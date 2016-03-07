@@ -66,6 +66,7 @@ int precompute_gas_on_each_locality(hpx_gas_each_locality_t *result,
     //for each block in gas, find the owner of it and classify them into
     target = hpx_addr_add(base, i, block_size);
     rank = gas_owner_of(here->gas, target);
+    //printf("target=%p, rank=%d\n", target, rank);
     result[rank].array[result[rank].size] = target;
     result[rank].size++;
   }
@@ -74,6 +75,10 @@ int precompute_gas_on_each_locality(hpx_gas_each_locality_t *result,
 
 static int _nested_par_for_async_handler(void *args, size_t args_size){
   hpx_nested_for_call_args_t *call_arg = args;
+printf("min: %d, max: %d\n", call_arg->min, call_arg->max);
+  for (int j = 0; j < call_arg->locality.size; j++){
+      printf("%d %u\n", j, call_arg->locality.array[j]);
+  }
   hpx_addr_t target;
   void *local;
   for (int i = call_arg->min; i < call_arg->max; i++){
@@ -96,9 +101,8 @@ static int _nested_for_async_handler(void * args, size_t args_size){
   //void *local;
   //if (!hpx_gas_try_pin(target, (void**)&local))
   //  return HPX_RESEND;
-  
-  //TODO precompute the local into malloced local array
-  //TODO spawn it using par_for
+ 
+  //distributed the work using _nested_par_for
   const int n = call_arg->locality.size;
   const int m = n / nthreads;
   int r = n % nthreads;
@@ -108,10 +112,7 @@ static int _nested_for_async_handler(void * args, size_t args_size){
     call_arg->min = base;
     call_arg->max = base + m + ((r-- > 0) ? 1 : 0);
     base = call_arg->max;
-    hpx_parcel_t *p = action_new_parcel(_nested_par_for_async, HPX_HERE, NULL, 
-                                        NULL, 1, &args);
-    parcel_prepare(p);
-    scheduler_spawn_at(p, i);
+    hpx_call(HPX_HERE, _nested_par_for_async, HPX_NULL, args, args_size);
   }
   //hpx_gas_unpin(target);
   return HPX_SUCCESS;
@@ -127,7 +128,7 @@ int hpx_par_for(hpx_for_action_t f, int min, int max, void *args,
 
   // get the number of scheduler threads
   int nthreads = HPX_THREADS;
-
+ 
   hpx_addr_t and = HPX_NULL;
   hpx_action_t set = hpx_lco_set_action;
   hpx_action_t del = hpx_lco_delete_action;
@@ -136,7 +137,7 @@ int hpx_par_for(hpx_for_action_t f, int min, int max, void *args,
     hpx_call_when_with_continuation(and, sync, set, and, del, NULL, 0);
   }
 
-  const int n = max - min;
+ const int n = max - min;
   const int m = n / nthreads;
   int r = n % nthreads;
   int rmin = min;
@@ -200,6 +201,12 @@ int hpx_nested_for(hpx_nested_for_action_t f, const int min, const int max,
   int e = precompute_gas_on_each_locality(result, addr, min, max, block_size);
   if (HPX_SUCCESS != e)
      return e;
+  for (i = 0; i < nlocalities; i++){
+    printf("%d:  ", i);
+    for (int j = 0; j < result[i].size; j++)
+      printf("%u->", result[i].array[j]);
+    printf("\n");
+  }
 
   hpx_nested_for_call_args_t *call_args = malloc(sizeof(*args) + arg_size + sizeof(hpx_gas_each_locality_t) + size);
   memcpy(&call_args->arg, args, arg_size);
@@ -214,8 +221,11 @@ int hpx_nested_for(hpx_nested_for_action_t f, const int min, const int max,
   for (i = 0, e = nlocalities; i < e; ++i) {
     //get the address from gas
     //call_args->target = hpx_addr_add(addr, min + stride * i, block_size);
-    memcpy(&(call_args->locality), &(hpx_gas_each_locality_t const){ .size = result[i].size }, size + sizeof(int));
-    printf("%d: %d\n", i, call_args->locality.size);
+    call_args->locality.size = result[i].size;
+    memcpy(&(call_args->locality.array), &(result[i].array), size);
+    //for (int j = 0; j < call_args->locality.size; j++){
+    //  printf("%d %p\n", j, call_args->locality.array[j]);
+   // }
     hpx_call(HPX_THERE(i), _nested_for_async, HPX_NULL, call_args, len);
   }
   (void) free(result);
