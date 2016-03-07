@@ -260,7 +260,8 @@ static const char* const HPX_WAITON_TO_STRING[] = {
 /// The HPX configuration type.
 ///
 /// This configuration is used to control some of the runtime
-/// parameters for the HPX system.
+/// parameters for the HPX system.  The body of the struct is 
+/// defined in options.def, and not here in config.h.
 typedef struct config {
 #define LIBHPX_OPT(group, id, init, ctype) ctype group##id;
 # include "options.def"

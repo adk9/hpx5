@@ -35,6 +35,9 @@ typedef enum {
   HPX_DIST_TYPE_BLOCKED,   //!< Blocked sequential distribution.
 } hpx_gas_dist_type_t;
 
+/// The largest block size supported by the implementation.
+extern HPX_PUBLIC const uint64_t HPX_GAS_BLOCK_BYTES_MAX;
+
 /// User-defined GAS distribution function.
 typedef hpx_addr_t (*hpx_gas_dist_t)(uint32_t i, size_t n, uint32_t bsize);
 
@@ -572,7 +575,7 @@ _hpx_gas_bcast_sync(hpx_action_t action, hpx_addr_t base, int n,
 /// @param       sync  Notification of completion.
 void hpx_gas_rebalance(hpx_addr_t sync)
   HPX_PUBLIC;
-    
+
 /// @}
 
 #ifdef __cplusplus

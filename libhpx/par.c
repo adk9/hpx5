@@ -250,7 +250,8 @@ int hpx_nested_for_sync(hpx_nested_for_action_t f, const int min, const int max,
 }
 
 /// HPX parallel "call".
-
+/// @struct par_call_async_args_t
+/// @brief HPX parallel "call".
 typedef struct {
   hpx_action_t action;
   int min;

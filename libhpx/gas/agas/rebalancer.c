@@ -126,6 +126,7 @@ int _local_to_global_bst(int id, void *UNUSED) {
     return HPX_SUCCESS;
   }
 
+  log_gas("Added %u entries to global BST.\n", HASH_COUNT(*bst));
   agas_bst_t *entry, *tmp;
   HASH_ITER(hh, *bst, entry, tmp) {
     bst_upsert(_global_bst, entry->block, entry->counts, entry->sizes);
@@ -159,6 +160,7 @@ static int _aggregate_bst_handler(hpx_addr_t graph) {
   hpx_par_for_sync(_local_to_global_bst, 0, HPX_THREADS, NULL);
   hpx_parcel_t *p = NULL;
   size_t size = bst_serialize_to_parcel(_global_bst, &p);
+  log_gas("Global BST size: %lu bytes.\n", size);
   if (!size) {
     return HPX_SUCCESS;
   }

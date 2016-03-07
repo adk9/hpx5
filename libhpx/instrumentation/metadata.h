@@ -101,13 +101,13 @@ typedef struct inst_named_value {
 } HPX_PACKED inst_named_value_t;
 
 typedef struct inst_event_col_metadata {
-  const char mask;           // this should an OR of all the following values:
-  const char data_type;      // mask 0x1
-  const unsigned int offset; // mask 0x2
-  const uint64_t min;        // mask 0x4
-  const uint64_t max;        // mask 0x8
-  const char printf_code[8]; // mask 0x10 (this value must be nul terminated)
-  const char name[256];      // mask 0x20 (this value must be nul terminated)
+  const char mask;           //!< this should an OR of all the following values:
+  const char data_type;      //!< mask 0x1
+  const unsigned int offset; //!< mask 0x2
+  const uint64_t min;        //!< mask 0x4
+  const uint64_t max;        //!< mask 0x8
+  const char printf_code[8]; //!< mask 0x10 (this value must be nul terminated)
+  const char name[256];      //!< mask 0x20 (this value must be nul terminated)
 } inst_event_col_metadata_t;
 
 #define METADATA_WORKER                       \
@@ -150,12 +150,11 @@ typedef struct inst_event_col_metadata {
 #define METADATA_HPX_ADDR(off)      METADATA_UINT(64, off, "global address")
 #define METADATA_PTR(off)           METADATA_UINT(64, off, "local address")
 
-/// Event metadata
-
+/// Event metadata struct.
+/// In theory the number of columns need not match the number of fields in
+/// an event. In practice, right now they do.
 typedef struct inst_event_metadata {
   const int num_cols;
-  // In theory the number of columns need not match the number of fields in
-  // an event. In practice, right now they do.
   const  inst_event_col_metadata_t col_metadata[_NUM_COLS];
 } inst_event_metadata_t;
 

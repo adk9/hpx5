@@ -38,7 +38,7 @@ static int _insert_block_handler(int n, void *args[], size_t sizes[]) {
   uint32_t   *attr = args[2];
 
   size_t bsize = sizes[0];
-  char *lva = global_malloc(bsize);
+  char *lva = malloc(bsize);
   memcpy(lva, args[0], bsize);
 
   if (*attr & HPX_GAS_ATTR_LCO) {
@@ -81,12 +81,6 @@ static int _agas_invalidate_mapping_handler(hpx_addr_t dst, int rank) {
   e = hpx_call_cc(dst, _insert_block, block, bsize, &src, sizeof(src), &attr,
                   sizeof(attr));
 
-  // always free if it is a single block
-  int blocks = btt_get_blocks(agas->btt, gva);
-  if (!gva.bits.cyclic && blocks == 1) {
-    global_free(block);
-  }
-
   // otherwise only free if the block is not at its home
   if (gva.bits.home != here->rank) {
     free(block);
@@ -118,7 +112,7 @@ void agas_move(void *gas, hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {
   uint32_t owner;
   bool found = btt_get_owner(agas->btt, gva, &owner);
   if (found) {
-    hpx_call_cc(src, _agas_invalidate_mapping, &dst, &owner);
+    hpx_call(src, _agas_invalidate_mapping, sync, &dst, &owner);
     return;
   }
 

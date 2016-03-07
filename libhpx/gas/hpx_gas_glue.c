@@ -21,9 +21,12 @@
 #include <libhpx/action.h>
 #include <libhpx/debug.h>
 #include <libhpx/gas.h>
+#include <libhpx/gpa.h>
 #include <libhpx/locality.h>
 #include <libhpx/rebalancer.h>
 #include <libhpx/worker.h>
+
+const uint64_t HPX_GAS_BLOCK_BYTES_MAX = UINT64_C(1) << GPA_MAX_LG_BSIZE;
 
 hpx_addr_t HPX_HERE = 0;
 
