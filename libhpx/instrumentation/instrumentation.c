@@ -345,8 +345,7 @@ void inst_prof_dump(profile_log_t log) {
   free(filepath);
 }
 
-void inst_vtrace(int UNUNSED, int n, int id, ...) {
-  dbg_assert_str(n < 5, "can only trace up to 4 user values\n");
+void inst_vtrace(int UNUSED, int n, int id, ...) {
   logtable_t *log = &_logs[id];
   if (!log->records) {
     return;
