@@ -42,6 +42,12 @@ static const char *const TRACE_EVENT_TO_STRING[] = {
 #undef LIBHPX_EVENT
 };
 
+static const int TRACE_EVENT_NUM_FIELDS[] = {
+#define LIBHPX_EVENT(class, event, ...) __HPX_NARGS(__VA_ARGS__),
+# include "events.def"
+#undef LIBHPX_EVENT
+};
+
 #define TRACE_NUM_EVENTS _HPX_NELEM(TRACE_EVENT_TO_STRING)
 
 static const int TRACE_OFFSETS[] = {

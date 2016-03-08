@@ -24,18 +24,15 @@
 typedef struct record {
   int worker;
   uint64_t ns;
-  uint64_t user[4];
+  uint64_t user[0];
 } record_t;
 
 /// The number of columns for a recorded event; some may be unused
 #define _NUM_COLS 6
 
-#define _COL_OFFSET_WORKER offsetof(record_t, worker)
-#define _COL_OFFSET_NS     offsetof(record_t, ns)
-#define _COL_OFFSET_USER0  offsetof(record_t, user)
-#define _COL_OFFSET_USER1  offsetof(record_t, user) + 8
-#define _COL_OFFSET_USER2  offsetof(record_t, user) + 16
-#define _COL_OFFSET_USER3  offsetof(record_t, user) + 24
+#define _COL_OFFSET_WORKER    offsetof(record_t, worker)
+#define _COL_OFFSET_NS        offsetof(record_t, ns)
+#define _COL_OFFSET_USER(off) offsetof(record_t, user) + (off * 8)
 
 // ==================== Event metadata =========================================
 // Header file format:
@@ -131,7 +128,7 @@ typedef struct inst_event_col_metadata {
 #define METADATA_UINT(width, off, _name)      \
   { .mask = 0x3f,                             \
     .data_type = METADATA_TYPE_INT64,         \
-    .offset = _COL_OFFSET_USER##off,          \
+    .offset = _COL_OFFSET_USER(off),          \
     .min = 0,                                 \
     .max = UINT##width##_MAX,                 \
     .printf_code = "zu",                      \
@@ -147,8 +144,8 @@ typedef struct inst_event_col_metadata {
 
 #define METADATA_SIZE(off)          METADATA_UINT64(off, "size")
 #define METADATA_ACTION(off)        METADATA_UINT16(off, "action")
-#define METADATA_HPX_ADDR(off)      METADATA_UINT(64, off, "global address")
-#define METADATA_PTR(off)           METADATA_UINT(64, off, "local address")
+#define METADATA_HPX_ADDR(off)      METADATA_UINT64(off, "global address")
+#define METADATA_PTR(off)           METADATA_UINT64(off, "local address")
 
 /// Event metadata struct.
 /// In theory the number of columns need not match the number of fields in

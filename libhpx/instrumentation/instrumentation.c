@@ -352,12 +352,8 @@ void inst_vtrace(int UNUNSED, int n, int id, ...) {
     return;
   }
 
-  uint64_t args[4] = {0};
   va_list vargs;
   va_start(vargs, id);
-  for (int i = 0; i < n; ++i) {
-    args[i] = va_arg(vargs, uint64_t);
-  }
+  logtable_vappend(log, n, &vargs);
   va_end(vargs);
-  logtable_append(log, args[0], args[1], args[2], args[3]);
 }
