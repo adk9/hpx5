@@ -27,11 +27,11 @@
 namespace hpx {
 
 namespace detail {
-  
+
 // used to check sameness of type lists
 template <typename... Ts>
 struct tlist {};
-  
+
 // reference: https://functionalcpp.wordpress.com/2013/08/05/function-traits/
 template<class F>
 struct function_traits;
@@ -62,10 +62,10 @@ struct function_traits<R(Args...)> {
 template <typename T>
 struct _convert_arg_type;
 
-#define DEF_CONVERT_TYPE(cpptype, hpxtype)			\
-template<> struct _convert_arg_type<cpptype> {			\
-  constexpr static auto type = hpxtype;				\
-};								\
+#define DEF_CONVERT_TYPE(cpptype, hpxtype)          \
+template<> struct _convert_arg_type<cpptype> {          \
+  constexpr static auto type = hpxtype;             \
+};                              \
 constexpr decltype(hpxtype) _convert_arg_type<cpptype>::type;
 
 DEF_CONVERT_TYPE(char, HPX_CHAR)
@@ -95,8 +95,8 @@ constexpr decltype(HPX_POINTER) _convert_arg_type<T*>::type;
 } // namspace hpx
 
 namespace hpx {
-  
-// The action type 
+
+// The action type
 template <hpx_action_type_t TYPE, uint32_t ATTR, typename F, typename... ContTs>
 class Action;
 
@@ -113,37 +113,37 @@ struct Action_traits< Action<TYPE, ATTR, F, ContTs...> > {
   using ctypes = hpx::detail::tlist<ContTs...>;
   static constexpr std::size_t arity = sizeof...(ContTs);
 };
-  
-// The action type 
+
+// The action type
 template <hpx_action_type_t TYPE, uint32_t ATTR, typename F, typename... ContTs>
 class Action {
 private:
   hpx_action_t _id;
   bool _is_registerd;
-  
+
   template <typename R, typename... Args>
   int _register_helper(R(&f)(Args...)) {
     return hpx_register_action(HPX_DEFAULT, HPX_ATTR_NONE, __FILE__ ":" _HPX_XSTR(_id),
                                &(_id), sizeof...(Args) + 1 , f,
                                hpx::detail::_convert_arg_type<Args>::type...);
   }
-  
+
 public:
-  
+
   Action() : _is_registerd(false) {}
-  
+
   Action(F& f) { // Should the parameter be always a reference?
     static_assert(std::is_function<F>::value, "Action constructor argument is not a function.");
     _register_helper(f); // What to do with return value? Maybe throw an exception when the registration is not successful?
     _is_registerd = true;
   }
-  
+
   ~Action() {}
-  
+
   hpx_action_t get_id() const {
     return _id;
   }
-  
+
 /// Fully synchronous call interface.
 ///
 /// Performs action on @p args at @p addr, and sets @p out with the
@@ -187,7 +187,7 @@ public:
     return _hpx_call(addr.get(), _id, result.get(), sizeof...(Args), &args...);
   }
 
-  
+
 /// Locally synchronous call interface when LCO is set.
 ///
 /// This is a locally-synchronous, globally-asynchronous variant of
@@ -206,12 +206,12 @@ public:
     return _hpx_call_when(gate, addr, _id, result, sizeof...(Args), &args...);
   }
   template <typename LCO, typename T1, typename T2, typename... Args>
-  int call_when(const ::hpx::global_ptr<LCO>& gate, 
-		const ::hpx::global_ptr<T1>& addr, 
-		const ::hpx::global_ptr<T1>& result, Args&... args) {
+  int call_when(const ::hpx::global_ptr<LCO>& gate,
+        const ::hpx::global_ptr<T1>& addr,
+        const ::hpx::global_ptr<T1>& result, Args&... args) {
     return _hpx_call_when(gate.get(), addr.get(), _id, result.get(), sizeof...(Args), &args...);
   }
-  
+
 /// Fully synchronous call interface which implements hpx_parcel_send_through()
 /// when an LCO is set.
 ///
@@ -235,11 +235,11 @@ public:
     return _hpx_call_when_sync(gate, addr, _id, &out, sizeof(R), sizeof...(Args), &args...);
   }
   template <typename LCO, typename T, typename R, typename... Args>
-  int call_when_sync(const ::hpx::global_ptr<LCO>& gate, 
-			    const ::hpx::global_ptr<T>& addr, R& out, Args&... args) {
+  int call_when_sync(const ::hpx::global_ptr<LCO>& gate,
+                const ::hpx::global_ptr<T>& addr, R& out, Args&... args) {
     return _hpx_call_when_sync(gate.get(), addr.get(), _id, &out, sizeof(R), sizeof...(Args), &args...);
   }
-  
+
 /// Locally synchronous call with continuation interface.
 ///
 /// This is similar to hpx_call with additional parameters to specify the
@@ -255,18 +255,18 @@ public:
   template <typename Cont, typename... Args>
   int call_with_continuation(hpx_addr_t addr, hpx_addr_t c_target, Cont&& c_action, Args&... args) {
     // check if the continued types of current action (caller) match input arguments of c_action (callee)
-    static_assert(std::is_same<hpx::detail::tlist<ContTs...>, hpx::detail::tlist<Args...>>::value, 
-		  "continued types and continuation argument types must match...");
+    static_assert(std::is_same<hpx::detail::tlist<ContTs...>, hpx::detail::tlist<Args...>>::value,
+          "continued types and continuation argument types must match...");
     return _hpx_call_with_continuation(addr, _id, c_target, c_action.get_id(), sizeof...(Args), &args...);
   }
   template <typename T1, typename T2, typename Cont, typename... Args>
-  int call_with_continuation(const ::hpx::global_ptr<T1>& addr, const ::hpx::global_ptr<T2>& c_target, 
-			     Cont&& c_action, Args&... args) {
-    static_assert(std::is_same<hpx::detail::tlist<ContTs...>, hpx::detail::tlist<Args...>>::value, 
-		  "continued types and continuation argument types must match...");
+  int call_with_continuation(const ::hpx::global_ptr<T1>& addr, const ::hpx::global_ptr<T2>& c_target,
+                 Cont&& c_action, Args&... args) {
+    static_assert(std::is_same<hpx::detail::tlist<ContTs...>, hpx::detail::tlist<Args...>>::value,
+          "continued types and continuation argument types must match...");
     return _hpx_call_with_continuation(addr.get(), _id, c_target.get(), c_action.get_id(), sizeof...(Args), &args...);
   }
-  
+
 /// Fully asynchronous call interface.
 ///
 /// This is a completely asynchronous variant of the remote-procedure
@@ -289,11 +289,11 @@ public:
     return _hpx_call_async(addr, _id, lsync, result, sizeof...(Args), &args...);
   }
   template <typename T, typename LSYNC, typename RES, typename... Args>
-  int call_async(const ::hpx::global_ptr<T>& addr, const ::hpx::global_ptr<LSYNC>& lsync, 
-			const ::hpx::global_ptr<RES>& result, Args&... args) {
+  int call_async(const ::hpx::global_ptr<T>& addr, const ::hpx::global_ptr<LSYNC>& lsync,
+            const ::hpx::global_ptr<RES>& result, Args&... args) {
     return _hpx_call_async(addr, _id, lsync, result, sizeof...(Args), &args...);
   }
-  
+
 /// Locally synchronous call_when with continuation interface.
 ///
 /// The gate must be non-HPX_NULL.
@@ -307,15 +307,15 @@ public:
 ///                     locally during the hpx_call invocation.
   template <typename Cont, typename...Args>
   int call_when_with_continuation(hpx_addr_t gate, hpx_addr_t addr, hpx_addr_t c_target, Args&... args) {
-    
+
     return _hpx_call_when_with_continuation(gate, addr, _id, c_target, Cont::id, sizeof...(Args), &args...);
   }
   template <typename LCO, typename T1, typename T2, typename Cont, typename...Args>
-  int call_when_with_continuation(const ::hpx::global_ptr<LCO>& gate, const ::hpx::global_ptr<T1>& addr, 
-					 const ::hpx::global_ptr<T2>& c_target, Cont&& c_action, Args&... args) {
+  int call_when_with_continuation(const ::hpx::global_ptr<LCO>& gate, const ::hpx::global_ptr<T1>& addr,
+                     const ::hpx::global_ptr<T2>& c_target, Cont&& c_action, Args&... args) {
     return _hpx_call_when_with_continuation(gate.get(), addr.get(), _id, c_target.get(), c_action.get_id(), sizeof...(Args), &args...);
   }
-  
+
 /// Call with current continuation.
 ///
 /// This calls an action passing the currrent thread's continuation as the
@@ -337,7 +337,7 @@ public:
   int call_when_cc(const ::hpx::global_ptr<LCO>& gate, const ::hpx::global_ptr<T>& addr, Args&... args) {
     return _hpx_call_when_cc(gate.get(), addr.get(), _id, sizeof...(Args), &args...);
   }
-  
+
 /// Call with current continuation.
 ///
 /// This calls an action passing the currrent thread's continuation as the
@@ -356,17 +356,17 @@ public:
   int _hpx_call_cc(const ::hpx::global_ptr<T>& addr, Args&... args) {
     return _hpx_call_cc(addr.get(), _id, sizeof...(Args), &args...);
   }
-  
+
 //   template <typename... Args>
 //   int thread_continue(Args&... args) {
 //     return _hpx_thread_continue(sizeof...(Args), &args...);
 //   };
-  
+
   template <typename T>
   int thread_continue(T& arg) {
     return _hpx_thread_continue(2, &arg, sizeof(T));
   };
-  
+
 /// hpx parallel loop interface
 /// Perform a "for" loop in parallel.
 ///
@@ -426,20 +426,20 @@ int par_for_sync(int min, int max, Args&... args) {
 /// @returns An error code, or HPX_SUCCESS.
 template <typename LCO>
 int par_call(const int min, const int max,
-	     const int branching_factor, const int cutoff,
-	     const size_t arg_size,
-	     void (*arg_init)(void*, const int, const void*),
-	     const size_t env_size, const void *env,
-	     const hpx::global_ptr<LCO>& sync) {
+         const int branching_factor, const int cutoff,
+         const size_t arg_size,
+         void (*arg_init)(void*, const int, const void*),
+         const size_t env_size, const void *env,
+         const hpx::global_ptr<LCO>& sync) {
   return hpx_par_call(_id, min, max, branching_factor, cutoff, arg_size, arg_init, env_size, env, sync.get());
 }
 
 int par_call_sync(const int min, const int max,
-		  const int branching_factor, const int cutoff,
-		  const size_t arg_size,
-		  void (*arg_init)(void*, const int, const void*),
-		  const size_t env_size,
-		  const void *env) {
+          const int branching_factor, const int cutoff,
+          const size_t arg_size,
+          void (*arg_init)(void*, const int, const void*),
+          const size_t env_size,
+          const void *env) {
   return hpx_par_call_sync(_id, min, max, branching_factor, cutoff, arg_size, arg_init, env_size, env);
 }
 
@@ -452,7 +452,7 @@ int count_range_call(const hpx::global_ptr<T>& addr,
              void *const arg) {
   return hpx_count_range_call(addr.get(), count, increment, bsize, arg_size, arg);
 }
-  
+
 /// Collective calls.
 ///
 
@@ -461,9 +461,9 @@ int count_range_call(const hpx::global_ptr<T>& addr,
     return _hpx_process_broadcast(hpx_thread_current_pid(), _id, lsync, rsync, sizeof...(Args), &args...);
   }
   template <typename LSYNC, typename RSYNC, typename... Args>
-  int process_broadcast(const ::hpx::global_ptr<LSYNC>& lsync, 
-			       const ::hpx::global_ptr<RSYNC>& rsync, 
-			       Args&... args) {
+  int process_broadcast(const ::hpx::global_ptr<LSYNC>& lsync,
+                   const ::hpx::global_ptr<RSYNC>& rsync,
+                   Args&... args) {
     return _hpx_process_broadcast(hpx_thread_current_pid(), _id, lsync.get(), rsync.get(), sizeof...(Args), &args...);
   }
   template <typename... Args>
@@ -478,15 +478,15 @@ int count_range_call(const hpx::global_ptr<T>& addr,
   int process_broadcast_rsync(Args&... args) {
     return _hpx_process_broadcast_rsync(hpx_thread_current_pid(), _id, sizeof...(Args), &args...);
   }
-  
+
   template <typename... Args>
   int run(Args&... args) {
     using traits = hpx::detail::function_traits<F>;
     static_assert(::std::is_same< typename traits::arg_types, hpx::detail::tlist<Args...> >::value,
                   "action and argument types do not match");
-    return hpx::run(&_id, &args...);
+    return hpx::run(_id, &args...);
   }
-  
+
   template <typename R, typename... Args>
   int _register(R(&f)(Args...)) {
 //     return hpx_register_action(HPX_DEFAULT, HPX_ATTR_NONE, __FILE__ ":" _HPX_XSTR(A::id),
@@ -494,7 +494,7 @@ int count_range_call(const hpx::global_ptr<T>& addr,
 //                                _convert_arg_type<Args>::type...);
     return _register_helper(f);
   }
-  
+
 }; // template class Action
 
 // helper methods to create action object
@@ -510,5 +510,5 @@ make_action(F& f) {
 }
 
 }
-  
+
 #endif // HPX_CXX_ACTION_H

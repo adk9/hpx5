@@ -396,7 +396,7 @@ int main(int argc, char *argv[]) {
   }
 
   // run the update_table action
-  e = hpx::run(&_main, &cfg, sizeof(cfg));
+  e = hpx::run(_main, &cfg, sizeof(cfg));
   hpx::finalize();
   return e;
 }
