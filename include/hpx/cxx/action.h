@@ -484,7 +484,7 @@ int count_range_call(const hpx::global_ptr<T>& addr,
     using traits = hpx::detail::function_traits<F>;
     static_assert(::std::is_same< typename traits::arg_types, hpx::detail::tlist<Args...> >::value,
                   "action and argument types do not match");
-    return hpx::run(_id, &args...);
+    return hpx::run(_id, std::forward<Args>(args)...);
   }
 
   template <typename R, typename... Args>
