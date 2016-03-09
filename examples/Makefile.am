@@ -25,6 +25,7 @@ netbench_SOURCES        = netbench.c
 cpi_SOURCES             = cpi.c
 heat_SOURCES            = heat.c
 jacobi_SOURCES          = jacobi.c
+nested_SOURCES          = nested.c
 
 AM_CPPFLAGS             = -D_GNU_SOURCE $(HPX_APPS_CPPFLAGS) -I$(top_srcdir)/include
 AM_CFLAGS               = $(HPX_APPS_CFLAGS) -Wno-unused

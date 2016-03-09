@@ -234,7 +234,7 @@ int hpx_nested_for(hpx_nested_for_action_t f, const int min, const int max,
     //distribute the block address to the locality owns them
     //call_args->target = hpx_addr_add(addr, min + stride * i, block_size);
     call_args->locality.size = result[i].size;
-    memcpy(&(call_args->locality.array), &(result[i].array), size);
+    memcpy((call_args->locality.array), &(result[i].array), size);
     //for (int j = 0; j < call_args->locality.size; j++){
     //  printf("%d %p\n", j, call_args->locality.array[j]);
    // }
