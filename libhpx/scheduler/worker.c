@@ -556,7 +556,7 @@ static void _schedule_network(worker_t *w) {
 
   hpx_parcel_t *p = NULL;
   while ((p = parcel_stack_pop(&stack))) {
-    EVENT_PARCEL_RECV(p->id, p->action, p->size, p->src);
+    EVENT_PARCEL_RECV(p->id, p->action, p->size, p->src, p->target);
     _push_lifo(p, w);
   }
 }

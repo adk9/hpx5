@@ -96,6 +96,8 @@ int logtable_init(logtable_t *log, const char* filename, size_t size,
     goto unwind;
   }
 
+  log->record_size = sizeof(record_t) + TRACE_EVENT_NUM_FIELDS[id] * sizeof(uint64_t);
+
   size_t header_size = write_trace_header(log->header, class, id);
   assert(((uintptr_t)log->header + header_size) % 8 == 0);
   log->records = (void*)((uintptr_t)log->header + header_size);
@@ -135,8 +137,11 @@ void logtable_fini(logtable_t *log) {
 
 void logtable_append(logtable_t *log, uint64_t u1, uint64_t u2, uint64_t u3,
                      uint64_t u4) {
+}
+
+void logtable_vappend(logtable_t *log, int n, va_list *args) {
   size_t i = sync_fadd(&log->next, 1, SYNC_ACQ_REL);
-  if (_header_size(log) + (i+1) * sizeof(record_t) > log->max_size) {
+  if (_header_size(log) + (i+1) * log->record_size > log->max_size) {
     return;
   }
   sync_fadd(&log->last, 1, SYNC_ACQ_REL); // update size
@@ -144,8 +149,8 @@ void logtable_append(logtable_t *log, uint64_t u1, uint64_t u2, uint64_t u3,
   record_t *r = &log->records[i];
   r->worker = HPX_THREAD_ID;
   r->ns = hpx_time_from_start_ns(hpx_time_now());
-  r->user[0] = u1;
-  r->user[1] = u2;
-  r->user[2] = u3;
-  r->user[3] = u4;
+  uint64_t *user = r->user;
+  for (int i = 0; i < n; ++i) {
+    user[i] = va_arg(*args, uint64_t);
+  }
 }
