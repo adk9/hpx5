@@ -25,11 +25,12 @@ static int _initialize_handler(ELEMENT *element) {
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _initialize, _initialize_handler,
                   HPX_POINTER);
 
-static int _print_gas(int i, void *addr, void *args){
+static int _print_gas_handler(void *addr){
   ELEMENT *e = addr;
-  printf("%d %d\n", i, *e);
+  printf("%d\n", *e);
   return HPX_SUCCESS;
 }
+static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _print_gas, _print_gas_handler, HPX_POINTER);
 
 static int nested_for_handler(void) {
   int blk_num = HPX_LOCALITIES;
