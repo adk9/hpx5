@@ -6,7 +6,7 @@ examplesdir             = $(datarootdir)/doc/@PACKAGE@
 
 noinst_PROGRAMS         = fibonacci pingpong allreduce countdown seqspawn \
                           parspawn future memput memget guppie hello \
-                          qsort call netbench cpi heat jacobi
+                          qsort call netbench cpi heat jacobi nested
 
 fibonacci_SOURCES       = fibonacci.c
 pingpong_SOURCES        = pingpong.c
@@ -49,3 +49,4 @@ netbench_DEPENDENCIES   = $(HPX_APPS_DEPS)
 cpi_DEPENDENCIES        = $(HPX_APPS_DEPS)
 heat_DEPENDENCIES       = $(HPX_APPS_DEPS)
 jacobi_DEPENDENCIES     = $(HPX_APPS_DEPS)
+nested_DEPENDENCIES     = $(HPX_APPS_DEPS)

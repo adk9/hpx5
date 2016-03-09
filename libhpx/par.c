@@ -41,7 +41,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, 0, _par_for_async, _par_for_async_handler,
 typedef struct {
   int size;
   hpx_addr_t array[];
-}hpx_gas_each_locality_t;
+} _gas_each_locality_t;
 
 typedef struct {
   hpx_nested_for_action_t action;
@@ -52,65 +52,69 @@ typedef struct {
   int offset;
   int block_size;
   int arg_size;
-  hpx_gas_each_locality_t locality;
+  _gas_each_locality_t locality;
   unsigned char arg[];
-}hpx_nested_for_call_args_t;
+} _nested_for_call_args_t;
 
 
-int precompute_gas_on_each_locality(hpx_gas_each_locality_t *result, 
-                                    hpx_addr_t base, int min, int max, 
-                                    int offset, int block_size){
-  hpx_addr_t target;
-  uint32_t rank;
-  for (int i = min; i < max; i++){
-    //for each block in gas, find the owner of it and classify them into
-    target = hpx_addr_add(base, i + offset, block_size);
-    rank = gas_owner_of(here->gas, target);
-    void *local;
-    if (!hpx_gas_try_pin(target, (void**)&local))
-      return HPX_RESEND;
-    printf("target=%p-%d rank=%d\n", local, *((int*)local), rank);
+int precompute_gas_on_each_locality(_gas_each_locality_t *result,
+                                    hpx_addr_t base, int min, int max,
+                                    int stride, int offset, int bsize){
+  for (int i = min, e = max; i < e; ++i) {
+    // for each block in gas, find the owner of it and classify them into
+    hpx_addr_t target = hpx_addr_add(base, i * stride + offset, bsize);
+    // uint32_t rank = gas_owner_of(here->gas, target);
+    // void *local;
+    // if (!hpx_gas_try_pin(target, (void**)&local))
+    //   return HPX_RESEND;
+    // printf("target=%p-%d rank=%d\n", local, *((int*)local), rank);
+    int rank;
+    dbg_assert(hpx_call_sync(target, pinyourself, &rank, sizeof(rank)));
     result[rank].array[result[rank].size] = target;
     result[rank].size++;
   }
   return HPX_SUCCESS;
 }
 
-static int _nested_par_for_async_handler(void *args, size_t args_size){
-  hpx_nested_for_call_args_t *call_arg = args;
-  printf("min: %d, max: %d\n", call_arg->min, call_arg->max);
-  for (int j = 0; j < call_arg->locality.size; j++){
-      printf("%d %u\n", j, call_arg->locality.array[j]);
+static int _nested_par_for_async_handler(_nested_for_call_args_t *args,
+                                         size_t UNUSED) {
+  printf("min: %d, max: %d\n", args->min, args->max);
+  for (int j = 0, e = args->locality.size; j < e; ++j) {
+    printf("%d %u\n", j, args->locality.array[j]);
   }
-  hpx_addr_t target;
-  void *local;
-  for (int i = call_arg->min; i < call_arg->max; i++){
-    target = call_arg->locality.array[i];
-    if (!hpx_gas_try_pin(target, (void**)&local))
+
+  for (int i = args->min, e = args->max; i < e; ++i) {
+    hpx_addr_t target = args->locality.array[i];
+    void *local = NULL;
+    if (!hpx_gas_try_pin(target, (void**)&local)) {
+      // FIXME: Account for already-processed indices and create a new call for
+      //        that subset.
       return HPX_RESEND;
-    call_arg->action(i, local, call_arg->arg);
+    }
+
+    args->action(i, local, args->arg);
   }
   return HPX_SUCCESS;
 }
 
-static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _nested_par_for_async, 
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _nested_par_for_async,
                      _nested_par_for_async_handler, HPX_POINTER, HPX_SIZE_T);
 
 static int _nested_for_async_handler(void * args, size_t args_size){
-  hpx_nested_for_call_args_t *call_arg = args;
+  _nested_for_call_args_t *call_arg = args;
   int nthreads = HPX_THREADS;
   printf("min: %d, max: %d\n", call_arg->min, call_arg->max);
   //get the target address on each locality
-  hpx_addr_t target = hpx_thread_current_target();
+  // hpx_addr_t target = hpx_thread_current_target();
   //void *local;
   //if (!hpx_gas_try_pin(target, (void**)&local))
   //  return HPX_RESEND;
- 
+
   //distributed the work using _nested_par_for
   const int n = call_arg->locality.size;
   const int m = n / nthreads;
   int r = n % nthreads;
-  
+
   int base = 0;
   for (int i = 0, e = nthreads; i < e; ++i) {
     call_arg->min = base;
@@ -122,7 +126,7 @@ static int _nested_for_async_handler(void * args, size_t args_size){
   return HPX_SUCCESS;
 }
 
-static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, 
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED,
                      _nested_for_async, _nested_for_async_handler,
                      HPX_POINTER, HPX_INT);
 
@@ -132,7 +136,7 @@ int hpx_par_for(hpx_for_action_t f, int min, int max, void *args,
 
   // get the number of scheduler threads
   int nthreads = HPX_THREADS;
- 
+
   hpx_addr_t and = HPX_NULL;
   hpx_action_t set = hpx_lco_set_action;
   hpx_action_t del = hpx_lco_delete_action;
@@ -176,9 +180,9 @@ int hpx_par_for_sync(hpx_for_action_t f, int min, int max, void *args) {
   return e;
 }
 
-int hpx_nested_for(hpx_nested_for_action_t f, const int min, const int max, 
-                   const int stride, const int offset, const int block_size, 
-                   const int arg_size, const void *args, const hpx_addr_t addr,
+int hpx_nested_for(hpx_nested_for_action_t f, int min, int max,
+                   int bsize, int offset, int stride, int arg_size,
+                   const void *args, const hpx_addr_t addr,
                    hpx_addr_t sync) {
   dbg_assert(0 < max - min);
   dbg_assert(0 < stride);
@@ -186,9 +190,10 @@ int hpx_nested_for(hpx_nested_for_action_t f, const int min, const int max,
   dbg_assert(0 < block_size);
 
   // get the number of scheduler threads
-  int nlocalities = HPX_LOCALITIES, i;
+  int nlocalities = HPX_LOCALITIES;
+  int i = 0;
 
-  //sychronization, when all localities are executed "nlocalities" times, end
+  // sychronization, when all localities are executed "nlocalities" times, end
   hpx_addr_t and = HPX_NULL;
   hpx_action_t set = hpx_lco_set_action;
   hpx_action_t del = hpx_lco_delete_action;
@@ -196,19 +201,16 @@ int hpx_nested_for(hpx_nested_for_action_t f, const int min, const int max,
     and = hpx_lco_and_new(nlocalities);
     hpx_call_when_with_continuation(and, sync, set, and, del, NULL, 0);
   }
-  
-  //every locality will have an hpx_addr_t array with size "size"
-  size_t size;
-  if (0 != (max - min) % nlocalities){
-    size = ((max - min) / nlocalities + 1) *sizeof(hpx_addr_t); 
-  }
-  else{
-    size = ((max - min) / nlocalities) *sizeof(hpx_addr_t);
-  }
-  hpx_gas_each_locality_t *result = malloc((sizeof(hpx_gas_each_locality_t) + size) * (nlocalities + 1));
-  for (i = 0; i < nlocalities; i++){
-    result[i].size = 0;
-  }
+
+  // every locality will have an hpx_addr_t array with size "size"
+
+  // compute the range
+  int n = max - min;
+
+  // preallocate all of the addresses we're going to send to.
+  hpx_addr_t *map = calloc(nlocalities * n, sizeof(*result));
+  int *sizes = calloc(nlocalities);
+
   int e = precompute_gas_on_each_locality(result, addr, min, max, stride, block_size);
   if (HPX_SUCCESS != e)
      return e;
@@ -220,7 +222,7 @@ int hpx_nested_for(hpx_nested_for_action_t f, const int min, const int max,
     printf("\n");
   }
 */
-  hpx_nested_for_call_args_t *call_args = malloc(sizeof(hpx_nested_for_call_args_t) + arg_size + sizeof(hpx_gas_each_locality_t) + size);
+  _nested_for_call_args_t *call_args = malloc(sizeof(_nested_for_call_args_t) + arg_size + sizeof(_gas_each_locality_t) + size);
   memcpy(&call_args->arg, args, arg_size);
   call_args->action = f;
   call_args->min = min;
@@ -245,9 +247,8 @@ int hpx_nested_for(hpx_nested_for_action_t f, const int min, const int max,
   return HPX_SUCCESS;
 }
 
-int hpx_nested_for_sync(hpx_nested_for_action_t f, const int min, const int max,
-                        const int stride, const int offset, 
-                        const int block_size, const int arg_size, 
+int hpx_nested_for_sync(hpx_nested_for_action_t f, int min, int max,
+                        int bsize, int offset, int stride, int arg_size,
                         const void *args, const hpx_addr_t addr) {
   dbg_assert(0 < max - min);
   dbg_assert(0 < stride);
@@ -260,7 +261,7 @@ int hpx_nested_for_sync(hpx_nested_for_action_t f, const int min, const int max,
     return log_error("could not allocate an LCO.\n");
   }
 
-  int e = hpx_nested_for(f, min, max, stride, offset, block_size, arg_size, 
+  int e = hpx_nested_for(f, min, max, bsize, offset, stride, arg_size,
                          args, addr, sync);
   if (!e) {
     e = hpx_lco_wait(sync);

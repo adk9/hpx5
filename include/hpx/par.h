@@ -60,17 +60,30 @@ int hpx_par_for(hpx_for_action_t f, int min, int max, void *args,
 int hpx_par_for_sync(hpx_for_action_t f, int min, int max,
                      void *args) HPX_PUBLIC;
 
-typedef int (*hpx_nested_for_action_t)(int i, hpx_addr_t addr, void *arg);
+typedef int (*hpx_nested_for_action_t)(int i, void *lva, void *arg);
 
-int hpx_nested_for(hpx_nested_for_action_t f, const int min, const int max, 
-                   const int stride, const int offset, const int block_size,
-                   const int arg_size,  const void *args, 
-                   const hpx_addr_t addr, hpx_addr_t sync) HPX_PUBLIC;
+int hpx_nested_for(hpx_nested_for_action_t f, int min, int max, int bsize,
+                   int offset, int stride, int arg_size, void *args,
+                   hpx_addr_t addr, hpx_addr_t sync)
+  HPX_PUBLIC;
 
-int hpx_nested_for_sync(hpx_nested_for_action_t f, const int min, 
-                        const int max, const int stride, const int offset, 
-                        const int block_size, const int arg_size, 
-                        const void *args, const hpx_addr_t addr) HPX_PUBLIC;
+typedef hpx_addr_t (*lukes_thing)(int, void *);
+
+int lukes_nested_for(hpx_action_t f, int min, int max, void *args,
+                     hpx_addr_t sync, lukes_thing map, void *map_env);
+for (i: min, max) {
+  hpx_call(map(i, map_env), f, and, i, args);
+ }
+
+int lukes_nested_for(hpx_action_t f, int min, int max, void *args,
+                     hpx_addr_t sync,
+                     hpx_addr_t base, int bsize, int stride, int offset) {
+}
+
+int hpx_nested_for_sync(hpx_nested_for_action_t f, int min, int max, int bsize,
+                        int offset, int stride, int arg_size,
+                        void *args, hpx_addr_t addr)
+  HPX_PUBLIC;
 
 /// Perform a parallel call.
 ///
