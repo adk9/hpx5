@@ -27,9 +27,6 @@ typedef struct record {
   uint64_t user[0];
 } record_t;
 
-/// The number of columns for a recorded event; some may be unused
-#define _NUM_COLS 8
-
 #define _COL_OFFSET_WORKER    offsetof(record_t, worker)
 #define _COL_OFFSET_NS        offsetof(record_t, ns)
 #define _COL_OFFSET_USER(off) offsetof(record_t, user) + (off * 8)
@@ -152,19 +149,19 @@ typedef struct inst_event_col_metadata {
 /// an event. In practice, right now they do.
 typedef struct inst_event_metadata {
   const int num_cols;
-  const  inst_event_col_metadata_t col_metadata[0];
+  const inst_event_col_metadata_t *col_metadata;
 } inst_event_metadata_t;
 
-#define _METADATA_ARGS(...) {         \
-  .num_cols = __HPX_NARGS(__VA_ARGS__) + 2,   \
-  .col_metadata = {                           \
-    METADATA_WORKER,                          \
-    METADATA_NS,                              \
-    __VA_ARGS__                               \
-  }                                           \
+#define _METADATA_ARGS(...) {                                       \
+  .num_cols = __HPX_NARGS(__VA_ARGS__)+2,                           \
+  .col_metadata =                                                   \
+    (const inst_event_col_metadata_t[__HPX_NARGS(__VA_ARGS__)+2]) { \
+    METADATA_WORKER,                                                \
+    METADATA_NS,                                                    \
+    __VA_ARGS__                                                     \
+  }                                                                 \
 }
-#define _METADATA_NONE _METADATA_ARGS()      
-  
+#define _METADATA_NONE _METADATA_ARGS()
 
 extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 
