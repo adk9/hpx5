@@ -59,14 +59,17 @@ typedef struct {
 
 int precompute_gas_on_each_locality(hpx_gas_each_locality_t *result, 
                                     hpx_addr_t base, int min, int max, 
-                                    int block_size){
+                                    int offset, int block_size){
   hpx_addr_t target;
   uint32_t rank;
   for (int i = min; i < max; i++){
     //for each block in gas, find the owner of it and classify them into
-    target = hpx_addr_add(base, i, block_size);
+    target = hpx_addr_add(base, i + offset, block_size);
     rank = gas_owner_of(here->gas, target);
-    //printf("target=%p, rank=%d\n", target, rank);
+    void *local;
+    if (!hpx_gas_try_pin(target, (void**)&local))
+      return HPX_RESEND;
+    printf("target=%p-%d rank=%d\n", local, *((int*)local), rank);
     result[rank].array[result[rank].size] = target;
     result[rank].size++;
   }
@@ -75,7 +78,7 @@ int precompute_gas_on_each_locality(hpx_gas_each_locality_t *result,
 
 static int _nested_par_for_async_handler(void *args, size_t args_size){
   hpx_nested_for_call_args_t *call_arg = args;
-printf("min: %d, max: %d\n", call_arg->min, call_arg->max);
+  printf("min: %d, max: %d\n", call_arg->min, call_arg->max);
   for (int j = 0; j < call_arg->locality.size; j++){
       printf("%d %u\n", j, call_arg->locality.array[j]);
   }
@@ -90,14 +93,15 @@ printf("min: %d, max: %d\n", call_arg->min, call_arg->max);
   return HPX_SUCCESS;
 }
 
-static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _nested_par_for_async, _nested_par_for_async,
-                     HPX_POINTER, HPX_SIZE_T);
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _nested_par_for_async, 
+                     _nested_par_for_async_handler, HPX_POINTER, HPX_SIZE_T);
 
 static int _nested_for_async_handler(void * args, size_t args_size){
   hpx_nested_for_call_args_t *call_arg = args;
   int nthreads = HPX_THREADS;
+  printf("min: %d, max: %d\n", call_arg->min, call_arg->max);
   //get the target address on each locality
-  //hpx_addr_t target = hpx_thread_current_target();
+  hpx_addr_t target = hpx_thread_current_target();
   //void *local;
   //if (!hpx_gas_try_pin(target, (void**)&local))
   //  return HPX_RESEND;
@@ -193,22 +197,30 @@ int hpx_nested_for(hpx_nested_for_action_t f, const int min, const int max,
     hpx_call_when_with_continuation(and, sync, set, and, del, NULL, 0);
   }
   
-  size_t size = (max - min) / nlocalities *sizeof(hpx_addr_t);
-  hpx_gas_each_locality_t *result = malloc((sizeof(hpx_gas_each_locality_t) + size) * nlocalities);
+  //every locality will have an hpx_addr_t array with size "size"
+  size_t size;
+  if (0 != (max - min) % nlocalities){
+    size = ((max - min) / nlocalities + 1) *sizeof(hpx_addr_t); 
+  }
+  else{
+    size = ((max - min) / nlocalities) *sizeof(hpx_addr_t);
+  }
+  hpx_gas_each_locality_t *result = malloc((sizeof(hpx_gas_each_locality_t) + size) * (nlocalities + 1));
   for (i = 0; i < nlocalities; i++){
     result[i].size = 0;
   }
-  int e = precompute_gas_on_each_locality(result, addr, min, max, block_size);
+  int e = precompute_gas_on_each_locality(result, addr, min, max, stride, block_size);
   if (HPX_SUCCESS != e)
      return e;
+ /*
   for (i = 0; i < nlocalities; i++){
     printf("%d:  ", i);
     for (int j = 0; j < result[i].size; j++)
       printf("%u->", result[i].array[j]);
     printf("\n");
   }
-
-  hpx_nested_for_call_args_t *call_args = malloc(sizeof(*args) + arg_size + sizeof(hpx_gas_each_locality_t) + size);
+*/
+  hpx_nested_for_call_args_t *call_args = malloc(sizeof(hpx_nested_for_call_args_t) + arg_size + sizeof(hpx_gas_each_locality_t) + size);
   memcpy(&call_args->arg, args, arg_size);
   call_args->action = f;
   call_args->min = min;
@@ -219,7 +231,7 @@ int hpx_nested_for(hpx_nested_for_action_t f, const int min, const int max,
   call_args->arg_size = arg_size;
   size_t len = sizeof(*args) + arg_size;
   for (i = 0, e = nlocalities; i < e; ++i) {
-    //get the address from gas
+    //distribute the block address to the locality owns them
     //call_args->target = hpx_addr_add(addr, min + stride * i, block_size);
     call_args->locality.size = result[i].size;
     memcpy(&(call_args->locality.array), &(result[i].array), size);
@@ -253,9 +265,7 @@ int hpx_nested_for_sync(hpx_nested_for_action_t f, const int min, const int max,
   if (!e) {
     e = hpx_lco_wait(sync);
   }
-  printf("there\n");
   hpx_lco_delete(sync, HPX_NULL);
-  printf("here\n");
   return e;
 }
 
