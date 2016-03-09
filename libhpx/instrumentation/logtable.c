@@ -151,6 +151,6 @@ void logtable_vappend(logtable_t *log, int n, va_list *args) {
   r->ns = hpx_time_from_start_ns(hpx_time_now());
   uint64_t *user = r->user;
   for (int i = 0; i < n; ++i) {
-    user[i] = va_arg(args, uint64_t);
+    user[i] = va_arg(*args, uint64_t);
   }
 }
