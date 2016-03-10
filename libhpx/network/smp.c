@@ -66,10 +66,10 @@ static int _smp_coll_init(void *network, coll_t **_c) {
   return LIBHPX_OK;
 }
 
-static int _smp_coll_sync(void *network, hpx_parcel_t *in, void *out,
+static int _smp_coll_sync(void *network, void *in, size_t in_size, void *out,
                           coll_t *c) {
-  void *sendbuf = in->buffer;
-  int count = in->size;
+  void *sendbuf = in;
+  int count = in_size;
   memcpy(out, sendbuf, count);
   return LIBHPX_OK;
 }
