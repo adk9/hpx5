@@ -243,7 +243,7 @@ void inst_fini(void) {
 }
 
 void inst_prof_dump(profile_log_t log) {
-  if (!_log_path) {
+  if (!_log_path || (log.num_events == 0 && log.num_counters == 0)) {
     return;
   }
 
@@ -271,7 +271,7 @@ void inst_prof_dump(profile_log_t log) {
       fprintf(f, "Total recorded user value: %f\n", total);
     }
 
-    if (total_time_ms != 0 || (log.num_counters >0 && !log.events[i].simple)) {
+    if (total_time_ms != 0 || (log.num_counters > 0 && !log.events[i].simple)) {
       fprintf(f, "Statistics:\n");
       fprintf(f, "%-24s%-24s%-24s%-24s\n",
              "Type", "Average", "Minimum", "Maximum");
