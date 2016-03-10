@@ -37,6 +37,7 @@ void allreduce_init(allreduce_t *r, size_t bytes, hpx_addr_t parent,
   int ctx_bytes = sizeof(coll_t) + sizeof(int32_t) * HPX_LOCALITIES;
   r->ctx = malloc(ctx_bytes);
   r->ctx->group_bytes = sizeof(int32_t) * HPX_LOCALITIES;
+  memset(r->ctx, 0, sizeof(coll_t) + r->ctx->group_bytes);
   r->ctx->comm_bytes = 0;
   r->ctx->group_sz = 0;
   r->ctx->recv_count = bytes;
@@ -48,6 +49,7 @@ void allreduce_fini(allreduce_t *r) {
   hpx_lco_delete_sync(r->lock);
   continuation_delete(r->continuation);
   reduce_delete(r->reduce);
+  free(r->ctx); 
 }
 
 int32_t allreduce_add(allreduce_t *r, hpx_action_t op, hpx_addr_t addr) {
@@ -111,19 +113,22 @@ void allreduce_reduce(allreduce_t *r, const void *val) {
     return;
   }
 
-  if (here->config->coll_network) {
+  if (here->config->coll_network && r->parent) {
     // for sw based direct collective join
     // create parcel and prepare for coll call
-    hpx_parcel_t *p = hpx_parcel_acquire(NULL, r->bytes);
-    void *output = malloc(r->bytes);
-    reduce_reset(r->reduce, hpx_parcel_get_data(p));
+    // hpx_parcel_t *p = hpx_parcel_acquire(NULL, r->bytes);
+    // void* in =  hpx_parcel_get_data(p);
+    void *output = calloc(r->bytes, sizeof(char));
+    void *in = calloc(r->bytes, sizeof(char));
+    reduce_reset(r->reduce, in);
 
     // perform synchronized collective comm
-    here->net->coll_sync(here->net, p, output, r->ctx);
+    here->net->coll_sync(here->net, in, r->bytes, output, r->ctx);
 
     // call all local continuations to communicate the result
     continuation_trigger(r->continuation, output);
     free(output);
+    free(in);
     return;
   }
   // the local continuation is done, join the parent node asynchronously

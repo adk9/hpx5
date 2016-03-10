@@ -111,9 +111,9 @@ static int _funneled_coll_init(void *network, coll_t **_c){
   return LIBHPX_OK;	
 }
 
-static int _funneled_coll_sync(void *network, hpx_parcel_t *in, void* out, coll_t* c){
-  void *sendbuf = in->buffer;
-  int count     = in->size;
+static int _funneled_coll_sync(void *network, void *in, size_t input_sz, void* out, coll_t* c){
+  void *sendbuf = in;
+  int count     = input_sz;
   char *comm = c->data + c->group_bytes;
   _funneled_t* isir = network;
   
