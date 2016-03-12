@@ -45,6 +45,7 @@
 /examples/cxx/guppie
 /examples/cxx/hello
 /examples/cxx/parspawn
+/examples/cxx/heat
 /examples/fibonacci
 /examples/pingpong
 /examples/allreduce
