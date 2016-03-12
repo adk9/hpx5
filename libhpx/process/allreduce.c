@@ -113,7 +113,7 @@ void allreduce_reduce(allreduce_t *r, const void *val) {
     return;
   }
 
-  if (here->config->coll_network) {
+  if (here->config->coll_network && r->parent) {
     // for sw based direct collective join
     // create parcel and prepare for coll call
     // hpx_parcel_t *p = hpx_parcel_acquire(NULL, r->bytes);
