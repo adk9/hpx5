@@ -121,9 +121,9 @@ private:
 
   template <typename R, typename... Args>
   int _register_helper(R (&f)(Args...)) {
-    return hpx_register_action(
-        HPX_DEFAULT, HPX_ATTR_NONE, __FILE__ ":" _HPX_XSTR(_id), &(_id),
-        sizeof...(Args) + 1, f, hpx::detail::_convert_arg_type<Args>::type...);
+    return hpx_register_action(TYPE, ATTR, __FILE__ ":" _HPX_XSTR(_id), &(_id),
+                               sizeof...(Args) + 1, f,
+                               hpx::detail::_convert_arg_type<Args>::type...);
   }
 
 public:
@@ -527,6 +527,17 @@ public:
         "action and argument types do not match");
     return _hpx_run(&_id, sizeof...(Args), hpx::detail::_convert_arg(args)...);
   }
+  template <typename T1, typename T2> int run(T1 *marshalled_arg, T2 sz) {
+    using traits = hpx::detail::function_traits<F>;
+    static_assert(ATTR == HPX_MARSHALLED,
+                  "Only marshalled actions take marshalled arguments.");
+    static_assert(
+        std::is_same<typename traits::arg_types,
+                     hpx::detail::tlist<T1 *, typename std::remove_reference<
+                                                  T2>::type>>::value,
+        "action and argument types do not match");
+    return _hpx_run(&_id, 2, marshalled_arg, sz);
+  }
 
   template <typename R, typename... Args> int _register(R (&f)(Args...)) {
     return _register_helper(f);
@@ -535,6 +546,14 @@ public:
 }; // template class Action
 
 // helper methods to create action object
+template <typename R, typename T1, typename T2, typename... ContTs>
+Action<HPX_DEFAULT, HPX_MARSHALLED, R(T1 *, T2), ContTs...>
+make_action(R (&f)(T1 *, T2)) {
+  static_assert(std::is_unsigned<T2>::value, "The second argument of a "
+                                             "marshalled action should be an "
+                                             "unsigned integer type.");
+  return Action<HPX_DEFAULT, HPX_MARSHALLED, R(T1 *, T2), ContTs...>(f);
+}
 template <hpx_action_type_t T, uint32_t ATTR, typename F, typename... ContTs>
 Action<T, ATTR, F, ContTs...> make_action(F &f) {
   return Action<T, ATTR, F, ContTs...>(f);
