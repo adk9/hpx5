@@ -121,14 +121,34 @@ static int _funneled_coll_sync(void *network, void *in, size_t input_sz, void* o
   //destined for collective operation
   isir->vtable.flush(network);
 
+  MPI_Request req;
+  MPI_Comm *communicator = comm;
+  MPI_Status status;
+  int flag = 0;
+  
   while (!sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE))
-    ;
+   ;
+  MPI_Iallreduce(sendbuf, out, 1, MPI_DOUBLE, MPI_MIN, *communicator, &req);
+  sync_store(&isir->progress_lock, 1, SYNC_RELEASE);
+  
+  while(!flag){ 
+  
+  while (!sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE))
+   ;
+  
   if(c->type == ALL_REDUCE) {
-    isir->xport->allreduce(sendbuf, out, count, NULL, &c->op, comm);
+    //isir->xport->allreduce(sendbuf, out, count, NULL, &c->op, comm);
+    MPI_Test(&req, &flag, &status);
   } else {
     log_dflt("Collective type descriptor : %d is Invalid! \n", c->type);
   }
+  
   sync_store(&isir->progress_lock, 1, SYNC_RELEASE);
+
+  if(!flag)
+    hpx_thread_yield();
+  
+ }
   return LIBHPX_OK;
 }
 
