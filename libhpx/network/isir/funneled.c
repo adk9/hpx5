@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <hpx/builtins.h>
 #include <libsync/queues.h>
+#include <unistd.h>
 
 #include <libhpx/debug.h>
 #include <libhpx/gas.h>
@@ -102,7 +103,7 @@ static int _funneled_coll_init(void *network, coll_t **_c){
   char *comm = c->data + c->group_bytes;
 
   _funneled_t* isir = network;
-  isir->vtable.flush(network);
+  //isir->vtable.flush(network);
   while (!sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE))
     ;
   isir->xport->create_comm(comm, ranks, num_active, here->ranks);
@@ -119,7 +120,7 @@ static int _funneled_coll_sync(void *network, void *in, size_t input_sz, void* o
   
   //flushing network is necessary (sufficient ?) to execute any packets
   //destined for collective operation
-  isir->vtable.flush(network);
+  //isir->vtable.flush(network);
 
   MPI_Request req;
   MPI_Comm *communicator = comm;
@@ -128,25 +129,27 @@ static int _funneled_coll_sync(void *network, void *in, size_t input_sz, void* o
   
   while (!sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE))
    ;
-  MPI_Iallreduce(sendbuf, out, 1, MPI_DOUBLE, MPI_MIN, *communicator, &req);
+  int ret = MPI_Iallreduce(sendbuf, out, 1, MPI_DOUBLE, MPI_MIN, *communicator, &req);
+  if(ret != MPI_SUCCESS){
+    printf("error in allreduce\n");
+  }  
   sync_store(&isir->progress_lock, 1, SYNC_RELEASE);
   
   while(!flag){ 
   
-  while (!sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE))
-   ;
+    if(sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE)){
   
-  if(c->type == ALL_REDUCE) {
-    //isir->xport->allreduce(sendbuf, out, count, NULL, &c->op, comm);
-    MPI_Test(&req, &flag, &status);
-  } else {
-    log_dflt("Collective type descriptor : %d is Invalid! \n", c->type);
-  }
+      MPI_Test(&req, &flag, &status);
+      if(c->type == ALL_REDUCE) {
+        //isir->xport->allreduce(sendbuf, out, count, NULL, &c->op, comm);
+      } else {
+        log_dflt("Collective type descriptor : %d is Invalid! \n", c->type);
+      }
   
-  sync_store(&isir->progress_lock, 1, SYNC_RELEASE);
-
-  if(!flag)
-    hpx_thread_yield();
+      sync_store(&isir->progress_lock, 1, SYNC_RELEASE);
+    }
+    if(!flag)
+      usleep(400);
   
  }
   return LIBHPX_OK;
