@@ -23,13 +23,12 @@
 
 typedef struct record {
   int worker;
-  uint64_t ns;
   uint64_t user[0];
 } record_t;
 
 #define _COL_OFFSET_WORKER    offsetof(record_t, worker)
-#define _COL_OFFSET_NS        offsetof(record_t, ns)
-#define _COL_OFFSET_USER(off) offsetof(record_t, user) + (off * 8)
+#define _COL_OFFSET_NS        offsetof(record_t, user)
+#define _COL_OFFSET_USER(off) offsetof(record_t, user) + ((off + 1) * 8)
 
 // ==================== Event metadata =========================================
 // Header file format:
@@ -137,10 +136,10 @@ typedef struct inst_event_col_metadata {
 
 /// Helper metadata generation macros for commonly used types
 
-#define METADATA_EMPTY(off)         METADATA_UINT64(off, "")
+#define METADATA_EMPTY(off)         METADATA_UINT64(off, "empty")
 
 #define METADATA_SIZE(off)          METADATA_UINT64(off, "size")
-#define METADATA_ACTION(off)        METADATA_UINT16(off, "action")
+#define METADATA_ACTION(off)        METADATA_UINT64(off, "action")
 #define METADATA_HPX_ADDR(off)      METADATA_UINT64(off, "global address")
 #define METADATA_PTR(off)           METADATA_UINT64(off, "local address")
 
@@ -167,7 +166,7 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 
 #define METADATA_PARCEL_ID(off)        METADATA_UINT64(off, "parcel id")
 #define METADATA_PARCEL_SIZE(off)      METADATA_UINT64(off, "parcel size")
-#define METADATA_PARCEL_SOURCE(off)    METADATA_UINT32(off, "source addr")
+#define METADATA_PARCEL_SOURCE(off)    METADATA_UINT64(off, "source addr")
 #define METADATA_PARCEL_PARENT_ID(off) METADATA_UINT64(off, "parent id")
 #define METADATA_PARCEL_TARGET(off)    METADATA_UINT64(off, "target addr")
 
@@ -289,8 +288,8 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 #define BOOKEND_BOOKEND_METADATA _METADATA_NONE
 
 #define GAS_ACCESS_METADATA                                \
-  _METADATA_ARGS(METADATA_UINT32(0, "source"),             \
-                 METADATA_UINT32(1, "destination"),        \
+  _METADATA_ARGS(METADATA_UINT64(0, "source"),             \
+                 METADATA_UINT64(1, "destination"),        \
                  METADATA_UINT64(2, "target"),             \
                  METADATA_SIZE(3))
 
