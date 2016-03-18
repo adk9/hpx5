@@ -50,9 +50,9 @@ typedef struct {
 
 // static hpx_action_t _main          = 0;
 static hpx_action_t _initGlobals = 0;
-static hpx_action_t _initDomain = 0;
-static hpx_action_t _initGrid = 0;
-static hpx_action_t _updateGrid = 0;
+// static hpx_action_t _initDomain = 0;
+// static hpx_action_t _initGrid = 0;
+// static hpx_action_t _updateGrid = 0;
 static hpx_action_t _write_double = 0;
 static hpx_action_t _read_double = 0;
 static hpx_action_t _stencil = 0;
@@ -179,7 +179,8 @@ static int _spawn_stencil_action(struct spawn_stencil_args *args, size_t size) {
   return hpx_call(cell, _stencil, args->max, args, sizeof(*args));
 }
 
-static int _updateGrid_action(void *args, size_t size) {
+static int _updateGrid_action(
+    /*void *args, size_t size*/) { // looks like args, size is not used?
   struct timeval ts_st, ts_end;
   double time, max_time;
   double dTmax, epsilon, dTmax_global;
@@ -252,6 +253,7 @@ static int _updateGrid_action(void *args, size_t size) {
   }
   return hpx::SUCCESS;
 }
+auto _updateGrid = hpx::make_action(_updateGrid_action);
 
 static int _initGlobals_action(global_args_t *args, size_t size) {
   grid = args->grid;
@@ -265,7 +267,7 @@ void init_globals(hpx_addr_t grid, hpx_addr_t new_grid) {
   assert(e == hpx::SUCCESS);
 }
 
-static int _initDomain_action(const InitArgs *args, size_t size) {
+static int _initDomain_action(const InitArgs *args, std::size_t size) {
   hpx_addr_t local = hpx_thread_current_target();
   Domain *ld = NULL;
   if (!hpx_gas_try_pin(local, (void **)&ld))
@@ -279,8 +281,9 @@ static int _initDomain_action(const InitArgs *args, size_t size) {
 
   return hpx::SUCCESS;
 }
+auto _initDomain = hpx::make_action(_initDomain_action);
 
-static int _initGrid_action(void *args, size_t size) {
+static int _initGrid_action() {
   hpx_addr_t local = hpx_thread_current_target();
   double *ld = NULL;
   if (!hpx_gas_try_pin(local, (void **)&ld))
@@ -294,7 +297,7 @@ static int _initGrid_action(void *args, size_t size) {
   hpx_gas_unpin(local);
   return hpx::SUCCESS;
 }
-// auto _initGrid = hpx::make_action(_initGrid_action);
+auto _initGrid = hpx::make_action(_initGrid_action);
 
 static int _main_action(int *input, std::size_t size) {
   grid =
@@ -309,12 +312,14 @@ static int _main_action(int *input, std::size_t size) {
   hpx_addr_t complete = hpx_lco_and_new(HPX_LOCALITIES);
 
   hpx_addr_t gDone = hpx_lco_future_new(0);
-  hpx_call(grid, _initGrid, gDone, NULL, 0);
+  //   hpx_call(grid, _initGrid, gDone, NULL, 0);
+  _initGrid.call(grid, gDone);
   hpx_lco_wait(gDone);
   hpx_lco_delete(gDone, HPX_NULL);
 
   hpx_addr_t nDone = hpx_lco_future_new(0);
-  hpx_call(new_grid, _initGrid, nDone, NULL, 0);
+  //   hpx_call(new_grid, _initGrid, nDone, NULL, 0);
+  _initGrid.call(new_grid, nDone);
   hpx_lco_wait(nDone);
   hpx_lco_delete(nDone, HPX_NULL);
 
@@ -329,14 +334,16 @@ static int _main_action(int *input, std::size_t size) {
   for (int i = 0, e = HPX_LOCALITIES; i < e; ++i) {
     InitArgs init = {.index = i, .runtimes = runtimes, .dTmax = dTmax};
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * i, sizeof(Domain));
-    hpx_call(block, _initDomain, done, &init, sizeof(init));
+    //     hpx_call(block, _initDomain.get_id(), done, &init, sizeof(init));
+    _initDomain.call(block, done, &init, sizeof(init));
   }
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);
 
   for (int i = 0; i < HPX_LOCALITIES; i++) {
     hpx_addr_t block = hpx_addr_add(domain, sizeof(Domain) * i, sizeof(Domain));
-    hpx_call(block, _updateGrid, complete, NULL, 0);
+    //     hpx_call(block, _updateGrid, complete, NULL, 0);
+    _updateGrid.call(block, complete);
   }
   hpx_lco_wait(complete);
   hpx_lco_delete(complete, HPX_NULL);
@@ -360,12 +367,13 @@ void _register_actions(void) {
   //   HPX_POINTER, HPX_SIZE_T);
   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _initGlobals,
                       _initGlobals_action, HPX_POINTER, HPX_SIZE_T);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _initDomain,
-                      _initDomain_action, HPX_POINTER, HPX_SIZE_T);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _initGrid, _initGrid_action,
-                      HPX_POINTER, HPX_SIZE_T);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _updateGrid,
-                      _updateGrid_action, HPX_POINTER, HPX_SIZE_T);
+  //   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _initDomain,
+  //                       _initDomain_action, HPX_POINTER, HPX_SIZE_T);
+  //   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _initGrid,
+  //   _initGrid_action,
+  //                       HPX_POINTER, HPX_SIZE_T);
+  //   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _updateGrid,
+  //                       _updateGrid_action, HPX_POINTER, HPX_SIZE_T);
   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _write_double,
                       _write_double_action, HPX_POINTER, HPX_SIZE_T);
   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _read_double,
