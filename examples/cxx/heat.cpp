@@ -179,7 +179,8 @@ static int _spawn_stencil_action(struct spawn_stencil_args *args, size_t size) {
   return hpx_call(cell, _stencil, args->max, args, sizeof(*args));
 }
 
-static int _updateGrid_action(/*void *args, size_t size*/) { // looks like args, size is not used?
+static int _updateGrid_action(
+    /*void *args, size_t size*/) { // looks like args, size is not used?
   struct timeval ts_st, ts_end;
   double time, max_time;
   double dTmax, epsilon, dTmax_global;
