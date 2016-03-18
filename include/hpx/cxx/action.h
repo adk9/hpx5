@@ -28,8 +28,8 @@ namespace hpx {
 
 namespace detail {
 
-// used to check sameness of type lists
-template <typename... Ts> struct tlist {};
+// list of types(type pack), meta functions defined on this
+template <typename... Ts> struct tlist { using type = tlist<Ts...>; };
 
 // reference: https://functionalcpp.wordpress.com/2013/08/05/function-traits/
 template <class F> struct function_traits;
@@ -46,6 +46,71 @@ template <class R, class... Args> struct function_traits<R(Args...)> {
   static constexpr std::size_t arity = sizeof...(Args);
   using arg_types = tlist<Args...>;
 }; // template struct function_traits
+
+/// template meta (Scheme-like) functions on tlist
+/// Reduce_Right takes binary op BOP, initial value I (returned if tlist is
+/// empty), and a tlist L
+/// and reduces from the 'right'
+template <template <typename, typename> class BOP, typename I, typename L>
+struct Reduce_Right;
+template <template <typename, typename> class BOP, typename I>
+struct Reduce_Right<BOP, I, tlist<>> : I {};
+template <template <typename, typename> class BOP, typename I, typename T>
+struct Reduce_Right<BOP, I, tlist<T>> : T {};
+template <template <typename, typename> class BOP, typename I, typename H,
+          typename... TL>
+struct Reduce_Right<BOP, I, tlist<H, TL...>>
+    : BOP<H, typename Reduce_Right<BOP, I, tlist<TL...>>::type> {};
+
+/// Map takes binary op BOP, and two tlists, applies BOP on elements of L1 and
+/// L2 and produces another tlist
+/// L1 and L2 must be of the same length
+template <template <typename, typename> class BOP, typename L1, typename L2>
+struct Map;
+template <template <typename, typename> class BOP, typename... T1s,
+          typename... T2s>
+struct Map<BOP, tlist<T1s...>, tlist<T2s...>>
+    : tlist<typename BOP<T1s, T2s>::type...> {};
+
+/// Combine Map and Reduce_Right
+template <template <typename, typename> class M,
+          template <typename, typename> class R, typename I, typename L1,
+          typename L2>
+struct Map_Reduce : Reduce_Right<R, I, typename Map<M, L1, L2>::type> {};
+
+template <bool B> using bool_constant = std::integral_constant<bool, B>;
+
+// ops on {std::true_type, std::false_type}
+template <typename B1, typename B2>
+struct And : std::conditional<B1::value, B2, B1> {};
+template <typename B1, typename B2>
+struct Or : std::conditional<B1::value, B1, B2> {};
+template <class B> struct Not : bool_constant<!B::value> {};
+
+template <typename L1, typename L2> struct Same_Length;
+template <typename... T1s, typename... T2s>
+struct Same_Length<tlist<T1s...>, tlist<T2s...>>
+    : bool_constant<(sizeof...(T1s) == sizeof...(T2s))> {};
+
+/// needed to conditionally evaluate operands (std::conditional not enough)
+template <bool C, typename T, typename F> struct delayed_conditional;
+template <typename T, typename F> struct delayed_conditional<true, T, F> : T {};
+template <typename T, typename F>
+struct delayed_conditional<false, T, F> : F {};
+
+/// checks if L1 and L2 are of equal lengths and then performs Map_Reduce
+/// arguments are M: map op, R: reduce op, I: returned by reduce for empty lists
+/// L1, L2: tlists that M operates on and converts to result tlist which is then
+/// operated on by reduce
+template <template <typename, typename> class M,
+          template <typename, typename> class R, typename I, typename L1,
+          typename L2>
+struct Checked_Map_Reduce {
+  using Cond = typename Same_Length<L1, L2>::type;
+  using type =
+      typename delayed_conditional<Cond::value, Map_Reduce<M, R, I, L1, L2>,
+                                   std::false_type>::type;
+};
 
 /// HPX basic datatypes
 /// HPX_CHAR, HPX_UCHAR, HPX_SCHAR, HPX_SHORT, HPX_USHORT, HPX_SSHORT, HPX_INT,
@@ -83,14 +148,42 @@ template <typename T> struct _convert_arg_type<T *> {
 template <typename T>
 constexpr decltype(HPX_POINTER) _convert_arg_type<T *>::type;
 
-/// This overloaded function converts actual call arguments to pointers
-/// to be passed to the C impl
-template <typename T> T *_convert_arg(T &arg) {
-  return &arg;
-}
-template <typename T> T &&_convert_arg(T &&arg) {
-  return std::forward<T>(arg);
-}
+template <hpx_action_type_t Type, uint32_t Attr, typename Alist>
+struct typecheck_action_args;
+
+/// marshalled actions only have two arguments
+/// first is a pointer to the marshalled buffer and second is (convertible to)
+/// std::size
+template <hpx_action_type_t Type, typename T1, typename T2>
+struct typecheck_action_args<Type, HPX_MARSHALLED, tlist<T1, T2>> {
+  using decayed_t1 = typename std::decay<T1>::type;
+  using decayed_t2 = typename std::decay<T2>::type;
+  using cond1 = tlist<typename std::is_pointer<decayed_t1>::type,
+                      typename std::is_unsigned<decayed_t2>::type>;
+  using type = typename Reduce_Right<And, std::false_type, cond1>::type;
+};
+/// for actions that are not marshalled, arguments cannot be pointers
+/// and must be one of the hpx supported types
+template <hpx_action_type_t Type, typename... Ts>
+struct typecheck_action_args<Type, HPX_ATTR_NONE, tlist<Ts...>> {
+  using type = typename Reduce_Right<And, std::true_type,
+                                     tlist<Not<std::is_pointer<Ts>>...>>::type;
+};
+template <hpx_action_type_t Type, typename Alist>
+struct typecheck_action_args<Type, HPX_PINNED, Alist>
+    : typecheck_action_args<Type, HPX_ATTR_NONE, Alist> {};
+template <hpx_action_type_t Type, typename Alist>
+struct typecheck_action_args<Type, HPX_INTERNAL, Alist>
+    : typecheck_action_args<Type, HPX_ATTR_NONE, Alist> {};
+template <hpx_action_type_t Type, typename Alist>
+struct typecheck_action_args<Type, HPX_VECTORED, Alist>
+    : typecheck_action_args<Type, HPX_ATTR_NONE, Alist> {};
+template <hpx_action_type_t Type, typename Alist>
+struct typecheck_action_args<Type, HPX_COALESCED, Alist>
+    : typecheck_action_args<Type, HPX_ATTR_NONE, Alist> {};
+template <hpx_action_type_t Type, typename Alist>
+struct typecheck_action_args<Type, HPX_COMPRESSED, Alist>
+    : typecheck_action_args<Type, HPX_ATTR_NONE, Alist> {};
 
 } // namespace detail
 } // namspace hpx
@@ -126,6 +219,19 @@ private:
                                hpx::detail::_convert_arg_type<Args>::type...);
   }
 
+  /// This overloaded function converts actual call arguments to pointers
+  /// to be passed to the C impl
+  template <typename T>
+  typename std::enable_if<(ATTR != HPX_MARSHALLED), T *>::type
+  _convert_arg(T &arg) {
+    return &arg;
+  }
+  template <typename T>
+  typename std::enable_if<(ATTR == HPX_MARSHALLED), T &&>::type
+  _convert_arg(T &&arg) {
+    return std::forward<T>(arg);
+  }
+
 public:
   Action() : _is_registerd(false) {
   }
@@ -133,6 +239,10 @@ public:
   Action(F &f) { // Should the parameter be always a reference?
     static_assert(std::is_function<F>::value,
                   "Action constructor argument is not a function.");
+    using atypes = typename hpx::detail::function_traits<F>::arg_types;
+    static_assert(
+        hpx::detail::typecheck_action_args<TYPE, ATTR, atypes>::type::value,
+        "Type checking on function arguments failed");
     _register_helper(f); // What to do with return value? Maybe throw an
                          // exception when the registration is not successful?
     _is_registerd = true;
@@ -185,13 +295,32 @@ public:
   /// @returns            HPX_SUCCESS, or an error code if there was a problem
   ///                     locally during the hpx_call invocation.
   template <typename... Args>
-  int call(hpx_addr_t addr, hpx_addr_t result, Args &... args) {
-    return _hpx_call(addr, _id, result, sizeof...(Args), &args...);
+  int call(hpx_addr_t addr, hpx_addr_t result, Args &&... args) {
+    using L1 = typename hpx::detail::tlist<Args...>;
+    using L2 = typename hpx::detail::function_traits<F>::arg_types;
+    static_assert(
+        hpx::detail::typecheck_action_args<TYPE, ATTR, L1>::type::value,
+        "argument typecheck failed");
+    static_assert(
+        hpx::detail::Checked_Map_Reduce<std::is_convertible, hpx::detail::And,
+                                        std::true_type, L1, L2>::type::value,
+        "action and argument types do not match");
+    return _hpx_call(addr, _id, result, sizeof...(Args), _convert_arg(args)...);
   }
   template <typename T1, typename LCO, typename... Args>
   int call(const ::hpx::global_ptr<T1> &addr,
-           const ::hpx::global_ptr<LCO> &result, Args &... args) {
-    return _hpx_call(addr.get(), _id, result.get(), sizeof...(Args), &args...);
+           const ::hpx::global_ptr<LCO> &result, Args &&... args) {
+    using L1 = typename hpx::detail::tlist<Args...>;
+    using L2 = typename hpx::detail::function_traits<F>::arg_types;
+    static_assert(
+        hpx::detail::typecheck_action_args<TYPE, ATTR, L1>::type::value,
+        "argument typecheck failed");
+    static_assert(
+        hpx::detail::Checked_Map_Reduce<std::is_convertible, hpx::detail::And,
+                                        std::true_type, L1, L2>::type::value,
+        "action and argument types do not match");
+    return _hpx_call(addr.get(), _id, result.get(), sizeof...(Args),
+                     _convert_arg(args)...);
   }
 
   /// Locally synchronous call interface when LCO is set.
@@ -519,25 +648,29 @@ public:
   }
 
   template <typename... Args> int run(Args &&... args) {
-    using traits = hpx::detail::function_traits<F>;
+    using L1 = typename hpx::detail::tlist<Args...>;
+    using L2 = typename hpx::detail::function_traits<F>::arg_types;
     static_assert(
-        ::std::is_same<typename traits::arg_types,
-                       hpx::detail::tlist<typename std::remove_reference<
-                           Args>::type...>>::value,
-        "action and argument types do not match");
-    return _hpx_run(&_id, sizeof...(Args), hpx::detail::_convert_arg(args)...);
-  }
-  template <typename T1, typename T2> int run(T1 *marshalled_arg, T2 sz) {
-    using traits = hpx::detail::function_traits<F>;
-    static_assert(ATTR == HPX_MARSHALLED,
-                  "Only marshalled actions take marshalled arguments.");
+        hpx::detail::typecheck_action_args<TYPE, ATTR, L1>::type::value,
+        "argument typecheck failed");
     static_assert(
-        std::is_same<typename traits::arg_types,
-                     hpx::detail::tlist<T1 *, typename std::remove_reference<
-                                                  T2>::type>>::value,
+        hpx::detail::Checked_Map_Reduce<std::is_convertible, hpx::detail::And,
+                                        std::true_type, L1, L2>::type::value,
         "action and argument types do not match");
-    return _hpx_run(&_id, 2, marshalled_arg, sz);
+    return _hpx_run(&_id, sizeof...(Args), _convert_arg(args)...);
   }
+  //   template <typename T1, typename T2> int run(T1 *marshalled_arg, T2 sz) {
+  //     using traits = hpx::detail::function_traits<F>;
+  //     static_assert(ATTR == HPX_MARSHALLED,
+  //                   "Only marshalled actions take marshalled arguments.");
+  //     static_assert(
+  //         std::is_same<typename traits::arg_types,
+  //                      hpx::detail::tlist<T1 *, typename
+  //                      std::remove_reference<
+  //                                                   T2>::type>>::value,
+  //         "action and argument types do not match");
+  //     return _hpx_run(&_id, 2, marshalled_arg, sz);
+  //   }
 
   template <typename R, typename... Args> int _register(R (&f)(Args...)) {
     return _register_helper(f);
@@ -549,9 +682,10 @@ public:
 template <typename R, typename T1, typename T2, typename... ContTs>
 Action<HPX_DEFAULT, HPX_MARSHALLED, R(T1 *, T2), ContTs...>
 make_action(R (&f)(T1 *, T2)) {
-  static_assert(std::is_unsigned<T2>::value, "The second argument of a "
-                                             "marshalled action should be an "
-                                             "unsigned integer type.");
+  //   static_assert(std::is_unsigned<T2>::value, "The second argument of a "
+  //                                              "marshalled action should be
+  //                                              an "
+  //                                              "unsigned integer type.");
   return Action<HPX_DEFAULT, HPX_MARSHALLED, R(T1 *, T2), ContTs...>(f);
 }
 template <hpx_action_type_t T, uint32_t ATTR, typename F, typename... ContTs>
