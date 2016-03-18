@@ -179,8 +179,7 @@ static int _spawn_stencil_action(struct spawn_stencil_args *args, size_t size) {
   return hpx_call(cell, _stencil, args->max, args, sizeof(*args));
 }
 
-static int _updateGrid_action(
-    /*void *args, size_t size*/) { // looks like args, size is not used?
+static int _updateGrid_action(/*void *args, size_t size*/) { // looks like args, size is not used?
   struct timeval ts_st, ts_end;
   double time, max_time;
   double dTmax, epsilon, dTmax_global;
@@ -283,7 +282,7 @@ static int _initDomain_action(const InitArgs *args, std::size_t size) {
 }
 auto _initDomain = hpx::make_action(_initDomain_action);
 
-static int _initGrid_action() {
+static int _initGrid_action(/*void *args, size_t size*/) { // arguments not used
   hpx_addr_t local = hpx_thread_current_target();
   double *ld = NULL;
   if (!hpx_gas_try_pin(local, (void **)&ld))

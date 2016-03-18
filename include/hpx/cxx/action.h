@@ -659,18 +659,6 @@ public:
         "action and argument types do not match");
     return _hpx_run(&_id, sizeof...(Args), _convert_arg(args)...);
   }
-  //   template <typename T1, typename T2> int run(T1 *marshalled_arg, T2 sz) {
-  //     using traits = hpx::detail::function_traits<F>;
-  //     static_assert(ATTR == HPX_MARSHALLED,
-  //                   "Only marshalled actions take marshalled arguments.");
-  //     static_assert(
-  //         std::is_same<typename traits::arg_types,
-  //                      hpx::detail::tlist<T1 *, typename
-  //                      std::remove_reference<
-  //                                                   T2>::type>>::value,
-  //         "action and argument types do not match");
-  //     return _hpx_run(&_id, 2, marshalled_arg, sz);
-  //   }
 
   template <typename R, typename... Args> int _register(R (&f)(Args...)) {
     return _register_helper(f);
