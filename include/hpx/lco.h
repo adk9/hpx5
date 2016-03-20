@@ -740,6 +740,26 @@ hpx_addr_t hpx_lco_user_new(size_t size, hpx_action_t id, hpx_action_t op,
   HPX_PUBLIC;
 /// @}
 
+/// Allocate a dataflow LCO.
+///
+hpx_addr_t hpx_lco_dataflow_new(void)
+  HPX_PUBLIC;
+
+/// Add a node to the dataflow LCO.
+///
+/// @param lco      The dataflow LCO
+/// @param action   The action to run when the inputs are available
+/// @param out      The output LCO
+/// @param n        Number of input LCOs
+/// @param ...      The input LCOs
+///
+/// @returns        HPX_SUCCESS, or an error code.
+int _hpx_lco_dataflow_add(hpx_addr_t lco, hpx_action_t action, hpx_addr_t out, int n, ...)
+  HPX_PUBLIC;
+
+#define hpx_lco_dataflow_add(lco, action, out, ...)                   \
+  _hpx_lco_dataflow_add(addr, action, out, __HPX_NARGS(__VA_ARGS__) , \
+                        ##__VA_ARGS__)
 /// @}
 
 #ifdef __cplusplus
