@@ -632,9 +632,10 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
   EVENT_SCHED_EXIT();
   EVENT_SCHEDTIMES_SCHED(source, spins);
 
-  // We shouldn't be able to transfer to the same parcel.
-  assert (p != w->current);
-  _transfer(p, _checkpoint, &(_checkpoint_env_t){ .f = f, .env = env }, w);
+  // Don't transfer to the same parcel.
+  if (p != w->current) {
+    _transfer(p, _checkpoint, &(_checkpoint_env_t){ .f = f, .env = env }, w);
+  }
 
   (void)source;
   (void)spins;
