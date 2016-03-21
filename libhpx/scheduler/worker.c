@@ -121,7 +121,6 @@ static void _continue_parcel_va(hpx_parcel_t *p, int n, va_list *args) {
   }
   else {
     process_recover_credit(p);
-    EVENT_THREAD_RUN(p, self);
   }
 }
 
@@ -541,9 +540,7 @@ typedef struct {
 static void _checkpoint(hpx_parcel_t *to, void *sp, void *env) {
   hpx_parcel_t *prev = _swap_current(to, sp, self);
   _checkpoint_env_t *c = env;
-  EVENT_THREAD_RUN(to, self);
   c->f(prev, c->env);
-  EVENT_THREAD_END(to, self);
 }
 
 /// Probe and progress the network.
@@ -581,12 +578,12 @@ static void _schedule_network(worker_t *w) {
 ///
 /// @returns            The status from _transfer.
 static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
+  EVENT_SCHED_ENTER();
   int source = -1;
   int spins = 0;
   hpx_parcel_t *p = NULL;
   worker_t *w = self;
   while (!worker_is_stopped()) {
-    EVENT_SCHED_ENTER();
     if (!block) {
       p = _schedule_lifo(w);
       INST(source = SOURCE_LIFO);
@@ -635,13 +632,10 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
   EVENT_SCHED_EXIT();
   EVENT_SCHEDTIMES_SCHED(source, spins);
 
-  // don't transfer to the same parcel
-  if (p != w->current) {
-    EVENT_THREAD_RUN(p, w);
-    _transfer(p, _checkpoint, &(_checkpoint_env_t){ .f = f, .env = env }, w);
-  }
+  // We shouldn't be able to transfer to the same parcel.
+  assert (p != w->current);
+  _transfer(p, _checkpoint, &(_checkpoint_env_t){ .f = f, .env = env }, w);
 
-  EVENT_THREAD_RESUME(w->current, w);
   (void)source;
   (void)spins;
 }
