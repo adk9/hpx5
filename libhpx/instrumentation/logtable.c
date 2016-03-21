@@ -146,11 +146,10 @@ void logtable_vappend(logtable_t *log, int n, va_list *args) {
   }
   sync_fadd(&log->last, 1, SYNC_ACQ_REL); // update size
 
-  record_t *r = &log->records[i] + i*(n+1)*sizeof(uint64_t)/sizeof(record_t);
+  record_t *r = (void*)((char*)log->records + i * log->record_size);
   r->worker = HPX_THREAD_ID;
-  uint64_t *user = r->user;
-  user[0] = hpx_time_from_start_ns(hpx_time_now());
-  for (int i = 0; i < n; ++i) {
-    user[i+1] = va_arg(*args, uint64_t);
+  r->user[0] = hpx_time_from_start_ns(hpx_time_now());
+  for (int i = 1, e = n + 1; i < e; ++i) {
+    r->user[i] = va_arg(*args, uint64_t);
   }
 }
