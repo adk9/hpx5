@@ -166,7 +166,8 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 
 #define METADATA_PARCEL_ID(off)        METADATA_UINT64(off, "parcel id")
 #define METADATA_PARCEL_SIZE(off)      METADATA_UINT64(off, "parcel size")
-#define METADATA_PARCEL_SOURCE(off)    METADATA_UINT64(off, "source addr")
+#define METADATA_PARCEL_SOURCE_A(off)  METADATA_UINT64(off, "source addr")
+#define METADATA_PARCEL_SOURCE_R(off)  METADATA_UINT64(off, "source rank")
 #define METADATA_PARCEL_PARENT_ID(off) METADATA_UINT64(off, "parent id")
 #define METADATA_PARCEL_TARGET(off)    METADATA_UINT64(off, "target addr")
 
@@ -178,13 +179,13 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 #define PARCEL_SEND_METADATA                                 \
   _METADATA_ARGS(METADATA_PARCEL_ID(0), METADATA_ACTION(1),  \
                  METADATA_PARCEL_SIZE(2),                    \
-                 METADATA_PARCEL_SOURCE(3),                  \
+                 METADATA_PARCEL_SOURCE_A(3),                \
                  METADATA_PARCEL_TARGET(4))
 
 #define PARCEL_RECV_METADATA                                 \
  _METADATA_ARGS(METADATA_PARCEL_ID(0), METADATA_ACTION(1),   \
                  METADATA_PARCEL_SIZE(2),                    \
-                 METADATA_PARCEL_SOURCE(3),                  \
+                 METADATA_PARCEL_SOURCE_R(3),                \
                  METADATA_PARCEL_TARGET(4))
 
 #define PARCEL_RUN_METADATA                                  \
