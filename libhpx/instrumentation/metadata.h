@@ -23,7 +23,7 @@
 
 typedef struct record {
   int worker;
-  uint64_t user[0];
+  uint64_t user[];
 } record_t;
 
 #define _COL_OFFSET_WORKER    offsetof(record_t, worker)
@@ -33,20 +33,20 @@ typedef struct record {
 // ==================== Event metadata =========================================
 // Header file format:
 //
-// Magic file identifier bytes = 
+// Magic file identifier bytes =
 //   {'h', 'p', 'x', ' ', 'l', 'o', 'g', '\0', 0xFF, 0x00, 0xAA, 0x55}
 // table offset
 // [metadata-id, length, data]*
 //
 //
 //
-// * "table offset" is 4 bytes 
+// * "table offset" is 4 bytes
 // Then,
-// * "metadata-id" is 4 bytes 
-// * "length" is 4 bytes, indicates how many bytes to read for the data 
+// * "metadata-id" is 4 bytes
+// * "length" is 4 bytes, indicates how many bytes to read for the data
 //   portion of this header entry
 // * the data is a set of bytes, interpreted in a context-specific manner
-// 
+//
 // Metadata-id numbers:
 // -1 -- Named value
 // 0 -- types
