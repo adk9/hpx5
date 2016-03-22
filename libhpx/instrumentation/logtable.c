@@ -123,7 +123,7 @@ void logtable_fini(logtable_t *log) {
 
   if (log->fd != -1) {
     size_t filesize =
-      (uintptr_t)&log->records[log->last] - (uintptr_t)log->header;
+      (uintptr_t)log->records + log->last*log->record_size - (uintptr_t)log->header;
     int e = ftruncate(log->fd, filesize);
     if (e) {
       log_error("failed to truncate trace file\n");
