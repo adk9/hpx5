@@ -354,7 +354,7 @@ void inst_prof_dump(profile_log_t log) {
 
 void inst_vtrace(int UNUSED, int n, int id, ...) {
   logtable_t *log = &_logs[id];
-  if (!log->records) {
+  if (!log->buffer) {
     return;
   }
 
