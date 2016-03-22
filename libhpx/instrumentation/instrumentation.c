@@ -224,6 +224,13 @@ int inst_start(void) {
 #ifndef ENABLE_INSTRUMENTATION
   return LIBHPX_OK;
 #endif
+
+  // If we don't have a valid directory for logging then we're not going to
+  // output anything.
+  if (!_log_path) {
+    return NULL;
+  }
+
   // write action table for tracing
   if (inst_trace_class(HPX_TRACE_PARCEL)) {
     _dump_actions();
