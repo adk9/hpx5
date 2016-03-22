@@ -30,10 +30,6 @@
 #include "file_header.h"
 #include "logtable.h"
 
-static size_t _header_size(logtable_t *log) {
-  return (size_t)((uintptr_t)log->records - (uintptr_t)log->header);
-}
-
 static int _create_file(const char *filename, size_t size) {
   static const int flags = O_RDWR | O_CREAT;
   static const int perm = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
@@ -56,19 +52,14 @@ static int _create_file(const char *filename, size_t size) {
 static void *_create_mmap(size_t size, int file) {
   static const int prot = PROT_WRITE;
   static const int flags = MAP_SHARED | MAP_NORESERVE;
-  void *base = mmap(NULL, size * sizeof(record_t), prot, flags, file, 0);
+  void *base = mmap(NULL, size, prot, flags, file, 0);
   if (base == MAP_FAILED) {
     log_error("could not mmap log file\n");
-    return NULL;
+    base = NULL;
   }
   else {
-    log_dflt("mapped %zu byte trace file at %p.\n", size * sizeof(record_t), base);
+    log_dflt("mapped %zu byte trace file at %p.\n", size, base);
   }
-
-  if ((uintptr_t)base % HPX_CACHELINE_SIZE) {
-    log_dflt("log records are not cacheline aligned\n");
-  }
-
   return base;
 }
 
@@ -77,10 +68,10 @@ int logtable_init(logtable_t *log, const char* filename, size_t size,
   log->fd = -1;
   log->class = class;
   log->id = id;
-  sync_store(&log->next, 0, SYNC_RELEASE);
-  sync_store(&log->last, 0, SYNC_RELEASE);
+  log->record_bytes = 0;
   log->max_size = size;
-  log->records = NULL;
+  log->buffer = NULL;
+  sync_store(&log->next, NULL, SYNC_RELEASE);
 
   if (filename == NULL || size == 0) {
     return LIBHPX_OK;
@@ -91,17 +82,17 @@ int logtable_init(logtable_t *log, const char* filename, size_t size,
     goto unwind;
   }
 
-  log->header = _create_mmap(size, log->fd);
-  if (!log->header) {
+  log->buffer = _create_mmap(size, log->fd);
+  if (!log->buffer) {
     goto unwind;
   }
 
-  log->record_size = sizeof(record_t) + TRACE_EVENT_NUM_FIELDS[id] * sizeof(uint64_t);
+  int fields = TRACE_EVENT_NUM_FIELDS[id];
+  log->record_bytes = sizeof(record_t) + fields * sizeof(uint64_t);
 
-  size_t header_size = write_trace_header(log->header, class, id);
-  assert(((uintptr_t)log->header + header_size) % 8 == 0);
-  log->records = (void*)((uintptr_t)log->header + header_size);
-
+  size_t header_size = write_trace_header(log->buffer, class, id);
+  assert(((uintptr_t)log->buffer + header_size) % 8 == 0);
+  sync_store(&log->next, log->buffer + header_size, SYNC_RELEASE);
   return LIBHPX_OK;
 
  unwind:
@@ -114,22 +105,18 @@ void logtable_fini(logtable_t *log) {
     return;
   }
 
-  if (log->header) {
-    int e = munmap(log->header, log->max_size);
-    if (e) {
+  if (log->buffer) {
+    if (munmap(log->buffer, log->max_size)) {
       log_error("failed to unmap trace file\n");
     }
   }
 
   if (log->fd != -1) {
-    size_t filesize =
-      (uintptr_t)log->records + log->last*log->record_size - (uintptr_t)log->header;
-    int e = ftruncate(log->fd, filesize);
-    if (e) {
+    size_t filesize = sync_load(&log->next, SYNC_ACQUIRE) - log->buffer;
+    if (ftruncate(log->fd, filesize)) {
       log_error("failed to truncate trace file\n");
     }
-    e = close(log->fd);
-    if (e) {
+    if (close(log->fd)) {
       log_error("failed to close trace file\n");
     }
   }
@@ -140,13 +127,12 @@ void logtable_append(logtable_t *log, uint64_t u1, uint64_t u2, uint64_t u3,
 }
 
 void logtable_vappend(logtable_t *log, int n, va_list *args) {
-  size_t i = sync_fadd(&log->next, 1, SYNC_ACQ_REL);
-  if (_header_size(log) + (i+1) * log->record_size > log->max_size) {
+  char *next = sync_fadd(&log->next, log->record_bytes, SYNC_ACQ_REL);
+  if (next - log->buffer > log->max_size) {
     return;
   }
-  sync_fadd(&log->last, 1, SYNC_ACQ_REL); // update size
 
-  record_t *r = (void*)((char*)log->records + i * log->record_size);
+  record_t *r = (record_t*)next;
   r->worker = HPX_THREAD_ID;
   r->ns = hpx_time_from_start_ns(hpx_time_now());
   for (int i = 0, e = n; i < e; ++i) {
