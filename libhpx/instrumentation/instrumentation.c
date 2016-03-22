@@ -228,7 +228,7 @@ int inst_start(void) {
   // If we don't have a valid directory for logging then we're not going to
   // output anything.
   if (!_log_path) {
-    return NULL;
+    return LIBHPX_OK;
   }
 
   // write action table for tracing
