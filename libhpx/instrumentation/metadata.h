@@ -23,12 +23,13 @@
 
 typedef struct record {
   int worker;
+  uint64_t ns;
   uint64_t user[];
 } record_t;
 
 #define _COL_OFFSET_WORKER    offsetof(record_t, worker)
-#define _COL_OFFSET_NS        offsetof(record_t, user)
-#define _COL_OFFSET_USER(off) offsetof(record_t, user) + ((off + 1) * 8)
+#define _COL_OFFSET_NS        offsetof(record_t, ns)
+#define _COL_OFFSET_USER(off) offsetof(record_t, user) + (off * 8)
 
 // ==================== Event metadata =========================================
 // Header file format:

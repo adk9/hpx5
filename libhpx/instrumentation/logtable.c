@@ -148,8 +148,8 @@ void logtable_vappend(logtable_t *log, int n, va_list *args) {
 
   record_t *r = (void*)((char*)log->records + i * log->record_size);
   r->worker = HPX_THREAD_ID;
-  r->user[0] = hpx_time_from_start_ns(hpx_time_now());
-  for (int i = 1, e = n + 1; i < e; ++i) {
+  r->ns = hpx_time_from_start_ns(hpx_time_now());
+  for (int i = 0, e = n; i < e; ++i) {
     r->user[i] = va_arg(*args, uint64_t);
   }
 }
