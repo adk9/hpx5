@@ -99,4 +99,5 @@ LIBHPX_EVENT(BOOKEND, BOOKEND)
 /// GAS events
 /// @{
 LIBHPX_EVENT(GAS, ACCESS, int, int, hpx_addr_t, size_t)
+LIBHPX_EVENT(GAS, MOVE, hpx_addr_t, hpx_addr_t, hpx_addr_t)
 /// @}

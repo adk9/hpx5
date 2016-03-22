@@ -295,4 +295,9 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
                  METADATA_UINT64(2, "target"),             \
                  METADATA_SIZE(3))
 
+#define GAS_MOVE_METADATA                                  \
+  _METADATA_ARGS(METADATA_UINT64(0, "block"),              \
+                 METADATA_UINT64(1, "old"),                \
+                 METADATA_UINT64(2, "new"))
+
 #endif
