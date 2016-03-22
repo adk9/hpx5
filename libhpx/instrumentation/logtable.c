@@ -91,7 +91,6 @@ int logtable_init(logtable_t *log, const char* filename, size_t size,
   log->record_bytes = sizeof(record_t) + fields * sizeof(uint64_t);
 
   size_t header_size = write_trace_header(log->buffer, class, id);
-  assert(((uintptr_t)log->buffer + header_size) % 8 == 0);
   sync_store(&log->next, log->buffer + header_size, SYNC_RELEASE);
   return LIBHPX_OK;
 
@@ -120,10 +119,6 @@ void logtable_fini(logtable_t *log) {
       log_error("failed to close trace file\n");
     }
   }
-}
-
-void logtable_append(logtable_t *log, uint64_t u1, uint64_t u2, uint64_t u3,
-                     uint64_t u4) {
 }
 
 void logtable_vappend(logtable_t *log, int n, va_list *args) {
