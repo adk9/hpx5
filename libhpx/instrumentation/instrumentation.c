@@ -93,7 +93,7 @@ static void _dump_actions(void) {
   }
 }
 
-static void _log_create(int class, int id, size_t size, hpx_time_t now) {
+static void _log_create(int class, int id, size_t size) {
   char filename[256];
   snprintf(filename, 256, "event.%d.%d.%d.%s.%s.log",
            class, id, hpx_get_my_rank(),
@@ -164,18 +164,18 @@ int inst_init(config_t *cfg) {
     return LIBHPX_OK;
   }
 
-  _log_path = _get_log_path(cfg->inst_dir);
-  if (_log_path == NULL) {
-    return LIBHPX_OK;
-  }
-
   // create log files
-  hpx_time_t start = hpx_time_now();
   int nclasses = _HPX_NELEM(HPX_TRACE_CLASS_TO_STRING);
   for (int cl = 0, e = nclasses; cl < e; ++cl) {
     if (inst_trace_class(1 << cl)) {
       for (int id = TRACE_OFFSETS[cl], e = TRACE_OFFSETS[cl + 1]; id < e; ++id) {
-        _log_create(cl, id, cfg->trace_filesize, start);
+        if (!_log_path) {
+          _log_path = _get_log_path(cfg->inst_dir);
+          if (!_log_path) {
+            return LIBHPX_OK;
+          }
+        }
+        _log_create(cl, id, cfg->trace_filesize);
       }
     }
   }
@@ -247,6 +247,7 @@ void inst_fini(void) {
     logtable_fini(&_logs[i]);
   }
   free((void*)_log_path);
+  _log_path = NULL;
 }
 
 void inst_prof_dump(profile_log_t log) {
