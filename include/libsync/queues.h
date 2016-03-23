@@ -20,7 +20,6 @@
 /// http://www.cs.rochester.edu/u/scott/papers/1996_PODC_queues.pdf, implemented
 /// based on
 /// https://www.cs.rochester.edu/research/synchronization/pseudocode/queues.html#tlq
-#include <config.h>
 #include <hpx/attributes.h>
 #include "cptr.h"
 
@@ -35,7 +34,7 @@ struct two_lock_queue_node {
 /// @brief
 /// Using SWAP on the head and tail pointers for locking. Could use something
 /// more scalable if higher contention.
-typedef struct HPX_ALIGNED(64){
+typedef struct HPX_ALIGNED(64) {
   two_lock_queue_node_t *head;
   const char _paddinga[HPX_CACHELINE_SIZE - sizeof(two_lock_queue_node_t*)];
   two_lock_queue_node_t *tail;
