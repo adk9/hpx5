@@ -30,23 +30,31 @@
 #include <libhpx/profiling.h>
 #include <libsync/sync.h>
 
-/// Each locality maintains a single profile log
-extern profile_log_t _profile_log;
 
 int prof_init(struct config *cfg) {
-  _profile_log.counters = NULL;
-  _profile_log.num_counters = 0;
-  _profile_log.events = malloc(_profile_log.max_events *
+  profile_log.counters = NULL;
+  if (config_prof_counters_isset(cfg, HPX_PROF_TIMERS)) {
+    profile_log.num_counters = 1;
+    counters = malloc(sizeof(int));
+    counters[0] = HPX_TIMERS;
+  }
+  else {
+    profile_log.num_counters = 0;
+  }
+  profile_log.events = malloc(profile_log.max_events *
                                 sizeof(profile_list_t));
   return LIBHPX_OK;
 }
 
 void prof_fini(void) {
-  inst_prof_dump(_profile_log);
-  for (int i = 0; i < _profile_log.num_events; i++) {
-    free(_profile_log.events[i].entries);
+  inst_prof_dump(profile_log);
+  if (num_counters > 0) {
+    free(counters);
   }
-  free(_profile_log.events);
+  for (int i = 0; i < profile_log.num_events; i++) {
+    free(profile_log.events[i].entries);
+  }
+  free(profile_log.events);
 }
 
 int prof_get_averages(int64_t *values, char *key) {
@@ -66,16 +74,28 @@ int prof_get_maximums(int64_t *values, char *key) {
 }
 
 int prof_start_hardware_counters(char *key, int *tag) {
+  if (profile_log.num_counters == 0) {
+    return LIBHPX_OK;
+  }
+
   prof_start_timing(key, tag);
   return LIBHPX_OK;
 }
 
 int prof_stop_hardware_counters(char *key, int *tag) {
+  if (profile_log.num_counters == 0) {
+    return LIBHPX_OK;
+  }
+
   prof_stop_timing(key, tag);
   return LIBHPX_OK;
 }
 
 int prof_pause(char *key, int *tag) {
+  if (profile_log.num_counters == 0) {
+    return LIBHPX_OK;
+  }
+
   hpx_time_t end = hpx_time_now();
   int event = profile_get_event(key);
   if (event < 0) {
@@ -83,40 +103,44 @@ int prof_pause(char *key, int *tag) {
   }
 
   if (*tag == HPX_PROF_NO_TAG) {
-    for (int i = _profile_log.events[event].num_entries - 1; i >= 0; i--) {
-      if (!_profile_log.events[event].entries[i].marked &&
-         !_profile_log.events[event].entries[i].paused) {
+    for (int i = profile_log.events[event].num_entries - 1; i >= 0; i--) {
+      if (!profile_log.events[event].entries[i].marked &&
+         !profile_log.events[event].entries[i].paused) {
         *tag = i;
         break;
       }
     }
   }
   if (*tag == HPX_PROF_NO_TAG ||
-     _profile_log.events[event].entries[*tag].marked ||
-     _profile_log.events[event].entries[*tag].paused) {
+     profile_log.events[event].entries[*tag].marked ||
+     profile_log.events[event].entries[*tag].paused) {
     return LIBHPX_EINVAL;
   }
 
   // first store timing information
   hpx_time_t dur;
-  hpx_time_diff(_profile_log.events[event].entries[*tag].ref_time, end, &dur);
-  _profile_log.events[event].entries[*tag].run_time =
-      hpx_time_add(_profile_log.events[event].entries[*tag].run_time, dur);
+  hpx_time_diff(profile_log.events[event].entries[*tag].ref_time, end, &dur);
+  profile_log.events[event].entries[*tag].run_time =
+      hpx_time_add(profile_log.events[event].entries[*tag].run_time, dur);
 
-  _profile_log.events[event].entries[*tag].paused = true;
+  profile_log.events[event].entries[*tag].paused = true;
   return LIBHPX_OK;
 }
 
 int prof_resume(char *key, int *tag) {
+  if (profile_log.num_counters == 0) {
+    return LIBHPX_OK;
+  }
+
   int event = profile_get_event(key);
   if (event < 0) {
     return LIBHPX_EINVAL;
   }
 
   if (*tag == HPX_PROF_NO_TAG) {
-    for (int i = _profile_log.events[event].num_entries - 1; i >= 0; i--) {
-      if (!_profile_log.events[event].entries[i].marked &&
-         _profile_log.events[event].entries[i].paused) {
+    for (int i = profile_log.events[event].num_entries - 1; i >= 0; i--) {
+      if (!profile_log.events[event].entries[i].marked &&
+         profile_log.events[event].entries[i].paused) {
         *tag = i;
         break;
       }
@@ -126,10 +150,10 @@ int prof_resume(char *key, int *tag) {
     return LIBHPX_EINVAL;
   }
 
-  _profile_log.events[event].entries[*tag].paused = false;
-  _profile_log.events[event].entries[*tag].start_time = hpx_time_now();
-  _profile_log.events[event].entries[*tag].ref_time =
-    _profile_log.events[event].entries[*tag].start_time;
+  profile_log.events[event].entries[*tag].paused = false;
+  profile_log.events[event].entries[*tag].start_time = hpx_time_now();
+  profile_log.events[event].entries[*tag].ref_time =
+    profile_log.events[event].entries[*tag].start_time;
   return LIBHPX_OK;
 }
 

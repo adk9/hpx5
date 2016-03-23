@@ -58,7 +58,6 @@ int prof_start_hardware_counters(char *key, int *tag) {
 }
 
 int prof_stop_hardware_counters(char *key, int *tag) {
-  prof_stop_timing(key, tag);
   return LIBHPX_OK;
 }
 

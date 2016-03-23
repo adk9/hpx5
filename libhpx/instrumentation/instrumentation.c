@@ -160,7 +160,8 @@ int inst_init(config_t *cfg) {
 #ifndef ENABLE_INSTRUMENTATION
   return LIBHPX_OK;
 #endif
-  if (!config_inst_at_isset(cfg, HPX_LOCALITY_ID)) {
+  if (!config_inst_at_isset(cfg, HPX_LOCALITY_ID) ||
+      (!cfg->prof_counters && !cfg->trace_classes)) {
     return LIBHPX_OK;
   }
 
