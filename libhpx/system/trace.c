@@ -18,13 +18,16 @@
 /// @file trace.c
 ///
 /// Print a backtrace to stdout
-
-#include <execinfo.h>
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifdef HAVE_EXECINFO_H
+#include <execinfo.h>
+#endif
+
 /* Obtain a backtrace and print it to stdout. */
 void system_print_trace(void *fd) {
+#ifdef HAVE_EXECINFO_H
   void *array[32];
   size_t size;
   char **strings;
@@ -38,6 +41,6 @@ void system_print_trace(void *fd) {
   for (i = 0; i < size; i++) {
     printf ("%s\n", strings[i]);
   }
-
   free (strings);
+#endif
 }

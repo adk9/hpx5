@@ -61,4 +61,5 @@ AC_DEFUN([HPX_CONFIG_HOST], [
  AC_SUBST([LIBFFI_CONTRIB_DIR], [$libffi_contrib_dir])
  AC_DEFINE_UNQUOTED([HPX_CACHELINE_SIZE], [$l1d_linesize], [Cacheline size])
  AC_DEFINE_UNQUOTED([HPX_PAGE_SIZE], [$pagesize], [OS Memory Page Size])
+ AC_CHECK_HEADERS([execinfo.h])
 ])
