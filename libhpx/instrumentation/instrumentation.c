@@ -106,10 +106,10 @@ static HPX_NON_NULL(1, 2) FILE *_fopen_log(const char *name, const char *e) {
 
   char *path = _concat_path(_log_path, name);
   FILE *file = fopen(path, "w");
-  free(path);
   if (!file) {
     log_error("failed to open file %s\n %s\n", path, e);
   }
+  free(path);
   return file;
 }
 
