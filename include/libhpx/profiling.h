@@ -151,41 +151,41 @@ void prof_mark(char *key);
 
 /// Begin profiling. This begins recording performance information of an event.
 /// @param         key The key that identifies the code event
-/// @param         tag A pointer that is given a unique value upon success; is
-///                    used in other functions for better profiling performance
+/// @param[in/out]  tag A pointer that is given a unique value upon success; is
+///                     used in other functions for better profiling performance
 void prof_start_timing(char *key, int *tag);
 
 /// Stop profiling.  This ends recording performance information of an event.
 /// Additionally, the times are added to the running total time.
-/// @param         key The key that identifies the code event
-/// @param         tag Used for internal lookup; will be given a new value if
-///                    the provided value is HPX_PROF_NO_TAG
+/// @param          key The key that identifies the code event
+/// @param[in/out]  tag Used for internal lookup; will be given a new value if
+///                     the provided value is HPX_PROF_NO_TAG
 int prof_stop_timing(char *key, int *tag);
 
 /// Begin profiling. This begins recording performance information of an event.
-/// @param         key The key that identifies the code event
-/// @param         tag A pointer that is given a unique value upon success; is
-///                    used in other functions for better profiling performance
+/// @param          key The key that identifies the code event
+/// @param[in/out]  tag A pointer that is given a unique value upon success; is
+///                     used in other functions for better profiling performance
 int prof_start_hardware_counters(char *key, int *tag);
 
 /// Stop profiling.  This ends recording performance information of an event.
 /// Additionally, the counter values are added to the running total counts.
-/// @param         key The key that identifies the code event
-/// @param         tag Used for internal lookup; will be given a new value if
-///                    the provided value is HPX_PROF_NO_TAG
+/// @param          key The key that identifies the code event
+/// @param[in/out]  tag Used for internal lookup; will be given a new value if
+///                     the provided value is HPX_PROF_NO_TAG
 int prof_stop_hardware_counters(char *key, int *tag);
 
 /// Pause the profiling temporarily
-/// @param         key The key that identifies the code event
-/// @param         tag Used for internal lookup; will be given a new value if
-///                    the provided value is HPX_PROF_NO_TAG
+/// @param          key The key that identifies the code event
+/// @param[in/out]  tag Used for internal lookup; will be given a new value if
+///                     the provided value is HPX_PROF_NO_TAG
 int prof_pause(char *key, int *tag);
 
 /// Resume profiling after pausing; the tag argument should be the value
 /// returned after calling the corresponding prof_pause()
-/// @param         key The key that identifies the code event
-/// @param         tag Used for internal lookup; will be given a new value if
-///                    the provided value is HPX_PROF_NO_TAG
+/// @param          key The key that identifies the code event
+/// @param[in/out]  tag Used for internal lookup; will be given a new value if
+///                     the provided value is HPX_PROF_NO_TAG
 int prof_resume(char *key, int *tag);
 
 #endif
