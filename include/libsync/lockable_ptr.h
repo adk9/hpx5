@@ -14,6 +14,10 @@
 #ifndef HPX_SYNC_LOCKABLE_PTR_H
 #define HPX_SYNC_LOCKABLE_PTR_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include<hpx/attributes.h>
 
 typedef const void * volatile lockable_ptr_t;
@@ -22,5 +26,9 @@ typedef const void * volatile lockable_ptr_t;
 const void *sync_lockable_ptr_lock(lockable_ptr_t *p) HPX_PUBLIC;
 void sync_lockable_ptr_unlock(lockable_ptr_t *p) HPX_PUBLIC;
 const void *sync_lockable_ptr_read(lockable_ptr_t *p) HPX_PUBLIC;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // HPX_SYNC_LOCKABLE_PTR_H

@@ -14,6 +14,10 @@
 #ifndef LIBHPX_DEQUES_H
 #define LIBHPX_DEQUES_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /// @file include/libsync/deques.h
 /// A workstealing deque implementation based on the design presented in
 /// "Dynamic Circular Work-Stealing Deque" by David Chase and Yossi Lev
@@ -70,5 +74,9 @@ void *sync_chase_lev_ws_deque_pop(chase_lev_ws_deque_t *d)
 
 void *sync_chase_lev_ws_deque_steal(chase_lev_ws_deque_t *d)
   HPX_NON_NULL(1) HPX_PUBLIC;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIBHPX_DEQUES_H

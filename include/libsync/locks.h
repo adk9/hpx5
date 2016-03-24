@@ -14,6 +14,10 @@
 #ifndef HPX_SYNC_LOCKS_H_
 #define HPX_SYNC_LOCKS_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <hpx/attributes.h>
 #include "sync.h"
 
@@ -152,5 +156,9 @@ void sync_mcs_lock_acquire(struct mcs_lock *mcs, struct mcs_node *node)
 
 void sync_mcs_lock_release(struct mcs_lock *mcs, struct mcs_node *node)
   HPX_NON_NULL(1, 2) HPX_PUBLIC;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* HPX_SYNC_LOCKS_H_ */

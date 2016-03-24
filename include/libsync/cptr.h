@@ -14,6 +14,10 @@
 #ifndef HPX_SYNC_CPTR_H
 #define HPX_SYNC_CPTR_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 #include <hpx/attributes.h>
 #include "sync.h"
@@ -74,5 +78,9 @@ bool sync_cptr_is_consistent(volatile cptr_t *ptr, const cptr_t *val)
 /// For x86_64, which we've implemented here, the only valid way to read a 16
 /// byte memory address atomically is with the cmpxch16b instruction.
 void sync_cptr_load(volatile cptr_t *ptr, cptr_t *out) HPX_PUBLIC;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // HPX_SYNC_CPTR_H
