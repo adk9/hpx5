@@ -24,7 +24,6 @@ extern "C" {
 #include <libhpx/config.h>
 #include <libhpx/locality.h>
 
-struct config;
 struct profile_log;
 
 /// INST will do @p stmt only if instrumentation is enabled
@@ -37,7 +36,7 @@ struct profile_log;
 #endif
 
 /// Initialize instrumentation. This is usually called in hpx_init().
-int inst_init(struct config *cfg)
+int inst_init(const config_t *cfg)
   HPX_NON_NULL(1);
 
 /// "Start" instrumentation. This is usually called in hpx_run(). This takes

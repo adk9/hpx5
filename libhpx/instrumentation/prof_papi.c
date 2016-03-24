@@ -61,7 +61,7 @@ static int _set_event(int id, uint64_t papi_event, uint64_t event) {
   return 1;
 }
 
-int prof_init(config_t *cfg) {
+int prof_init(const config_t *cfg) {
   // initialize PAPI
   int e = PAPI_library_init(PAPI_VER_CURRENT);
   if (e != PAPI_VER_CURRENT) {

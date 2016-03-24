@@ -32,7 +32,7 @@
 
 #include "profile.h"
 
-int prof_init(struct config *cfg) {
+int prof_init(const config_t *cfg) {
   profile_log.counters = NULL;
   profile_log.num_counters = 0;
   if (config_prof_counters_isset(cfg, HPX_PROF_TIMERS)) {

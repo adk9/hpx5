@@ -205,7 +205,7 @@ static const char *_get_log_path(const char *dir) {
   return NULL;
 }
 
-int inst_init(config_t *cfg) {
+int inst_init(const config_t *cfg) {
 #ifndef ENABLE_INSTRUMENTATION
   return LIBHPX_OK;
 #endif

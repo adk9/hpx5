@@ -18,7 +18,7 @@
 #include <libhpx/libhpx.h>
 #include <libhpx/profiling.h>
 
-int prof_init(struct config *cfg) {
+int prof_init(const struct config *cfg) {
   return LIBHPX_OK;
 }
 

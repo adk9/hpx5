@@ -81,7 +81,7 @@ int profile_get_event(char *key);
 int profile_new_event(char *key, bool simple, int eventset);
 
 /// Initialize profiling. This is usually called in hpx_init().
-int prof_init(struct config *cfg)
+int prof_init(const struct config *cfg)
   HPX_NON_NULL(1);
 
 /// Cleanup
