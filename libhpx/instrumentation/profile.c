@@ -30,7 +30,7 @@
 #include <libhpx/profiling.h>
 #include <libsync/sync.h>
 
-#include "profile.h"
+profile_log_t profile_log;
 
 int profile_new_event(char *key, bool simple, int eventset) {
   if (profile_log.events == NULL) {
@@ -165,7 +165,7 @@ void prof_get_total_time(char *key, hpx_time_t *tot) {
 
   prof_get_average_time(key, &average);
 
-  total = profile_log.events[event].num_entries * 
+  total = profile_log.events[event].num_entries *
           hpx_time_diff_ns(HPX_TIME_NULL, average);
   seconds = total / 1e9;
   ns = total % (int64_t)1e9;
@@ -190,7 +190,7 @@ void prof_get_min_time(char *key, hpx_time_t *min) {
   if (profile_log.events[event].num_entries > 0 ) {
     for (int i = 0; i < profile_log.events[event].num_entries; i++) {
       if (profile_log.events[event].entries[i].marked) {
-        minimum = hpx_time_diff_ns(HPX_TIME_NULL, 
+        minimum = hpx_time_diff_ns(HPX_TIME_NULL,
                                    profile_log.events[event].entries[i].run_time);
         start = i+1;
         break;
@@ -295,7 +295,7 @@ void prof_start_timing(char *key, int *tag) {
   }
 
   // interrupt current timing
-  if (profile_log.current_event >= 0 && 
+  if (profile_log.current_event >= 0 &&
      !profile_log.events[profile_log.current_event].entries[
                           profile_log.current_entry].marked &&
      !profile_log.events[profile_log.current_event].entries[
@@ -315,7 +315,7 @@ void prof_start_timing(char *key, int *tag) {
   profile_log.current_entry = index;
   profile_log.current_event = event;
   profile_log.events[event].entries[index].start_time = hpx_time_now();
-  profile_log.events[event].entries[index].ref_time = 
+  profile_log.events[event].entries[index].ref_time =
     profile_log.events[event].entries[index].start_time;
   *tag = index;
 }
@@ -343,11 +343,11 @@ int prof_stop_timing(char *key, int *tag) {
     hpx_time_t dur;
     hpx_time_diff(profile_log.events[event].entries[*tag].ref_time, end, &dur);
 
-    profile_log.events[event].entries[*tag].run_time = 
+    profile_log.events[event].entries[*tag].run_time =
         hpx_time_add(profile_log.events[event].entries[*tag].run_time, dur);
   }
   profile_log.events[event].entries[*tag].marked = true;
-  
+
   // if another event/entry was being measured prior to switching to the current
   // event/entry, then pick up where we left off
   if (profile_log.events[event].entries[*tag].last_event >= 0) {

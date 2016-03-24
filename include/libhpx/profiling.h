@@ -64,6 +64,8 @@ typedef struct profile_log {
   int          current_event; //!< The current code event
 } profile_log_t;
 
+extern profile_log_t profile_log;
+
 /// Add a new entry to the profile list in the profile log.
 /// @param             event The event id of the new entry being added
 /// @returns                 Index of the new entry.
