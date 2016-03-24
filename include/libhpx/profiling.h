@@ -59,8 +59,6 @@ typedef struct {
   int          current_event; //!< The current code event
 } profile_log_t;
 
-profile_log_t profile_log;
-
 #define PROFILE_INIT {                      \
     .num_counters = 0,                      \
     .num_events = 0,                        \

@@ -31,6 +31,8 @@
 #include <libhpx/profiling.h>
 #include <libsync/sync.h>
 
+#include "profile.h"
+
 static uint64_t _papi_events[] = {
   [HPX_L1_TCM]  = PAPI_L1_TCM,
   [HPX_L1_TCA]  = PAPI_L1_TCA,

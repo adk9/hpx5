@@ -30,6 +30,8 @@
 #include <libhpx/profiling.h>
 #include <libsync/sync.h>
 
+#include "profile.h"
+
 int profile_new_event(char *key, bool simple, int eventset) {
   if (profile_log.events == NULL) {
     return LIBHPX_ERROR;

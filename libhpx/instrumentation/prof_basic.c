@@ -30,6 +30,7 @@
 #include <libhpx/profiling.h>
 #include <libsync/sync.h>
 
+#include "profile.h"
 
 int prof_init(struct config *cfg) {
   profile_log.counters = NULL;
