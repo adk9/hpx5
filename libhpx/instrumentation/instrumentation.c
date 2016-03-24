@@ -276,6 +276,10 @@ void inst_fini(void) {
 }
 
 void inst_prof_dump(const profile_log_t *log) {
+  if (log->num_counters == 0) {
+    return;
+  }
+
   char filename[256];
   snprintf(filename, 256, "profile.%d", HPX_LOCALITY_ID);
 
