@@ -130,7 +130,6 @@ void prof_get_average_time(char *key, hpx_time_t *avg) {
 
   int64_t seconds, ns, average = 0;
   double divisor = 0;
-  int64_t wall_time = hpx_time_from_start_ns(hpx_time_now());
   for (int i = 0; i < profile_log.events[event].num_entries; i++) {
     if (profile_log.events[event].entries[i].marked) {
       average += hpx_time_diff_ns(HPX_TIME_NULL,

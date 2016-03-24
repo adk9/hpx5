@@ -35,8 +35,8 @@ int prof_init(struct config *cfg) {
   profile_log.counters = NULL;
   if (config_prof_counters_isset(cfg, HPX_PROF_TIMERS)) {
     profile_log.num_counters = 1;
-    counters = malloc(sizeof(int));
-    counters[0] = HPX_TIMERS;
+    profile_log.counters = malloc(sizeof(int));
+    profile_log.counters[0] = HPX_TIMERS;
   }
   else {
     profile_log.num_counters = 0;
@@ -48,8 +48,8 @@ int prof_init(struct config *cfg) {
 
 void prof_fini(void) {
   inst_prof_dump(profile_log);
-  if (num_counters > 0) {
-    free(counters);
+  if (profile_log.num_counters > 0) {
+    free(profile_log.counters);
   }
   for (int i = 0; i < profile_log.num_events; i++) {
     free(profile_log.events[i].entries);
