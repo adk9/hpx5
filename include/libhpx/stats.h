@@ -41,15 +41,6 @@ typedef struct libhpx_stats {
   unsigned long        yields;
 } libhpx_stats_t;
 
-#define LIBHPX_STATS_INIT { \
-    .spawns        = 0,     \
-    .failed_steals = 0,     \
-    .steals        = 0,     \
-    .mail          = 0,     \
-    .stacks        = 0,     \
-    .yields        = 0,     \
-  }
-
 /// Initialize the libhpx statistics structure.
 void libhpx_stats_init(struct libhpx_stats *stats)
   HPX_NON_NULL(1);

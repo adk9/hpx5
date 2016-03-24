@@ -29,7 +29,7 @@
 #include <libhpx/locality.h>
 #include <libhpx/stats.h>
 
-static libhpx_stats_t _global_stats = LIBHPX_STATS_INIT;
+static libhpx_stats_t _global_stats;
 
 void libhpx_stats_init(struct libhpx_stats *stats) {
   stats->spawns        = 0;
