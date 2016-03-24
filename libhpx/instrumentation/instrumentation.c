@@ -275,7 +275,7 @@ void inst_fini(void) {
   _log_path = NULL;
 }
 
-void inst_prof_dump(profile_log_t log) {
+void inst_prof_dump(const profile_log_t *log) {
   char filename[256];
   snprintf(filename, 256, "profile.%d", HPX_LOCALITY_ID);
 
@@ -286,43 +286,43 @@ void inst_prof_dump(profile_log_t log) {
 
   double duration = hpx_time_from_start_ns(hpx_time_now())/1e9;
   fprintf(f, "Total time: %.3f seconds \n", duration);
-  for (int i = 0, e = log.num_events; i < e; ++i) {
-    fprintf(f, "\nEvent: %s\n", log.events[i].key);
-    fprintf(f, "Count: %d\n", log.events[i].num_entries);
-    double total = prof_get_user_total(log.events[i].key);
+  for (int i = 0, e = log->num_events; i < e; ++i) {
+    fprintf(f, "\nEvent: %s\n", log->events[i].key);
+    fprintf(f, "Count: %d\n", log->events[i].num_entries);
+    double total = prof_get_user_total(log->events[i].key);
     double total_time_ms;
     hpx_time_t total_time;
-    prof_get_total_time(log.events[i].key, &total_time);
+    prof_get_total_time(log->events[i].key, &total_time);
     total_time_ms = hpx_time_ms(total_time);
     if (total != 0) {
       fprintf(f, "Total recorded user value: %f\n", total);
     }
 
-    if (total_time_ms != 0 || (log.num_counters > 0 && !log.events[i].simple)) {
+    if (total_time_ms != 0 || (log->num_counters > 0 && !log->events[i].simple)) {
       fprintf(f, "Statistics:\n");
       fprintf(f, "%-24s%-24s%-24s%-24s\n",
              "Type", "Average", "Minimum", "Maximum");
     }
 
-    if (log.num_counters > 0 && !log.events[i].simple) {
-      int64_t averages[log.num_counters];
-      int64_t minimums[log.num_counters];
-      int64_t maximums[log.num_counters];
+    if (log->num_counters > 0 && !log->events[i].simple) {
+      int64_t averages[log->num_counters];
+      int64_t minimums[log->num_counters];
+      int64_t maximums[log->num_counters];
 
-      prof_get_averages(averages, log.events[i].key);
-      prof_get_minimums(minimums, log.events[i].key);
-      prof_get_maximums(maximums, log.events[i].key);
-      for (int j = 0, e = log.num_counters; j < e; ++j) {
+      prof_get_averages(averages, log->events[i].key);
+      prof_get_minimums(minimums, log->events[i].key);
+      prof_get_maximums(maximums, log->events[i].key);
+      for (int j = 0, e = log->num_counters; j < e; ++j) {
         fprintf(f, "%-24s%-24"PRIu64"%-24"PRIu64"%-24"PRIu64"\n",
-                HPX_COUNTER_TO_STRING[log.counters[j]],
+                HPX_COUNTER_TO_STRING[log->counters[j]],
                 averages[j], minimums[j], maximums[j]);
       }
     }
 
     hpx_time_t average, min, max;
-    prof_get_average_time(log.events[i].key, &average);
-    prof_get_min_time(log.events[i].key, &min);
-    prof_get_max_time(log.events[i].key, &max);
+    prof_get_average_time(log->events[i].key, &average);
+    prof_get_min_time(log->events[i].key, &min);
+    prof_get_max_time(log->events[i].key, &max);
 
     if (total_time_ms != 0) {
       fprintf(f, "%-24s%-24.6f%-24.6f%-24.6f\n", "Time (ms)",
@@ -337,9 +337,9 @@ void inst_prof_dump(profile_log_t log) {
     }
 
     fprintf(f, "\nDUMP:\n\n%-24s", "Entry #");
-    if (!log.events[i].simple) {
-      for (int j = 0, e = log.num_counters; j < e; ++j) {
-        fprintf(f, "%-24s", HPX_COUNTER_TO_STRING[log.counters[j]]);
+    if (!log->events[i].simple) {
+      for (int j = 0, e = log->num_counters; j < e; ++j) {
+        fprintf(f, "%-24s", HPX_COUNTER_TO_STRING[log->counters[j]]);
       }
     }
 
@@ -353,21 +353,21 @@ void inst_prof_dump(profile_log_t log) {
     }
     fprintf(f, "\n");
 
-    for (int j = 0, e = log.events[i].num_entries; j < e; ++j) {
+    for (int j = 0, e = log->events[i].num_entries; j < e; ++j) {
       fprintf(f, "%-24d", j);
-      if (!log.events[i].simple) {
-        for (int k = 0, e = log.num_counters; k < e; k++) {
-          fprintf(f, "%-24"PRIu64, log.events[i].entries[j].counter_totals[k]);
+      if (!log->events[i].simple) {
+        for (int k = 0, e = log->num_counters; k < e; k++) {
+          fprintf(f, "%-24"PRIu64, log->events[i].entries[j].counter_totals[k]);
         }
       }
 
-      fprintf(f, "%-24f", hpx_time_ms(log.events[i].entries[j].start_time));
+      fprintf(f, "%-24f", hpx_time_ms(log->events[i].entries[j].start_time));
       if (total_time_ms != 0) {
-        fprintf(f, "%-24f", hpx_time_ms(log.events[i].entries[j].run_time));
+        fprintf(f, "%-24f", hpx_time_ms(log->events[i].entries[j].run_time));
       }
 
       if (total != 0) {
-        fprintf(f, "%-24f", log.events[i].entries[j].user_val);
+        fprintf(f, "%-24f", log->events[i].entries[j].user_val);
       }
       fprintf(f, "\n");
     }

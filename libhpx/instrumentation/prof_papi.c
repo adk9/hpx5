@@ -102,7 +102,7 @@ int prof_init(config_t *cfg) {
 }
 
 void prof_fini(void) {
-  inst_prof_dump(profile_log);
+  inst_prof_dump(&profile_log);
   for (int i = 0; i < profile_log.num_events; i++) {
     if (!profile_log.events[i].simple) {
       for (int j = 0; j < profile_log.events[i].num_entries; j++) {
@@ -163,7 +163,7 @@ int prof_get_totals(int64_t *values, char *key) {
 
   for (int i = 0; i < profile_log.num_counters; i++) {
     values[i] = 0;
-  
+
     // 'use' variable is necessary for offsetting as timing is not included in
     // the 'counter_totals' array, but is considered in 'num_counters'
     int use = i - (HPX_TIMERS == profile_log.counters[0]) ? 1 : 0;
@@ -198,7 +198,7 @@ int prof_get_minimums(int64_t *values, char *key) {
     values[i] = 0;
     int start = profile_log.events[event].num_entries;
     int64_t temp;
-    
+
     // 'use' variable is necessary for offsetting as timing is not included in
     // the 'counter_totals' array, but is considered in 'num_counters'
     int use = i - (HPX_TIMERS == profile_log.counters[0]) ? 1 : 0;
@@ -206,7 +206,7 @@ int prof_get_minimums(int64_t *values, char *key) {
     if (use < 0) {
       for (int j = 0; j < profile_log.events[event].num_entries; j++) {
         if (profile_log.events[event].entries[i].marked) {
-          values[i] = hpx_time_diff_ns(HPX_TIME_NULL, 
+          values[i] = hpx_time_diff_ns(HPX_TIME_NULL,
                           profile_log.events[event].entries[j].run_time);
           start = j + 1;
           break;
@@ -253,15 +253,15 @@ int prof_get_maximums(int64_t *values, char *key) {
     values[i] = 0;
     int start = profile_log.events[event].num_entries;
     int64_t temp;
-    
+
     // 'use' variable is necessary for offsetting as timing is not included in
     // the 'counter_totals' array, but is considered in 'num_counters'
     int use = i - (HPX_TIMERS == profile_log.counters[0]) ? 1 : 0;
-    
+
     if (use < 0) {
       for (int j = 0; j < profile_log.events[event].num_entries; j++) {
         if (profile_log.events[event].entries[i].marked) {
-          values[i] = hpx_time_diff_ns(HPX_TIME_NULL, 
+          values[i] = hpx_time_diff_ns(HPX_TIME_NULL,
                           profile_log.events[event].entries[j].run_time);
           start = j + 1;
           break;
@@ -304,7 +304,7 @@ static int _create_new_event(char *key) {
   if (retval != PAPI_OK) {
     log_error("unable to create eventset with error code %d\n", retval);
   } else {
-    for (int i = (profile_log.counters[0] == HPX_TIMERS) ? 1 : 0; 
+    for (int i = (profile_log.counters[0] == HPX_TIMERS) ? 1 : 0;
          i < profile_log.num_counters; i++) {
       PAPI_add_event(eventset, _papi_events[profile_log.counters[i]]);
     }
@@ -314,7 +314,7 @@ static int _create_new_event(char *key) {
 }
 
 int prof_start_hardware_counters(char *key, int *tag) {
-  hpx_time_t end = 
+  hpx_time_t end =
       (HPX_TIMERS == profile_log.counters[0]) ? hpx_time_now() : HPX_TIME_NULL;
 
   int event = profile_get_event(key);
@@ -328,12 +328,12 @@ int prof_start_hardware_counters(char *key, int *tag) {
   if (profile_log.events[event].simple) {
     return LIBHPX_EINVAL;
   }
-  
-  int how_many = profile_log.num_counters - 
+
+  int how_many = profile_log.num_counters -
                  (HPX_TIMERS == profile_log.counters[0]) ? 1 : 0;
-  
+
   // update the current event and entry being recorded
-  if (profile_log.current_event >= 0 && 
+  if (profile_log.current_event >= 0 &&
      !profile_log.events[profile_log.current_event].entries[
                           profile_log.current_entry].marked &&
      !profile_log.events[profile_log.current_event].entries[
@@ -361,30 +361,30 @@ int prof_start_hardware_counters(char *key, int *tag) {
 
     for (int i = 0; i < how_many; i++) {
       profile_log.events[profile_log.current_event].entries[
-                         profile_log.current_entry].counter_totals[i] 
+                         profile_log.current_entry].counter_totals[i]
                            += (int64_t) values[i];
     }
   }
 
   int index = profile_new_entry(event);
-  
+
   profile_log.events[event].entries[index].last_entry = profile_log.current_entry;
   profile_log.events[event].entries[index].last_event = profile_log.current_event;
   profile_log.current_entry = index;
   profile_log.current_event = event;
   *tag = index;
   PAPI_reset(profile_log.events[profile_log.current_event].eventset);
-  
+
   profile_log.events[event].entries[index].start_time = hpx_time_now();
   if (how_many != profile_log.num_counters){
-    profile_log.events[event].entries[index].ref_time = 
+    profile_log.events[event].entries[index].ref_time =
       profile_log.events[event].entries[index].start_time;
   }
   return PAPI_start(profile_log.events[event].eventset);
 }
 
 int prof_stop_hardware_counters(char *key, int *tag) {
-  hpx_time_t end = 
+  hpx_time_t end =
       (HPX_TIMERS == profile_log.counters[0]) ? hpx_time_now() : HPX_TIME_NULL;
 
   int event = profile_get_event(key);
@@ -392,13 +392,13 @@ int prof_stop_hardware_counters(char *key, int *tag) {
     return LIBHPX_EINVAL;
   }
 
-  int how_many = profile_log.num_counters - 
+  int how_many = profile_log.num_counters -
                  (HPX_TIMERS == profile_log.counters[0]) ? 1 : 0;
 
   // left as long long instead of int64_t to suppress a warning
   // at compile time
   long long values[how_many];
-  
+
   for (int i = 0; i < how_many; i++) {
     values[i] = -1;
   }
@@ -407,9 +407,9 @@ int prof_stop_hardware_counters(char *key, int *tag) {
   if (retval != PAPI_OK) {
     return retval;
   }
-  
+
   for (int i = 0; i < how_many; i++) {
-    profile_log.events[event].entries[*tag].counter_totals[i] 
+    profile_log.events[event].entries[*tag].counter_totals[i]
       += (int64_t) values[i];
   }
 
@@ -420,11 +420,11 @@ int prof_stop_hardware_counters(char *key, int *tag) {
   // if another event/entry was being measured prior to switching to the current
   // event/entry, then pick up where we left off (check current_event because it
   // was already updated in prof_stop_timing())
-  if (profile_log.current_event >= 0 && 
+  if (profile_log.current_event >= 0 &&
      !profile_log.events[event].entries[profile_log.current_entry].paused) {
 
     if (how_many != profile_log.num_counters) {
-      profile_log.events[event].entries[profile_log.current_entry].ref_time = 
+      profile_log.events[event].entries[profile_log.current_entry].ref_time =
         profile_log.events[event].entries[profile_log.current_entry].start_time;
     }
     PAPI_start(profile_log.events[profile_log.current_event].eventset);
@@ -434,7 +434,7 @@ int prof_stop_hardware_counters(char *key, int *tag) {
 }
 
 int prof_pause(char *key, int *tag) {
-  hpx_time_t end = 
+  hpx_time_t end =
       (HPX_TIMERS == profile_log.counters[0]) ? hpx_time_now() : HPX_TIME_NULL;
 
   int event = profile_get_event(key);
@@ -444,7 +444,7 @@ int prof_pause(char *key, int *tag) {
 
   if (*tag == HPX_PROF_NO_TAG) {
     for (int i = profile_log.events[event].num_entries - 1; i >= 0; i--) {
-      if (!profile_log.events[event].entries[i].marked && 
+      if (!profile_log.events[event].entries[i].marked &&
          !profile_log.events[event].entries[i].paused) {
         *tag = i;
         break;
@@ -461,19 +461,19 @@ int prof_pause(char *key, int *tag) {
   if (profile_log.counters[0] == HPX_TIMERS) {
     hpx_time_t dur;
     hpx_time_diff(profile_log.events[event].entries[*tag].ref_time, end, &dur);
-    profile_log.events[event].entries[*tag].run_time = 
+    profile_log.events[event].entries[*tag].run_time =
       hpx_time_add(profile_log.events[event].entries[*tag].run_time, dur);
   }
 
   // then store counter information if necessary
   if (!profile_log.events[event].simple) {
-    int how_many = profile_log.num_counters - 
+    int how_many = profile_log.num_counters -
                    (HPX_TIMERS == profile_log.counters[0]) ? 1 : 0;
 
     // I leave this as type long long instead of int64_t to suppress a warning
     // at compile time that appears if I do otherwise
     long long values[how_many];
-  
+
     for (int i = 0; i < how_many; i++) {
       values[i] = -1;
     }
@@ -482,9 +482,9 @@ int prof_pause(char *key, int *tag) {
     if (retval != PAPI_OK) {
       return retval;
     }
-    
+
     for (int i = 0; i < how_many; i++) {
-      profile_log.events[event].entries[*tag].counter_totals[i] 
+      profile_log.events[event].entries[*tag].counter_totals[i]
         += (int64_t) values[i];
     }
   }
@@ -500,7 +500,7 @@ int prof_resume(char *key, int *tag) {
 
   if (*tag == HPX_PROF_NO_TAG) {
     for (int i = profile_log.events[event].num_entries - 1; i >= 0; i--) {
-      if (!profile_log.events[event].entries[i].marked && 
+      if (!profile_log.events[event].entries[i].marked &&
          profile_log.events[event].entries[i].paused) {
         *tag = i;
         break;

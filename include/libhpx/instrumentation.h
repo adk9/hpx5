@@ -23,9 +23,9 @@ extern "C" {
 #include <hpx/builtins.h>
 #include <libhpx/config.h>
 #include <libhpx/locality.h>
-#include <libhpx/profiling.h>
 
 struct config;
+struct profile_log;
 
 /// INST will do @p stmt only if instrumentation is enabled
 #ifdef ENABLE_INSTRUMENTATION
@@ -49,7 +49,7 @@ int inst_start(void);
 void inst_fini(void);
 
 /// Dump all of the profiling information to file
-void inst_prof_dump(profile_log_t profile_log);
+void inst_prof_dump(const struct profile_log *log);
 
 /// Record an event to the log
 /// @param        type Type this event is part of (see hpx_inst_class_type_t)

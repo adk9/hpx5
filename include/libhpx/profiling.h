@@ -54,7 +54,7 @@ typedef struct {
 } profile_list_t;
 
 /// The data structure for storing profiling entries
-typedef struct {
+typedef struct profile_log {
   int           num_counters; //!< Number of counters utilized
   int             num_events; //!< Number of code events profiled
   int             max_events; //!< Maximum number of code events profilable

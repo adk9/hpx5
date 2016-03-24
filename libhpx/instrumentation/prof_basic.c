@@ -34,25 +34,23 @@
 
 int prof_init(struct config *cfg) {
   profile_log.counters = NULL;
+  profile_log.num_counters = 0;
   if (config_prof_counters_isset(cfg, HPX_PROF_TIMERS)) {
     profile_log.num_counters = 1;
     profile_log.counters = malloc(sizeof(int));
     profile_log.counters[0] = HPX_TIMERS;
   }
-  else {
-    profile_log.num_counters = 0;
-  }
-  profile_log.events = malloc(profile_log.max_events *
-                                sizeof(profile_list_t));
+  profile_log.events = malloc(profile_log.max_events * sizeof(profile_list_t));
+  dbg_assert(profile_log.events);
   return LIBHPX_OK;
 }
 
 void prof_fini(void) {
-  inst_prof_dump(profile_log);
+  inst_prof_dump(&profile_log);
   if (profile_log.num_counters > 0) {
     free(profile_log.counters);
   }
-  for (int i = 0; i < profile_log.num_events; i++) {
+  for (int i = 0, e = profile_log.num_events; i < e; ++i) {
     free(profile_log.events[i].entries);
   }
   free(profile_log.events);
