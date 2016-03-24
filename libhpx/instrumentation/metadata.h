@@ -137,8 +137,6 @@ typedef struct inst_event_col_metadata {
 
 /// Helper metadata generation macros for commonly used types
 
-#define METADATA_EMPTY(off)         METADATA_UINT64(off, "empty")
-
 #define METADATA_SIZE(off)          METADATA_UINT64(off, "size")
 #define METADATA_ACTION(off)        METADATA_UINT64(off, "action")
 #define METADATA_HPX_ADDR(off)      METADATA_UINT64(off, "global address")
@@ -215,7 +213,9 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 
 #define SCHED_PUSH_LIFO_METADATA  _METADATA_ARGS(METADATA_PARCEL_ID(0))
 #define SCHED_POP_LIFO_METADATA   _METADATA_ARGS(METADATA_PARCEL_ID(0))
-#define SCHED_STEAL_LIFO_METADATA _METADATA_NONE
+#define SCHED_STEAL_LIFO_METADATA _METADATA_ARGS(METADATA_PARCEL_ID(0), \
+                                                 METADATA_UINT64(1, "victim"))
+
 #define SCHED_ENTER_METADATA      _METADATA_NONE
 #define SCHED_EXIT_METADATA       _METADATA_NONE
 
