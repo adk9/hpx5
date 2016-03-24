@@ -292,9 +292,11 @@ static void _push_lifo(hpx_parcel_t *p, void *worker) {
 /// Process the next available parcel from our work queue in a lifo order.
 static hpx_parcel_t *_schedule_lifo(worker_t *w) {
   hpx_parcel_t *p = sync_chase_lev_ws_deque_pop(_work(w));
-  EVENT_SCHED_POP_LIFO(p->id);
-  EVENT_SCHED_WQSIZE(sync_chase_lev_ws_deque_size(
+  INST_IF (p) {
+    EVENT_SCHED_POP_LIFO(p->id);
+    EVENT_SCHED_WQSIZE(sync_chase_lev_ws_deque_size(
       &w->queues[sync_load(&w->work_id, SYNC_RELAXED)].work));
+  }
   return p;
 }
 

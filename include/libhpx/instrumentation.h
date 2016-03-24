@@ -30,8 +30,10 @@ struct config;
 /// INST will do @p stmt only if instrumentation is enabled
 #ifdef ENABLE_INSTRUMENTATION
 # define INST(stmt) stmt;
+# define INST_IF(S) if (S)
 #else
 # define INST(stmt)
+# define INST_IF(S) if (false)
 #endif
 
 /// Initialize instrumentation. This is usually called in hpx_init().
