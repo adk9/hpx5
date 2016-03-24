@@ -27,25 +27,36 @@ typedef struct {
   char * volatile next;                         //!< pointer to next record
 } logtable_t;
 
-#define LOGTABLE_INIT {                         \
-    .fd          = -1,                          \
-    .class       = -1,                          \
-    .id          = -1,                          \
-    .record_bytes = 0,                          \
-    .max_size    = 0,                           \
-    .buffer      = NULL,                        \
-    .next        = NULL                         \
-    }
-
 /// Initialize a logtable.
 ///
-/// If filename is NULL or size == 0 this will not generate a file.
-int logtable_init(logtable_t *lt, const char* filename, size_t size,
+/// This will create a file-backed mmaped buffer for this event for logging
+/// purposes.
+///
+/// @param           lt The log table to initialize.
+/// @param     filename The name of the file to create and map.
+/// @param         size The number of bytes to allocate.
+/// @param        class The event class.
+/// @param        event The event type.
+void logtable_init(logtable_t *lt, const char* filename, size_t size,
                   int class, int event);
 
+/// Clean up a log table.
+///
+/// It is safe to call this on an uninitialized log table. If the log table was
+/// initialized this will unmap its buffer, and truncate and close the
+/// corresponding file.
+///
+/// @param           lt The log table to finalize.
 void logtable_fini(logtable_t *lt);
 
 /// Append a record to a log table.
-void logtable_vappend(logtable_t *log, int n, va_list *args);
+///
+/// Log tables have variable length record sizes based on their event type. This
+/// allows the user to log a variable number of features with each trace point.
+///
+/// @param           lt The log table.
+/// @param            n The number of features to log.
+/// @param         args The features to log.
+void logtable_vappend(logtable_t *lt, int n, va_list *args);
 
 #endif // LIBHPX_INSTRUMENTATION_LOGTABLE_H

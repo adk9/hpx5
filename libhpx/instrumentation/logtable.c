@@ -63,7 +63,7 @@ static void *_create_mmap(size_t size, int file) {
   return base;
 }
 
-int logtable_init(logtable_t *log, const char* filename, size_t size,
+void logtable_init(logtable_t *log, const char* filename, size_t size,
                   int class, int id) {
   log->fd = -1;
   log->class = class;
@@ -74,17 +74,21 @@ int logtable_init(logtable_t *log, const char* filename, size_t size,
   sync_store(&log->next, NULL, SYNC_RELEASE);
 
   if (filename == NULL || size == 0) {
-    return LIBHPX_OK;
+    return;
   }
 
   log->fd = _create_file(filename, size);
   if (log->fd == -1) {
-    goto unwind;
+    log_error("could not create log file %s\n", filename);
+    return;
   }
 
   log->buffer = _create_mmap(size, log->fd);
   if (!log->buffer) {
-    goto unwind;
+    log_error("could not mmap %s as event buffer\n", filename);
+    ftruncate(log->fd, 0);
+    close(log->fd);
+    return;
   }
 
   int fields = TRACE_EVENT_NUM_FIELDS[id];
@@ -92,11 +96,6 @@ int logtable_init(logtable_t *log, const char* filename, size_t size,
 
   size_t header_size = write_trace_header(log->buffer, class, id);
   sync_store(&log->next, log->buffer + header_size, SYNC_RELEASE);
-  return LIBHPX_OK;
-
- unwind:
-  logtable_fini(log);
-  return LIBHPX_ERROR;
 }
 
 void logtable_fini(logtable_t *log) {
