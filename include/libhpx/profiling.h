@@ -14,9 +14,14 @@
 #ifndef PROFILING_H
 #define PROFILING_H
 
+#ifndef __cplusplus
+# include <stdbool.h>
+#endif
+
 #include <stdint.h>
 #include <hpx/attributes.h>
 #include <hpx/builtins.h>
+#include <hpx/time.h>
 
 #define SIMPLE true
 
@@ -59,19 +64,9 @@ typedef struct {
   int          current_event; //!< The current code event
 } profile_log_t;
 
-#define PROFILE_INIT {                      \
-    .num_counters = 0,                      \
-    .num_events = 0,                        \
-    .max_events = 256,                      \
-    .counters = NULL,                       \
-    .events = NULL,                         \
-    .current_entry = -1,                    \
-    .current_event = -1                     \
-    }
-
 /// Add a new entry to the profile list in the profile log.
 /// @param             event The event id of the new entry being added
-/// @returns                 Index of the new entry.  
+/// @returns                 Index of the new entry.
 int profile_new_entry(int event);
 
 /// Get the event corresponding to the event key @p key in the profile
