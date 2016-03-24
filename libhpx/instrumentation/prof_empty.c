@@ -15,20 +15,8 @@
 # include "config.h"
 #endif
 
-#include <errno.h>
-#include <stdarg.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
-
-#include <hpx/hpx.h>
-#include <libhpx/config.h>
-#include <libhpx/debug.h>
-#include <libhpx/instrumentation.h>
 #include <libhpx/libhpx.h>
-#include <libhpx/locality.h>
 #include <libhpx/profiling.h>
-#include <libsync/sync.h>
 
 int prof_init(struct config *cfg) {
   return LIBHPX_OK;
