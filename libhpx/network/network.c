@@ -116,7 +116,7 @@ network_t *network_new(config_t *cfg, boot_t *boot, struct gas *gas) {
     network = coalesced_network_new(network, cfg);
   }
 
-  if (!config_inst_at_isset(here->config, here->rank)) {
+  if (!config_trace_at_isset(here->config, here->rank)) {
     return network;
   }
 

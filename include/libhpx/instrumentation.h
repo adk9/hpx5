@@ -47,9 +47,6 @@ int inst_start(void);
 /// Finalize the instrumentation framework.
 void inst_fini(void);
 
-/// Dump all of the profiling information to file
-void inst_prof_dump(const struct profile_log *log);
-
 /// Record an event to the log
 /// @param        type Type this event is part of (see hpx_inst_class_type_t)
 /// @param            n The number of user arguments to log, < 5.

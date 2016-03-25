@@ -37,7 +37,6 @@
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
 #include <libhpx/parcel.h>
-#include <libhpx/profiling.h>
 #include "logtable.h"
 
 #ifndef HOST_NAME_MAX
@@ -210,19 +209,14 @@ int inst_init(const config_t *cfg) {
   return LIBHPX_OK;
 #endif
 
-  // If we're not instrumenting at this locality, then don't do anything.
-  if (!config_inst_at_isset(cfg, HPX_LOCALITY_ID)) {
-    return LIBHPX_OK;
-  }
-
-  // If we don't have anything to record, then don't to anything.
-  if (!cfg->prof_counters && !cfg->trace_classes) {
+  // If we're not tracing at this locality, then don't do anything.
+  if (!config_trace_at_isset(cfg, HPX_LOCALITY_ID)) {
     return LIBHPX_OK;
   }
 
   // At this point we know that we'll be generating some sort of logs, so
   // prepare the path.
-  _log_path = _get_log_path(cfg->inst_dir);
+  _log_path = _get_log_path(cfg->trace_dir);
   if (!_log_path) {
     return LIBHPX_OK;
   }
@@ -236,12 +230,6 @@ int inst_init(const config_t *cfg) {
         _create_logtable(c, i, cfg->trace_filesize);
       }
     }
-  }
-
-  // Initialize profiling.
-  // @todo Should this be done from the top level?
-  if (prof_init(cfg)) {
-    log_dflt("error detected while initializing profiling\n");
   }
 
   inst_trace(HPX_TRACE_BOOKEND, TRACE_EVENT_BOOKEND_BOOKEND);
@@ -265,7 +253,6 @@ int inst_start(void) {
 
 void inst_fini(void) {
   inst_trace(HPX_TRACE_BOOKEND, TRACE_EVENT_BOOKEND_BOOKEND);
-  prof_fini();
   for (int i = 0, e = TRACE_NUM_EVENTS; i < e; ++i) {
     logtable_fini(&_logs[i]);
   }
@@ -273,113 +260,6 @@ void inst_fini(void) {
     free((char*)_log_path);
   }
   _log_path = NULL;
-}
-
-void inst_prof_dump(const profile_log_t *log) {
-  if (log->num_counters == 0) {
-    return;
-  }
-
-  char filename[256];
-  snprintf(filename, 256, "profile.%d", HPX_LOCALITY_ID);
-
-  FILE *f = _fopen_log(filename, "failed to open profiling output file");
-  if (!f) {
-    return;
-  }
-
-  double duration = hpx_time_from_start_ns(hpx_time_now())/1e9;
-  fprintf(f, "Total time: %.3f seconds \n", duration);
-  for (int i = 0, e = log->num_events; i < e; ++i) {
-    fprintf(f, "\nEvent: %s\n", log->events[i].key);
-    fprintf(f, "Count: %d\n", log->events[i].num_entries);
-    double total = prof_get_user_total(log->events[i].key);
-    double total_time_ms;
-    hpx_time_t total_time;
-    prof_get_total_time(log->events[i].key, &total_time);
-    total_time_ms = hpx_time_ms(total_time);
-    if (total != 0) {
-      fprintf(f, "Total recorded user value: %f\n", total);
-    }
-
-    if (total_time_ms != 0 || (log->num_counters > 0 && !log->events[i].simple)) {
-      fprintf(f, "Statistics:\n");
-      fprintf(f, "%-24s%-24s%-24s%-24s\n",
-             "Type", "Average", "Minimum", "Maximum");
-    }
-
-    if (log->num_counters > 0 && !log->events[i].simple) {
-      int64_t averages[log->num_counters];
-      int64_t minimums[log->num_counters];
-      int64_t maximums[log->num_counters];
-
-      prof_get_averages(averages, log->events[i].key);
-      prof_get_minimums(minimums, log->events[i].key);
-      prof_get_maximums(maximums, log->events[i].key);
-      for (int j = 0, e = log->num_counters; j < e; ++j) {
-        fprintf(f, "%-24s%-24"PRIu64"%-24"PRIu64"%-24"PRIu64"\n",
-                HPX_COUNTER_TO_STRING[log->counters[j]],
-                averages[j], minimums[j], maximums[j]);
-      }
-    }
-
-    hpx_time_t average, min, max;
-    prof_get_average_time(log->events[i].key, &average);
-    prof_get_min_time(log->events[i].key, &min);
-    prof_get_max_time(log->events[i].key, &max);
-
-    if (total_time_ms != 0) {
-      fprintf(f, "%-24s%-24.6f%-24.6f%-24.6f\n", "Time (ms)",
-              hpx_time_ms(average),
-              hpx_time_ms(min),
-              hpx_time_ms(max));
-    }
-
-    // Move to the next event if we're not doing detailed profiling.
-    if (!here || !here->config || !here->config->prof_detailed) {
-      continue;
-    }
-
-    fprintf(f, "\nDUMP:\n\n%-24s", "Entry #");
-    if (!log->events[i].simple) {
-      for (int j = 0, e = log->num_counters; j < e; ++j) {
-        fprintf(f, "%-24s", HPX_COUNTER_TO_STRING[log->counters[j]]);
-      }
-    }
-
-    fprintf(f, "%-24s", "Start Time (ms)");
-    if (total_time_ms != 0) {
-      fprintf(f, "%-24s", "CPU Time (ms)");
-    }
-
-    if (total != 0) {
-      fprintf(f, "%-24s", "User Value (ms)");
-    }
-    fprintf(f, "\n");
-
-    for (int j = 0, e = log->events[i].num_entries; j < e; ++j) {
-      fprintf(f, "%-24d", j);
-      if (!log->events[i].simple) {
-        for (int k = 0, e = log->num_counters; k < e; k++) {
-          fprintf(f, "%-24"PRIu64, log->events[i].entries[j].counter_totals[k]);
-        }
-      }
-
-      fprintf(f, "%-24f", hpx_time_ms(log->events[i].entries[j].start_time));
-      if (total_time_ms != 0) {
-        fprintf(f, "%-24f", hpx_time_ms(log->events[i].entries[j].run_time));
-      }
-
-      if (total != 0) {
-        fprintf(f, "%-24f", log->events[i].entries[j].user_val);
-      }
-      fprintf(f, "\n");
-    }
-  }
-
-  if (fclose(f)) {
-    log_error("failed to write profiling output to %s\n", filename);
-  }
 }
 
 void inst_vtrace(int UNUSED, int n, int id, ...) {

@@ -166,7 +166,7 @@ HPX_CONFIG_OPENCL([opencl], [$have_percolation])
 HPX_CONFIG_DOCS
 HPX_CONFIG_DEBUG
 HPX_CONFIG_INSTRUMENTATION
-HPX_CONFIG_PAPI([papi], [$have_instrumentation])
+#HPX_CONFIG_PAPI([papi], [$have_instrumentation])
 HPX_CONFIG_APEX([apex])
 HPX_CONFIG_TESTS
 HPX_CONFIG_LIBHPX

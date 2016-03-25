@@ -47,7 +47,6 @@ enum enum_hpx_sched_policy { hpx_sched_policy__NULL = -1, hpx_sched_policy_arg_d
 enum enum_hpx_log_level { hpx_log_level__NULL = -1, hpx_log_level_arg_default = 0, hpx_log_level_arg_boot, hpx_log_level_arg_sched, hpx_log_level_arg_gas, hpx_log_level_arg_lco, hpx_log_level_arg_net, hpx_log_level_arg_trans, hpx_log_level_arg_parcel, hpx_log_level_arg_action, hpx_log_level_arg_config, hpx_log_level_arg_memory, hpx_log_level_arg_coll, hpx_log_level_arg_all };
 enum enum_hpx_dbg_waitonsig { hpx_dbg_waitonsig__NULL = -1, hpx_dbg_waitonsig_arg_segv = 0, hpx_dbg_waitonsig_arg_abrt, hpx_dbg_waitonsig_arg_fpe, hpx_dbg_waitonsig_arg_ill, hpx_dbg_waitonsig_arg_bus, hpx_dbg_waitonsig_arg_iot, hpx_dbg_waitonsig_arg_sys, hpx_dbg_waitonsig_arg_trap, hpx_dbg_waitonsig_arg_all };
 enum enum_hpx_trace_classes { hpx_trace_classes__NULL = -1, hpx_trace_classes_arg_parcel = 0, hpx_trace_classes_arg_pwc, hpx_trace_classes_arg_sched, hpx_trace_classes_arg_lco, hpx_trace_classes_arg_process, hpx_trace_classes_arg_memory, hpx_trace_classes_arg_schedtimes, hpx_trace_classes_arg_bookend, hpx_trace_classes_arg_gas, hpx_trace_classes_arg_all };
-enum enum_hpx_prof_counters { hpx_prof_counters__NULL = -1, hpx_prof_counters_arg_TIMERS = 0, hpx_prof_counters_arg_L1_TCM, hpx_prof_counters_arg_L1_TCA, hpx_prof_counters_arg_L2_TCM, hpx_prof_counters_arg_L2_TCA, hpx_prof_counters_arg_L3_TCM, hpx_prof_counters_arg_L3_TCA, hpx_prof_counters_arg_TLB_TL, hpx_prof_counters_arg_TOT_INS, hpx_prof_counters_arg_INT_INS, hpx_prof_counters_arg_FP_INS, hpx_prof_counters_arg_LD_INS, hpx_prof_counters_arg_SR_INS, hpx_prof_counters_arg_BR_INS, hpx_prof_counters_arg_TOT_CYC, hpx_prof_counters_arg_all };
 enum enum_hpx_photon_backend { hpx_photon_backend__NULL = -1, hpx_photon_backend_arg_default = 0, hpx_photon_backend_arg_verbs, hpx_photon_backend_arg_ugni, hpx_photon_backend_arg_fi };
 
 /** @brief Where the command line options are stored */
@@ -95,21 +94,21 @@ struct hpx_options_t
   int hpx_sched_stackcachelimit_arg;	/**< @brief bound on the number of stacks to cache.  */
   char * hpx_sched_stackcachelimit_orig;	/**< @brief bound on the number of stacks to cache original value given at command line.  */
   const char *hpx_sched_stackcachelimit_help; /**< @brief bound on the number of stacks to cache help description.  */
-  int* hpx_log_at_arg;	/**< @brief selectively output log information.  */
-  char ** hpx_log_at_orig;	/**< @brief selectively output log information original value given at command line.  */
-  unsigned int hpx_log_at_min; /**< @brief selectively output log information's minimum occurreces */
-  unsigned int hpx_log_at_max; /**< @brief selectively output log information's maximum occurreces */
-  const char *hpx_log_at_help; /**< @brief selectively output log information help description.  */
+  int* hpx_log_at_arg;	/**< @brief filter by locality, -1 for all (default none).  */
+  char ** hpx_log_at_orig;	/**< @brief filter by locality, -1 for all (default none) original value given at command line.  */
+  unsigned int hpx_log_at_min; /**< @brief filter by locality, -1 for all (default none)'s minimum occurreces */
+  unsigned int hpx_log_at_max; /**< @brief filter by locality, -1 for all (default none)'s maximum occurreces */
+  const char *hpx_log_at_help; /**< @brief filter by locality, -1 for all (default none) help description.  */
   enum enum_hpx_log_level *hpx_log_level_arg;	/**< @brief set the logging level (default='all').  */
   char ** hpx_log_level_orig;	/**< @brief set the logging level original value given at command line.  */
   unsigned int hpx_log_level_min; /**< @brief set the logging level's minimum occurreces */
   unsigned int hpx_log_level_max; /**< @brief set the logging level's maximum occurreces */
   const char *hpx_log_level_help; /**< @brief set the logging level help description.  */
-  int* hpx_dbg_waitat_arg;	/**< @brief wait for debugger at specific locality.  */
-  char ** hpx_dbg_waitat_orig;	/**< @brief wait for debugger at specific locality original value given at command line.  */
-  unsigned int hpx_dbg_waitat_min; /**< @brief wait for debugger at specific locality's minimum occurreces */
-  unsigned int hpx_dbg_waitat_max; /**< @brief wait for debugger at specific locality's maximum occurreces */
-  const char *hpx_dbg_waitat_help; /**< @brief wait for debugger at specific locality help description.  */
+  int* hpx_dbg_waitat_arg;	/**< @brief wait for debugger at, -1 for all (default none).  */
+  char ** hpx_dbg_waitat_orig;	/**< @brief wait for debugger at, -1 for all (default none) original value given at command line.  */
+  unsigned int hpx_dbg_waitat_min; /**< @brief wait for debugger at, -1 for all (default none)'s minimum occurreces */
+  unsigned int hpx_dbg_waitat_max; /**< @brief wait for debugger at, -1 for all (default none)'s maximum occurreces */
+  const char *hpx_dbg_waitat_help; /**< @brief wait for debugger at, -1 for all (default none) help description.  */
   int hpx_dbg_waitonabort_flag;	/**< @brief wait inside of hpx_abort() (default=off).  */
   const char *hpx_dbg_waitonabort_help; /**< @brief wait inside of hpx_abort() help description.  */
   enum enum_hpx_dbg_waitonsig *hpx_dbg_waitonsig_arg;	/**< @brief wait on program error signals (default='all').  */
@@ -121,29 +120,22 @@ struct hpx_options_t
   const char *hpx_dbg_mprotectstacks_help; /**< @brief use mprotect() to bracket stacks to look for stack overflows help description.  */
   int hpx_dbg_syncfree_flag;	/**< @brief use synchronous GAS free operations (default=off).  */
   const char *hpx_dbg_syncfree_help; /**< @brief use synchronous GAS free operations help description.  */
-  char * hpx_inst_dir_arg;	/**< @brief directory to output instrumentation files.  */
-  char * hpx_inst_dir_orig;	/**< @brief directory to output instrumentation files original value given at command line.  */
-  const char *hpx_inst_dir_help; /**< @brief directory to output instrumentation files help description.  */
-  int* hpx_inst_at_arg;	/**< @brief set the localities to activate instrumentation at.  */
-  char ** hpx_inst_at_orig;	/**< @brief set the localities to activate instrumentation at original value given at command line.  */
-  unsigned int hpx_inst_at_min; /**< @brief set the localities to activate instrumentation at's minimum occurreces */
-  unsigned int hpx_inst_at_max; /**< @brief set the localities to activate instrumentation at's maximum occurreces */
-  const char *hpx_inst_at_help; /**< @brief set the localities to activate instrumentation at help description.  */
-  enum enum_hpx_trace_classes *hpx_trace_classes_arg;	/**< @brief set the event classes to trace.  */
-  char ** hpx_trace_classes_orig;	/**< @brief set the event classes to trace original value given at command line.  */
-  unsigned int hpx_trace_classes_min; /**< @brief set the event classes to trace's minimum occurreces */
-  unsigned int hpx_trace_classes_max; /**< @brief set the event classes to trace's maximum occurreces */
-  const char *hpx_trace_classes_help; /**< @brief set the event classes to trace help description.  */
-  long hpx_trace_filesize_arg;	/**< @brief set the size of each trace file.  */
-  char * hpx_trace_filesize_orig;	/**< @brief set the size of each trace file original value given at command line.  */
-  const char *hpx_trace_filesize_help; /**< @brief set the size of each trace file help description.  */
-  enum enum_hpx_prof_counters *hpx_prof_counters_arg;	/**< @brief set which HW counters to use for profiling.  */
-  char ** hpx_prof_counters_orig;	/**< @brief set which HW counters to use for profiling original value given at command line.  */
-  unsigned int hpx_prof_counters_min; /**< @brief set which HW counters to use for profiling's minimum occurreces */
-  unsigned int hpx_prof_counters_max; /**< @brief set which HW counters to use for profiling's maximum occurreces */
-  const char *hpx_prof_counters_help; /**< @brief set which HW counters to use for profiling help description.  */
-  int hpx_prof_detailed_flag;	/**< @brief dump all individual measurements to file in addition to summaries (default=off).  */
-  const char *hpx_prof_detailed_help; /**< @brief dump all individual measurements to file in addition to summaries help description.  */
+  char * hpx_trace_dir_arg;	/**< @brief file output directory.  */
+  char * hpx_trace_dir_orig;	/**< @brief file output directory original value given at command line.  */
+  const char *hpx_trace_dir_help; /**< @brief file output directory help description.  */
+  int* hpx_trace_at_arg;	/**< @brief filter by locality, -1 for all (default all).  */
+  char ** hpx_trace_at_orig;	/**< @brief filter by locality, -1 for all (default all) original value given at command line.  */
+  unsigned int hpx_trace_at_min; /**< @brief filter by locality, -1 for all (default all)'s minimum occurreces */
+  unsigned int hpx_trace_at_max; /**< @brief filter by locality, -1 for all (default all)'s maximum occurreces */
+  const char *hpx_trace_at_help; /**< @brief filter by locality, -1 for all (default all) help description.  */
+  enum enum_hpx_trace_classes *hpx_trace_classes_arg;	/**< @brief filter by class.  */
+  char ** hpx_trace_classes_orig;	/**< @brief filter by class original value given at command line.  */
+  unsigned int hpx_trace_classes_min; /**< @brief filter by class's minimum occurreces */
+  unsigned int hpx_trace_classes_max; /**< @brief filter by class's maximum occurreces */
+  const char *hpx_trace_classes_help; /**< @brief filter by class help description.  */
+  long hpx_trace_filesize_arg;	/**< @brief maximum bytes for each file.  */
+  char * hpx_trace_filesize_orig;	/**< @brief maximum bytes for each file original value given at command line.  */
+  const char *hpx_trace_filesize_help; /**< @brief maximum bytes for each file help description.  */
   long hpx_isir_testwindow_arg;	/**< @brief number of ISIR requests to test in progress loop.  */
   char * hpx_isir_testwindow_orig;	/**< @brief number of ISIR requests to test in progress loop original value given at command line.  */
   const char *hpx_isir_testwindow_help; /**< @brief number of ISIR requests to test in progress loop help description.  */
@@ -242,12 +234,10 @@ struct hpx_options_t
   unsigned int hpx_dbg_waitonsig_given ;	/**< @brief Whether hpx-dbg-waitonsig was given.  */
   unsigned int hpx_dbg_mprotectstacks_given ;	/**< @brief Whether hpx-dbg-mprotectstacks was given.  */
   unsigned int hpx_dbg_syncfree_given ;	/**< @brief Whether hpx-dbg-syncfree was given.  */
-  unsigned int hpx_inst_dir_given ;	/**< @brief Whether hpx-inst-dir was given.  */
-  unsigned int hpx_inst_at_given ;	/**< @brief Whether hpx-inst-at was given.  */
+  unsigned int hpx_trace_dir_given ;	/**< @brief Whether hpx-trace-dir was given.  */
+  unsigned int hpx_trace_at_given ;	/**< @brief Whether hpx-trace-at was given.  */
   unsigned int hpx_trace_classes_given ;	/**< @brief Whether hpx-trace-classes was given.  */
   unsigned int hpx_trace_filesize_given ;	/**< @brief Whether hpx-trace-filesize was given.  */
-  unsigned int hpx_prof_counters_given ;	/**< @brief Whether hpx-prof-counters was given.  */
-  unsigned int hpx_prof_detailed_given ;	/**< @brief Whether hpx-prof-detailed was given.  */
   unsigned int hpx_isir_testwindow_given ;	/**< @brief Whether hpx-isir-testwindow was given.  */
   unsigned int hpx_isir_sendlimit_given ;	/**< @brief Whether hpx-isir-sendlimit was given.  */
   unsigned int hpx_isir_recvlimit_given ;	/**< @brief Whether hpx-isir-recvlimit was given.  */
@@ -470,7 +460,6 @@ extern const char *hpx_option_parser_hpx_sched_policy_values[];  /**< @brief Pos
 extern const char *hpx_option_parser_hpx_log_level_values[];  /**< @brief Possible values for hpx-log-level. */
 extern const char *hpx_option_parser_hpx_dbg_waitonsig_values[];  /**< @brief Possible values for hpx-dbg-waitonsig. */
 extern const char *hpx_option_parser_hpx_trace_classes_values[];  /**< @brief Possible values for hpx-trace-classes. */
-extern const char *hpx_option_parser_hpx_prof_counters_values[];  /**< @brief Possible values for hpx-prof-counters. */
 extern const char *hpx_option_parser_hpx_photon_backend_values[];  /**< @brief Possible values for hpx-photon-backend. */
 
 

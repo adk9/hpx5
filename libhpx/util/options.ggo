@@ -74,27 +74,27 @@ int optional
 
 section "Log options"
 
-option "hpx-log-at" - "selectively output log information"
-typestr="[localities]"
+option "hpx-log-at" - "filter by locality, -1 for all (default none)"
+typestr="localities"
 int optional multiple
 
 option "hpx-log-level" - "set the logging level"
-typestr="level,..."
+typestr="levels"
 values="default","boot","sched","gas","lco","net","trans","parcel","action","config","memory","coll","all"
 default="all"
 enum optional argoptional multiple
 
 section "HPX Debug Options"
 
-option "hpx-dbg-waitat" - "wait for debugger at specific locality"
-typestr="[locality]"
+option "hpx-dbg-waitat" - "wait for debugger at, -1 for all (default none)"
+typestr="localities"
 int optional multiple
 
 option "hpx-dbg-waitonabort" - "wait inside of hpx_abort()"
 flag off
 
 option "hpx-dbg-waitonsig" - "wait on program error signals"
-typestr="sig,..."
+typestr="signals"
 values="segv","abrt","fpe","ill","bus","iot","sys","trap","all"
 default="all"
 enum optional argoptional multiple
@@ -105,36 +105,24 @@ flag off
 option "hpx-dbg-syncfree" - "use synchronous GAS free operations"
 flag off
 
-section "Instrumentation"
+section "Tracing"
 
-option "hpx-inst-dir" - "directory to output instrumentation files"
+option "hpx-trace-dir" - "file output directory"
 typestr="dir"
 string optional
 
-option "hpx-inst-at" - "set the localities to activate instrumentation at"
-typestr="[localities]"
+option "hpx-trace-at" - "filter by locality, -1 for all (default all)"
+typestr="localities"
 int optional multiple
 
-section "Tracing"
-
-option "hpx-trace-classes" - "set the event classes to trace"
+option "hpx-trace-classes" - "filter by class"
 typestr="class"
 values="parcel","pwc","sched","lco","process","memory","schedtimes","bookend","gas","all"
 enum optional multiple
 
-option "hpx-trace-filesize" - "set the size of each trace file"
+option "hpx-trace-filesize" - "maximum bytes for each file"
 typestr="bytes"
 long optional
-
-section "Profiling"
-
-option "hpx-prof-counters" - "set which HW counters to use for profiling"
-typestr="counters"
-values="TIMERS","L1_TCM","L1_TCA","L2_TCM","L2_TCA","L3_TCM","L3_TCA","TLB_TL","TOT_INS","INT_INS","FP_INS","LD_INS","SR_INS","BR_INS","TOT_CYC","all"
-enum optional multiple
-
-option "hpx-prof-detailed" - "dump all individual measurements to file in addition to summaries"
-flag off
 
 section "ISIR Network Options"
 
