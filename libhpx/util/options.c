@@ -309,10 +309,8 @@ config_t *config_new(int *argc, char ***argv) {
   *cfg = _default_cfg;
 
   if (!argc || !argv) {
-    // This is a (ugly) workaround to make the following logging macro
-    // work.
-    here->config = cfg;
-    log_dflt("hpx_init(NULL, NULL) called, using default configuration\n");
+    log_internal(__LINE__, __FILE__, __func__,
+                 "hpx_init(NULL, NULL) called, using default configuration\n");
     return cfg;
   }
 
