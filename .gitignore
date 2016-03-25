@@ -76,6 +76,7 @@
 /include/libhpx/Makefile
 /include/libhpx/event_stubs.h
 /include/libsync/Makefile
+/include/libsync/queues.h
 
 # /contrib/
 contrib/Makefile
