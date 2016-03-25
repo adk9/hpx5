@@ -24,6 +24,7 @@ TESTS = allreduce               \
         gas_memget              \
         gas_memput              \
         gas_move                \
+        init                    \
         lco_get_remote          \
         lco_allreduce           \
         lco_and                 \
@@ -86,6 +87,7 @@ gas_global_alloc_DEPENDENCIES       = $(HPX_APPS_DEPS)
 gas_memget_DEPENDENCIES             = $(HPX_APPS_DEPS)
 gas_memput_DEPENDENCIES             = $(HPX_APPS_DEPS)
 gas_move_DEPENDENCIES               = $(HPX_APPS_DEPS)
+init_DEPENDENCIES                   = $(HPX_APPS_DEPS)
 lco_allreduce_DEPENDENCIES          = $(HPX_APPS_DEPS)
 lco_and_DEPENDENCIES                = $(HPX_APPS_DEPS)
 lco_array_DEPENDENCIES              = $(HPX_APPS_DEPS)

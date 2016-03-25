@@ -131,6 +131,7 @@ tests/cxx/futures
 tests/cxx/global_ptr
 tests/cxx/system
 tests/unit/gas_memget
+tests/unit/init
 tests/unit/thread_yield
 tests/unit/cxx_raii
 tests/unit/lco_gencount
