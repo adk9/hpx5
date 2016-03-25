@@ -281,6 +281,9 @@ void hpx_print_help(void) {
 
 #define LIBHPX_OPT_INTSET(group, id, init, none, all)                \
   int config_##group##id##_isset(const config_t *cfg, int element) { \
+    if (!cfg) {                                                      \
+      return 0;                                                      \
+    }                                                                \
     if (!cfg->group##id) {                                           \
       return (init == all);                                          \
     }                                                                \
@@ -306,6 +309,9 @@ config_t *config_new(int *argc, char ***argv) {
   *cfg = _default_cfg;
 
   if (!argc || !argv) {
+    // This is a (ugly) workaround to make the following logging macro
+    // work.
+    here->config = cfg;
     log_dflt("hpx_init(NULL, NULL) called, using default configuration\n");
     return cfg;
   }
