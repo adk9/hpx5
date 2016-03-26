@@ -155,7 +155,7 @@ void *hpx_parcel_get_data(hpx_parcel_t *p) {
   return buffer;
 }
 
-size_t hpx_parcel_get_size(hpx_parcel_t *p) {
+size_t hpx_parcel_get_size(const hpx_parcel_t *p) {
   return p->size;
 }
 
