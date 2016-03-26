@@ -219,6 +219,14 @@ hpx_addr_t hpx_parcel_get_cont_target(const hpx_parcel_t *p)
 void *hpx_parcel_get_data(hpx_parcel_t *p)
   HPX_NON_NULL(1) HPX_PUBLIC;
 
+/// Get the size of the data buffer for a parcel.
+///
+/// @param            p The parcel to query.
+///
+/// @returns            The size of the data buffer for the parcel.
+size_t hpx_parcel_get_size(hpx_parcel_t *p)
+  HPX_NON_NULL(1) HPX_PUBLIC;
+
 /// Get the process ID for a parcel.
 ///
 /// @param            p The parcel to query.

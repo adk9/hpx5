@@ -155,6 +155,10 @@ void *hpx_parcel_get_data(hpx_parcel_t *p) {
   return buffer;
 }
 
+size_t hpx_parcel_get_size(hpx_parcel_t *p) {
+  return p->size;
+}
+
 hpx_pid_t hpx_parcel_get_pid(const hpx_parcel_t *p) {
   return p->pid;
 }
