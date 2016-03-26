@@ -2,8 +2,8 @@ noinst_HEADERS   = tests.h
 
 noinst_PROGRAMS  = $(TESTS)
 
-AM_CPPFLAGS      = $(HPX_APPS_CPPFLAGS) -I$(top_srcdir)/include -Wno-unused
-AM_CFLAGS        = $(HPX_APPS_CFLAGS)
+AM_CPPFLAGS      = $(HPX_APPS_CPPFLAGS) $(APEX_CFLAGS) -I$(top_srcdir)/include -Wno-unused
+AM_CFLAGS        = $(HPX_APPS_CFLAGS) $(APEX_CFLAGS)
 AM_CXXFLAGS      = $(HPX_APPS_CXXFLAGS)
 AM_LDFLAGS       = $(HPX_APPS_LDFLAGS) -no-install
 LDADD            = $(HPX_APPS_LDADD)

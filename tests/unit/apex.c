@@ -95,8 +95,10 @@ static int _fib_main_action(int *args, size_t size) {
   int fn = 0;                                   // fib result
   printf("fib(%d)=", n); fflush(stdout);
   hpx_time_t now = hpx_time_now();
+  apex_profiler_handle p = apex_start(APEX_NAME_STRING, "FIB main");
 
   hpx_call_sync(HPX_HERE, _fib, &fn, sizeof(fn), &n, sizeof(n));
+  apex_stop(p);
   double elapsed = hpx_time_elapsed_ms(now)/1e3;
 
   printf("%d\n", fn);
@@ -154,12 +156,12 @@ int main(int argc, char *argv[]) {
   printf("_fib_action Function calls : %d\n", function_count);
   apex_profile * profile = apex_get_profile(APEX_FUNCTION_ADDRESS, (void*)(&_fib_action));
   if (profile) {
-      printf("Number of calls Reported by APEX : %d, total time in action: %f seconds.\n", (int)profile->calls, profile->accumulated);
+      printf("Number of calls Reported by APEX : %d, total time in action: %f seconds (or cycles, if rdtsc was used).\n", (int)profile->calls, profile->accumulated);
       if (function_count == profile->calls) {
           printf("Test passed.\n");
-          rc = 0;
+          e = 0;
       } else {
-          rc = 1;
+          e = 1;
       }
   }
 #endif
