@@ -280,7 +280,8 @@ void config_print(const config_t *cfg, FILE *file);
 
 /// Add declarations to query each of the set options.
 #define LIBHPX_OPT_INTSET(group, id, UNUSED2, UNUSED3, UNUSED4)     \
-  int config_##group##id##_isset(const config_t *cfg, int value);
+  int config_##group##id##_isset(const config_t *cfg, int value)    \
+    HPX_NON_NULL(1);
 
 #define LIBHPX_OPT_BITSET(group, id, UNUSED2)                       \
   static inline uint64_t                                            \

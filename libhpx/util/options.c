@@ -281,9 +281,6 @@ void hpx_print_help(void) {
 
 #define LIBHPX_OPT_INTSET(group, id, init, none, all)                \
   int config_##group##id##_isset(const config_t *cfg, int element) { \
-    if (!cfg) {                                                      \
-      return 0;                                                      \
-    }                                                                \
     if (!cfg->group##id) {                                           \
       return (init == all);                                          \
     }                                                                \

@@ -61,7 +61,7 @@ typedef struct gas {
 } gas_t;
 
 gas_t *gas_new(config_t *cfg, struct boot *boot)
-  HPX_MALLOC;
+  HPX_MALLOC HPX_NON_NULL(1,2);
 
 inline static void gas_dealloc(gas_t *gas) {
   assert(gas && gas->dealloc);
