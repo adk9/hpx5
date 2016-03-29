@@ -140,7 +140,7 @@ static void _dump_actions(void) {
     return;
   }
 
-  for (int i = 0, e = action_table_size(); i < e; ++i) {
+  for (int i = 1, e = action_table_size(); i < e; ++i) {
     const char *tag = action_is_internal(i) ? "INTERNAL" : "USER";
     fprintf(file, "%d,%s,%s\n", i, actions[i].key, tag);
   }
