@@ -14,7 +14,7 @@
 /// Standard declarative trace events list, designed for multiple inclusion. Before
 /// including this file #define the LIBHPX_EVENT() macro.
 
-/// LIBHPX_EVENT(class, event, args1, ..., args4)
+/// LIBHPX_EVENT(class, event, args1, ..., args5)
 ///
 /// This generic macro can be used to create expansions for all of the macros in
 /// this file.

@@ -30,26 +30,41 @@ extern "C" {
 #include <libhpx/worker.h>
 
 /// Tracing events.
+///
+/// This generates an enumerated type that lists the all of the
+/// available events for tracing.
 typedef enum {
 #define LIBHPX_EVENT(class, event, ...) TRACE_EVENT_##class##_##event,
 # include "events.def"
 #undef LIBHPX_EVENT
 } libhpx_trace_events_t;
 
+/// Event names
+///
+/// This generates a table that maps tracing events to their names.
 static const char *const TRACE_EVENT_TO_STRING[] = {
 #define LIBHPX_EVENT(class, event, ...) _HPX_XSTR(class##_##event),
 # include "events.def"
 #undef LIBHPX_EVENT
 };
 
+/// Number of fields per event.
+///
+/// When outputting trace files, we need to know the number of fields
+/// in each trace event's payload. This table maintains that
+/// information by counting the number of arguments to the event
+/// definition.
 static const int TRACE_EVENT_NUM_FIELDS[] = {
 #define LIBHPX_EVENT(class, event, ...) __HPX_NARGS(__VA_ARGS__),
 # include "events.def"
 #undef LIBHPX_EVENT
 };
 
+/// Total number of trace events.
 #define TRACE_NUM_EVENTS _HPX_NELEM(TRACE_EVENT_TO_STRING)
 
+/// Offsets into the trace table indicating the beginning of each
+/// trace class.
 static const int TRACE_OFFSETS[] = {
   TRACE_EVENT_PARCEL_CREATE,
   TRACE_EVENT_NETWORK_PWC_SEND,
@@ -64,6 +79,15 @@ static const int TRACE_OFFSETS[] = {
 };
 
 /// Trace event macros.
+///
+/// The trace event macros are generated automatically from their
+/// definitions in the events.def file. When instrumentation is
+/// disabled, we use empty stubs declared in event_stubs.h that is
+/// generated at configure-time (since the C preprocessor disallows
+/// generating macros from other macros). Otherwise, we generate the
+/// event macros from the event definitions using the helper macros
+/// _DECL and _ARGS. These macros take the variadic type arguments to
+/// an event, and uses identifiers to instantiate the types.
 #ifndef ENABLE_INSTRUMENTATION
 # include <libhpx/event_stubs.h>
 #else
