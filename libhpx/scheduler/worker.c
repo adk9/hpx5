@@ -43,6 +43,7 @@
 #include <libhpx/topology.h>
 #include <libhpx/worker.h>
 #include "cvar.h"
+#include "events.h"
 #include "lco.h"
 #include "thread.h"
 
