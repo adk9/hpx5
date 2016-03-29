@@ -101,3 +101,12 @@ LIBHPX_EVENT(BOOKEND, BOOKEND)
 LIBHPX_EVENT(GAS, ACCESS, int, int, hpx_addr_t, size_t)
 LIBHPX_EVENT(GAS, MOVE, hpx_addr_t, hpx_addr_t, hpx_addr_t)
 /// @}
+
+/// Collective events
+/// @{
+LIBHPX_EVENT(COLLECTIVE, NEW, hpx_addr_t)
+LIBHPX_EVENT(COLLECTIVE, DELETE, hpx_addr_t)
+LIBHPX_EVENT(COLLECTIVE, SUBSCRIBE, hpx_addr_t, hpx_action_t, hpx_addr_t, int, int)
+LIBHPX_EVENT(COLLECTIVE, UNSUBSCRIBE, hpx_addr_t, int, int)
+LIBHPX_EVENT(COLLECTIVE, JOIN, hpx_addr_t, hpx_addr_t, size_t, int, int)
+/// @}

@@ -322,4 +322,29 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
                  METADATA_UINT64(1, "old"),                \
                  METADATA_UINT64(2, "new"))
 
+#define COLLECTIVE_NEW_METADATA \
+  _METADATA_ARGS(METADATA_HPX_ADDR(0))
+
+#define COLLECTIVE_DELETE_METADATA \
+  _METADATA_ARGS(METADATA_HPX_ADDR(0))
+
+#define COLLECTIVE_SUBSCRIBE_METADATA                           \
+  _METADATA_ARGS(METADATA_HPX_ADDR(0),                          \
+                 METADATA_UINT64(1, "continuation action"),     \
+                 METADATA_UINT64(2, "continuation address"),    \
+                 METADATA_UINT64(3, "user id"),                 \
+                 METADATA_UINT64(4, "rank"))
+
+#define COLLECTIVE_UNSUBSCRIBE_METADATA         \
+  _METADATA_ARGS(METADATA_HPX_ADDR(0),          \
+                 METADATA_UINT64(3, "user id"), \
+                 METADATA_UINT64(4, "rank"))
+
+#define COLLECTIVE_JOIN_METADATA                \
+  _METADATA_ARGS(METADATA_HPX_ADDR(0),          \
+                 METADATA_UINT64(1, "proxy"),   \
+                 METADATA_UINT64(2, "bytes"),   \
+                 METADATA_UINT64(3, "user id"), \
+                 METADATA_UINT64(4, "rank"))
+
 #endif
