@@ -36,8 +36,8 @@ check-build:
   - make -C tests check || check_check
 
 cross-build:
-  - stage: cross
-  - script:
+  stage: cross
+  script:
   - ./bootstrap
   - ./configure --enable-debug --enable-instrumentation --enable-percolation --enable-agas --enable-hpx++
                 --enable-testsuite --enable-parallel-config --with-libffi=contrib
