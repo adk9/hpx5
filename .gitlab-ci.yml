@@ -41,6 +41,6 @@ cross-build:
   - ./bootstrap
   - ./configure --enable-debug --enable-instrumentation --enable-percolation --enable-agas --enable-hpx++
                 --enable-testsuite --enable-parallel-config --with-libffi=contrib
-		--host=arm-linux-gnueabihf CC=arm-linux-gnueabihf-gcc CXX=arm-linux-gnueabihf-g++
-		CFLAGS="-g -O0" CXXFLAGS="-g -O0"
+                --host=arm-linux-gnueabihf CC=arm-linux-gnueabihf-gcc CXX=arm-linux-gnueabihf-g++
+                CFLAGS="-g -O0" CXXFLAGS="-g -O0"
   - make -j 8
