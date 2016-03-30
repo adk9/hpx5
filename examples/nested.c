@@ -17,8 +17,10 @@ const int elem_per_blk = 10;
 #define ELEMENT int
 
 static int _initialize_handler(ELEMENT *element) {
+  fprintf(stdout, "Init the array...\n");
   for (int i = 0, e = elem_per_blk; i < e; ++i) {
     element[i] = (ELEMENT)i;
+    fprintf(stdout, "%d %d\n", i, element[i]);
   }
   return HPX_SUCCESS;
 }
@@ -27,16 +29,18 @@ static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _initialize, _initialize_handler,
 
 static int _print_gas_handler(void *addr){
   ELEMENT *e = addr;
-  printf("%d\n", *e);
+  printf("user_handler:%d\n", *e);
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _print_gas, _print_gas_handler, HPX_POINTER);
 
 static int nested_for_handler(void) {
+  fprintf(stdout, "localities: %d\nthreads:%d\n", HPX_LOCALITIES, HPX_THREADS);
   int blk_num = HPX_LOCALITIES;
   size_t blk_size = elem_per_blk * sizeof(ELEMENT);
   //allocate gas
-  hpx_addr_t array = hpx_gas_alloc_cyclic(blk_num + 1, blk_size, 0);
+  hpx_addr_t array = hpx_gas_alloc_cyclic(blk_num, blk_size, 0);
+
   //fill numbers
   int e = hpx_gas_bcast_sync(_initialize, array, blk_num, 0, blk_size);
   if (HPX_SUCCESS != e) {
@@ -44,8 +48,8 @@ static int nested_for_handler(void) {
   }
 
   //perform nested for
-  int offset = elem_per_blk * blk_size;
-  e = hpx_nested_for_sync(_print_gas, 0, blk_num * elem_per_blk, blk_size,
+  int offset = 0;
+  e = hpx_nested_for_sync(_print_gas, 0, blk_num * elem_per_blk - 1, blk_size,
                           offset, sizeof(ELEMENT), 0, NULL, array);
   if (HPX_SUCCESS != e)
     return e;
