@@ -43,6 +43,7 @@
 #include <libhpx/topology.h>
 #include <libhpx/worker.h>
 #include "cvar.h"
+#include "events.h"
 #include "lco.h"
 #include "thread.h"
 
@@ -121,7 +122,6 @@ static void _continue_parcel_va(hpx_parcel_t *p, int n, va_list *args) {
   }
   else {
     process_recover_credit(p);
-    EVENT_THREAD_RUN(p, self);
   }
 }
 
@@ -280,7 +280,7 @@ static void _swap_epoch(worker_t *worker) {
 static void _push_lifo(hpx_parcel_t *p, void *worker) {
   dbg_assert(p->target != HPX_NULL);
   dbg_assert(actions[p->action].handler != NULL);
-  EVENT_SCHED_PUSH_LIFO(p);
+  EVENT_SCHED_PUSH_LIFO(p->id);
   GAS_TRACE_ACCESS(p->src, here->rank, p->target, p->size);
   worker_t *w = worker;
   uint64_t size = sync_chase_lev_ws_deque_push(_work(w), p);
@@ -293,9 +293,11 @@ static void _push_lifo(hpx_parcel_t *p, void *worker) {
 /// Process the next available parcel from our work queue in a lifo order.
 static hpx_parcel_t *_schedule_lifo(worker_t *w) {
   hpx_parcel_t *p = sync_chase_lev_ws_deque_pop(_work(w));
-  EVENT_SCHED_POP_LIFO(p);
-  EVENT_SCHED_WQSIZE(sync_chase_lev_ws_deque_size(
+  INST_IF (p) {
+    EVENT_SCHED_POP_LIFO(p->id);
+    EVENT_SCHED_WQSIZE(sync_chase_lev_ws_deque_size(
       &w->queues[sync_load(&w->work_id, SYNC_RELAXED)].work));
+  }
   return p;
 }
 
@@ -350,7 +352,7 @@ static int _push_half_handler(int src) {
   // send them back to the thief
   if (parcels) {
     scheduler_spawn_at(parcels, src);
-    EVENT_SCHED_STEAL_LIFO(parcels, self->id);
+    EVENT_SCHED_STEAL_LIFO(parcels->id, self->id);
   }
   return HPX_SUCCESS;
 }
@@ -362,7 +364,7 @@ static hpx_parcel_t *_steal_from(worker_t *w, int id) {
   hpx_parcel_t *p = sync_chase_lev_ws_deque_steal(_work(victim));
   if (p) {
     w->last_victim = id;
-    EVENT_SCHED_STEAL_LIFO(p, victim->id);
+    EVENT_SCHED_STEAL_LIFO(p->id, victim->id);
   } else {
     w->last_victim = -1;
   }
@@ -541,9 +543,7 @@ typedef struct {
 static void _checkpoint(hpx_parcel_t *to, void *sp, void *env) {
   hpx_parcel_t *prev = _swap_current(to, sp, self);
   _checkpoint_env_t *c = env;
-  EVENT_THREAD_RUN(to, self);
   c->f(prev, c->env);
-  EVENT_THREAD_END(to, self);
 }
 
 /// Probe and progress the network.
@@ -581,12 +581,12 @@ static void _schedule_network(worker_t *w) {
 ///
 /// @returns            The status from _transfer.
 static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
+  EVENT_SCHED_ENTER();
   int source = -1;
   int spins = 0;
   hpx_parcel_t *p = NULL;
   worker_t *w = self;
   while (!worker_is_stopped()) {
-    EVENT_SCHED_ENTER();
     if (!block) {
       p = _schedule_lifo(w);
       INST(source = SOURCE_LIFO);
@@ -635,13 +635,11 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
   EVENT_SCHED_EXIT();
   EVENT_SCHEDTIMES_SCHED(source, spins);
 
-  // don't transfer to the same parcel
+  // Don't transfer to the same parcel.
   if (p != w->current) {
-    EVENT_THREAD_RUN(p, w);
     _transfer(p, _checkpoint, &(_checkpoint_env_t){ .f = f, .env = env }, w);
   }
 
-  EVENT_THREAD_RESUME(w->current, w);
   (void)source;
   (void)spins;
 }

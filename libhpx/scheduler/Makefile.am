@@ -12,3 +12,7 @@ libscheduler_la_SOURCES  = cvar.c scheduler.c worker.c thread.c lco.c future.c \
                            reduce.c gather.c alltoall.c user_lco.c apex.c \
                            sigmask.c execute_thread.cc
 libscheduler_la_LIBADD   = arch/libarch.la
+
+if ENABLE_INSTRUMENTATION
+libscheduler_la_SOURCES += events.c
+endif

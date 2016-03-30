@@ -76,7 +76,8 @@ void log_internal(unsigned line, const char *filename, const char *func,
 # include "libhpx/locality.h"
 # define log_level(level, ...)                                 \
   do {                                                         \
-    if (config_log_level_isset(here->config, level) &&         \
+    if (here->config &&                                        \
+        config_log_level_isset(here->config, level) &&         \
         config_log_at_isset(here->config, here->rank)) {       \
       log_internal(__LINE__, __FILE__, __func__, __VA_ARGS__); \
     }                                                          \

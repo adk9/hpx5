@@ -11,24 +11,16 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
-#ifndef HPX_SYNC_LOCKABLE_PTR_H
-#define HPX_SYNC_LOCKABLE_PTR_H
+#include "hpx/hpx.h"
+#include "tests.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+int main(int argc, char *argv[argc]) {
+  if (hpx_init(NULL, NULL) != 0) {
+    fprintf(stderr, "failed to initialize HPX.\n");
+    return -1;
+  }
 
-#include<hpx/attributes.h>
-
-typedef const void * volatile lockable_ptr_t;
-#define SYNC_LOCKABLE_PTR(T) const T * volatile
-
-const void *sync_lockable_ptr_lock(lockable_ptr_t *p) HPX_PUBLIC;
-void sync_lockable_ptr_unlock(lockable_ptr_t *p) HPX_PUBLIC;
-const void *sync_lockable_ptr_read(lockable_ptr_t *p) HPX_PUBLIC;
-
-#ifdef __cplusplus
+  hpx_finalize();
+  printf("hpx_finalize completed %d.\n", 1);
+  return 0;
 }
-#endif
-
-#endif // HPX_SYNC_LOCKABLE_PTR_H

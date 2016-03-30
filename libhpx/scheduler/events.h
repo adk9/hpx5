@@ -21,6 +21,20 @@
 extern "C" {
 #endif
 
+struct hpx_parcel;
+struct worker;
+
+#ifdef ENABLE_INSTRUMENTATION
+void EVENT_THREAD_RUN(struct hpx_parcel *p, struct worker *w);
+void EVENT_THREAD_END(struct hpx_parcel *p, struct worker *w);
+void EVENT_THREAD_SUSPEND(struct hpx_parcel *p, struct worker *w);
+void EVENT_THREAD_RESUME(struct hpx_parcel *p, struct worker *w);
+#else
+# define EVENT_THREAD_RUN(...)
+# define EVENT_THREAD_END(...)
+# define EVENT_THREAD_SUSPEND(...)
+# define EVENT_THREAD_RESUME(...)
+#endif
 
 #ifdef __cplusplus
 }

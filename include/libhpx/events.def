@@ -14,7 +14,7 @@
 /// Standard declarative trace events list, designed for multiple inclusion. Before
 /// including this file #define the LIBHPX_EVENT() macro.
 
-/// LIBHPX_EVENT(class, event, args1, ..., args4)
+/// LIBHPX_EVENT(class, event, args1, ..., args5)
 ///
 /// This generic macro can be used to create expansions for all of the macros in
 /// this file.
@@ -29,14 +29,14 @@
 
 /// Parcel events
 /// @{
-LIBHPX_EVENT(PARCEL, CREATE, int, hpx_action_t, size_t, int)
-LIBHPX_EVENT(PARCEL, SEND, int, hpx_action_t, size_t, int, hpx_addr_t)
-LIBHPX_EVENT(PARCEL, RECV, int, hpx_action_t, size_t, int, hpx_addr_t)
-LIBHPX_EVENT(PARCEL, RUN, int, hpx_action_t, size_t)
-LIBHPX_EVENT(PARCEL, END, int, hpx_action_t)
-LIBHPX_EVENT(PARCEL, SUSPEND, int, hpx_action_t)
-LIBHPX_EVENT(PARCEL, RESUME, int, hpx_action_t)
-LIBHPX_EVENT(PARCEL, RESEND, int, hpx_action_t, size_t, hpx_addr_t)
+LIBHPX_EVENT(PARCEL, CREATE, uint64_t, hpx_action_t, size_t, int)
+LIBHPX_EVENT(PARCEL, SEND, uint64_t, hpx_action_t, size_t, hpx_addr_t, hpx_addr_t)
+LIBHPX_EVENT(PARCEL, RECV, uint64_t, hpx_action_t, size_t, int, hpx_addr_t)
+LIBHPX_EVENT(PARCEL, RUN, uint64_t, hpx_action_t, size_t)
+LIBHPX_EVENT(PARCEL, END, uint64_t, hpx_action_t)
+LIBHPX_EVENT(PARCEL, SUSPEND, uint64_t, hpx_action_t)
+LIBHPX_EVENT(PARCEL, RESUME, uint64_t, hpx_action_t)
+LIBHPX_EVENT(PARCEL, RESEND, uint64_t, hpx_action_t, size_t, hpx_addr_t)
 /// @}
 
 /// Network PWC events
@@ -48,9 +48,9 @@ LIBHPX_EVENT(NETWORK_PWC, RECV)
 /// Scheduler events
 /// @{
 LIBHPX_EVENT(SCHED, WQSIZE, size_t)
-LIBHPX_EVENT(SCHED, PUSH_LIFO, hpx_parcel_t*)
-LIBHPX_EVENT(SCHED, POP_LIFO, hpx_parcel_t*)
-LIBHPX_EVENT(SCHED, STEAL_LIFO, hpx_parcel_t*, int)
+LIBHPX_EVENT(SCHED, PUSH_LIFO, uint64_t)
+LIBHPX_EVENT(SCHED, POP_LIFO, uint64_t)
+LIBHPX_EVENT(SCHED, STEAL_LIFO, uint64_t, int)
 LIBHPX_EVENT(SCHED, ENTER)
 LIBHPX_EVENT(SCHED, EXIT)
 /// @}
@@ -99,4 +99,5 @@ LIBHPX_EVENT(BOOKEND, BOOKEND)
 /// GAS events
 /// @{
 LIBHPX_EVENT(GAS, ACCESS, int, int, hpx_addr_t, size_t)
+LIBHPX_EVENT(GAS, MOVE, hpx_addr_t, hpx_addr_t, hpx_addr_t)
 /// @}

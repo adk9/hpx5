@@ -211,6 +211,7 @@ _rebalance_blocks_handler(int start, int end, int owner, void *graph,
 
     if (owner != new_owner) {
       log_gas("move block 0x%lx from %d to %d\n", vtxs[i], owner, new_owner);
+      EVENT_GAS_MOVE(vtxs[i], HPX_THERE(owner), HPX_THERE(new_owner));
       hpx_gas_move(vtxs[i], HPX_THERE(new_owner), done);
     } else {
       hpx_lco_set(done, 0, NULL, HPX_NULL, HPX_NULL);

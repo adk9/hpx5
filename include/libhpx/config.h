@@ -186,7 +186,8 @@ static const char *const HPX_TRACE_CLASS_TO_STRING[] = {
 
 //! Configuration options for profiling in HPX.
 typedef enum {
- HPX_L1_TCM = 0,
+ HPX_TIMERS = 0,
+ HPX_L1_TCM,
  HPX_L1_TCA,
  HPX_L2_TCM,
  HPX_L2_TCA,
@@ -203,6 +204,7 @@ typedef enum {
  HPX_COUNTER_MAX,
 } libhpx_hw_counters_t;
 
+#define HPX_PROF_TIMERS    (UINT64_C(1) << HPX_TIMERS)
 #define HPX_PROF_L1_TCM    (UINT64_C(1) << HPX_L1_TCM)
 #define HPX_PROF_L1_TCA    (UINT64_C(1) << HPX_L1_TCA)
 #define HPX_PROF_L2_TCM    (UINT64_C(1) << HPX_L2_TCM)
@@ -219,6 +221,7 @@ typedef enum {
 #define HPX_PROF_TOT_CYC   (UINT64_C(1) << HPX_TOT_CYC)
 
 static const char *const HPX_COUNTER_TO_STRING[] = {
+  "TIMERS",
   "L1_TCM",
   "L1_TCA",
   "L2_TCM",

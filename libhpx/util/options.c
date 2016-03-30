@@ -306,7 +306,8 @@ config_t *config_new(int *argc, char ***argv) {
   *cfg = _default_cfg;
 
   if (!argc || !argv) {
-    log_dflt("hpx_init(NULL, NULL) called, using default configuration\n");
+    log_internal(__LINE__, __FILE__, __func__,
+                 "hpx_init(NULL, NULL) called, using default configuration\n");
     return cfg;
   }
 
@@ -423,8 +424,8 @@ void config_print(const config_t *cfg, FILE *f) {
   }
   fprintf(f, "\n");
 
-  fprintf(f, "\nInstrumentation\n");
-  fprintf(f, "  dir\t\t\t\"%s\"\n", cfg->inst_dir);
+  fprintf(f, "\nTracinf\n");
+  fprintf(f, "  dir\t\t\t\"%s\"\n", cfg->trace_dir);
   fprintf(f, "  trace filesize\t%zu\n", cfg->trace_filesize);
   fprintf(f, "  trace classes\t\t");
   for (int i = 0, e = _HPX_NELEM(HPX_TRACE_CLASS_TO_STRING); i < e; ++i) {
@@ -435,17 +436,17 @@ void config_print(const config_t *cfg, FILE *f) {
   }
   fprintf(f, "\n");
   fprintf(f, "  at\t\t\t");
-  if (!cfg->inst_at) {
+  if (!cfg->trace_at) {
     fprintf(f, "all");
   }
   else {
-    for (int i = 0; cfg->inst_at[i] != HPX_LOCALITY_NONE; ++i) {
-      if (cfg->inst_at[i] == HPX_LOCALITY_ALL) {
+    for (int i = 0; cfg->trace_at[i] != HPX_LOCALITY_NONE; ++i) {
+      if (cfg->trace_at[i] == HPX_LOCALITY_ALL) {
         fprintf(f, "all\n");
         break;
       }
       else {
-        fprintf(f, "%d, ", cfg->inst_at[i]);
+        fprintf(f, "%d, ", cfg->trace_at[i]);
       }
     }
   }

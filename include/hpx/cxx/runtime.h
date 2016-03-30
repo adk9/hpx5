@@ -34,7 +34,6 @@ namespace hpx {
 /// exit() is called from an HPX lightweight thread to terminate
 /// scheduler execution
 
-
 /// Initializes the HPX runtime.
 ///
 /// This must be called before other HPX functions.  init() initializes the
@@ -79,9 +78,9 @@ void finalize() {
 /// @param  args arguments to pass to @p entry
 /// @returns     the status code passed to exit() upon
 ///              termination.
-template <typename... Args>
-int run(hpx_action_t &entry, Args&&... args) {
-  return _hpx_run(&entry, sizeof...(Args), &args...);
+template <typename Act, typename... Args>
+int run(Act &action, Args &&... args) {
+  return action.run(std::forward<Args>(args)...);
 }
 
 /// Exit the HPX runtime.

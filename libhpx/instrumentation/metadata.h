@@ -24,7 +24,7 @@
 typedef struct record {
   int worker;
   uint64_t ns;
-  uint64_t user[0];
+  uint64_t user[];
 } record_t;
 
 #define _COL_OFFSET_WORKER    offsetof(record_t, worker)
@@ -34,20 +34,20 @@ typedef struct record {
 // ==================== Event metadata =========================================
 // Header file format:
 //
-// Magic file identifier bytes = 
+// Magic file identifier bytes =
 //   {'h', 'p', 'x', ' ', 'l', 'o', 'g', '\0', 0xFF, 0x00, 0xAA, 0x55}
 // table offset
 // [metadata-id, length, data]*
 //
 //
 //
-// * "table offset" is 4 bytes 
+// * "table offset" is 4 bytes
 // Then,
-// * "metadata-id" is 4 bytes 
-// * "length" is 4 bytes, indicates how many bytes to read for the data 
+// * "metadata-id" is 4 bytes
+// * "length" is 4 bytes, indicates how many bytes to read for the data
 //   portion of this header entry
 // * the data is a set of bytes, interpreted in a context-specific manner
-// 
+//
 // Metadata-id numbers:
 // -1 -- Named value
 // 0 -- types
@@ -137,10 +137,8 @@ typedef struct inst_event_col_metadata {
 
 /// Helper metadata generation macros for commonly used types
 
-#define METADATA_EMPTY(off)         METADATA_UINT64(off, "")
-
 #define METADATA_SIZE(off)          METADATA_UINT64(off, "size")
-#define METADATA_ACTION(off)        METADATA_UINT16(off, "action")
+#define METADATA_ACTION(off)        METADATA_UINT64(off, "action")
 #define METADATA_HPX_ADDR(off)      METADATA_UINT64(off, "global address")
 #define METADATA_PTR(off)           METADATA_UINT64(off, "local address")
 
@@ -167,7 +165,8 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 
 #define METADATA_PARCEL_ID(off)        METADATA_UINT64(off, "parcel id")
 #define METADATA_PARCEL_SIZE(off)      METADATA_UINT64(off, "parcel size")
-#define METADATA_PARCEL_SOURCE(off)    METADATA_UINT32(off, "source addr")
+#define METADATA_PARCEL_SOURCE_A(off)  METADATA_UINT64(off, "source addr")
+#define METADATA_PARCEL_SOURCE_R(off)  METADATA_UINT64(off, "source rank")
 #define METADATA_PARCEL_PARENT_ID(off) METADATA_UINT64(off, "parent id")
 #define METADATA_PARCEL_TARGET(off)    METADATA_UINT64(off, "target addr")
 
@@ -179,13 +178,13 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 #define PARCEL_SEND_METADATA                                 \
   _METADATA_ARGS(METADATA_PARCEL_ID(0), METADATA_ACTION(1),  \
                  METADATA_PARCEL_SIZE(2),                    \
-                 METADATA_PARCEL_SOURCE(3),                  \
+                 METADATA_PARCEL_SOURCE_A(3),                \
                  METADATA_PARCEL_TARGET(4))
 
 #define PARCEL_RECV_METADATA                                 \
  _METADATA_ARGS(METADATA_PARCEL_ID(0), METADATA_ACTION(1),   \
                  METADATA_PARCEL_SIZE(2),                    \
-                 METADATA_PARCEL_SOURCE(3),                  \
+                 METADATA_PARCEL_SOURCE_R(3),                \
                  METADATA_PARCEL_TARGET(4))
 
 #define PARCEL_RUN_METADATA                                  \
@@ -212,9 +211,11 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 #define SCHED_WQSIZE_METADATA                                \
   _METADATA_ARGS(METADATA_UINT64(0, "work_queue_size"))
 
-#define SCHED_PUSH_LIFO_METADATA  _METADATA_NONE
-#define SCHED_POP_LIFO_METADATA   _METADATA_NONE
-#define SCHED_STEAL_LIFO_METADATA _METADATA_NONE
+#define SCHED_PUSH_LIFO_METADATA  _METADATA_ARGS(METADATA_PARCEL_ID(0))
+#define SCHED_POP_LIFO_METADATA   _METADATA_ARGS(METADATA_PARCEL_ID(0))
+#define SCHED_STEAL_LIFO_METADATA _METADATA_ARGS(METADATA_PARCEL_ID(0), \
+                                                 METADATA_UINT64(1, "victim"))
+
 #define SCHED_ENTER_METADATA      _METADATA_NONE
 #define SCHED_EXIT_METADATA       _METADATA_NONE
 
@@ -264,12 +265,34 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 #define PROCESS_DELETE_METADATA                             \
   _METADATA_ARGS(METADATA_PROCESS_ADDRESS(0))               \
 
-#define MEMORY_REGISTERED_ALLOC_METADATA _METADATA_NONE
-#define MEMORY_REGISTERED_FREE_METADATA  _METADATA_NONE
-#define MEMORY_GLOBAL_ALLOC_METADATA     _METADATA_NONE
-#define MEMORY_GLOBAL_FREE_METADATA      _METADATA_NONE
-#define MEMORY_CYCLIC_ALLOC_METADATA     _METADATA_NONE
-#define MEMORY_CYCLIC_FREE_METADATA      _METADATA_NONE
+#define METADATA_MEMORY_ADDRESS(off) METADATA_UINT64(off, "memory address")
+#define METADATA_MEMORY_BYTES(off) METADATA_UINT64(off, "bytes")
+#define METADATA_MEMORY_BOUNDARY(off) METADATA_UINT64(off, "boundary")
+
+#define MEMORY_REGISTERED_ALLOC_METADATA                    \
+  _METADATA_ARGS(METADATA_MEMORY_ADDRESS(0),                \
+                 METADATA_MEMORY_BYTES(1),                  \
+                 METADATA_MEMORY_BOUNDARY(2))
+
+#define MEMORY_REGISTERED_FREE_METADATA                     \
+  _METADATA_ARGS(METADATA_MEMORY_ADDRESS(0))
+
+#define MEMORY_GLOBAL_ALLOC_METADATA                        \
+  _METADATA_ARGS(METADATA_MEMORY_ADDRESS(0),                \
+                 METADATA_MEMORY_BYTES(1),                  \
+                 METADATA_MEMORY_BOUNDARY(2))
+
+#define MEMORY_GLOBAL_FREE_METADATA                         \
+  _METADATA_ARGS(METADATA_MEMORY_ADDRESS(0))
+
+#define MEMORY_CYCLIC_ALLOC_METADATA                        \
+  _METADATA_ARGS(METADATA_MEMORY_ADDRESS(0),                \
+                 METADATA_MEMORY_BYTES(1),                  \
+                 METADATA_MEMORY_BOUNDARY(2))
+
+#define MEMORY_CYCLIC_FREE_METADATA                         \
+  _METADATA_ARGS(METADATA_MEMORY_ADDRESS(0))
+
 #define MEMORY_ENTER_ALLOC_FREE_METADATA _METADATA_NONE
 
 #define METADATA_SCHEDTIMES_SCHED_SOURCE(off)   \
@@ -280,7 +303,7 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 
 #define SCHEDTIMES_SCHED_METADATA                          \
   _METADATA_ARGS(METADATA_SCHEDTIMES_SCHED_SOURCE(0),      \
-                     METADATA_SCHEDTIMES_SCHED_SPINS(0))
+                 METADATA_SCHEDTIMES_SCHED_SPINS(1))
 
 #define SCHEDTIMES_PROBE_METADATA _METADATA_NONE
 
@@ -289,9 +312,14 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 #define BOOKEND_BOOKEND_METADATA _METADATA_NONE
 
 #define GAS_ACCESS_METADATA                                \
-  _METADATA_ARGS(METADATA_UINT32(0, "source"),             \
-                 METADATA_UINT32(1, "destination"),        \
+  _METADATA_ARGS(METADATA_UINT64(0, "source"),             \
+                 METADATA_UINT64(1, "destination"),        \
                  METADATA_UINT64(2, "target"),             \
                  METADATA_SIZE(3))
+
+#define GAS_MOVE_METADATA                                  \
+  _METADATA_ARGS(METADATA_UINT64(0, "block"),              \
+                 METADATA_UINT64(1, "old"),                \
+                 METADATA_UINT64(2, "new"))
 
 #endif

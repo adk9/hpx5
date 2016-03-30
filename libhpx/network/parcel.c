@@ -129,7 +129,9 @@ void parcel_launch(hpx_parcel_t *p) {
              actions[p->c_action].key,
              p->c_target);
 
-  EVENT_PARCEL_SEND(p->id, p->action, p->size, p->src, p->target);
+  EVENT_PARCEL_SEND(p->id, p->action, p->size, 
+                    (self && self->current) ? self->current->target : HPX_NULL,
+                    p->target);
 
   // do a local send through loopback, bypassing the network, otherwise dump the
   // parcel out to the network

@@ -14,6 +14,10 @@
 #ifndef HPX_SYNC_GENERIC_H_
 #define HPX_SYNC_GENERIC_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define SYNC_FLOAT_TY(T, s)
 #define SYNC_INT_TY(T, s)                                   \
   static inline T sync_load_##s(T volatile *addr, int mm) { \
@@ -70,5 +74,9 @@
 #undef SYNC_PTR_TY
 #undef SYNC_INT_TY
 #undef SYNC_FLOAT_TY
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* HPX_SYNC_GENERIC_H_ */

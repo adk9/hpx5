@@ -27,7 +27,7 @@
 #include <libhpx/events.h>
 #include <libhpx/parcel.h>
 #include <libhpx/worker.h>
-
+#include "events.h"
 
 namespace {
   /// A local exception type used to propagate the status from
@@ -39,9 +39,7 @@ namespace {
 }
 
 void HPX_NORETURN worker_execute_thread(hpx_parcel_t *p) {
-#ifdef ENABLE_INSTRUMENTATION
   EVENT_THREAD_RUN(p, self);
-#endif
   int status = HPX_SUCCESS;
   try {
     status = action_exec_parcel(p->action, p);

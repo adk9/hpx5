@@ -45,6 +45,7 @@
 /examples/cxx/guppie
 /examples/cxx/hello
 /examples/cxx/parspawn
+/examples/cxx/heat
 /examples/fibonacci
 /examples/pingpong
 /examples/allreduce
@@ -75,6 +76,7 @@
 /include/libhpx/Makefile
 /include/libhpx/event_stubs.h
 /include/libsync/Makefile
+/include/libsync/queues.h
 
 # /contrib/
 contrib/Makefile
@@ -129,11 +131,13 @@ tests/cxx/futures
 tests/cxx/global_ptr
 tests/cxx/system
 tests/unit/gas_memget
+tests/unit/init
 tests/unit/thread_yield
 tests/unit/cxx_raii
 tests/unit/lco_gencount
 tests/unit/parcel_send
 tests/unit/lco_sema
+tests/unit/percolation
 tests/unit/process
 tests/unit/lco_collectives
 tests/unit/parcel_send_through
