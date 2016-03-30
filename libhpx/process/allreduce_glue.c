@@ -16,6 +16,8 @@
 #endif
 
 #include <libhpx/debug.h>
+#include <libhpx/events.h>
+#include <libhpx/instrumentation.h>
 #include <libhpx/locality.h>
 #include "allreduce.h"
 
@@ -45,6 +47,7 @@ hpx_addr_t hpx_process_collective_allreduce_new(size_t bytes,
   hpx_lco_delete_sync(and);
 
   // return the array
+  EVENT_COLLECTIVE_NEW(base);
   return base;
 }
 
@@ -78,6 +81,7 @@ int32_t hpx_process_collective_allreduce_subscribe(hpx_addr_t allreduce,
   hpx_addr_t leaf = hpx_addr_add(allreduce, here->rank * BSIZE, BSIZE);
   dbg_check( hpx_call_sync(leaf, allreduce_add_async, &id, sizeof(id),
                            &c_action, &c_target) );
+  EVENT_COLLECTIVE_SUBSCRIBE(allreduce, c_action, c_target, id, here->rank);
   return id;
 }
 
@@ -101,6 +105,7 @@ void hpx_process_collective_allreduce_unsubscribe(hpx_addr_t allreduce,
                                                   int32_t id) {
   hpx_addr_t leaf = hpx_addr_add(allreduce, here->rank * BSIZE, BSIZE);
   dbg_check( hpx_call_sync(leaf, allreduce_remove_async, NULL, 0, &id) );
+  EVENT_COLLECTIVE_UNSUBSCRIBE(allreduce, id, here->rank);
 }
 
 int hpx_process_collective_allreduce_join(hpx_addr_t allreduce,
@@ -113,5 +118,6 @@ int hpx_process_collective_allreduce_join(hpx_addr_t allreduce,
   }
   allreduce_reduce(r, in);
   hpx_gas_unpin(proxy);
+  EVENT_COLLECTIVE_JOIN(allreduce, proxy, bytes, id, here->rank);
   return HPX_SUCCESS;
 }

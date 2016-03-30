@@ -171,6 +171,7 @@ static const char *const HPX_LOG_LEVEL_TO_STRING[] = {
 #define HPX_TRACE_SCHEDTIMES  (UINT64_C(1) << 6)
 #define HPX_TRACE_BOOKEND     (UINT64_C(1) << 7)
 #define HPX_TRACE_GAS         (UINT64_C(1) << 8)
+#define HPX_TRACE_COLLECTIVE  (UINT64_C(1) << 9)
 
 static const char *const HPX_TRACE_CLASS_TO_STRING[] = {
   "PARCEL",
@@ -181,7 +182,8 @@ static const char *const HPX_TRACE_CLASS_TO_STRING[] = {
   "MEMORY",
   "SCHEDTIMES",
   "BOOKEND",
-  "GAS"
+  "GAS",
+  "COLLECTIVE"
 };
 
 //! Configuration options for profiling in HPX.
@@ -263,7 +265,7 @@ static const char* const HPX_WAITON_TO_STRING[] = {
 /// The HPX configuration type.
 ///
 /// This configuration is used to control some of the runtime
-/// parameters for the HPX system.  The body of the struct is 
+/// parameters for the HPX system.  The body of the struct is
 /// defined in options.def, and not here in config.h.
 typedef struct config {
 #define LIBHPX_OPT(group, id, init, ctype) ctype group##id;
