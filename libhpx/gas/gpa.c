@@ -109,24 +109,21 @@ static hpx_addr_t _add_cyclic(hpx_addr_t gpa, int64_t n, uint32_t bsize,
   int64_t  blocks;
 
   uint32_t _phase = _phase_of(gpa, bsize) + n;
-  if (_phase >= 0) {
-    phase  = _phase % bsize;
-    blocks = _phase / bsize;
-    uint32_t _rank = gpa_to_rank(gpa) + blocks;
-    rank   = _rank % here->ranks;
-    cycles = _rank / here->ranks;
-  } else {
-    phase  = bsize + (_phase % bsize);
+  phase  = _phase % bsize;
+  blocks = _phase / bsize;
+  if (_phase < 0) {
+    phase += bsize;
     blocks = (_phase + 1) / bsize - 1;
-    uint32_t _rank = gpa_to_rank(gpa) + blocks;
-    if (_rank >= 0) {
-      rank   = _rank % here->ranks;
-      cycles = _rank / here->ranks;
-    } else {
-      rank   = here->ranks + (_rank % here->ranks);
-      cycles = (_rank + 1) / here->ranks - 1;
-    }
   }
+
+  uint32_t _rank = gpa_to_rank(gpa) + blocks;
+  rank   = _rank % here->ranks;
+  cycles = _rank / here->ranks;
+  if (_rank < 0) {
+    rank  += here->ranks;
+    cycles = (_rank + 1) / here->ranks - 1;
+  }
+
   block = _block_of(gpa, bsize) + cycles;
 
   const hpx_addr_t addr = _triple_to_gpa(rank, block, phase, bsize);
