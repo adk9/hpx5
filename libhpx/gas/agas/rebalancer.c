@@ -26,6 +26,7 @@
 #include <libhpx/parcel.h>
 #include <libhpx/rebalancer.h>
 #include <libhpx/scheduler.h>
+#include <libhpx/stats.h>
 #include <libhpx/worker.h>
 #include <uthash.h>
 #include "agas.h"
@@ -215,6 +216,7 @@ static int _rebalance_sync(uint64_t *partition, hpx_addr_t graph, void *g) {
   uint64_t *vtxs = NULL;
   size_t nvtxs = agas_graph_get_vtxs(g, &vtxs);
   if (nvtxs > 0 && partition) {
+    hpx_time_t now = hpx_time_now();
     // rebalance blocks in each partition
     hpx_addr_t done = hpx_lco_and_new(here->ranks);
     for (int i = 0; i < here->ranks; ++i) {
@@ -230,6 +232,7 @@ static int _rebalance_sync(uint64_t *partition, hpx_addr_t graph, void *g) {
     }
     hpx_lco_wait(done);
     hpx_lco_delete(done, HPX_NULL);
+    printf("m = %.7f\n", hpx_time_elapsed_ms(now)/1e3);
   }
 
   hpx_gas_unpin(graph);
@@ -249,9 +252,11 @@ static int _partition_sync(hpx_addr_t msync) {
     return HPX_RESEND;
   }
 
+  hpx_time_t now = hpx_time_now();
   uint64_t *partition = NULL;
   size_t nvtxs = agas_graph_partition(g, here->ranks, &partition);
   log_gas("Finished partitioning block graph (%ld vertices)\n", nvtxs);
+  printf("p = %.7f\n", hpx_time_elapsed_ms(now)/1e3);
   return hpx_call(HPX_HERE, _rebalance, msync, &partition, &graph, &g);
 }
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _partition, _partition_sync, HPX_ADDR);
@@ -259,12 +264,14 @@ static LIBHPX_ACTION(HPX_DEFAULT, 0, _partition, _partition_sync, HPX_ADDR);
 // Aggregate the global BSTs.
 //
 static int _aggregate_sync(hpx_addr_t psync, hpx_addr_t msync) {
+  hpx_time_t now = hpx_time_now();
   log_gas("Starting GAS rebalancing\n");
 
   hpx_addr_t graph = agas_graph_new();
   // first, aggregate the "block" graph locally
   hpx_bcast_rsync(_aggregate_bst, &graph);
   log_gas("Block graph aggregated on locality %d\n", HPX_LOCALITY_ID);
+  printf("a = %.7f\n", hpx_time_elapsed_ms(now)/1e3);
   return hpx_call(graph, _partition, psync, &msync);
 }
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _aggregate, _aggregate_sync, HPX_ADDR,
