@@ -10,6 +10,7 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
+#define _GNU_SOURCE
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -20,6 +21,7 @@
 ///
 
 #include <assert.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
@@ -42,6 +44,8 @@
 #include <libhpx/utils.h>
 
 #include "parser.h"
+
+extern char *program_invocation_name;
 
 typedef struct hpx_options_t hpx_options_t;
 
@@ -305,16 +309,8 @@ config_t *config_new(int *argc, char ***argv) {
   dbg_assert(cfg);
   *cfg = _default_cfg;
 
-  if (!argc || !argv) {
-    log_internal(__LINE__, __FILE__, __func__,
-                 "hpx_init(NULL, NULL) called, using default configuration\n");
-    return cfg;
-  }
-
-  dbg_assert(*argc > 0 && *argv);
-
   // The executable is used by the gengetopt parser internally.
-  const char *progname = (*argv)[0];
+  const char *progname = program_invocation_name;
 
   // Process the environment.
   hpx_options_t opts;
@@ -323,10 +319,12 @@ config_t *config_new(int *argc, char ***argv) {
   hpx_option_parser_free(&opts);
 
   // Use the command line arguments to override the environment values.
-  _process_cmdline(&opts, argc, argv);
-  _merge_opts(cfg, &opts);
-  hpx_option_parser_free(&opts);
+  if (argc) {
+    _process_cmdline(&opts, argc, argv);
+    _merge_opts(cfg, &opts);
+  }
 
+  hpx_option_parser_free(&opts);
 
   // the config file takes the highest precedence in determining the
   // runtime parameters
