@@ -214,6 +214,11 @@ int inst_init(const config_t *cfg) {
     return LIBHPX_OK;
   }
 
+  // If we don't have anything to record, then don't to anything.
+  if (!cfg->trace_classes) {
+    return LIBHPX_OK;
+  }
+
   // At this point we know that we'll be generating some sort of logs, so
   // prepare the path.
   _log_path = _get_log_path(cfg->trace_dir);
