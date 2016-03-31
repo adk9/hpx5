@@ -269,6 +269,7 @@ void hpx_gas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) {
   dbg_assert(here && here->gas);
   gas_t *gas = here->gas;
   dbg_assert(gas->move);
+  EVENT_COUNT(++self->stats.moves);
   gas->move(here->gas, src, dst, lco);
 }
 

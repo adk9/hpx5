@@ -314,7 +314,7 @@ static void _handle_mail(worker_t *w) {
   hpx_parcel_t *p = NULL;
   while ((parcels = sync_two_lock_queue_dequeue(&w->inbox))) {
     while ((p = parcel_stack_pop(&parcels))) {
-      COUNTER_SAMPLE(++w->stats.mail);
+      EVENT_COUNT(++w->stats.mail);
       log_sched("got mail %p\n", p);
       _push_lifo(p, w);
     }
@@ -477,9 +477,9 @@ static hpx_parcel_t *_schedule_steal(worker_t *w) {
   }
 
   if (p) {
-    COUNTER_SAMPLE(++w->stats.steals);
+    EVENT_COUNT(++w->stats.steals);
   } else {
-    COUNTER_SAMPLE(++w->stats.failed_steals);
+    EVENT_COUNT(++w->stats.failed_steals);
   }
   return p;
 }
@@ -789,7 +789,7 @@ void scheduler_spawn(hpx_parcel_t *p) {
   dbg_assert(w->id >= 0);
   dbg_assert(p);
   dbg_assert(actions[p->action].handler != NULL);
-  COUNTER_SAMPLE(w->stats.spawns++);
+  EVENT_COUNT(w->stats.spawns++);
 
   // If we're stopped down then push the parcel and return. This prevents an
   // infinite spawn from inhibiting termination.
@@ -863,7 +863,7 @@ static void _yield(hpx_parcel_t *p, void *env) {
 
 void scheduler_yield(void) {
   if (action_is_default(self->current->action)) {
-    COUNTER_SAMPLE(++self->stats.yields);
+    EVENT_COUNT(++self->stats.yields);
     self->yielded = true;
     // NB: no trace point, overwhelms infrastructure
     _schedule(_yield, NULL, 0);
