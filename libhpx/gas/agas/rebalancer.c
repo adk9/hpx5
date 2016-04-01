@@ -226,17 +226,10 @@ static LIBHPX_ACTION(HPX_DEFAULT, 0, _rebalance_blocks,
 // Start balancing the blocks.
 // This can be called by any locality in the system.
 static int rebalancer_start_sync(void) {
-  log_gas("Starting GAS rebalancing\n");
-
-  hpx_addr_t graph = agas_graph_new();
-  // first, aggregate the "block" graph locally
-  hpx_bcast_rsync(_aggregate_bst, &graph);
-  log_gas("Block graph aggregated on root locality\n");
-
+  hpx_addr_t graph = hpx_thread_current_target();
   void *g = NULL;
   if (!hpx_gas_try_pin(graph, (void**)&g)) {
-    dbg_error("Could not pin the graph. Did it move?\n");
-    return HPX_ERROR;
+    return HPX_RESEND;
   }
   
   // then, divide it into partitions
@@ -273,5 +266,13 @@ int rebalancer_start(hpx_addr_t sync) {
     hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
     return 0;
   }
-  return hpx_call(HPX_HERE, _rebalancer_start_sync, sync);
+
+  log_gas("Starting GAS rebalancing\n");
+
+  hpx_addr_t graph = agas_graph_new();
+  // first, aggregate the "block" graph locally
+  hpx_bcast_rsync(_aggregate_bst, &graph);
+  log_gas("Block graph aggregated on locality %d\n", HPX_LOCALITY_ID);
+
+  return hpx_call(graph, _rebalancer_start_sync, sync);
 }
