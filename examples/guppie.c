@@ -182,17 +182,17 @@ static int _mover_action(guppie_config_t *cfg, size_t n) {
 
   for (i = 0; i < nmoves; ++i) {
     // get a random number
-    src = (13719 * rand()) % (cfg->tabsize / BLOCK_SIZE);
+    src = i % (cfg->tabsize / BLOCK_SIZE);
     assert(src < cfg->tabsize);
     dst = HPX_THERE(rand() % HPX_LOCALITIES);
 
     // get the random address into the table.
     hpx_addr_t there = hpx_addr_add(cfg->table, src * BLOCK_SIZE, BLOCK_SIZE);
     // initiate a move
-    //hpx_gas_move(there, dst, done);
+    hpx_gas_move(there, dst, done);
   }
 
-  //hpx_lco_wait(done);
+  hpx_lco_wait(done);
   double move_time = hpx_time_elapsed_ms(start)/1e3;
   printf("move time: %.7f ms (%ld moves)\n", move_time, nmoves);
   hpx_lco_delete(done, HPX_NULL);
