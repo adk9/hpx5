@@ -174,11 +174,13 @@ void Block(int mype, int npes, long totalsize, long *start,
 static int _mover_action(guppie_config_t *cfg, size_t n) {
   uint64_t src;
   int dst;
-  hpx_addr_t lco;
-
   int size = HPX_LOCALITIES;
+  uint64_t nmoves = (_move/100) * cfg->nupdate;
+  int i;
+  hpx_addr_t done = hpx_lco_and_new(nmoves);
+  hpx_time_t start = hpx_time_now();
 
-  while (1) {
+  for (i = 0; i < nmoves; ++i) {
     // get a random number
     src = (13719 * rand()) % (cfg->tabsize / sizeof(uint64_t));
     assert(src < cfg->tabsize);
@@ -186,13 +188,14 @@ static int _mover_action(guppie_config_t *cfg, size_t n) {
 
     // get the random address into the table.
     hpx_addr_t there = hpx_addr_add(cfg->table, src * BLOCK_SIZE, BLOCK_SIZE);
-    lco = hpx_lco_future_new(0);
     // initiate a move
-    hpx_gas_move(there, HPX_THERE(dst), lco);
-    hpx_lco_wait(lco);
-    hpx_lco_delete(lco, HPX_NULL);
+    hpx_gas_move(there, HPX_THERE(dst), done);
   }
-  // gets killed at shutdown
+
+  hpx_lco_wait(done);
+  double move_time = hpx_time_elapsed_ms(start)/1e3;
+  printf("move time: %.7f ms\n", move_time);
+  hpx_lco_delete(done, HPX_NULL);
   return HPX_SUCCESS;
 }
 
@@ -243,6 +246,7 @@ void _main_action(guppie_config_t *cfg, size_t size)
   long j;
   hpx_addr_t lco;
   hpx_addr_t there;
+  double rebalance_time;
 
   printf("nThreads = %d\n", hpx_get_num_ranks());
   printf("Main table size = 2^%ld = %ld words\n", cfg->ltabsize, cfg->tabsize);
@@ -257,6 +261,7 @@ void _main_action(guppie_config_t *cfg, size_t size)
   // Begin timing here
   icputime = -CPUSEC();
   is = -WSEC();
+  rebalance_time = 0.0;
 
   // Initialize main table
   int e = hpx_bcast_rsync(_init_table, cfg, sizeof(*cfg));
@@ -289,8 +294,10 @@ void _main_action(guppie_config_t *cfg, size_t size)
   if (_rebalance) {
     printf("Starting automatic rebalancing.\n");
     hpx_addr_t done = hpx_lco_future_new(0);
+    rebalance_time = -CPUSEC();
     hpx_gas_rebalance(done);
     hpx_lco_wait(done);
+    rebalance_time += CPUSEC();
     printf("Finished automatic rebalancing.\n");
     hpx_lco_delete(done, HPX_NULL);
   }
@@ -299,10 +306,11 @@ void _main_action(guppie_config_t *cfg, size_t size)
   cputime += CPUSEC();
   s += WSEC();
   // Print timing results
-  printf("init(c= %.4lf w= %.4lf) up(c= %.4lf w= %.4lf) up/sec= %.0lf\n",
+  printf("init(c= %.4lf w= %.4lf) up(c= %.4lf w= %.4lf, r= %.4lf) up/sec= %.0lf\n",
          icputime, is, cputime, s, ((double)cfg->nupdate / s));
 
   // Verification of results (in serial or "safe" mode; optional)
+  hpx_exit(HPX_SUCCESS);
   temp = 0x1;
   lco = hpx_lco_and_new(cfg->nupdate);
   for (i=0; i<cfg->nupdate; i++) {
@@ -327,7 +335,7 @@ void _main_action(guppie_config_t *cfg, size_t size)
 
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: guppie [options] TABSIZE NUPDATES\n"
-          "\t-M, enable AGAS data movement\n"
+          "\t-M <num>, enable AGAS data movement with num% (0-100) frequency\n"
           "\t-R, enable automatic AGAS-based rebalancing\n"
           "\t-h, show help\n");
   hpx_print_help();
@@ -361,7 +369,7 @@ int main(int argc, char *argv[])
   while ((opt = getopt(argc, argv, "MRh?")) != -1) {
     switch (opt) {
      case 'M':
-      _move = 1;
+      _move = atoi(optarg) % 100;
       break;
      case 'R':
       _rebalance = 1;
