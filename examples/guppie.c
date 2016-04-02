@@ -306,8 +306,9 @@ void _main_action(guppie_config_t *cfg, size_t size)
   cputime += CPUSEC();
   s += WSEC();
   // Print timing results
-  printf("init(c= %.4lf w= %.4lf) up(c= %.4lf w= %.4lf, r= %.4lf) up/sec= %.0lf\n",
-         icputime, is, cputime, s, ((double)cfg->nupdate / s));
+  printf("init(c= %.4lf w= %.4lf) up(c= %.4lf w= %.4lf, r= %.4lf)"
+         " up/sec= %.0lf\n", icputime, is, cputime, s, rebalance_time,
+         ((double)cfg->nupdate / s));
 
   // Verification of results (in serial or "safe" mode; optional)
   hpx_exit(HPX_SUCCESS);
