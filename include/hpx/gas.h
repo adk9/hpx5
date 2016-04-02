@@ -339,7 +339,7 @@ void *hpx_malloc_registered(size_t bytes)
 ///
 /// @param     elements The number of elements to allocate.
 /// @param        bytes The number of bytes to allocate.
-void *hpx_calloc_regisered(size_t elements, size_t bytes)
+void *hpx_calloc_registered(size_t elements, size_t bytes)
   HPX_PUBLIC;
 
 /// Allocate local aligned memory for use in the memget/memput functions.
