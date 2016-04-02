@@ -175,26 +175,26 @@ static int _mover_action(guppie_config_t *cfg, size_t n) {
   uint64_t src;
   int dst;
   int size = HPX_LOCALITIES;
-  uint64_t nmoves = (_move/100) * cfg->nupdate;
+  uint64_t nmoves = ((double)_move/100) * (cfg->tabsize / BLOCK_SIZE);
   int i;
   hpx_addr_t done = hpx_lco_and_new(nmoves);
   hpx_time_t start = hpx_time_now();
 
   for (i = 0; i < nmoves; ++i) {
     // get a random number
-    src = (13719 * rand()) % (cfg->tabsize / sizeof(uint64_t));
+    src = (13719 * rand()) % (cfg->tabsize / BLOCK_SIZE);
     assert(src < cfg->tabsize);
-    dst = (rand() % size);
+    dst = HPX_THERE(rand() % HPX_LOCALITIES);
 
     // get the random address into the table.
     hpx_addr_t there = hpx_addr_add(cfg->table, src * BLOCK_SIZE, BLOCK_SIZE);
     // initiate a move
-    hpx_gas_move(there, HPX_THERE(dst), done);
+    //hpx_gas_move(there, dst, done);
   }
 
-  hpx_lco_wait(done);
+  //hpx_lco_wait(done);
   double move_time = hpx_time_elapsed_ms(start)/1e3;
-  printf("move time: %.7f ms\n", move_time);
+  printf("move time: %.7f ms (%ld moves)\n", move_time, nmoves);
   hpx_lco_delete(done, HPX_NULL);
   return HPX_SUCCESS;
 }
@@ -254,8 +254,7 @@ void _main_action(guppie_config_t *cfg, size_t size)
   fflush(stdout);
 
   // Allocate main table.
-  cfg->table = hpx_gas_alloc_cyclic_attr(cfg->tabsize, sizeof(uint64_t),
-                                         sizeof(uint64_t),
+  cfg->table = hpx_gas_alloc_cyclic_attr(cfg->tabsize, BLOCK_SIZE, BLOCK_SIZE,
                                          _rebalance ? HPX_GAS_ATTR_LB : HPX_GAS_ATTR_NONE);
 
   // Begin timing here
@@ -367,10 +366,10 @@ int main(int argc, char *argv[])
   }
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "MRh?")) != -1) {
+  while ((opt = getopt(argc, argv, "M:Rh?")) != -1) {
     switch (opt) {
      case 'M':
-      _move = atoi(optarg) % 100;
+      _move = (atoi(optarg)%100)+1;
       break;
      case 'R':
       _rebalance = 1;
