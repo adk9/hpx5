@@ -139,6 +139,7 @@ _agas_owner_of(const void *gas, hpx_addr_t addr) {
   gva_t gva = { .addr = addr };
   uint32_t owner;
   btt_get_owner(agas->btt, gva, &owner);
+  dbg_assert(owner < here->ranks);
   return owner;
 }
 
