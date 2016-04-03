@@ -173,8 +173,6 @@ void Block(int mype, int npes, long totalsize, long *start,
 
 static int _mover_action(guppie_config_t *cfg, size_t n) {
   uint64_t src;
-  int dst;
-  int size = HPX_LOCALITIES;
   uint64_t nmoves = ((double)_move/100) * (cfg->tabsize / BLOCK_SIZE);
   int i;
   hpx_addr_t done = hpx_lco_and_new(nmoves);
@@ -184,7 +182,7 @@ static int _mover_action(guppie_config_t *cfg, size_t n) {
     // get a random number
     src = i % (cfg->tabsize / BLOCK_SIZE);
     assert(src < cfg->tabsize);
-    dst = HPX_THERE(rand() % HPX_LOCALITIES);
+    hpx_addr_t dst = HPX_THERE(rand() % HPX_LOCALITIES);
 
     // get the random address into the table.
     hpx_addr_t there = hpx_addr_add(cfg->table, src * BLOCK_SIZE, BLOCK_SIZE);
