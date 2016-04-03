@@ -301,8 +301,8 @@ int btt_remove_when_count_zero(void *obj, gva_t gva, void **lva) {
   (void)erased;
 }
 
-int btt_try_move(void *obj, gva_t gva, int rank, void **lva, uint32_t *attr) {
+int btt_try_move(void *obj, gva_t gva, int to, void **lva, uint32_t *attr) {
   int e = _btt_wait_until_count_zero(obj, gva, lva, attr);
-  btt_set_owner(obj, gva, rank);
+  btt_set_owner(obj, gva, to);
   return e;
 }
