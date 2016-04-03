@@ -246,7 +246,9 @@ static hpx_parcel_t *_finish(irecv_buffer_t *irecvs, int i, void *status) {
     int to = gas_owner_of(here->gas, p->target);
     if (to != here->rank) {
       network_send(self->network, p);
-      irecvs->records[i].parcel = NULL;
+      if (LIBHPX_OK != _start(irecvs, i)) {
+        dbg_error("failed to regenerate an irecv\n");
+      }
       return NULL;
     }
   }
