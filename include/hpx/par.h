@@ -60,27 +60,50 @@ int hpx_par_for(hpx_for_action_t f, int min, int max, void *args,
 int hpx_par_for_sync(hpx_for_action_t f, int min, int max,
                      void *args) HPX_PUBLIC;
 
-typedef int (*hpx_nested_for_action_t)(int i, void *lva, void *arg);
-
-int hpx_nested_for(hpx_action_t f, int min, int max, int bsize,
+/// Perform a hierarchical "for" loop in parallel.
+///
+/// This encapsulates a hierarchical parallel for loop:
+///
+/// @code
+/// distribution[HPX_LOCALITIES] = precompute_distribution_on_localities();
+/// for (int i = 0, a = HPX_LOCALITIES; i< a; ++i) {
+///   int base = 0;
+///   int chunk = distribution[i] / HPX_THREADS;
+///   int rmin, rmax;
+///   for (int j = 0, b = HPX_THREADS; j < b; ++j) {
+///     rmin = base;
+///     rmax = base + chunk;
+///     base = rmax;
+///     for (int k = rmin, c = rmax; k < c; ++k)
+///       hpx_call(HPX_HERE, action, HPX_NULL, &k, &args, arg_size);
+/// }
+/// @endcode
+///
+/// After precomputation on the gas, we can get the distribution of 
+/// all the blocks on all localities from index min to max.
+/// Then the job on each locality will be evenly divided int equal chunks
+/// among the number of "worker" threads available.
+/// Work is actively pushed to each worker thread
+/// but is not affinitized and can be stolen by other worker threads.
+///
+/// @param        f The "for" loop body function.
+/// @param      min The minimum index of the global array within gas.
+/// @param      max The maximum index of the gloabl array within gas.
+/// @param    bsize The block size of the gas.
+/// @param   offset The offset of the gas.
+/// @param   stride The stride between each block within the gas.
+/// @param arg_size The arguments size to the for function @p f.
+/// @param     args The arguments to the for function @p f.
+/// @param     addr The global address space address.
+/// @param     sync An LCO that indicates the completion of all iterations.
+///
+//// @returns An error code, or HPX_SUCCESS.
+int hpx_hier_for(hpx_action_t f, int min, int max, int bsize,
                    int offset, int stride, int arg_size, void *args,
                    hpx_addr_t addr, hpx_addr_t sync)
   HPX_PUBLIC;
-//
-//typedef hpx_addr_t (*lukes_thing)(int, void *);
-//
-//int lukes_nested_for(hpx_action_t f, int min, int max, void *args,
-//                     hpx_addr_t sync, lukes_thing map, void *map_env);
-//for (i: min, max) {
-//  hpx_call(map(i, map_env), f, and, i, args);
-// }
-//
-//int lukes_nested_for(hpx_action_t f, int min, int max, void *args,
-//                     hpx_addr_t sync,
-//                     hpx_addr_t base, int bsize, int stride, int offset) {
-//}
-//
-int hpx_nested_for_sync(hpx_action_t f, int min, int max, int bsize, 
+
+int hpx_hier_for_sync(hpx_action_t f, int min, int max, int bsize, 
                         int offset, int stride, int arg_size,
                         void *args, hpx_addr_t addr)
   HPX_PUBLIC;

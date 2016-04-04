@@ -34,7 +34,7 @@ static int _print_gas_handler(void *addr){
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _print_gas, _print_gas_handler, HPX_POINTER);
 
-static int nested_for_handler(void) {
+static int hier_for_handler(void) {
   fprintf(stdout, "localities: %d\nthreads:%d\n", HPX_LOCALITIES, HPX_THREADS);
   int blk_num = HPX_LOCALITIES;
   size_t blk_size = elem_per_blk * sizeof(ELEMENT);
@@ -49,7 +49,7 @@ static int nested_for_handler(void) {
 
   //perform nested for
   int offset = 0;
-  e = hpx_nested_for_sync(_print_gas, 0, blk_num * elem_per_blk - 1, blk_size,
+  e = hpx_hier_for_sync(_print_gas, 0, blk_num * elem_per_blk, blk_size,
                           offset, sizeof(ELEMENT), 0, NULL, array);
   if (HPX_SUCCESS != e)
     return e;
@@ -57,14 +57,14 @@ static int nested_for_handler(void) {
   hpx_exit(HPX_SUCCESS);
   return HPX_SUCCESS;
 }
-static HPX_ACTION(HPX_DEFAULT, 0, nested_for, nested_for_handler);
+static HPX_ACTION(HPX_DEFAULT, 0, hier_for, hier_for_handler);
 
 int main(int argc, char *argv[argc]) {
   if (hpx_init(&argc, &argv) != 0) {
     return -1;
   }
 
-  int e = hpx_run(&nested_for);
+  int e = hpx_run(&hier_for);
   if (HPX_SUCCESS != e) {
     printf("something failed: %d\n", e);
   }

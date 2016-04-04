@@ -6,7 +6,7 @@ examplesdir             = $(datarootdir)/doc/@PACKAGE@
 
 noinst_PROGRAMS         = fibonacci pingpong allreduce countdown seqspawn \
                           parspawn future memput memget guppie hello \
-                          qsort call netbench cpi heat jacobi nested
+                          qsort call netbench cpi heat jacobi hierfor
 
 fibonacci_SOURCES       = fibonacci.c
 pingpong_SOURCES        = pingpong.c
@@ -25,7 +25,7 @@ netbench_SOURCES        = netbench.c
 cpi_SOURCES             = cpi.c
 heat_SOURCES            = heat.c
 jacobi_SOURCES          = jacobi.c
-nested_SOURCES          = nested.c
+hierfor_SOURCES         = hierfor.c
 
 AM_CPPFLAGS             = -D_GNU_SOURCE $(HPX_APPS_CPPFLAGS) -I$(top_srcdir)/include
 AM_CFLAGS               = $(HPX_APPS_CFLAGS) -Wno-unused
@@ -49,4 +49,4 @@ netbench_DEPENDENCIES   = $(HPX_APPS_DEPS)
 cpi_DEPENDENCIES        = $(HPX_APPS_DEPS)
 heat_DEPENDENCIES       = $(HPX_APPS_DEPS)
 jacobi_DEPENDENCIES     = $(HPX_APPS_DEPS)
-nested_DEPENDENCIES     = $(HPX_APPS_DEPS)
+hierfor_DEPENDENCIES    = $(HPX_APPS_DEPS)
