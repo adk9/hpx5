@@ -182,7 +182,8 @@ static int _mover_action(guppie_config_t *cfg, size_t n) {
     // get a random number
     src = i % (cfg->tabsize / BLOCK_SIZE);
     assert(src < cfg->tabsize);
-    hpx_addr_t dst = HPX_THERE(rand() % HPX_LOCALITIES);
+    int rnd = rand() % HPX_LOCALITIES;
+    hpx_addr_t dst = HPX_THERE(rnd);
 
     // get the random address into the table.
     hpx_addr_t there = hpx_addr_add(cfg->table, src * BLOCK_SIZE, BLOCK_SIZE);
