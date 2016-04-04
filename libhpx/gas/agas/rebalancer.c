@@ -215,8 +215,6 @@ static int _rebalance_sync(uint64_t *partition, hpx_addr_t graph, void *g) {
   uint64_t *vtxs = NULL;
   size_t nvtxs = agas_graph_get_vtxs(g, &vtxs);
   if (nvtxs > 0 && partition) {
-    hpx_time_t now = hpx_time_now();
-
     // rebalance blocks in each partition
     hpx_addr_t done = hpx_lco_and_new(HPX_LOCALITIES);
     for (int i = 0; i < HPX_LOCALITIES; ++i) {
@@ -280,5 +278,5 @@ int rebalancer_start(hpx_addr_t async, hpx_addr_t psync, hpx_addr_t msync) {
     return 0;
   }
 
-  return hpx_call(graph, _rebalancer_start_sync, sync);
+  return hpx_call(HPX_HERE, _aggregate, async, &psync, &msync);
 }

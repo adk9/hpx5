@@ -290,7 +290,7 @@ void _main_action(guppie_config_t *cfg, size_t size)
     printf("Starting automatic rebalancing.\n");
     hpx_addr_t done = hpx_lco_future_new(0);
     rebalance_time = -WSEC();
-    hpx_gas_rebalance(done);
+    hpx_gas_rebalance(HPX_NULL, HPX_NULL, done);
     hpx_lco_wait(done);
     rebalance_time += WSEC();
     printf("Finished automatic rebalancing.\n");

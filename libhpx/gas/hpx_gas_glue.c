@@ -403,6 +403,6 @@ void hpx_gas_set_attr(hpx_addr_t addr, uint32_t attr) {
 static LIBHPX_ACTION(HPX_INTERRUPT, 0, _set_attr_action,
                      hpx_gas_set_attr, HPX_ADDR, HPX_UINT32);
 
-void hpx_gas_rebalance(hpx_addr_t sync) {
-  rebalancer_start(sync);
+void hpx_gas_rebalance(hpx_addr_t async, hpx_addr_t psync, hpx_addr_t msync) {
+  rebalancer_start(async, psync, msync);
 }
