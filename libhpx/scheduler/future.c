@@ -285,7 +285,7 @@ hpx_addr_t hpx_lco_future_array_new(int n, int size, int futures_per_block) {
   // perform the global allocation
   uint32_t       blocks = ceil_div_32(n, futures_per_block);
   uint32_t future_bytes = sizeof(_future_t) + size;
-  uint32_t  block_bytes = futures_per_block * future_bytes;
+  uint64_t  block_bytes = futures_per_block * future_bytes;
   hpx_addr_t       base = lco_alloc_cyclic(blocks, block_bytes, 0);
 
   // for each block, initialize the future
@@ -306,8 +306,8 @@ hpx_addr_t hpx_lco_future_array_new(int n, int size, int futures_per_block) {
 // provide this array indexer.
 hpx_addr_t hpx_lco_future_array_at(hpx_addr_t array, int i, int size, int bsize)
 {
-  uint32_t future_bytes = sizeof(_future_t) + size;
-  uint32_t  block_bytes = bsize * future_bytes;
+  uint64_t future_bytes = sizeof(_future_t) + size;
+  uint64_t  block_bytes = bsize * future_bytes;
   return hpx_addr_add(array, i * future_bytes, block_bytes);
 }
 
