@@ -43,7 +43,7 @@ typedef struct {
   hpx_action_t        op;
   hpx_action_t predicate;
   void             *init;
-  void           *buffer;
+  size_t       init_size;
   char           data[0];
 } _user_lco_t;
 
@@ -57,8 +57,7 @@ static void _reset(_user_lco_t *u) {
   dbg_assert_str(cvar_empty(&u->cvar),
                  "Reset on an LCO that has waiting threads.\n");
   lco_reset_triggered(&u->lco);
-  size_t init_size = ((char*)u->buffer - u->data);
-  _user_lco_init(u, u->size, u->id, u->op, u->predicate, u->init, init_size);
+  _user_lco_init(u, u->size, u->id, u->op, u->predicate, u->init, u->init_size);
 }
 
 
@@ -72,8 +71,7 @@ static bool _trigger(_user_lco_t *u) {
 
 static size_t _user_lco_size(lco_t *lco) {
   _user_lco_t *u = (_user_lco_t *)lco;
-  size_t init_size = ((char*)u->buffer - u->data);
-  return (sizeof(*u) + u->size + init_size);
+  return (sizeof(*u) + u->size + u->init_size);
 }
 
 /// Deletes a user-defined LCO.
@@ -116,11 +114,12 @@ static int _user_lco_set(lco_t *lco, int size, const void *from) {
   // perform the op()
   handler_t f = actions[u->op].handler;
   hpx_monoid_op_t op = (hpx_monoid_op_t)f;
-  op(u->buffer, from, size);
+  void *buffer = hpx_lco_user_get_user_data(lco);
+  op(buffer, from, size);
 
   f = actions[u->predicate].handler;
   hpx_predicate_t predicate = (hpx_predicate_t)f;
-  if (predicate(u->buffer, u->size)) {
+  if (predicate(buffer, u->size)) {
     lco_set_triggered(&u->lco);
     scheduler_signal_all(&u->cvar);
     set = 1;
@@ -177,7 +176,8 @@ static hpx_status_t _user_lco_get(lco_t *lco, int size, void *out, int reset) {
 
   // copy out the value if the caller wants it
   if (out) {
-    memcpy(out, u->buffer, size);
+    void *buffer = hpx_lco_user_get_user_data(lco);
+    memcpy(out, buffer, size);
   }
 
   if (reset) {
@@ -214,15 +214,16 @@ static hpx_status_t _user_lco_getref(lco_t *lco, int size, void **out, int *unpi
 
   // No need for a lock here, synchronization happened in _wait(), and the LCO
   // is pinned externally.
-  _user_lco_t *u = (_user_lco_t *)lco;
-  *out  = u->buffer;
+  *out  = hpx_lco_user_get_user_data(lco);
   *unpin = 0;
   return HPX_SUCCESS;
 }
 
 // Release the reference to the buffer.
 static int _user_lco_release(lco_t *lco, void *out) {
-  dbg_assert(lco && out && out == ((_user_lco_t *)lco)->buffer);
+  void *buffer = hpx_lco_user_get_user_data(lco);
+  dbg_assert(lco && out && out == buffer);
+  (void)buffer;
   return 1;
 }
 
@@ -260,11 +261,12 @@ _user_lco_init(_user_lco_t *u, size_t size, hpx_action_t id,
   u->op = op;
   u->predicate = predicate;
   u->init = u->data;
-  u->buffer = (char*)u->data + init_size;
+  u->init_size = init_size;
 
   handler_t f = actions[u->id].handler;
   _hpx_user_lco_id_t init_fn = (_hpx_user_lco_id_t)f;
-  init_fn(u->buffer, u->size, init, init_size);
+  void *buffer = (char*)u->data + init_size;
+  init_fn(buffer, u->size, init, init_size);
   return HPX_SUCCESS;
 }
 /// @}
@@ -381,5 +383,5 @@ hpx_addr_t hpx_lco_user_local_array_new(int n, size_t size, hpx_action_t id,
 /// portion of the user-defined LCO regardless the LCO has been set or not.
 void *hpx_lco_user_get_user_data(void *lco) {
   _user_lco_t *u = lco;
-  return u->buffer;
+  return (char*)u->data + u->init_size;
 }
