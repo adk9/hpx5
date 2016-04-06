@@ -64,7 +64,6 @@ static int _agas_invalidate_mapping_handler(hpx_addr_t dst, int to) {
   agas_t *agas = (agas_t*)here->gas;
   hpx_addr_t src = hpx_thread_current_target();
   gva_t gva = { .addr = src };
-  size_t bsize = UINT64_C(1) << gva.bits.size;
 
   uint32_t owner;
   dbg_assert(btt_get_owner(agas->btt, gva, &owner) && (here->rank == owner));
@@ -83,6 +82,7 @@ static int _agas_invalidate_mapping_handler(hpx_addr_t dst, int to) {
     sync_tatas_acquire(&lco->lock);
   }
 
+  size_t bsize = UINT64_C(1) << gva.bits.size;
   e = hpx_call_cc(dst, _insert_block, block, bsize, &src, sizeof(src), &attr,
                   sizeof(attr));
 
