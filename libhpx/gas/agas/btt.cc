@@ -55,8 +55,7 @@ BTT::attachParcel(gva_t gva, hpx_parcel_t *p) {
   uint64_t key = gva_to_key(gva);
   bool ret = false;
   bool found = update_fn(key, [&](Entry& entry) {
-      assert(entry.owner == here->rank);
-      if (entry.count == 0) {
+      if (entry.owner != here->rank || entry.count == 0) {
         ret = true;
         return;
       }
