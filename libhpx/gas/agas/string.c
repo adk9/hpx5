@@ -55,6 +55,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED | HPX_VECTORED, _insert_block,
 
 /// Invalidate the remote block mapping. This action blocks until it
 /// can safely invalidate the block.
+static hpx_action_t _agas_invalidate_mapping;
 static int _agas_invalidate_mapping_handler(hpx_addr_t dst, int to) {
   // unnecessary to move to the same locality
   if (here->rank == to) {
@@ -66,8 +67,10 @@ static int _agas_invalidate_mapping_handler(hpx_addr_t dst, int to) {
   gva_t gva = { .addr = src };
 
   uint32_t owner;
-  dbg_assert(btt_get_owner(agas->btt, gva, &owner) && (here->rank == owner));
-  (void)owner;
+  btt_get_owner(agas->btt, gva, &owner);
+  if (here->rank != owner) {
+    return hpx_call_cc(src, _agas_invalidate_mapping, &dst, &to);
+  }
 
   void *block = NULL;
   uint32_t attr;
