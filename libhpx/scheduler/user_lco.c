@@ -42,7 +42,6 @@ typedef struct {
   hpx_action_t        id;
   hpx_action_t        op;
   hpx_action_t predicate;
-  void             *init;
   size_t       init_size;
   char           data[0];
 } _user_lco_t;
@@ -57,7 +56,7 @@ static void _reset(_user_lco_t *u) {
   dbg_assert_str(cvar_empty(&u->cvar),
                  "Reset on an LCO that has waiting threads.\n");
   lco_reset_triggered(&u->lco);
-  _user_lco_init(u, u->size, u->id, u->op, u->predicate, u->init, u->init_size);
+  _user_lco_init(u, u->size, u->id, u->op, u->predicate, u->data, u->init_size);
 }
 
 
@@ -260,7 +259,6 @@ _user_lco_init(_user_lco_t *u, size_t size, hpx_action_t id,
   u->id = id;
   u->op = op;
   u->predicate = predicate;
-  u->init = u->data;
   u->init_size = init_size;
 
   handler_t f = actions[u->id].handler;
