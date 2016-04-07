@@ -38,7 +38,7 @@ bool btt_get_attr(const void *btt, gva_t gva, uint32_t *attr);
 void btt_set_attr(void *btt, gva_t gva, uint32_t attr);
 size_t btt_get_blocks(const void *btt, gva_t gva);
 int btt_get_all(const void *btt, gva_t gva, void **lva, size_t *blocks,
-                int32_t *count);
+                int32_t *count, uint32_t *owner);
 
 /// During hpx_gas_free (and hpx_lco_delete) we want to remove the btt entry for
 /// a block, but only once its reference count hits zero. This function will

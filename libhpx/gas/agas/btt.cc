@@ -55,7 +55,8 @@ BTT::attachParcel(gva_t gva, hpx_parcel_t *p) {
   uint64_t key = gva_to_key(gva);
   bool ret = false;
   bool found = update_fn(key, [&](Entry& entry) {
-      if (entry.owner != here->rank || entry.count == 0) {
+      assert(entry.owner == here->rank);
+      if (entry.count == 0) {
         ret = true;
         return;
       }
@@ -240,7 +241,7 @@ btt_get_blocks(const void* obj, gva_t gva) {
 
 int
 btt_get_all(const void *o, gva_t gva, void **lva, size_t *blocks,
-            int32_t *cnt) {
+            int32_t *cnt, uint32_t *owner) {
   const BTT *btt = static_cast<const BTT*>(o);
   Entry entry;
   uint64_t key = gva_to_key(gva);
@@ -254,6 +255,9 @@ btt_get_all(const void *o, gva_t gva, void **lva, size_t *blocks,
     }
     if (cnt) {
       *cnt = entry.count;
+    }
+    if (owner) {
+      *owner = entry.owner;
     }
   }
   return found;
