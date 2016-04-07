@@ -47,7 +47,7 @@ static int _insert_block_handler(int n, void *args[], size_t sizes[]) {
   }
 
   gva_t gva = { .addr = *src };
-  btt_insert(agas->btt, gva, here->rank, lva, 1, *attr);
+  btt_upsert(agas->btt, gva, here->rank, lva, 1, *attr);
   return HPX_SUCCESS;
 }
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED | HPX_VECTORED, _insert_block,

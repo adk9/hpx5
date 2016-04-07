@@ -134,6 +134,17 @@ btt_insert(void *obj, gva_t gva, uint32_t owner, void *lva, size_t blocks,
 }
 
 void
+btt_upsert(void *obj, gva_t gva, uint32_t owner, void *lva, size_t blocks,
+           uint32_t attr) {
+  BTT *btt = static_cast<BTT*>(obj);
+  uint64_t key = gva_to_key(gva);
+  auto updatefn = [&](Entry& entry) {
+    entry = Entry(owner, lva, blocks, attr);
+  };
+  btt->upsert(key, updatefn, Entry(owner, lva, blocks, attr));
+}
+
+void
 btt_remove(void *obj, gva_t gva) {
   BTT *btt = static_cast<BTT*>(obj);
   uint64_t key = gva_to_key(gva);

@@ -26,6 +26,8 @@ void btt_delete(void *btt);
 
 void btt_insert(void *btt, gva_t gva, uint32_t owner, void *lva, size_t blocks,
                 uint32_t attr);
+void btt_upsert(void *btt, gva_t gva, uint32_t owner, void *lva, size_t blocks,
+                uint32_t attr);
 void btt_remove(void *btt, gva_t gva);
 bool btt_try_pin(void *btt, gva_t gva, void **lva);
 void btt_unpin(void *btt, gva_t gva);
