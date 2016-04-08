@@ -77,7 +77,7 @@ BTT::tryPin(gva_t gva, void** lva) {
   bool found = update_fn(key, [&](Entry& entry) {
       // If we do not own the block or if there is a pending delete on
       // this block, the try-pin operation fails.
-      if (entry.owner != here->rank || entry.onunpin != NULL) {
+      if (entry.owner != here->rank || entry.onunpin) {
         return;
       }
 
@@ -96,21 +96,18 @@ BTT::tryPin(gva_t gva, void** lva) {
 hpx_parcel_t *
 BTT::unpin(gva_t gva) {
   uint64_t key = gva_to_key(gva);
-  bool ret = false;
-  hpx_parcel_t *p;
+  hpx_parcel_t *p = NULL;
   bool found = update_fn(key, [&](Entry& entry) {
       assert(entry.owner == here->rank);
       assert(entry.count > 0);
       entry.count--;
       // printf("%lu %d --\n", key, entry.count);
-      if (entry.count == 0 && entry.onunpin) {
+      if (!entry.count && entry.onunpin) {
         p = entry.onunpin;
-        entry.onunpin = NULL;
-        ret = true;
       }
     });
   assert(found);
-  return (ret ? p : NULL);
+  return p;
 }
 
 void *
