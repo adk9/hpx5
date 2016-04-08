@@ -32,6 +32,14 @@
 
 static int _insert_block_handler(int n, void *args[], size_t sizes[]) {
   agas_t *agas = (agas_t*)here->gas;
+  hpx_addr_t dst = hpx_thread_current_target();
+  gva_t dgva = { .addr = dst };
+
+  uint32_t owner;
+  btt_get_owner(agas->btt, dgva, &owner);
+  if (here->rank != owner) {
+    return HPX_RESEND;
+  }
 
   dbg_assert(args[0] && sizes[0]);
   hpx_addr_t *src  = args[1];
@@ -46,8 +54,8 @@ static int _insert_block_handler(int n, void *args[], size_t sizes[]) {
     sync_tatas_release(&lco->lock);
   }
 
-  gva_t gva = { .addr = *src };
-  btt_upsert(agas->btt, gva, here->rank, lva, 1, *attr);
+  gva_t sgva = { .addr = *src };
+  btt_upsert(agas->btt, sgva, here->rank, lva, 1, *attr);
   return HPX_SUCCESS;
 }
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED | HPX_VECTORED, _insert_block,
@@ -55,7 +63,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED | HPX_VECTORED, _insert_block,
 
 /// Invalidate the remote block mapping. This action blocks until it
 /// can safely invalidate the block.
-static hpx_action_t _agas_invalidate_mapping;
+static HPX_ACTION_DECL(_agas_invalidate_mapping);
 static int _agas_invalidate_mapping_handler(hpx_addr_t dst, int to) {
   // unnecessary to move to the same locality
   if (here->rank == to) {
@@ -69,7 +77,7 @@ static int _agas_invalidate_mapping_handler(hpx_addr_t dst, int to) {
   uint32_t owner;
   btt_get_owner(agas->btt, gva, &owner);
   if (here->rank != owner) {
-    return hpx_call_cc(src, _agas_invalidate_mapping, &dst, &to);
+    return HPX_RESEND;
   }
 
   void *block = NULL;
