@@ -41,33 +41,12 @@ namespace {
   class BTT : public Map {
    public:
     BTT(size_t);
-    hpx_parcel_t *attachParcel(gva_t gva, hpx_parcel_t *p);
     bool tryPin(gva_t gva, void** lva);
     hpx_parcel_t *unpin(gva_t gva);
   };
 }
 
 BTT::BTT(size_t size) : Map(size) {
-}
-
-hpx_parcel_t *
-BTT::attachParcel(gva_t gva, hpx_parcel_t *p) {
-  uint64_t key = gva_to_key(gva);
-  bool ret = false;
-  bool found = update_fn(key, [&](Entry& entry) {
-      assert(entry.owner == here->rank);
-      if (entry.count == 0) {
-        ret = true;
-        return;
-      }
-
-      // If there are pending pins on this block, we register a parcel
-      // that is launched when the reference count goes to 0.
-      assert(entry.onunpin == NULL);
-      entry.onunpin = p;
-    });
-  assert(found);
-  return (ret ? p : NULL);
 }
 
 bool
@@ -192,17 +171,6 @@ btt_get_owner(const void* obj, gva_t gva, uint32_t *owner) {
   return found;
 }
 
-void
-btt_set_owner(void* obj, gva_t gva, uint32_t owner) {
-  BTT *btt = static_cast<BTT*>(obj);
-  Entry entry;
-  uint64_t key = gva_to_key(gva);
-  bool found = btt->update_fn(key, [&](Entry& entry) {
-      entry.owner = owner;
-    });
-  assert(found);
-}
-
 bool
 btt_get_attr(const void* obj, gva_t gva, uint32_t *attr) {
   const BTT *btt = static_cast<const BTT*>(obj);
@@ -266,58 +234,68 @@ btt_get_all(const void *o, gva_t gva, void **lva, size_t *blocks,
 typedef struct {
   BTT        *btt;
   gva_t       gva;
-} _btt_attach_parcel_env_t;
+} _btt_onunpin_env_t;
 
-static void _btt_attach_parcel_continuation(hpx_parcel_t *p, void *e) {
-  _btt_attach_parcel_env_t *env = static_cast<_btt_attach_parcel_env_t*>(e);
+static void _btt_onunpin_continuation(hpx_parcel_t *p, void *e) {
+  _btt_onunpin_env_t *env = static_cast<_btt_onunpin_env_t*>(e);
   BTT *btt = env->btt;
   gva_t gva = env->gva;
-  if ((p = btt->attachParcel(gva, p))) {
+  uint64_t key = gva_to_key(gva);
+  int32_t count;
+  bool found = btt->update_fn(key, [&](Entry& entry) {
+      //assert(entry.owner == here->rank);
+
+      // if there are pending pins on this block, we register a parcel
+      // that is launched when the reference count goes to 0.
+      count = entry.count;
+      assert(!entry.onunpin);
+      entry.onunpin = p;
+    });
+  assert(found);
+  if (!count) {
     parcel_launch(p);
   }
-}
-
-static int
-_btt_wait_until_count_zero(void *obj, gva_t gva, void **lva, uint32_t *attr) {
-  BTT *btt = static_cast<BTT*>(obj);
-  Entry entry;
-  uint64_t key = gva_to_key(gva);
-  if (!btt->find(key, entry)) {
-    return HPX_ERROR;
-  }
-
-  if (lva) {
-    *lva = entry.lva;
-  }
-
-  if (attr) {
-    *attr = entry.attr;
-  }
-
-  // Wait until the reference count hits zero.
-  if (entry.count) {
-    _btt_attach_parcel_env_t env = {
-      .btt = btt,
-      .gva = gva
-    };
-
-    scheduler_suspend(_btt_attach_parcel_continuation, &env, 0);
-  }
-  return HPX_SUCCESS;
+  (void)found;
 }
 
 int btt_remove_when_count_zero(void *obj, gva_t gva, void **lva) {
   BTT *btt = static_cast<BTT*>(obj);
-  uint64_t key = gva_to_key(gva);
-  int e = _btt_wait_until_count_zero(obj, gva, lva, NULL);
-  bool erased = btt->erase(key);
-  assert(erased);
-  return e;
-  (void)erased;
+  _btt_onunpin_env_t env = {
+    .btt = btt,
+    .gva = gva
+  };
+
+  scheduler_suspend(_btt_onunpin_continuation, &env, 0);
+  if (lva) {
+    *lva = btt_lookup(btt, gva);
+  }
+  btt_remove(obj, gva);
+  return HPX_SUCCESS;
 }
 
 int btt_try_move(void *obj, gva_t gva, int to, void **lva, uint32_t *attr) {
-  int e = _btt_wait_until_count_zero(obj, gva, lva, attr);
-  btt_set_owner(obj, gva, to);
-  return e;
+  BTT *btt = static_cast<BTT*>(obj);
+  _btt_onunpin_env_t env = {
+    .btt = btt,
+    .gva = gva
+  };
+
+  scheduler_suspend(_btt_onunpin_continuation, &env, 0);
+  uint64_t key = gva_to_key(gva);
+  Entry entry;
+  bool found = btt->update_fn(key, [&](Entry& entry) {
+      entry.onunpin = NULL;
+      entry.owner = to;
+
+      if (lva) {
+        *lva = entry.lva;
+      }
+
+      if (attr) {
+        *attr = entry.attr;
+      }
+    });
+  assert(found);
+  return HPX_SUCCESS;
+  (void)found;
 }
