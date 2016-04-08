@@ -241,7 +241,7 @@ btt_get_blocks(const void* obj, gva_t gva) {
 
 int
 btt_get_all(const void *o, gva_t gva, void **lva, size_t *blocks,
-            int32_t *cnt, uint32_t *owner) {
+            int32_t *cnt, uint32_t *owner, uint32_t *attr) {
   const BTT *btt = static_cast<const BTT*>(o);
   Entry entry;
   uint64_t key = gva_to_key(gva);
@@ -258,6 +258,9 @@ btt_get_all(const void *o, gva_t gva, void **lva, size_t *blocks,
     }
     if (owner) {
       *owner = entry.owner;
+    }
+    if (attr) {
+      *attr = entry.attr;
     }
   }
   return found;
