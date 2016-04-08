@@ -173,15 +173,13 @@ void Block(int mype, int npes, long totalsize, long *start,
 
 static int _mover_action(guppie_config_t *cfg, size_t n) {
   uint64_t src;
-  uint64_t nmoves = ((double)_move/100) * (cfg->tabsize / BLOCK_SIZE);
-  int i;
+  uint64_t nmoves = ((double)_move/100) * (cfg->nupdate);
   hpx_addr_t done = hpx_lco_and_new(nmoves);
   hpx_time_t start = hpx_time_now();
 
-  for (i = 0; i < nmoves; ++i) {
+  for (uint64_t i = 0; i < nmoves; ++i) {
     // get a random number
-    src = i % (cfg->tabsize / BLOCK_SIZE);
-    assert(src < cfg->tabsize);
+    src = i % (cfg->tabsize-1);
     hpx_addr_t dst = HPX_THERE(rand() % HPX_LOCALITIES);
 
     // get the random address into the table.
@@ -192,7 +190,7 @@ static int _mover_action(guppie_config_t *cfg, size_t n) {
 
   hpx_lco_wait(done);
   double move_time = hpx_time_elapsed_ms(start)/1e3;
-  printf("move time: %.7f ms (%ld moves)\n", move_time, nmoves);
+  printf("move time: %.7f s (%ld moves)\n", move_time, nmoves);
   hpx_lco_delete(done, HPX_NULL);
   return HPX_SUCCESS;
 }
@@ -291,10 +289,10 @@ void _main_action(guppie_config_t *cfg, size_t size)
   if (_rebalance) {
     printf("Starting automatic rebalancing.\n");
     hpx_addr_t done = hpx_lco_future_new(0);
-    rebalance_time = -CPUSEC();
+    rebalance_time = -WSEC();
     hpx_gas_rebalance(done);
     hpx_lco_wait(done);
-    rebalance_time += CPUSEC();
+    rebalance_time += WSEC();
     printf("Finished automatic rebalancing.\n");
     hpx_lco_delete(done, HPX_NULL);
   }
@@ -343,6 +341,7 @@ static void _usage(FILE *stream) {
 // main routine
 int main(int argc, char *argv[])
 {
+  srand(42);
   guppie_config_t guppie_cfg = {
     .ltabsize = LTABSIZE,
     .tabsize  = TABSIZE,
