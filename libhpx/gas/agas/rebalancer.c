@@ -180,70 +180,51 @@ static int _aggregate_bst_handler(hpx_addr_t graph) {
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _aggregate_bst, _aggregate_bst_handler,
                      HPX_ADDR);
 
-// Move blocks that need to be rebalanced.
-//
-// This function issues "move" requests to blocks that need to be
-// rebalanced. The graph's owner map is referred to to figure out
-// which blocks need to be moved.
-//
-// @param    start The starting index of the block in graph.
-// @param      end The end index of the block in the graph.
-// @param    owner The existing owner of the block.
-// @param    graph Pointer to the AGAS graph.
-// @param partiton The partition array returned by the partition.
-// @param     done LCO to set when the rebalancing is done.
+
+// Move blocks in bulk to their new owners.
 static int
-_rebalance_blocks_handler(int start, int end, int owner, void *graph,
-                          uint64_t *partition, hpx_addr_t done) {
-  uint64_t *vtxs = NULL;
-  agas_graph_get_vtxs(graph, &vtxs);
+_bulk_move_handler(int n, void *args[], size_t sizes[]) {
+  uint64_t      *vtxs = args[0];
+  uint64_t *partition = args[1];
 
-  for (int i = start; i <= end; ++i) {
-    int partition_id = partition[i];
-    int new_owner = -1;
-    for (int k = 0; k < here->ranks; ++k) {
-      if (partition_id == partition[k]) {
-        new_owner = k;
-        break;
-      }
-    }
-    dbg_assert(new_owner >= 0);
+  size_t bytes = sizes[0];
+  uint64_t count = bytes/sizeof(uint64_t);
 
-    if (owner != new_owner) {
-      log_gas("move block 0x%lx from %d to %d\n", vtxs[i], owner, new_owner);
-      EVENT_GAS_MOVE(vtxs[i], HPX_THERE(owner), HPX_THERE(new_owner));
+  hpx_addr_t done = hpx_lco_and_new(count);
+  for (int i = 0; i < count; ++i) {
+    int new_owner = partition[i];
+    if (new_owner != here->rank) {
+      log_gas("move block 0x%lx from %d to %d\n", vtxs[i], here->rank, new_owner);
+      EVENT_GAS_MOVE(vtxs[i], HPX_HERE, HPX_THERE(new_owner));
       hpx_gas_move(vtxs[i], HPX_THERE(new_owner), done);
     } else {
       hpx_lco_set(done, 0, NULL, HPX_NULL, HPX_NULL);
     }
   }
+  hpx_lco_wait(done);
+  hpx_lco_delete(done, HPX_NULL);
   return HPX_SUCCESS;
 }
-static LIBHPX_ACTION(HPX_DEFAULT, 0, _rebalance_blocks,
-                     _rebalance_blocks_handler, HPX_INT, HPX_INT, HPX_INT,
-                     HPX_POINTER, HPX_POINTER, HPX_ADDR);
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED | HPX_VECTORED, _bulk_move,
+                     _bulk_move_handler, HPX_INT, HPX_POINTER, HPX_POINTER);
 
-// Start balancing the blocks.
+// Start rebalancing the blocks.
 // This can be called by any locality in the system.
-static int rebalancer_start_sync(void) {
-  hpx_addr_t graph = hpx_thread_current_target();
-  void *g = NULL;
-  if (!hpx_gas_try_pin(graph, (void**)&g)) {
-    return HPX_RESEND;
-  }
-  
-  // then, divide it into partitions
-  uint64_t *partition = NULL;
-  size_t nvtxs = agas_graph_partition(g, here->ranks, &partition);
-  log_gas("Finished partitioning block graph (%ld vertices)\n", nvtxs);
+static int _rebalance_sync(uint64_t *partition, hpx_addr_t graph, void *g) {
+  // get the vertex array
+  uint64_t *vtxs = NULL;
+  size_t nvtxs = agas_graph_get_vtxs(g, &vtxs);
   if (nvtxs > 0 && partition) {
-    // rebalance blocks based on the resulting partition
-    hpx_addr_t done = hpx_lco_and_new(nvtxs-HPX_LOCALITIES);
-    for (int i = 0; i < agas_graph_get_owner_count(g); ++i) {
+    hpx_time_t now = hpx_time_now();
+
+    // rebalance blocks in each partition
+    hpx_addr_t done = hpx_lco_and_new(HPX_LOCALITIES);
+    for (int i = 0; i < HPX_LOCALITIES; ++i) {
       int start, end, owner;
       agas_graph_get_owner_entry(g, i, &start, &end, &owner);
-      hpx_call(HPX_HERE, _rebalance_blocks, HPX_NULL, &start, &end, &owner,
-               &g, &partition, &done);
+      size_t bytes = (end-start)*sizeof(uint64_t);
+      hpx_call(HPX_THERE(owner), _bulk_move, done,
+               vtxs+start, bytes, partition+start, bytes);
     }
     hpx_lco_wait(done);
     hpx_lco_delete(done, HPX_NULL);
@@ -254,25 +235,50 @@ static int rebalancer_start_sync(void) {
   agas_graph_delete(graph);
   return HPX_SUCCESS;
 }
-static LIBHPX_ACTION(HPX_DEFAULT, 0, _rebalancer_start_sync,
-                     rebalancer_start_sync);
+static LIBHPX_ACTION(HPX_DEFAULT, 0, _rebalance, _rebalance_sync,
+                     HPX_POINTER, HPX_ADDR, HPX_POINTER);
 
-// Start balancing the blocks asynchronously.
+// Start partitioning the aggregated BST.
 //
-// The LCO @p sync can be used for completion notification. This can
-// be called by any locality in the system.
-int rebalancer_start(hpx_addr_t sync) {
-  if (here->config->gas != HPX_GAS_AGAS) {
-    hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
-    return 0;
+static int _partition_sync(hpx_addr_t msync) {
+  hpx_addr_t graph = hpx_thread_current_target();
+  void *g = NULL;
+  if (!hpx_gas_try_pin(graph, (void**)&g)) {
+    return HPX_RESEND;
   }
 
+  uint64_t *partition = NULL;
+  size_t nvtxs = agas_graph_partition(g, here->ranks, &partition);
+  log_gas("Finished partitioning block graph (%ld vertices)\n", nvtxs);
+  return hpx_call(HPX_HERE, _rebalance, msync, &partition, &graph, &g);
+}
+static LIBHPX_ACTION(HPX_DEFAULT, 0, _partition, _partition_sync, HPX_ADDR);
+
+// Aggregate the global BSTs.
+//
+static int _aggregate_sync(hpx_addr_t psync, hpx_addr_t msync) {
   log_gas("Starting GAS rebalancing\n");
 
   hpx_addr_t graph = agas_graph_new();
   // first, aggregate the "block" graph locally
   hpx_bcast_rsync(_aggregate_bst, &graph);
   log_gas("Block graph aggregated on locality %d\n", HPX_LOCALITY_ID);
+  return hpx_call(graph, _partition, psync, &msync);
+}
+static LIBHPX_ACTION(HPX_DEFAULT, 0, _aggregate, _aggregate_sync, HPX_ADDR,
+                     HPX_ADDR);
+
+// Start rebalancing.
+//
+// The LCO @p sync can be used for completion notification. This can
+// be called by any locality in the system.
+int rebalancer_start(hpx_addr_t async, hpx_addr_t psync, hpx_addr_t msync) {
+  if (here->config->gas != HPX_GAS_AGAS) {
+    hpx_lco_set(async, 0, NULL, HPX_NULL, HPX_NULL);
+    hpx_lco_set(psync, 0, NULL, HPX_NULL, HPX_NULL);
+    hpx_lco_set(msync, 0, NULL, HPX_NULL, HPX_NULL);
+    return 0;
+  }
 
   return hpx_call(graph, _rebalancer_start_sync, sync);
 }
