@@ -49,11 +49,6 @@ static int _insert_block_handler(int n, void *args[], size_t sizes[]) {
   char *lva = malloc(bsize);
   memcpy(lva, args[0], bsize);
 
-  if (*attr & HPX_GAS_ATTR_LCO) {
-    lco_t *lco = (lco_t*)lva;
-    sync_tatas_release(&lco->lock);
-  }
-
   gva_t sgva = { .addr = *src };
   btt_upsert(agas->btt, sgva, here->rank, lva, 1, *attr);
   return HPX_SUCCESS;
@@ -86,11 +81,6 @@ static int _agas_invalidate_mapping_handler(hpx_addr_t dst, int to) {
   if (e != HPX_SUCCESS) {
     log_error("failed to invalidate remote mapping.\n");
     return e;
-  }
-
-  if (attr & HPX_GAS_ATTR_LCO) {
-    lco_t *lco = block;
-    sync_tatas_acquire(&lco->lock);
   }
 
   size_t bsize = UINT64_C(1) << gva.bits.size;
