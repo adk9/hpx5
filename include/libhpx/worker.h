@@ -23,6 +23,7 @@ extern "C" {
 #include <hpx/attributes.h>
 #include <libsync/deques.h>
 #include <libsync/queues.h>
+#include <libhpx/instrumentation.h>
 #include <libhpx/padding.h>
 #include <libhpx/stats.h>
 
@@ -70,6 +71,7 @@ struct worker {
   void            *profiler;              //!< reference to the profiler
   void                 *bst;              //!< reference to the profiler
   struct network   *network;              //!< reference to the network
+  inst_t              *inst;              //!< reference to instrumentation data
 } HPX_ALIGNED(HPX_CACHELINE_SIZE);
 typedef struct worker worker_t;
 /// @}

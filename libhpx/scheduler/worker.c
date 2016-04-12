@@ -683,6 +683,9 @@ void worker_fini(worker_t *w) {
   sync_chase_lev_ws_deque_fini(&w->queues[0].work);
   sync_chase_lev_ws_deque_fini(&w->queues[1].work);
 
+  // and clean up any instrumentation data
+  inst_fini(w);
+
   // and delete any cached stacks
   ustack_t *stack = NULL;
   while ((stack = w->stacks)) {

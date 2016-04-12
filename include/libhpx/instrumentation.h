@@ -24,7 +24,14 @@ extern "C" {
 #include <libhpx/config.h>
 #include <libhpx/locality.h>
 
-struct profile_log;
+struct worker;
+struct logtable;
+
+/// All of the data needed for managing instrumentation for each worker thread
+typedef struct inst {
+  struct logtable   **logs;                         //!< pointers to the logs
+} inst_t;
+
 
 /// INST will do @p stmt only if instrumentation is enabled
 #ifdef ENABLE_INSTRUMENTATION
@@ -36,7 +43,7 @@ struct profile_log;
 #endif
 
 /// Initialize instrumentation. This is usually called in hpx_init().
-int inst_init(const config_t *cfg)
+int inst_init(const config_t *cfg, struct worker *w)
   HPX_NON_NULL(1);
 
 /// "Start" instrumentation. This is usually called in hpx_run(). This takes
@@ -45,7 +52,7 @@ int inst_init(const config_t *cfg)
 int inst_start(void);
 
 /// Finalize the instrumentation framework.
-void inst_fini(void);
+void inst_fini(struct worker *w);
 
 /// Record an event to the log
 /// @param        type Type this event is part of (see hpx_inst_class_type_t)

@@ -17,6 +17,7 @@
 
 #include <fcntl.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
@@ -39,39 +40,16 @@ static int _create_file(const char *filename, size_t size) {
     return -1;
   }
 
-  lseek(fd, size - 1, SEEK_SET);
-  if (write(fd, "", 1) != 1) {
-    log_error("could not create log file %s\n", filename);
-    close(fd);
-    return -1;
-  }
-
   return fd;
 }
 
-static void *_create_mmap(size_t size, int file) {
-  static const int prot = PROT_WRITE;
-  static const int flags = MAP_SHARED | MAP_NORESERVE;
-  void *base = mmap(NULL, size, prot, flags, file, 0);
-  if (base == MAP_FAILED) {
-    log_error("could not mmap log file\n");
-    base = NULL;
-  }
-  else {
-    log_dflt("mapped %zu byte trace file at %p.\n", size, base);
-  }
-  return base;
-}
-
 void logtable_init(logtable_t *log, const char* filename, size_t size,
-                  int class, int id) {
+                   int class, int id) {
   log->fd = -1;
-  log->class = class;
   log->id = id;
   log->record_bytes = 0;
   log->max_size = size;
   log->buffer = NULL;
-  sync_store(&log->next, NULL, SYNC_RELEASE);
 
   if (filename == NULL || size == 0) {
     return;
@@ -83,9 +61,9 @@ void logtable_init(logtable_t *log, const char* filename, size_t size,
     return;
   }
 
-  log->buffer = _create_mmap(size, log->fd);
+  log->buffer = (char *) malloc(size);
   if (!log->buffer) {
-    log_error("could not mmap %s as event buffer\n", filename);
+    log_error("problem allocating buffer for %s\n", filename);
     ftruncate(log->fd, 0);
     close(log->fd);
     return;
@@ -94,8 +72,14 @@ void logtable_init(logtable_t *log, const char* filename, size_t size,
   int fields = TRACE_EVENT_NUM_FIELDS[id];
   log->record_bytes = sizeof(record_t) + fields * sizeof(uint64_t);
 
-  size_t header_size = write_trace_header(log->buffer, class, id);
-  sync_store(&log->next, log->buffer + header_size, SYNC_RELEASE);
+  char *buffer = malloc(32768);
+  log->header_size = write_trace_header(buffer, class, id);
+  if (write(log->fd, buffer, log->header_size) != log->header_size) {
+    log_error("failed to write header to file\n");
+  }
+
+  free(buffer);
+  log->next = log->buffer;
 }
 
 void logtable_fini(logtable_t *log) {
@@ -103,17 +87,9 @@ void logtable_fini(logtable_t *log) {
     return;
   }
 
-  if (log->buffer) {
-    if (munmap(log->buffer, log->max_size)) {
-      log_error("failed to unmap trace file\n");
-    }
-  }
-
   if (log->fd != -1) {
-    size_t filesize = sync_load(&log->next, SYNC_ACQUIRE) - log->buffer;
-    if (ftruncate(log->fd, filesize)) {
-      log_error("failed to truncate trace file\n");
-    }
+    size_t filesize = log->next - log->buffer;
+    write(log->fd, log->buffer, filesize);
     if (close(log->fd)) {
       log_error("failed to close trace file\n");
     }
@@ -121,9 +97,12 @@ void logtable_fini(logtable_t *log) {
 }
 
 void logtable_vappend(logtable_t *log, int n, va_list *args) {
-  char *next = sync_fadd(&log->next, log->record_bytes, SYNC_ACQ_REL);
+  char *next = log->next + log->record_bytes;
   if (next - log->buffer > log->max_size) {
-    return;
+    sync_tatas_acquire(log->lock);
+    write(log->fd, log->buffer, log->max_size);
+    sync_tatas_release(log->lock);
+    log->next = 0;
   }
 
   record_t *r = (record_t*)next;
@@ -132,4 +111,5 @@ void logtable_vappend(logtable_t *log, int n, va_list *args) {
   for (int i = 0, e = n; i < e; ++i) {
     r->user[i] = va_arg(*args, uint64_t);
   }
+  log->next = next;
 }
