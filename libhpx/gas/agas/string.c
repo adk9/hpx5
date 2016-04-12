@@ -77,15 +77,11 @@ static int _agas_invalidate_mapping_handler(hpx_addr_t dst, int to) {
 
   void *block = NULL;
   uint32_t attr;
-  int e = btt_try_move(agas->btt, gva, to, &block, &attr);
-  if (e != HPX_SUCCESS) {
-    log_error("failed to invalidate remote mapping.\n");
-    return e;
-  }
+  btt_try_move(agas->btt, gva, to, &block, &attr);
 
   size_t bsize = UINT64_C(1) << gva.bits.size;
-  e = hpx_call_cc(dst, _insert_block, block, bsize, &src, sizeof(src), &attr,
-                  sizeof(attr));
+  int e = hpx_call_cc(dst, _insert_block, block, bsize, &src, sizeof(src),
+                      &attr, sizeof(attr));
 
   // otherwise only free if the block is not at its home
   if (gva.bits.home != here->rank) {

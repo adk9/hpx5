@@ -42,13 +42,13 @@ int btt_get_all(const void *btt, gva_t gva, void **lva, size_t *blocks,
 /// During hpx_gas_free (and hpx_lco_delete) we want to remove the btt entry for
 /// a block, but only once its reference count hits zero. This function will
 /// block the calling thread until that condition is true.
-int btt_remove_when_count_zero(void *btt, gva_t gva, void** lva);
+void btt_remove_when_count_zero(void *btt, gva_t gva, void** lva);
 
 /// This function updates the block metadata to point to its new owner
 /// denoted by @p rank. The function blocks the calling thread until
 /// all "pinned" references to the block reach a count of zero.
-int btt_try_move(void *obj, gva_t gva, int rank, void **lva,
-                 uint32_t *attr);
+void btt_try_move(void *obj, gva_t gva, uint32_t to, void **lva,
+                  uint32_t *attr);
 
 #ifdef __cplusplus
 }

@@ -45,8 +45,9 @@ static int _agas_free_block_handler(hpx_addr_t block) {
   agas_t *agas = here->gas;
   gva_t    gva = { .addr = block };
   void    *lva = NULL;
-  int        e = btt_remove_when_count_zero(agas->btt, gva, &lva);
-  dbg_check(e, "No btt entry for %"PRIu64" at %d\n", gva.addr, here->rank);
+
+  // Remove the BTT entry for this block.
+  btt_remove_when_count_zero(agas->btt, gva, &lva);
 
   // This was the home for the block, ultimately the continuation of this action
   // will free the segment it is in.

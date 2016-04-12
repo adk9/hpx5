@@ -15,6 +15,8 @@
 # include "config.h"
 #endif
 
+#include <libhpx/action.h>
+#include <inttypes.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/parcel.h>
 #include <libhpx/scheduler.h>
@@ -56,7 +58,7 @@ BTT::tryPin(gva_t gva, void** lva) {
   bool found = update_fn(key, [&](Entry& entry) {
       // If we do not own the block or if there is a pending delete on
       // this block, the try-pin operation fails.
-      if (entry.owner != here->rank || entry.onunpin) {
+      if (entry.owner != here->rank) {
         return;
       }
 
@@ -83,6 +85,7 @@ BTT::unpin(gva_t gva) {
       // printf("%lu %d --\n", key, entry.count);
       if (!entry.count && entry.onunpin) {
         p = entry.onunpin;
+        entry.onunpin = NULL;
       }
     });
   assert(found);
@@ -141,7 +144,7 @@ btt_unpin(void* obj, gva_t gva) {
   BTT *btt = static_cast<BTT*>(obj);
   hpx_parcel_t *p = btt->unpin(gva);
   if (p) {
-    parcel_launch(p);
+    scheduler_spawn(p);
   }
 }
 
@@ -234,59 +237,23 @@ btt_get_all(const void *o, gva_t gva, void **lva, size_t *blocks,
 typedef struct {
   BTT        *btt;
   gva_t       gva;
+  uint32_t     to;
+  void      **lva;
+  uint32_t  *attr;
+  int32_t  *count;
 } _btt_onunpin_env_t;
 
 static void _btt_onunpin_continuation(hpx_parcel_t *p, void *e) {
   _btt_onunpin_env_t *env = static_cast<_btt_onunpin_env_t*>(e);
-  BTT *btt = env->btt;
-  gva_t gva = env->gva;
+  BTT       *btt = env->btt;
+  gva_t      gva = env->gva;
+  int         to = env->to;
+  void     **lva = env->lva;
+  uint32_t *attr = env->attr;
+  int32_t *count = env->count;
+
   uint64_t key = gva_to_key(gva);
-  int32_t count;
   bool found = btt->update_fn(key, [&](Entry& entry) {
-      //assert(entry.owner == here->rank);
-
-      // if there are pending pins on this block, we register a parcel
-      // that is launched when the reference count goes to 0.
-      count = entry.count;
-      assert(!entry.onunpin);
-      entry.onunpin = p;
-    });
-  assert(found);
-  if (!count) {
-    parcel_launch(p);
-  }
-  (void)found;
-}
-
-int btt_remove_when_count_zero(void *obj, gva_t gva, void **lva) {
-  BTT *btt = static_cast<BTT*>(obj);
-  _btt_onunpin_env_t env = {
-    .btt = btt,
-    .gva = gva
-  };
-
-  scheduler_suspend(_btt_onunpin_continuation, &env, 0);
-  if (lva) {
-    *lva = btt_lookup(btt, gva);
-  }
-  btt_remove(obj, gva);
-  return HPX_SUCCESS;
-}
-
-int btt_try_move(void *obj, gva_t gva, int to, void **lva, uint32_t *attr) {
-  BTT *btt = static_cast<BTT*>(obj);
-  _btt_onunpin_env_t env = {
-    .btt = btt,
-    .gva = gva
-  };
-
-  scheduler_suspend(_btt_onunpin_continuation, &env, 0);
-  uint64_t key = gva_to_key(gva);
-  Entry entry;
-  bool found = btt->update_fn(key, [&](Entry& entry) {
-      entry.onunpin = NULL;
-      entry.owner = to;
-
       if (lva) {
         *lva = entry.lva;
       }
@@ -294,8 +261,54 @@ int btt_try_move(void *obj, gva_t gva, int to, void **lva, uint32_t *attr) {
       if (attr) {
         *attr = entry.attr;
       }
+
+      *count = entry.count;
+      if (!*count) {
+        entry.owner = to;
+      } else {
+        entry.onunpin = p;
+      }
     });
   assert(found);
-  return HPX_SUCCESS;
-  (void)found;
+  if (!*count) {
+    scheduler_spawn(p);
+  }
+}
+
+void btt_remove_when_count_zero(void *obj, gva_t gva, void **lva) {
+  BTT *btt = static_cast<BTT*>(obj);
+
+  int32_t count = 0;
+  _btt_onunpin_env_t env = {
+    .btt = btt,
+    .gva = gva,
+    .to  = here->rank,
+    .lva = lva,
+    .attr = NULL,
+    .count = &count
+  };
+
+  do {
+    scheduler_suspend(_btt_onunpin_continuation, &env, 0);
+  } while (count != 0);
+  btt_remove(obj, gva);
+}
+
+void btt_try_move(void *obj, gva_t gva, uint32_t to, void **lva,
+                  uint32_t *attr) {
+  BTT *btt = static_cast<BTT*>(obj);
+
+  int32_t count = 0;
+  _btt_onunpin_env_t env = {
+    .btt = btt,
+    .gva = gva,
+    .to = to,
+    .lva = lva,
+    .attr = attr,
+    .count = &count
+  };
+
+  do {
+    scheduler_suspend(_btt_onunpin_continuation, &env, 0);
+  } while (count != 0);
 }
