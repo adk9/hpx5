@@ -99,10 +99,15 @@ void logtable_fini(logtable_t *log) {
 void logtable_vappend(logtable_t *log, int n, va_list *args) {
   char *next = log->next + log->record_bytes;
   if (next - log->buffer > log->max_size) {
+    size_t amount = log->max_size - (log->max_size % log->record_bytes);
     sync_tatas_acquire(log->lock);
-    write(log->fd, log->buffer, log->max_size);
+    write(log->fd, log->buffer, amount);
     sync_tatas_release(log->lock);
-    log->next = 0;
+    log->next = log->buffer;
+    next = log->buffer;
+  }
+  else {
+    log->next = next;
   }
 
   record_t *r = (record_t*)next;
@@ -111,5 +116,4 @@ void logtable_vappend(logtable_t *log, int n, va_list *args) {
   for (int i = 0, e = n; i < e; ++i) {
     r->user[i] = va_arg(*args, uint64_t);
   }
-  log->next = next;
 }

@@ -226,7 +226,7 @@ int inst_init(const config_t *cfg, worker_t *w) {
   for (int c = 0, e = nclasses; c < e; ++c) {
     if (inst_trace_class(1 << c)) {
       for (int i = TRACE_OFFSETS[c], e = TRACE_OFFSETS[c + 1]; i < e; ++i) {
-        _create_logtable(w, c, i, cfg->trace_filesize);
+        _create_logtable(w, c, i, cfg->trace_buffersize);
       }
     }
   }

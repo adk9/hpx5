@@ -133,9 +133,9 @@ struct hpx_options_t
   unsigned int hpx_trace_classes_min; /**< @brief filter by class's minimum occurreces */
   unsigned int hpx_trace_classes_max; /**< @brief filter by class's maximum occurreces */
   const char *hpx_trace_classes_help; /**< @brief filter by class help description.  */
-  long hpx_trace_filesize_arg;	/**< @brief maximum bytes for each file.  */
-  char * hpx_trace_filesize_orig;	/**< @brief maximum bytes for each file original value given at command line.  */
-  const char *hpx_trace_filesize_help; /**< @brief maximum bytes for each file help description.  */
+  long hpx_trace_buffersize_arg;	/**< @brief size of trace buffers.  */
+  char * hpx_trace_buffersize_orig;	/**< @brief size of trace buffers original value given at command line.  */
+  const char *hpx_trace_buffersize_help; /**< @brief size of trace buffers help description.  */
   long hpx_isir_testwindow_arg;	/**< @brief number of ISIR requests to test in progress loop.  */
   char * hpx_isir_testwindow_orig;	/**< @brief number of ISIR requests to test in progress loop original value given at command line.  */
   const char *hpx_isir_testwindow_help; /**< @brief number of ISIR requests to test in progress loop help description.  */
@@ -237,7 +237,7 @@ struct hpx_options_t
   unsigned int hpx_trace_dir_given ;	/**< @brief Whether hpx-trace-dir was given.  */
   unsigned int hpx_trace_at_given ;	/**< @brief Whether hpx-trace-at was given.  */
   unsigned int hpx_trace_classes_given ;	/**< @brief Whether hpx-trace-classes was given.  */
-  unsigned int hpx_trace_filesize_given ;	/**< @brief Whether hpx-trace-filesize was given.  */
+  unsigned int hpx_trace_buffersize_given ;	/**< @brief Whether hpx-trace-buffersize was given.  */
   unsigned int hpx_isir_testwindow_given ;	/**< @brief Whether hpx-isir-testwindow was given.  */
   unsigned int hpx_isir_sendlimit_given ;	/**< @brief Whether hpx-isir-sendlimit was given.  */
   unsigned int hpx_isir_recvlimit_given ;	/**< @brief Whether hpx-isir-recvlimit was given.  */
