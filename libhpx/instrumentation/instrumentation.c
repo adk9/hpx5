@@ -215,9 +215,9 @@ int inst_init(const config_t *cfg, worker_t *w) {
 
   // Allocate memory for pointers to the logs and their respective locks
   int nclasses = _HPX_NELEM(HPX_TRACE_CLASS_TO_STRING);
-  w->inst->logs = (struct logtable **) malloc(TRACE_OFFSETS[nclasses + 1] *
+  w->inst->logs = (struct logtable **) malloc(TRACE_OFFSETS[nclasses] *
                                               sizeof(struct logtable *));
-  for (int i = 0; i < TRACE_OFFSETS[nclasses + 1]; i++) {
+  for (int i = 0; i < TRACE_OFFSETS[nclasses]; i++) {
     w->inst->logs[i] = NULL;
   }
 
