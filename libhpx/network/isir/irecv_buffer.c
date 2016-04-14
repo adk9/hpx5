@@ -87,7 +87,11 @@ static int _start(irecv_buffer_t *irecvs, int i) {
   // payload for this class of parcels
   int tag = irecvs->records[i].tag;
   uint32_t payload = tag_to_payload_size(tag);
-  hpx_parcel_t *p = hpx_parcel_acquire(NULL, payload);
+  hpx_parcel_t *p = parcel_alloc(payload);
+
+  p->ustack = NULL;
+  p->next = NULL;
+  parcel_set_state(p, PARCEL_SERIALIZED);
 
   void  *request = _request_at(irecvs, i);
   int n = payload_size_to_isir_bytes(payload);
