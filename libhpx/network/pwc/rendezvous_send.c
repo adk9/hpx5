@@ -58,7 +58,7 @@ typedef struct {
 /// We need to use a marshaled operation because we send the transport key by
 /// value and we don't have an FFI type to capture that.
 static int _rendezvous_get_handler(_rendezvous_get_args_t *args, size_t size) {
-  hpx_parcel_t *p = hpx_parcel_acquire(NULL, args->n - sizeof(*p));
+  hpx_parcel_t *p = parcel_alloc(args->n - sizeof(*p));
   dbg_assert(p);
   xport_op_t op = {
     .rank = args->rank,
