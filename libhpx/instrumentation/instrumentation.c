@@ -135,15 +135,12 @@ static void _dump_actions(void) {
 
 static void _create_logtable(worker_t *w, int class, int id, size_t size) {
   char filename[256];
-  snprintf(filename, 256, "event.%d.%d.%d.%s.%s.log",
+  snprintf(filename, 256, "event.%03d.%03d.%05d.%s.log",
            w->id, id, hpx_get_my_rank(),
-           HPX_TRACE_CLASS_TO_STRING[class],
            TRACE_EVENT_TO_STRING[id]);
 
   char *path = _concat_path(_log_path, filename);
-  w->inst->logs[id] = (logtable_t *) malloc(sizeof(logtable_t));
-  w->inst->logs[id]->lock = (tatas_lock_t *) malloc(sizeof(tatas_lock_t));
-  sync_tatas_init(w->inst->logs[id]->lock);
+  w->inst->logs[id] = malloc(sizeof(logtable_t));
   logtable_init(w->inst->logs[id], path, size, class, id);
   free(path);
 }
@@ -215,11 +212,7 @@ int inst_init(const config_t *cfg, worker_t *w) {
 
   // Allocate memory for pointers to the logs and their respective locks
   int nclasses = _HPX_NELEM(HPX_TRACE_CLASS_TO_STRING);
-  w->inst->logs = (struct logtable **) malloc(TRACE_OFFSETS[nclasses] *
-                                              sizeof(struct logtable *));
-  for (int i = 0; i < TRACE_OFFSETS[nclasses]; i++) {
-    w->inst->logs[i] = NULL;
-  }
+  w->inst->logs = calloc(TRACE_OFFSETS[nclasses], sizeof(logtable_t));
 
   // Scan through each trace event class and create logs for the associated
   // class events that that we are going to be tracing.
@@ -231,9 +224,6 @@ int inst_init(const config_t *cfg, worker_t *w) {
     }
   }
 
-  if (w->id == 0) {
-    inst_trace(HPX_TRACE_BOOKEND, TRACE_EVENT_BOOKEND_BOOKEND);
-  }
   return LIBHPX_OK;
 }
 

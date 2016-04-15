@@ -163,82 +163,29 @@ static const char *const HPX_LOG_LEVEL_TO_STRING[] = {
 
 //! Configuration options for instrumentation in HPX.
 #define HPX_TRACE_PARCEL      (UINT64_C(1) << 0)
-#define HPX_TRACE_NETWORK_PWC (UINT64_C(1) << 1)
-#define HPX_TRACE_SCHED       (UINT64_C(1) << 2)
-#define HPX_TRACE_LCO         (UINT64_C(1) << 3)
-#define HPX_TRACE_PROCESS     (UINT64_C(1) << 4)
-#define HPX_TRACE_MEMORY      (UINT64_C(1) << 5)
-#define HPX_TRACE_SCHEDTIMES  (UINT64_C(1) << 6)
-#define HPX_TRACE_BOOKEND     (UINT64_C(1) << 7)
-#define HPX_TRACE_GAS         (UINT64_C(1) << 8)
-#define HPX_TRACE_COLLECTIVE  (UINT64_C(1) << 9)
+#define HPX_TRACE_NETWORK     (UINT64_C(1) << 1)
+#define HPX_TRACE_NETWORK_PWC (UINT64_C(1) << 2)
+#define HPX_TRACE_SCHED       (UINT64_C(1) << 3)
+#define HPX_TRACE_LCO         (UINT64_C(1) << 4)
+#define HPX_TRACE_PROCESS     (UINT64_C(1) << 5)
+#define HPX_TRACE_MEMORY      (UINT64_C(1) << 6)
+#define HPX_TRACE_SCHEDTIMES  (UINT64_C(1) << 7)
+#define HPX_TRACE_FILE_IO     (UINT64_C(1) << 8)
+#define HPX_TRACE_GAS         (UINT64_C(1) << 9)
+#define HPX_TRACE_COLLECTIVE  (UINT64_C(1) << 10)
 
 static const char *const HPX_TRACE_CLASS_TO_STRING[] = {
   "PARCEL",
+  "NETWORK",
   "NETWORK_PWC",
   "SCHED",
   "LCO",
   "PROCESS",
   "MEMORY",
   "SCHEDTIMES",
-  "BOOKEND",
+  "FILE_IO",
   "GAS",
   "COLLECTIVE"
-};
-
-//! Configuration options for profiling in HPX.
-typedef enum {
- HPX_TIMERS = 0,
- HPX_L1_TCM,
- HPX_L1_TCA,
- HPX_L2_TCM,
- HPX_L2_TCA,
- HPX_L3_TCM,
- HPX_L3_TCA,
- HPX_TLB_TL,
- HPX_TOT_INS,
- HPX_INT_INS,
- HPX_FP_INS,
- HPX_LD_INS,
- HPX_SR_INS,
- HPX_BR_INS,
- HPX_TOT_CYC,
- HPX_COUNTER_MAX,
-} libhpx_hw_counters_t;
-
-#define HPX_PROF_TIMERS    (UINT64_C(1) << HPX_TIMERS)
-#define HPX_PROF_L1_TCM    (UINT64_C(1) << HPX_L1_TCM)
-#define HPX_PROF_L1_TCA    (UINT64_C(1) << HPX_L1_TCA)
-#define HPX_PROF_L2_TCM    (UINT64_C(1) << HPX_L2_TCM)
-#define HPX_PROF_L2_TCA    (UINT64_C(1) << HPX_L2_TCA)
-#define HPX_PROF_L3_TCM    (UINT64_C(1) << HPX_L3_TCM)
-#define HPX_PROF_L3_TCA    (UINT64_C(1) << HPX_L3_TCA)
-#define HPX_PROF_TLB_TL    (UINT64_C(1) << HPX_TLB_TL)
-#define HPX_PROF_TOT_INS   (UINT64_C(1) << HPX_TOT_INS)
-#define HPX_PROF_INT_INS   (UINT64_C(1) << HPX_INT_INS)
-#define HPX_PROF_FP_INS    (UINT64_C(1) << HPX_FP_INS)
-#define HPX_PROF_LD_INS    (UINT64_C(1) << HPX_LD_INS)
-#define HPX_PROF_SR_INS    (UINT64_C(1) << HPX_SR_INS)
-#define HPX_PROF_BR_INS    (UINT64_C(1) << HPX_BR_INS)
-#define HPX_PROF_TOT_CYC   (UINT64_C(1) << HPX_TOT_CYC)
-
-static const char *const HPX_COUNTER_TO_STRING[] = {
-  "TIMERS",
-  "L1_TCM",
-  "L1_TCA",
-  "L2_TCM",
-  "L2_TCA",
-  "L3_TCM",
-  "L3_TCA",
-  "TLB_TL",
-  "TOT_INS",
-  "INT_INS",
-  "FP_INS",
-  "LD_INS",
-  "SR_INS",
-  "BR_INS",
-  "TOT_CYC",
-  "all"
 };
 
 #define HPX_WAITON_NONE     (UINT64_C(0))

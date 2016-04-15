@@ -39,6 +39,12 @@ LIBHPX_EVENT(PARCEL, RESUME, uint64_t, hpx_action_t)
 LIBHPX_EVENT(PARCEL, RESEND, uint64_t, hpx_action_t, size_t, hpx_addr_t)
 /// @}
 
+/// Network events
+/// @{
+LIBHPX_EVENT(NETWORK, SCHED_ENTER)
+LIBHPX_EVENT(NETWORK, SCHED_EXIT)
+/// @}
+
 /// Network PWC events
 /// @{
 LIBHPX_EVENT(NETWORK_PWC, SEND)
@@ -91,9 +97,10 @@ LIBHPX_EVENT(SCHEDTIMES, PROBE)
 LIBHPX_EVENT(SCHEDTIMES, PROGRESS)
 /// @}
 
-/// Bookkeeping events
+/// File IO events
 /// @{
-LIBHPX_EVENT(BOOKEND, BOOKEND)
+LIBHPX_EVENT(FILE_IO, BEGIN)
+LIBHPX_EVENT(FILE_IO, END)
 /// @}
 
 /// GAS events

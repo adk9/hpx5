@@ -61,13 +61,13 @@ void logtable_init(logtable_t *log, const char* filename, size_t size,
     return;
   }
 
-  log->buffer = (char *) malloc(size);
+  log->buffer = malloc(size);
   if (!log->buffer) {
     log_error("problem allocating buffer for %s\n", filename);
-    ftruncate(log->fd, 0);
     close(log->fd);
     return;
   }
+  log->next = log->buffer;
 
   int fields = TRACE_EVENT_NUM_FIELDS[id];
   log->record_bytes = sizeof(record_t) + fields * sizeof(uint64_t);
@@ -77,9 +77,7 @@ void logtable_init(logtable_t *log, const char* filename, size_t size,
   if (write(log->fd, buffer, log->header_size) != log->header_size) {
     log_error("failed to write header to file\n");
   }
-
   free(buffer);
-  log->next = log->buffer;
 }
 
 void logtable_fini(logtable_t *log) {
@@ -97,22 +95,19 @@ void logtable_fini(logtable_t *log) {
 }
 
 void logtable_vappend(logtable_t *log, int n, va_list *args) {
+  uint64_t time = hpx_time_from_start_ns(hpx_time_now());
   char *next = log->next + log->record_bytes;
   if (next - log->buffer > log->max_size) {
-    size_t amount = log->max_size - (log->max_size % log->record_bytes);
-    sync_tatas_acquire(log->lock);
-    write(log->fd, log->buffer, amount);
-    sync_tatas_release(log->lock);
-    log->next = log->buffer;
+    EVENT_FILE_IO_BEGIN();
+    write(log->fd, log->buffer, log->next - log->buffer);
+    EVENT_FILE_IO_END();
     next = log->buffer;
   }
-  else {
-    log->next = next;
-  }
+  log->next = next;
 
   record_t *r = (record_t*)next;
-  r->worker = HPX_THREAD_ID;
-  r->ns = hpx_time_from_start_ns(hpx_time_now());
+  r->worker = self->id;
+  r->ns = time;
   for (int i = 0, e = n; i < e; ++i) {
     r->user[i] = va_arg(*args, uint64_t);
   }
