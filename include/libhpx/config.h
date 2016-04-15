@@ -164,20 +164,18 @@ static const char *const HPX_LOG_LEVEL_TO_STRING[] = {
 //! Configuration options for instrumentation in HPX.
 #define HPX_TRACE_PARCEL      (UINT64_C(1) << 0)
 #define HPX_TRACE_NETWORK     (UINT64_C(1) << 1)
-#define HPX_TRACE_NETWORK_PWC (UINT64_C(1) << 2)
-#define HPX_TRACE_SCHED       (UINT64_C(1) << 3)
-#define HPX_TRACE_LCO         (UINT64_C(1) << 4)
-#define HPX_TRACE_PROCESS     (UINT64_C(1) << 5)
-#define HPX_TRACE_MEMORY      (UINT64_C(1) << 6)
-#define HPX_TRACE_SCHEDTIMES  (UINT64_C(1) << 7)
-#define HPX_TRACE_FILE_IO     (UINT64_C(1) << 8)
-#define HPX_TRACE_GAS         (UINT64_C(1) << 9)
-#define HPX_TRACE_COLLECTIVE  (UINT64_C(1) << 10)
+#define HPX_TRACE_SCHED       (UINT64_C(1) << 2)
+#define HPX_TRACE_LCO         (UINT64_C(1) << 3)
+#define HPX_TRACE_PROCESS     (UINT64_C(1) << 4)
+#define HPX_TRACE_MEMORY      (UINT64_C(1) << 5)
+#define HPX_TRACE_SCHEDTIMES  (UINT64_C(1) << 6)
+#define HPX_TRACE_FILE_IO     (UINT64_C(1) << 7)
+#define HPX_TRACE_GAS         (UINT64_C(1) << 8)
+#define HPX_TRACE_COLLECTIVE  (UINT64_C(1) << 9)
 
 static const char *const HPX_TRACE_CLASS_TO_STRING[] = {
   "PARCEL",
   "NETWORK",
-  "NETWORK_PWC",
   "SCHED",
   "LCO",
   "PROCESS",

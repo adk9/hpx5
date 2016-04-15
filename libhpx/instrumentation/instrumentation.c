@@ -212,7 +212,7 @@ int inst_init(const config_t *cfg, worker_t *w) {
 
   // Allocate memory for pointers to the logs and their respective locks
   int nclasses = _HPX_NELEM(HPX_TRACE_CLASS_TO_STRING);
-  w->inst->logs = calloc(TRACE_OFFSETS[nclasses], sizeof(logtable_t));
+  w->inst->logs = calloc(TRACE_OFFSETS[nclasses], sizeof(logtable_t *));
 
   // Scan through each trace event class and create logs for the associated
   // class events that that we are going to be tracing.

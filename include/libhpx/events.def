@@ -28,6 +28,9 @@
 /// @param      arg5 The fifth argument.
 
 /// Parcel events
+/// Parcel events mark important interactions between HPX and parcels, including
+/// the creation of parcels, sending and receiving of parcels, running,
+/// terminating (ending), suspending and resuming, and resending of parcels.
 /// @{
 LIBHPX_EVENT(PARCEL, CREATE, uint64_t, hpx_action_t, size_t, int)
 LIBHPX_EVENT(PARCEL, SEND, uint64_t, hpx_action_t, size_t, hpx_addr_t, hpx_addr_t)
@@ -40,18 +43,18 @@ LIBHPX_EVENT(PARCEL, RESEND, uint64_t, hpx_action_t, size_t, hpx_addr_t)
 /// @}
 
 /// Network events
+/// Network events include when the scheduler handles network probing and 
+/// whenever PWC send/receive operations occur.
 /// @{
 LIBHPX_EVENT(NETWORK, SCHED_ENTER)
 LIBHPX_EVENT(NETWORK, SCHED_EXIT)
-/// @}
-
-/// Network PWC events
-/// @{
-LIBHPX_EVENT(NETWORK_PWC, SEND)
-LIBHPX_EVENT(NETWORK_PWC, RECV)
+LIBHPX_EVENT(NETWORK, PWC_SEND)
+LIBHPX_EVENT(NETWORK, PWC_RECV)
 /// @}
 
 /// Scheduler events
+/// Scheduler events mark when the scheduler is entered or exited as well as
+/// when events affecting the LIFO queue occur.
 /// @{
 LIBHPX_EVENT(SCHED, WQSIZE, size_t)
 LIBHPX_EVENT(SCHED, PUSH_LIFO, uint64_t)
@@ -62,6 +65,10 @@ LIBHPX_EVENT(SCHED, EXIT)
 /// @}
 
 /// LCO events
+/// LCO events mark when important lco procedures occur, such as the
+/// initialization, deletion, setting, resetting, or triggering of the LCO
+/// occurs, and also whenever the LCO is waited on or has a parcel attached to 
+/// it.
 /// @{
 LIBHPX_EVENT(LCO, INIT, void*, uint64_t)
 LIBHPX_EVENT(LCO, DELETE, void*, uint64_t)
@@ -73,6 +80,8 @@ LIBHPX_EVENT(LCO, TRIGGER, void*, uint64_t)
 /// @}
 
 /// Process events
+/// Process events mark when a new process is created, when a call is made, and
+/// when a process is deleted.
 /// @{
 LIBHPX_EVENT(PROCESS, NEW, hpx_addr_t, hpx_addr_t)
 LIBHPX_EVENT(PROCESS, CALL, hpx_addr_t, hpx_pid_t)
@@ -80,6 +89,9 @@ LIBHPX_EVENT(PROCESS, DELETE, hpx_addr_t)
 /// @}
 
 /// Memory events
+/// Memory events mark when allocating or freeing any of registered memory,
+/// global memory, or cyclicly allocated memory, and also marks when any of
+/// these operations are begun using MEMORY_ENTER_ALLOC_FREE.
 /// @{
 LIBHPX_EVENT(MEMORY, REGISTERED_ALLOC, void*, size_t, size_t)
 LIBHPX_EVENT(MEMORY, REGISTERED_FREE, void*)
@@ -98,18 +110,26 @@ LIBHPX_EVENT(SCHEDTIMES, PROGRESS)
 /// @}
 
 /// File IO events
+/// File IO events are used to mark when a file IO event occurs within the HPX
+/// runtime system.  At the moment this is only used when dumping trace data to
+/// file.
 /// @{
 LIBHPX_EVENT(FILE_IO, BEGIN)
 LIBHPX_EVENT(FILE_IO, END)
 /// @}
 
 /// GAS events
+/// GAS events mark whenever there is a GAS access or move.
 /// @{
 LIBHPX_EVENT(GAS, ACCESS, int, int, hpx_addr_t, size_t)
 LIBHPX_EVENT(GAS, MOVE, hpx_addr_t, hpx_addr_t, hpx_addr_t)
 /// @}
 
 /// Collective events
+/// Collective events mark important moments in the lifetime of process
+/// collectives.  Specifically the creation or deletion of collectives, the
+/// subscription or unsubscription of participants in the collective, and 
+/// whenever the collective performs a join operation.
 /// @{
 LIBHPX_EVENT(COLLECTIVE, NEW, hpx_addr_t)
 LIBHPX_EVENT(COLLECTIVE, DELETE, hpx_addr_t)
