@@ -107,7 +107,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, 0, _agas_move, _agas_move_handler, HPX_ADDR);
 void agas_move(void *gas, hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {
   agas_t *agas = gas;
   libhpx_network_t net = here->config->network;
-  if (net == HPX_NETWORK_PWC || net == HPX_NETWORK_SMP) {
+  if (net == HPX_NETWORK_SMP) {
     log_dflt("AGAS move not supported for network %s\n",
              HPX_NETWORK_TO_STRING[net]);
     hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
