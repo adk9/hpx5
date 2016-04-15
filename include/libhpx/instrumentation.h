@@ -25,11 +25,11 @@ extern "C" {
 #include <libhpx/locality.h>
 
 struct worker;
-struct logtable;
+typedef struct logtable logtable_t;
 
 /// All of the data needed for managing instrumentation for each worker thread
 typedef struct inst {
-  struct logtable   **logs;                         //!< pointers to the logs
+  logtable_t   **logs;                         //!< pointers to the logs
 } inst_t;
 
 

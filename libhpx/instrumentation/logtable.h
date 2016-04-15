@@ -17,7 +17,7 @@
 struct record;
 
 /// All of the data needed to keep the state of an individual event log
-typedef struct logtable {
+struct logtable {
   int               fd;                         //!< file backing the log
   int               id;                         //!< the event we're logging
   int     record_bytes;                         //!< record size
@@ -25,7 +25,7 @@ typedef struct logtable {
   char * volatile next;                         //!< pointer to next record
   size_t      max_size;                         //!< max size in bytes
   size_t   header_size;                         //!< header size in bytes
-} logtable_t;
+};
 
 /// Initialize a logtable.
 ///
