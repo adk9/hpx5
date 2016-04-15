@@ -214,19 +214,19 @@ network_isir_funneled_new(const config_t *cfg, struct boot *boot, gas_t *gas) {
     return NULL;
   }
 
-  network->vtable.type = HPX_NETWORK_ISIR;
-  network->vtable.string = &isir_string_vtable;
-  network->vtable.delete = _funneled_delete;
-  network->vtable.progress = _funneled_progress;
-  network->vtable.send = _funneled_send;
-  network->vtable.coll_sync = _funneled_coll_sync;
-  network->vtable.coll_init = _funneled_coll_init;
-  network->vtable.probe = _funneled_probe;
-  network->vtable.flush = _funneled_flush;
+  network->vtable.type         = HPX_NETWORK_ISIR;
+  network->vtable.string       = &parcel_string_vtable;
+  network->vtable.delete       = _funneled_delete;
+  network->vtable.progress     = _funneled_progress;
+  network->vtable.send         = _funneled_send;
+  network->vtable.coll_sync    = _funneled_coll_sync;
+  network->vtable.coll_init    = _funneled_coll_init;
+  network->vtable.probe        = _funneled_probe;
+  network->vtable.flush        = _funneled_flush;
   network->vtable.register_dma = _funneled_register_dma;
-  network->vtable.release_dma = _funneled_release_dma;
-  network->vtable.lco_get = isir_lco_get;
-  network->vtable.lco_wait = isir_lco_wait;
+  network->vtable.release_dma  = _funneled_release_dma;
+  network->vtable.lco_get      = isir_lco_get;
+  network->vtable.lco_wait     = isir_lco_wait;
   network->gas = gas;
 
   sync_two_lock_queue_init(&network->sends, NULL);

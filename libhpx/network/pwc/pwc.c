@@ -218,8 +218,12 @@ network_pwc_funneled_new(const config_t *cfg, boot_t *boot, gas_t *gas) {
   dbg_check(e, "failed to allocate the pwc network structure\n");
   dbg_assert(pwc);
 
+  if (gas->type == HPX_GAS_AGAS) {
+    pwc->vtable.string     = &parcel_string_vtable;
+  } else {
+    pwc->vtable.string     = &_pwc_string_vtable;
+  }
   pwc->vtable.type         = HPX_NETWORK_PWC;
-  pwc->vtable.string       = &_pwc_string_vtable;
   pwc->vtable.delete       = _pwc_delete;
   pwc->vtable.progress     = _pwc_progress;
   pwc->vtable.send         = _pwc_send;
