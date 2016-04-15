@@ -147,15 +147,43 @@ static void _pwc_delete(void *network) {
   for (int i = 0, e = here->ranks; i < e; ++i) {
     send_buffer_fini(&pwc->send_buffers[i]);
   }
-
-  heap_segment_t *heap = &pwc->heap_segments[here->rank];
-  _pwc_release_dma(pwc, heap->base, heap->n);
-  free(pwc->heap_segments);
   free(pwc->send_buffers);
+
+  if (pwc->heap_segments) {
+    heap_segment_t *heap = &pwc->heap_segments[here->rank];
+    _pwc_release_dma(pwc, heap->base, heap->n);
+    free(pwc->heap_segments);
+  }
 
   parcel_emulator_delete(pwc->parcels);
   pwc->xport->dealloc(pwc->xport);
   free(pwc);
+}
+
+static void _pwc_register_gas_heap(void *network, boot_t *boot, gas_t *gas) {
+  if (gas->type == HPX_GAS_AGAS) {
+    return;
+  }
+
+  pwc_network_t *pwc = network;
+  pwc->heap_segments = calloc(here->ranks, sizeof(heap_segment_t));
+
+  heap_segment_t heap = {
+    .n = gas_local_size(gas),
+    .base = gas_local_base(gas)
+  };
+  _pwc_register_dma(pwc, heap.base, heap.n, &heap.key);
+
+  // Exchange all the heap keys, and make sure it went okay
+  boot_allgather(boot, &heap, pwc->heap_segments, sizeof(heap));
+
+  heap_segment_t *segment = &pwc->heap_segments[here->rank];
+  dbg_assert(heap.n == segment->n);
+  dbg_assert(heap.base == segment->base);
+  dbg_assert(!strncmp(heap.key, segment->key, XPORT_KEY_SIZE));
+
+  // avoid unused variable warnings
+  (void)segment;
 }
 
 static const class_string_t _pwc_string_vtable = {
@@ -177,11 +205,6 @@ network_pwc_funneled_new(const config_t *cfg, boot_t *boot, gas_t *gas) {
     return NULL;
   }
 
-  if (cfg->gas == HPX_GAS_AGAS) {
-    dbg_error("PWC is incompatible with AGAS, please run with --hpx-gas=pgas "
-              "or with --hpx-network=isir\n");
-  }
-
   // Validate configuration.
   if (cfg->pwc_parceleagerlimit > cfg->pwc_parcelbuffersize) {
     dbg_error(" --hpx-pwc-parceleagerlimit (%zu) must be less than "
@@ -195,19 +218,19 @@ network_pwc_funneled_new(const config_t *cfg, boot_t *boot, gas_t *gas) {
   dbg_check(e, "failed to allocate the pwc network structure\n");
   dbg_assert(pwc);
 
-  pwc->vtable.type = HPX_NETWORK_PWC;
-  pwc->vtable.string = &_pwc_string_vtable;
-  pwc->vtable.delete = _pwc_delete;
-  pwc->vtable.progress = _pwc_progress;
-  pwc->vtable.send = _pwc_send;
-  pwc->vtable.coll_init = _pwc_coll_init;
-  pwc->vtable.coll_sync = _pwc_coll_sync;
-  pwc->vtable.probe = _pwc_probe;
-  pwc->vtable.flush = _pwc_flush;
+  pwc->vtable.type         = HPX_NETWORK_PWC;
+  pwc->vtable.string       = &_pwc_string_vtable;
+  pwc->vtable.delete       = _pwc_delete;
+  pwc->vtable.progress     = _pwc_progress;
+  pwc->vtable.send         = _pwc_send;
+  pwc->vtable.coll_init    = _pwc_coll_init;
+  pwc->vtable.coll_sync    = _pwc_coll_sync;
+  pwc->vtable.probe        = _pwc_probe;
+  pwc->vtable.flush        = _pwc_flush;
   pwc->vtable.register_dma = _pwc_register_dma;
-  pwc->vtable.release_dma = _pwc_release_dma;
-  pwc->vtable.lco_get = pwc_lco_get;
-  pwc->vtable.lco_wait = pwc_lco_wait;
+  pwc->vtable.release_dma  = _pwc_release_dma;
+  pwc->vtable.lco_get      = pwc_lco_get;
+  pwc->vtable.lco_wait     = pwc_lco_wait;
 
   // Initialize locks.
   sync_store(&pwc->probe_lock, 1, SYNC_RELEASE);
@@ -218,22 +241,9 @@ network_pwc_funneled_new(const config_t *cfg, boot_t *boot, gas_t *gas) {
   pwc->xport = pwc_xport_new(cfg, boot, gas);
   pwc->parcels = parcel_emulator_new_reload(cfg, boot, pwc->xport);
   pwc->send_buffers = calloc(here->ranks, sizeof(send_buffer_t));
-  pwc->heap_segments = calloc(here->ranks, sizeof(heap_segment_t));
 
   // Register the gas heap segment.
-  heap_segment_t heap = {
-    .n = gas_local_size(here->gas),
-    .base = gas_local_base(here->gas)
-  };
-  _pwc_register_dma(pwc, heap.base, heap.n, &heap.key);
-
-  // Exchange all the heap keys, and make sure it went okay
-  boot_allgather(boot, &heap, pwc->heap_segments, sizeof(heap));
-
-  heap_segment_t *segment = &pwc->heap_segments[here->rank];
-  dbg_assert(heap.n == segment->n);
-  dbg_assert(heap.base == segment->base);
-  dbg_assert(!strncmp(heap.key, segment->key, XPORT_KEY_SIZE));
+  _pwc_register_gas_heap(pwc, boot, gas);
 
   // Initialize the send buffers.
   for (int i = 0, e = here->ranks; i < e; ++i) {
@@ -243,9 +253,6 @@ network_pwc_funneled_new(const config_t *cfg, boot_t *boot, gas_t *gas) {
   }
 
   return &pwc->vtable;
-
-  // avoid unused variable warnings
-  (void)segment;
 }
 
 int pwc_get(void *obj, void *lva, hpx_addr_t from, size_t n,
