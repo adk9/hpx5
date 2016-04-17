@@ -109,13 +109,12 @@ LIBHPX_EVENT(SCHEDTIMES, PROBE)
 LIBHPX_EVENT(SCHEDTIMES, PROGRESS)
 /// @}
 
-/// File IO events
-/// File IO events are used to mark when a file IO event occurs within the HPX
-/// runtime system.  At the moment this is only used when dumping trace data to
-/// file.
+/// Trace events
+/// Trace events are used for marking events related to tracing.  At the moment 
+/// this is only used when dumping trace data to file.
 /// @{
-LIBHPX_EVENT(FILE_IO, BEGIN)
-LIBHPX_EVENT(FILE_IO, END)
+LIBHPX_EVENT(TRACE, FILE_IO_BEGIN)
+LIBHPX_EVENT(TRACE, FILE_IO_END)
 /// @}
 
 /// GAS events

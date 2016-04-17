@@ -98,9 +98,9 @@ void logtable_vappend(logtable_t *log, int n, va_list *args) {
   uint64_t time = hpx_time_from_start_ns(hpx_time_now());
   char *next = log->next + log->record_bytes;
   if (next - log->buffer > log->max_size) {
-    EVENT_FILE_IO_BEGIN();
+    EVENT_TRACE_FILE_IO_BEGIN();
     write(log->fd, log->buffer, log->next - log->buffer);
-    EVENT_FILE_IO_END();
+    EVENT_TRACE_FILE_IO_END();
     next = log->buffer;
   }
   log->next = next;
