@@ -108,7 +108,6 @@ static void _cleanup(locality_t *l) {
   }
 
   action_table_finalize();
-  inst_fini();
 
   if (l->config) {
     config_delete(l->config);
@@ -184,11 +183,6 @@ int hpx_init(int *argc, char ***argv) {
   if (!here->topology) {
     status = log_error("failed to discover topology.\n");
     goto unwind1;
-  }
-
-  // Initialize our instrumentation.
-  if (inst_init(here->config)) {
-    log_dflt("error detected while initializing instrumentation\n");
   }
 
   // Allocate the global heap.
@@ -323,8 +317,6 @@ void hpx_exit(int code) {
 /// Called by the application to shutdown the scheduler and network. May be
 /// called from any lightweight HPX thread, or the network thread.
 void hpx_abort(void) {
-  inst_fini();
-
   if (here && here->config && here->config->dbg_waitonabort) {
     dbg_wait();
   }

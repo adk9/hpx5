@@ -54,20 +54,6 @@
 static const char *_log_path;
 /// @}
 
-/// The log table array.
-///
-/// Each logtable_t is, in fact, a fixed-size header that describes a
-/// dynamically allocated buffer. These headers are not _too_ big, and there
-/// aren't _too_ many of them, so we go ahead and use an initialized data array
-/// to allocate their storage.
-///
-/// At runtime each event that we are _actually_ logging will have a large event
-/// buffer dynamically allocated.
-///
-/// @{
-static logtable_t _logs[TRACE_NUM_EVENTS];
-/// @}
-
 /// Concatenate two paths.
 ///
 /// This will return a dynamically allocated, '\0' terminated string that joins
@@ -147,15 +133,15 @@ static void _dump_actions(void) {
   fclose(file);
 }
 
-static void _create_logtable(int class, int id, size_t size) {
+static void _create_logtable(worker_t *w, int class, int id, size_t size) {
   char filename[256];
-  snprintf(filename, 256, "event.%d.%d.%d.%s.%s.log",
-           class, id, hpx_get_my_rank(),
-           HPX_TRACE_CLASS_TO_STRING[class],
+  snprintf(filename, 256, "event.%03d.%03d.%05d.%s.log",
+           w->id, id, hpx_get_my_rank(),
            TRACE_EVENT_TO_STRING[id]);
 
   char *path = _concat_path(_log_path, filename);
-  logtable_init(&_logs[id], path, size, class, id);
+  w->inst->logs[id] = malloc(sizeof(logtable_t));
+  logtable_init(w->inst->logs[id], path, size, class, id);
   free(path);
 }
 
@@ -204,13 +190,13 @@ static const char *_get_log_path(const char *dir) {
   return NULL;
 }
 
-int inst_init(const config_t *cfg) {
+int inst_init(const config_t *cfg, worker_t *w) {
 #ifndef ENABLE_INSTRUMENTATION
   return LIBHPX_OK;
 #endif
 
   // If we're not tracing at this locality, then don't do anything.
-  if (!config_trace_at_isset(cfg, HPX_LOCALITY_ID)) {
+  if (!config_trace_at_isset(cfg, HPX_LOCALITY_ID) || !cfg->trace_classes) {
     return LIBHPX_OK;
   }
 
@@ -221,23 +207,28 @@ int inst_init(const config_t *cfg) {
 
   // At this point we know that we'll be generating some sort of logs, so
   // prepare the path.
-  _log_path = _get_log_path(cfg->trace_dir);
+  if (w->id == 0){
+    _log_path = _get_log_path(cfg->trace_dir);
+  }
+
   if (!_log_path) {
     return LIBHPX_OK;
   }
 
+  // Allocate memory for pointers to the logs and their respective locks
+  int nclasses = _HPX_NELEM(HPX_TRACE_CLASS_TO_STRING);
+  w->inst->logs = calloc(TRACE_OFFSETS[nclasses], sizeof(logtable_t *));
+
   // Scan through each trace event class and create logs for the associated
   // class events that that we are going to be tracing.
-  int nclasses = _HPX_NELEM(HPX_TRACE_CLASS_TO_STRING);
   for (int c = 0, e = nclasses; c < e; ++c) {
     if (inst_trace_class(1 << c)) {
       for (int i = TRACE_OFFSETS[c], e = TRACE_OFFSETS[c + 1]; i < e; ++i) {
-        _create_logtable(c, i, cfg->trace_filesize);
+        _create_logtable(w, c, i, cfg->trace_buffersize);
       }
     }
   }
 
-  inst_trace(HPX_TRACE_BOOKEND, TRACE_EVENT_BOOKEND_BOOKEND);
   return LIBHPX_OK;
 }
 
@@ -256,22 +247,30 @@ int inst_start(void) {
   return LIBHPX_OK;
 }
 
-void inst_fini(void) {
-  inst_trace(HPX_TRACE_BOOKEND, TRACE_EVENT_BOOKEND_BOOKEND);
-  for (int i = 0, e = TRACE_NUM_EVENTS; i < e; ++i) {
-    logtable_fini(&_logs[i]);
-  }
+void inst_fini(worker_t *w) {
   if (_log_path) {
     free((char*)_log_path);
   }
   _log_path = NULL;
+  if(!w->inst->logs){
+    return;
+  }
+  for (int i = 0, e = TRACE_NUM_EVENTS; i < e; ++i) {
+    if(w->inst->logs[i]){
+      logtable_fini(w->inst->logs[i]);
+      free(w->inst->logs[i]);
+      w->inst->logs[i] = NULL;
+    }
+  }
+  free(w->inst->logs);
+  w->inst->logs = NULL;
 }
 
 void inst_vtrace(int UNUSED, int n, int id, ...) {
-  if (_logs[id].buffer) {
+  if (self && self->inst->logs && self->inst->logs[id]) {
     va_list vargs;
     va_start(vargs, id);
-    logtable_vappend(&_logs[id], n, &vargs);
+    logtable_vappend(self->inst->logs[id], n, &vargs);
     va_end(vargs);
   }
 }

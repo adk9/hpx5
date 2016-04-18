@@ -424,7 +424,7 @@ void config_print(const config_t *cfg, FILE *f) {
 
   fprintf(f, "\nTracinf\n");
   fprintf(f, "  dir\t\t\t\"%s\"\n", cfg->trace_dir);
-  fprintf(f, "  trace filesize\t%zu\n", cfg->trace_filesize);
+  fprintf(f, "  trace buffer size\t%zu\n", cfg->trace_buffersize);
   fprintf(f, "  trace classes\t\t");
   for (int i = 0, e = _HPX_NELEM(HPX_TRACE_CLASS_TO_STRING); i < e; ++i) {
     uint64_t class = (1lu << i);

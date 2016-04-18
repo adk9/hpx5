@@ -63,8 +63,8 @@ const char *hpx_options_t_help[] = {
   "\nTracing:",
   "      --hpx-trace-dir=dir       file output directory",
   "      --hpx-trace-at=localities filter by locality, -1 for all (default all)",
-  "      --hpx-trace-classes=class filter by class  (possible values=\"parcel\",\n                                  \"pwc\", \"sched\", \"lco\", \"process\",\n                                  \"memory\", \"schedtimes\", \"bookend\",\n                                  \"gas\", \"collective\", \"all\")",
-  "      --hpx-trace-filesize=bytes\n                                maximum bytes for each file",
+  "      --hpx-trace-classes=class filter by class  (possible values=\"parcel\",\n                                  \"network\", \"sched\", \"lco\", \"process\",\n                                  \"memory\", \"schedtimes\", \"trace\",\n                                  \"gas\", \"collective\", \"all\")",
+  "      --hpx-trace-buffersize=bytes\n                                size of trace buffers",
   "\nISIR Network Options:",
   "      --hpx-isir-testwindow=requests\n                                number of ISIR requests to test in progress\n                                  loop",
   "      --hpx-isir-sendlimit=requests\n                                ISIR network send limit",
@@ -151,7 +151,7 @@ const char *hpx_option_parser_hpx_thread_affinity_values[] = {"default", "hwthre
 const char *hpx_option_parser_hpx_sched_policy_values[] = {"default", "random", "hier", 0}; /*< Possible values for hpx-sched-policy. */
 const char *hpx_option_parser_hpx_log_level_values[] = {"default", "boot", "sched", "gas", "lco", "net", "trans", "parcel", "action", "config", "memory", "coll", "all", 0}; /*< Possible values for hpx-log-level. */
 const char *hpx_option_parser_hpx_dbg_waitonsig_values[] = {"segv", "abrt", "fpe", "ill", "bus", "iot", "sys", "trap", "all", 0}; /*< Possible values for hpx-dbg-waitonsig. */
-const char *hpx_option_parser_hpx_trace_classes_values[] = {"parcel", "pwc", "sched", "lco", "process", "memory", "schedtimes", "bookend", "gas", "collective", "all", 0}; /*< Possible values for hpx-trace-classes. */
+const char *hpx_option_parser_hpx_trace_classes_values[] = {"parcel", "network", "sched", "lco", "process", "memory", "schedtimes", "trace", "gas", "collective", "all", 0}; /*< Possible values for hpx-trace-classes. */
 const char *hpx_option_parser_hpx_photon_backend_values[] = {"default", "verbs", "ugni", "fi", 0}; /*< Possible values for hpx-photon-backend. */
 
 static char *
@@ -185,7 +185,7 @@ void clear_given (struct hpx_options_t *args_info)
   args_info->hpx_trace_dir_given = 0 ;
   args_info->hpx_trace_at_given = 0 ;
   args_info->hpx_trace_classes_given = 0 ;
-  args_info->hpx_trace_filesize_given = 0 ;
+  args_info->hpx_trace_buffersize_given = 0 ;
   args_info->hpx_isir_testwindow_given = 0 ;
   args_info->hpx_isir_sendlimit_given = 0 ;
   args_info->hpx_isir_recvlimit_given = 0 ;
@@ -257,7 +257,7 @@ void clear_args (struct hpx_options_t *args_info)
   args_info->hpx_trace_at_orig = NULL;
   args_info->hpx_trace_classes_arg = NULL;
   args_info->hpx_trace_classes_orig = NULL;
-  args_info->hpx_trace_filesize_orig = NULL;
+  args_info->hpx_trace_buffersize_orig = NULL;
   args_info->hpx_isir_testwindow_orig = NULL;
   args_info->hpx_isir_sendlimit_orig = NULL;
   args_info->hpx_isir_recvlimit_orig = NULL;
@@ -334,7 +334,7 @@ void init_args_info(struct hpx_options_t *args_info)
   args_info->hpx_trace_classes_help = hpx_options_t_help[30] ;
   args_info->hpx_trace_classes_min = 0;
   args_info->hpx_trace_classes_max = 0;
-  args_info->hpx_trace_filesize_help = hpx_options_t_help[31] ;
+  args_info->hpx_trace_buffersize_help = hpx_options_t_help[31] ;
   args_info->hpx_isir_testwindow_help = hpx_options_t_help[33] ;
   args_info->hpx_isir_sendlimit_help = hpx_options_t_help[34] ;
   args_info->hpx_isir_recvlimit_help = hpx_options_t_help[35] ;
@@ -517,7 +517,7 @@ hpx_option_parser_release (struct hpx_options_t *args_info)
   args_info->hpx_trace_at_arg = 0;
   free_multiple_field (args_info->hpx_trace_classes_given, (void *)(args_info->hpx_trace_classes_arg), &(args_info->hpx_trace_classes_orig));
   args_info->hpx_trace_classes_arg = 0;
-  free_string_field (&(args_info->hpx_trace_filesize_orig));
+  free_string_field (&(args_info->hpx_trace_buffersize_orig));
   free_string_field (&(args_info->hpx_isir_testwindow_orig));
   free_string_field (&(args_info->hpx_isir_sendlimit_orig));
   free_string_field (&(args_info->hpx_isir_recvlimit_orig));
@@ -668,8 +668,8 @@ hpx_option_parser_dump(FILE *outfile, struct hpx_options_t *args_info)
     write_into_file(outfile, "hpx-trace-dir", args_info->hpx_trace_dir_orig, 0);
   write_multiple_into_file(outfile, args_info->hpx_trace_at_given, "hpx-trace-at", args_info->hpx_trace_at_orig, 0);
   write_multiple_into_file(outfile, args_info->hpx_trace_classes_given, "hpx-trace-classes", args_info->hpx_trace_classes_orig, hpx_option_parser_hpx_trace_classes_values);
-  if (args_info->hpx_trace_filesize_given)
-    write_into_file(outfile, "hpx-trace-filesize", args_info->hpx_trace_filesize_orig, 0);
+  if (args_info->hpx_trace_buffersize_given)
+    write_into_file(outfile, "hpx-trace-buffersize", args_info->hpx_trace_buffersize_orig, 0);
   if (args_info->hpx_isir_testwindow_given)
     write_into_file(outfile, "hpx-isir-testwindow", args_info->hpx_isir_testwindow_orig, 0);
   if (args_info->hpx_isir_sendlimit_given)
@@ -1943,7 +1943,7 @@ hpx_option_parser_internal (
         { "hpx-trace-dir",	1, NULL, 0 },
         { "hpx-trace-at",	1, NULL, 0 },
         { "hpx-trace-classes",	1, NULL, 0 },
-        { "hpx-trace-filesize",	1, NULL, 0 },
+        { "hpx-trace-buffersize",	1, NULL, 0 },
         { "hpx-isir-testwindow",	1, NULL, 0 },
         { "hpx-isir-sendlimit",	1, NULL, 0 },
         { "hpx-isir-recvlimit",	1, NULL, 0 },
@@ -2311,16 +2311,16 @@ hpx_option_parser_internal (
               goto failure;
           
           }
-          /* maximum bytes for each file.  */
-          else if (strcmp (long_options[option_index].name, "hpx-trace-filesize") == 0)
+          /* size of trace buffers.  */
+          else if (strcmp (long_options[option_index].name, "hpx-trace-buffersize") == 0)
           {
           
           
-            if (update_arg( (void *)&(args_info->hpx_trace_filesize_arg), 
-                 &(args_info->hpx_trace_filesize_orig), &(args_info->hpx_trace_filesize_given),
-                &(local_args_info.hpx_trace_filesize_given), optarg, 0, 0, ARG_LONG,
+            if (update_arg( (void *)&(args_info->hpx_trace_buffersize_arg), 
+                 &(args_info->hpx_trace_buffersize_orig), &(args_info->hpx_trace_buffersize_given),
+                &(local_args_info.hpx_trace_buffersize_given), optarg, 0, 0, ARG_LONG,
                 check_ambiguity, override, 0, 0,
-                "hpx-trace-filesize", '-',
+                "hpx-trace-buffersize", '-',
                 additional_error))
               goto failure;
           
