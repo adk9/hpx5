@@ -248,7 +248,7 @@ int agas_graph_construct(hpx_addr_t graph, char *buf, size_t size,
 }
 
 static void _dump_agas_graph(_agas_graph_t *g) {
-#ifdef ENABLE_INSTRUMENTATION
+#if defined(ENABLE_INSTRUMENTATION) && defined(ENABLE_DEBUG)
   char filename[256];
   snprintf(filename, 256, "rebalancer_%d.graph", HPX_LOCALITY_ID);
   FILE *file = fopen(filename, "w");
