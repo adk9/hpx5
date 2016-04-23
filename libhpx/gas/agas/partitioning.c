@@ -395,22 +395,23 @@ size_t agas_graph_get_vtxs(void *graph, uint64_t **vtxs) {
 
 // Get the owner entries associated with the owner map of the AGAS
 // graph.
-int agas_graph_get_owner_entry(void *graph, uint64_t id, int *start,
+void agas_graph_get_owner_entry(void *graph, int id, int *start,
                                int *end, int *owner) {
   _agas_graph_t *g = (_agas_graph_t*)graph;
-  dbg_assert(g);
-  dbg_assert(id >= 0 && id <= g->count);
-
+  dbg_assert(id >= 0 && id < here->ranks);
   _owner_map_t entry = g->owner_map[id];
-  *start = entry.start;
   *owner = entry.owner;
 
-  if (id == g->count-1) {
+  if (id == g->count - 1) {
+    *start = entry.start;
     *end = g->nvtxs - 1;
+  } else if (id >= g->count) {
+    *start = 0;
+    *end = 0;
   } else {
+    *start = entry.start;
     _owner_map_t next_entry = g->owner_map[id+1];
     *end = next_entry.start - 1;
   }
-  return HPX_SUCCESS;
 }
 

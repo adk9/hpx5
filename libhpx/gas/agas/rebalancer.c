@@ -216,11 +216,15 @@ static int _rebalance_sync(uint64_t *partition, hpx_addr_t graph, void *g) {
   size_t nvtxs = agas_graph_get_vtxs(g, &vtxs);
   if (nvtxs > 0 && partition) {
     // rebalance blocks in each partition
-    hpx_addr_t done = hpx_lco_and_new(HPX_LOCALITIES);
-    for (int i = 0; i < HPX_LOCALITIES; ++i) {
+    hpx_addr_t done = hpx_lco_and_new(here->ranks);
+    for (int i = 0; i < here->ranks; ++i) {
       int start, end, owner;
       agas_graph_get_owner_entry(g, i, &start, &end, &owner);
       size_t bytes = (end-start)*sizeof(uint64_t);
+      if (!bytes) {
+        hpx_lco_set(done, 0, NULL, HPX_NULL, HPX_NULL);
+        continue;
+      }
       hpx_call(HPX_THERE(owner), _bulk_move, done,
                vtxs+start, bytes, partition+start, bytes);
     }
