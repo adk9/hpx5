@@ -22,6 +22,11 @@
 extern "C" {
 #endif
 
+/// Get the current program name without using argv.
+///
+/// @returns            A string with the program name.
+const char *system_get_program_name(void);
+
 /// Set the affinity of worker thread with @p id according to the
 /// globally specified thread affinity @p policy.
 int system_set_worker_affinity(int id, libhpx_thread_affinity_t policy);
