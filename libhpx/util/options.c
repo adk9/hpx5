@@ -10,7 +10,6 @@
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
-#define _GNU_SOURCE
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -21,9 +20,8 @@
 ///
 
 #include <assert.h>
-#include <errno.h>
-#include <stdlib.h>
 #include <ctype.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <utstring.h>
@@ -44,8 +42,6 @@
 #include <libhpx/utils.h>
 
 #include "parser.h"
-
-extern char *program_invocation_name;
 
 typedef struct hpx_options_t hpx_options_t;
 
@@ -125,14 +121,14 @@ static void _from_env_all(UT_string *str) {
 /// that we can parse using the gengetopt command-line infrastructure.
 ///
 /// @param[out]    opts The option structure we will fill from the environment.
-/// @param     progname Required by the gengetopt parser.
-static void _process_env(hpx_options_t *opts, const char *progname) {
+static void _process_env(hpx_options_t *opts) {
   UT_string *hpx_opts = NULL;
   utstring_new(hpx_opts);
   _from_env_all(hpx_opts);
 
   const char *cmdline = utstring_body(hpx_opts);
   if (cmdline) {
+    const char *progname = system_get_program_name();
     int e = hpx_option_parser_string(cmdline, opts, progname);
     dbg_check(e, "failed to parse environment options: %s.\n", cmdline);
   }
@@ -309,12 +305,9 @@ config_t *config_new(int *argc, char ***argv) {
   dbg_assert(cfg);
   *cfg = _default_cfg;
 
-  // The executable is used by the gengetopt parser internally.
-  const char *progname = program_invocation_name;
-
   // Process the environment.
   hpx_options_t opts;
-  _process_env(&opts, progname);
+  _process_env(&opts);
   _merge_opts(cfg, &opts);
   hpx_option_parser_free(&opts);
 
