@@ -67,10 +67,10 @@ void logtable_init(logtable_t *log, const char* filename, size_t size,
     close(log->fd);
     return;
   }
-  log->next = log->buffer;
 
   int fields = TRACE_EVENT_NUM_FIELDS[id];
   log->record_bytes = sizeof(record_t) + fields * sizeof(uint64_t);
+  log->next = log->buffer - log->record_bytes;
 
   char *buffer = malloc(32768);
   log->header_size = write_trace_header(buffer, class, id);
