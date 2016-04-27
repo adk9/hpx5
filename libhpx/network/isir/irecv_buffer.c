@@ -155,8 +155,10 @@ int _resize(irecv_buffer_t *buffer, uint32_t size, hpx_parcel_t **out) {
   }
 #endif
 
-  buffer->requests = realloc(buffer->requests, size * buffer->xport->sizeof_request());
-  buffer->statuses = realloc(buffer->statuses, size * buffer->xport->sizeof_status());
+  buffer->requests = realloc(buffer->requests,
+                             size * buffer->xport->sizeof_request());
+  buffer->statuses = realloc(buffer->statuses,
+                             size * buffer->xport->sizeof_status());
   buffer->out = realloc(buffer->out, size * sizeof(int));
   buffer->records = realloc(buffer->records, size * sizeof(*buffer->records));
 
@@ -246,17 +248,6 @@ static hpx_parcel_t *_finish(irecv_buffer_t *irecvs, int i, void *status) {
   irecvs->xport->finish(status, &src, &n);
 
   hpx_parcel_t *p = irecvs->records[i].parcel;
-  if (here->config->gas == HPX_GAS_AGAS) {
-    int to = gas_owner_of(here->gas, p->target);
-    if (to != here->rank) {
-      network_send(self->network, p);
-      if (LIBHPX_OK != _start(irecvs, i)) {
-        dbg_error("failed to regenerate an irecv\n");
-      }
-      return NULL;
-    }
-  }
-
   p->src = src;
   p->size = isir_bytes_to_payload_size(n);
   log_net("finished a recv for a %u-byte payload\n", p->size);
