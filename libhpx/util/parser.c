@@ -76,7 +76,7 @@ const char *hpx_options_t_help[] = {
   "      --hpx-coll-network        set collective implementation to network based\n                                  version (override parcel collectives)\n                                  (default=off)",
   "\nPhoton Transport Options:",
   "      --hpx-photon-backend=type set the underlying network API to use\n                                  (possible values=\"default\", \"verbs\",\n                                  \"ugni\", \"fi\")",
-  "      --hpx-photon-coll=type    set the underlying network collectives to use\n                                  (possible values=\"pwc\", \"nbc\")",
+  "      --hpx-photon-coll=type    set the underlying network collectives to use\n                                  (possible values=\"default\", \"pwc\",\n                                  \"nbc\")",
   "      --hpx-photon-ibdev=device [verbs] set a particular IB device (also a\n                                  filter for device and port discovery, e.g.\n                                  qib0:1+mlx4_0:2)",
   "      --hpx-photon-ethdev=device\n                                [verbs] set a particular ETH device (for CMA\n                                  mode only)",
   "      --hpx-photon-ibport=integer\n                                [verbs] set a particular IB port",
@@ -154,7 +154,7 @@ const char *hpx_option_parser_hpx_log_level_values[] = {"default", "boot", "sche
 const char *hpx_option_parser_hpx_dbg_waitonsig_values[] = {"segv", "abrt", "fpe", "ill", "bus", "iot", "sys", "trap", "all", 0}; /*< Possible values for hpx-dbg-waitonsig. */
 const char *hpx_option_parser_hpx_trace_classes_values[] = {"parcel", "network", "sched", "lco", "process", "memory", "schedtimes", "trace", "gas", "collective", "all", 0}; /*< Possible values for hpx-trace-classes. */
 const char *hpx_option_parser_hpx_photon_backend_values[] = {"default", "verbs", "ugni", "fi", 0}; /*< Possible values for hpx-photon-backend. */
-const char *hpx_option_parser_hpx_photon_coll_values[] = {"pwc", "nbc", 0}; /*< Possible values for hpx-photon-coll. */
+const char *hpx_option_parser_hpx_photon_coll_values[] = {"default", "pwc", "nbc", 0}; /*< Possible values for hpx-photon-coll. */
 
 static char *
 gengetopt_strdup (const char *s);

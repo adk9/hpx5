@@ -48,7 +48,7 @@ enum enum_hpx_log_level { hpx_log_level__NULL = -1, hpx_log_level_arg_default = 
 enum enum_hpx_dbg_waitonsig { hpx_dbg_waitonsig__NULL = -1, hpx_dbg_waitonsig_arg_segv = 0, hpx_dbg_waitonsig_arg_abrt, hpx_dbg_waitonsig_arg_fpe, hpx_dbg_waitonsig_arg_ill, hpx_dbg_waitonsig_arg_bus, hpx_dbg_waitonsig_arg_iot, hpx_dbg_waitonsig_arg_sys, hpx_dbg_waitonsig_arg_trap, hpx_dbg_waitonsig_arg_all };
 enum enum_hpx_trace_classes { hpx_trace_classes__NULL = -1, hpx_trace_classes_arg_parcel = 0, hpx_trace_classes_arg_network, hpx_trace_classes_arg_sched, hpx_trace_classes_arg_lco, hpx_trace_classes_arg_process, hpx_trace_classes_arg_memory, hpx_trace_classes_arg_schedtimes, hpx_trace_classes_arg_trace, hpx_trace_classes_arg_gas, hpx_trace_classes_arg_collective, hpx_trace_classes_arg_all };
 enum enum_hpx_photon_backend { hpx_photon_backend__NULL = -1, hpx_photon_backend_arg_default = 0, hpx_photon_backend_arg_verbs, hpx_photon_backend_arg_ugni, hpx_photon_backend_arg_fi };
-enum enum_hpx_photon_coll { hpx_photon_coll__NULL = -1, hpx_photon_coll_arg_pwc = 0, hpx_photon_coll_arg_nbc };
+enum enum_hpx_photon_coll { hpx_photon_coll__NULL = -1, hpx_photon_coll_arg_default = 0, hpx_photon_coll_arg_pwc, hpx_photon_coll_arg_nbc };
 
 /** @brief Where the command line options are stored */
 struct hpx_options_t

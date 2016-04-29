@@ -162,7 +162,7 @@ enum optional
 
 option "hpx-photon-coll" - "set the underlying network collectives to use"
 typestr="type"
-values="pwc","nbc"
+values="default","pwc","nbc"
 enum optional
 
 option "hpx-photon-ibdev" - "[verbs] set a particular IB device (also a filter for device and port discovery, e.g. qib0:1+mlx4_0:2)"
