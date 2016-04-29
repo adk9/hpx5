@@ -72,7 +72,7 @@ void logtable_init(logtable_t *log, const char* filename, size_t size,
   log->record_bytes = sizeof(record_t) + fields * sizeof(uint64_t);
   log->next = log->buffer - log->record_bytes;
 
-  char *buffer = malloc(32768);
+  char *buffer = calloc(1, 32768);
   log->header_size = write_trace_header(buffer, class, id);
   if (write(log->fd, buffer, log->header_size) != log->header_size) {
     log_error("failed to write header to file\n");
