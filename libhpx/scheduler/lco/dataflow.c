@@ -150,7 +150,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED,
                      _dataflow_init_action, _dataflow_init_handler,
                      HPX_POINTER);
 
-hpx_addr_t hpx_lco_dataflow_new(int lcos) {
+hpx_addr_t hpx_lco_dataflow_new(void) {
   _dataflow_t *d = NULL;
   hpx_addr_t gva = lco_alloc_local(1, sizeof(*d), 0);
 

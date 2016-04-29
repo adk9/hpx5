@@ -51,15 +51,16 @@ static int _mul_handler(double *inputs, int n) {
 static HPX_ACTION(HPX_DEFAULT, 0, _mul, _mul_handler, HPX_POINTER, HPX_INT);
 
 static int _main_handler(void) {
-  printf("e(%d)=", n); fflush(stdout);
+  double _e;
+  printf("e="); fflush(stdout);
   hpx_time_t now = hpx_time_now();
 
   // create the dataflow graph nodes using LCOs.
   hpx_addr_t a = hpx_lco_future_new(sizeof(_a));
   hpx_addr_t b = hpx_lco_future_new(sizeof(_b));
   hpx_addr_t c = hpx_lco_future_new(sizeof(double));
-  hpx_addr_t d = hpx_lco_future_new(sizeof(_d));
-  hpx_addr_t e = hpx_lco_future_new(sizeof(double));
+  hpx_addr_t d = hpx_lco_future_new(sizeof(double));
+  hpx_addr_t e = hpx_lco_future_new(sizeof(_e));
 
   // populate the dataflow LCO:
   hpx_addr_t df = hpx_lco_dataflow_new();
@@ -70,7 +71,6 @@ static int _main_handler(void) {
   // set the inputs:
   hpx_lco_set(a, sizeof(_a), &_a, HPX_NULL, HPX_NULL);
   hpx_lco_set(b, sizeof(_b), &_b, HPX_NULL, HPX_NULL);
-  double _e;
   hpx_lco_get(e, sizeof(_e), &_e);
 
   hpx_lco_delete_sync(a);

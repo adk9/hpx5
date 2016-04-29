@@ -758,7 +758,7 @@ int _hpx_lco_dataflow_add(hpx_addr_t lco, hpx_action_t action, hpx_addr_t out, i
   HPX_PUBLIC;
 
 #define hpx_lco_dataflow_add(lco, action, out, ...)                   \
-  _hpx_lco_dataflow_add(addr, action, out, __HPX_NARGS(__VA_ARGS__) , \
+  _hpx_lco_dataflow_add(lco, action, out, __HPX_NARGS(__VA_ARGS__) , \
                         ##__VA_ARGS__)
 /// @}
 
