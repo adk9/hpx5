@@ -331,7 +331,7 @@ void _main_action(guppie_config_t *cfg, size_t size)
 
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: guppie [options] TABSIZE NUPDATES\n"
-          "\t-M <num>, enable AGAS data movement with num% (0-100) frequency\n"
+          "\t-M <num>, enable AGAS data movement with num (0-100)\% frequency\n"
           "\t-R, enable automatic AGAS-based rebalancing\n"
           "\t-h, show help\n");
   hpx_print_help();
