@@ -144,13 +144,6 @@ struct scheduler *scheduler_new(const config_t *cfg) {
       scheduler_delete(s);
       return NULL;
     }
-    
-    // Initialize the instrumentation
-    s->workers[i].inst = (inst_t *) malloc(sizeof(inst_t));
-    s->workers[i].inst->logs = NULL;
-    if (inst_init(here->config, &s->workers[i])) {
-      log_dflt("error detected while initializing instrumentation\n");
-    }
   }
 
   e = system_barrier_init(&s->barrier, NULL, workers);

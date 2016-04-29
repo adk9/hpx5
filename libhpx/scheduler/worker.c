@@ -663,6 +663,10 @@ int worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
   w->bst         = NULL;
   w->network     = here->net;
 
+  if (inst_init(here->config, w)) {
+    log_dflt("error detected while initializing instrumentation\n");
+  }
+
   sync_chase_lev_ws_deque_init(&w->queues[0].work, work_size);
   sync_chase_lev_ws_deque_init(&w->queues[1].work, work_size);
   sync_two_lock_queue_init(&w->inbox, NULL);

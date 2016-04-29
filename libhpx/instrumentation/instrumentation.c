@@ -191,6 +191,9 @@ static const char *_get_log_path(const char *dir) {
 }
 
 int inst_init(const config_t *cfg, worker_t *w) {
+  w->inst = malloc(sizeof(inst_t));
+  w->inst->logs = NULL;
+
 #ifndef ENABLE_INSTRUMENTATION
   return LIBHPX_OK;
 #endif
@@ -252,18 +255,18 @@ void inst_fini(worker_t *w) {
     free((char*)_log_path);
   }
   _log_path = NULL;
-  if(!w->inst->logs){
-    return;
-  }
-  for (int i = 0, e = TRACE_NUM_EVENTS; i < e; ++i) {
-    if(w->inst->logs[i]){
-      logtable_fini(w->inst->logs[i]);
-      free(w->inst->logs[i]);
-      w->inst->logs[i] = NULL;
+  if (w->inst->logs){
+    for (int i = 0, e = TRACE_NUM_EVENTS; i < e; ++i) {
+      if(w->inst->logs[i]){
+        logtable_fini(w->inst->logs[i]);
+        free(w->inst->logs[i]);
+        w->inst->logs[i] = NULL;
+      }
     }
+    free(w->inst->logs);
   }
-  free(w->inst->logs);
   w->inst->logs = NULL;
+    free(w->inst);
 }
 
 void inst_vtrace(int UNUSED, int n, int id, ...) {
