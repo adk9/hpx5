@@ -38,6 +38,7 @@ typedef enum {
   LCO_REDUCE,
   LCO_SEMA,
   LCO_USER,
+  LCO_DATAFLOW,
   LCO_MAX
 } lco_type_t;
 

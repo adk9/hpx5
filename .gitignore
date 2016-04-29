@@ -64,6 +64,7 @@
 /examples/cpi
 /examples/heat
 /examples/jacobi
+/examples/dataflow
 
 # /include/
 /include/stamp-h1

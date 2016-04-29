@@ -160,6 +160,7 @@ static hpx_status_t _future_get(lco_t *lco, int size, void *out, int reset) {
   lco_lock(lco);
 
   _future_t *f = (_future_t *)lco;
+  log_lco("getting future %p (%d bytes)\n", (void*)f, size);
   hpx_status_t status = _wait(f);
   if (status != HPX_SUCCESS) {
     lco_unlock(lco);
