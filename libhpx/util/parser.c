@@ -76,6 +76,7 @@ const char *hpx_options_t_help[] = {
   "      --hpx-coll-network        set collective implementation to network based\n                                  version (override parcel collectives)\n                                  (default=off)",
   "\nPhoton Transport Options:",
   "      --hpx-photon-backend=type set the underlying network API to use\n                                  (possible values=\"default\", \"verbs\",\n                                  \"ugni\", \"fi\")",
+  "      --hpx-photon-coll=type    set the underlying network collectives to use\n                                  (possible values=\"pwc\", \"nbc\")",
   "      --hpx-photon-ibdev=device [verbs] set a particular IB device (also a\n                                  filter for device and port discovery, e.g.\n                                  qib0:1+mlx4_0:2)",
   "      --hpx-photon-ethdev=device\n                                [verbs] set a particular ETH device (for CMA\n                                  mode only)",
   "      --hpx-photon-ibport=integer\n                                [verbs] set a particular IB port",
@@ -153,6 +154,7 @@ const char *hpx_option_parser_hpx_log_level_values[] = {"default", "boot", "sche
 const char *hpx_option_parser_hpx_dbg_waitonsig_values[] = {"segv", "abrt", "fpe", "ill", "bus", "iot", "sys", "trap", "all", 0}; /*< Possible values for hpx-dbg-waitonsig. */
 const char *hpx_option_parser_hpx_trace_classes_values[] = {"parcel", "network", "sched", "lco", "process", "memory", "schedtimes", "trace", "gas", "collective", "all", 0}; /*< Possible values for hpx-trace-classes. */
 const char *hpx_option_parser_hpx_photon_backend_values[] = {"default", "verbs", "ugni", "fi", 0}; /*< Possible values for hpx-photon-backend. */
+const char *hpx_option_parser_hpx_photon_coll_values[] = {"pwc", "nbc", 0}; /*< Possible values for hpx-photon-coll. */
 
 static char *
 gengetopt_strdup (const char *s);
@@ -193,6 +195,7 @@ void clear_given (struct hpx_options_t *args_info)
   args_info->hpx_pwc_parceleagerlimit_given = 0 ;
   args_info->hpx_coll_network_given = 0 ;
   args_info->hpx_photon_backend_given = 0 ;
+  args_info->hpx_photon_coll_given = 0 ;
   args_info->hpx_photon_ibdev_given = 0 ;
   args_info->hpx_photon_ethdev_given = 0 ;
   args_info->hpx_photon_ibport_given = 0 ;
@@ -266,6 +269,8 @@ void clear_args (struct hpx_options_t *args_info)
   args_info->hpx_coll_network_flag = 0;
   args_info->hpx_photon_backend_arg = hpx_photon_backend__NULL;
   args_info->hpx_photon_backend_orig = NULL;
+  args_info->hpx_photon_coll_arg = hpx_photon_coll__NULL;
+  args_info->hpx_photon_coll_orig = NULL;
   args_info->hpx_photon_ibdev_arg = NULL;
   args_info->hpx_photon_ibdev_orig = NULL;
   args_info->hpx_photon_ethdev_arg = NULL;
@@ -342,25 +347,26 @@ void init_args_info(struct hpx_options_t *args_info)
   args_info->hpx_pwc_parceleagerlimit_help = hpx_options_t_help[38] ;
   args_info->hpx_coll_network_help = hpx_options_t_help[40] ;
   args_info->hpx_photon_backend_help = hpx_options_t_help[42] ;
-  args_info->hpx_photon_ibdev_help = hpx_options_t_help[43] ;
-  args_info->hpx_photon_ethdev_help = hpx_options_t_help[44] ;
-  args_info->hpx_photon_ibport_help = hpx_options_t_help[45] ;
-  args_info->hpx_photon_usecma_help = hpx_options_t_help[46] ;
-  args_info->hpx_photon_ibsrq_help = hpx_options_t_help[47] ;
-  args_info->hpx_photon_btethresh_help = hpx_options_t_help[48] ;
-  args_info->hpx_photon_fiprov_help = hpx_options_t_help[49] ;
-  args_info->hpx_photon_fidev_help = hpx_options_t_help[50] ;
-  args_info->hpx_photon_ledgersize_help = hpx_options_t_help[51] ;
-  args_info->hpx_photon_pwcbufsize_help = hpx_options_t_help[52] ;
-  args_info->hpx_photon_eagerbufsize_help = hpx_options_t_help[53] ;
-  args_info->hpx_photon_smallpwcsize_help = hpx_options_t_help[54] ;
-  args_info->hpx_photon_maxrd_help = hpx_options_t_help[55] ;
-  args_info->hpx_photon_defaultrd_help = hpx_options_t_help[56] ;
-  args_info->hpx_photon_numcq_help = hpx_options_t_help[57] ;
-  args_info->hpx_photon_usercq_help = hpx_options_t_help[58] ;
-  args_info->hpx_opt_smp_help = hpx_options_t_help[60] ;
-  args_info->hpx_parcel_compression_help = hpx_options_t_help[61] ;
-  args_info->hpx_coalescing_buffersize_help = hpx_options_t_help[62] ;
+  args_info->hpx_photon_coll_help = hpx_options_t_help[43] ;
+  args_info->hpx_photon_ibdev_help = hpx_options_t_help[44] ;
+  args_info->hpx_photon_ethdev_help = hpx_options_t_help[45] ;
+  args_info->hpx_photon_ibport_help = hpx_options_t_help[46] ;
+  args_info->hpx_photon_usecma_help = hpx_options_t_help[47] ;
+  args_info->hpx_photon_ibsrq_help = hpx_options_t_help[48] ;
+  args_info->hpx_photon_btethresh_help = hpx_options_t_help[49] ;
+  args_info->hpx_photon_fiprov_help = hpx_options_t_help[50] ;
+  args_info->hpx_photon_fidev_help = hpx_options_t_help[51] ;
+  args_info->hpx_photon_ledgersize_help = hpx_options_t_help[52] ;
+  args_info->hpx_photon_pwcbufsize_help = hpx_options_t_help[53] ;
+  args_info->hpx_photon_eagerbufsize_help = hpx_options_t_help[54] ;
+  args_info->hpx_photon_smallpwcsize_help = hpx_options_t_help[55] ;
+  args_info->hpx_photon_maxrd_help = hpx_options_t_help[56] ;
+  args_info->hpx_photon_defaultrd_help = hpx_options_t_help[57] ;
+  args_info->hpx_photon_numcq_help = hpx_options_t_help[58] ;
+  args_info->hpx_photon_usercq_help = hpx_options_t_help[59] ;
+  args_info->hpx_opt_smp_help = hpx_options_t_help[61] ;
+  args_info->hpx_parcel_compression_help = hpx_options_t_help[62] ;
+  args_info->hpx_coalescing_buffersize_help = hpx_options_t_help[63] ;
   
 }
 
@@ -524,6 +530,7 @@ hpx_option_parser_release (struct hpx_options_t *args_info)
   free_string_field (&(args_info->hpx_pwc_parcelbuffersize_orig));
   free_string_field (&(args_info->hpx_pwc_parceleagerlimit_orig));
   free_string_field (&(args_info->hpx_photon_backend_orig));
+  free_string_field (&(args_info->hpx_photon_coll_orig));
   free_string_field (&(args_info->hpx_photon_ibdev_arg));
   free_string_field (&(args_info->hpx_photon_ibdev_orig));
   free_string_field (&(args_info->hpx_photon_ethdev_arg));
@@ -684,6 +691,8 @@ hpx_option_parser_dump(FILE *outfile, struct hpx_options_t *args_info)
     write_into_file(outfile, "hpx-coll-network", 0, 0 );
   if (args_info->hpx_photon_backend_given)
     write_into_file(outfile, "hpx-photon-backend", args_info->hpx_photon_backend_orig, hpx_option_parser_hpx_photon_backend_values);
+  if (args_info->hpx_photon_coll_given)
+    write_into_file(outfile, "hpx-photon-coll", args_info->hpx_photon_coll_orig, hpx_option_parser_hpx_photon_coll_values);
   if (args_info->hpx_photon_ibdev_given)
     write_into_file(outfile, "hpx-photon-ibdev", args_info->hpx_photon_ibdev_orig, 0);
   if (args_info->hpx_photon_ethdev_given)
@@ -1951,6 +1960,7 @@ hpx_option_parser_internal (
         { "hpx-pwc-parceleagerlimit",	1, NULL, 0 },
         { "hpx-coll-network",	0, NULL, 0 },
         { "hpx-photon-backend",	1, NULL, 0 },
+        { "hpx-photon-coll",	1, NULL, 0 },
         { "hpx-photon-ibdev",	1, NULL, 0 },
         { "hpx-photon-ethdev",	1, NULL, 0 },
         { "hpx-photon-ibport",	1, NULL, 0 },
@@ -2417,6 +2427,20 @@ hpx_option_parser_internal (
                 &(local_args_info.hpx_photon_backend_given), optarg, hpx_option_parser_hpx_photon_backend_values, 0, ARG_ENUM,
                 check_ambiguity, override, 0, 0,
                 "hpx-photon-backend", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* set the underlying network collectives to use.  */
+          else if (strcmp (long_options[option_index].name, "hpx-photon-coll") == 0)
+          {
+          
+          
+            if (update_arg( (void *)&(args_info->hpx_photon_coll_arg), 
+                 &(args_info->hpx_photon_coll_orig), &(args_info->hpx_photon_coll_given),
+                &(local_args_info.hpx_photon_coll_given), optarg, hpx_option_parser_hpx_photon_coll_values, 0, ARG_ENUM,
+                check_ambiguity, override, 0, 0,
+                "hpx-photon-coll", '-',
                 additional_error))
               goto failure;
           

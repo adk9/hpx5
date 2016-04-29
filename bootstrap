@@ -8,7 +8,7 @@ CONTRIB=contrib
 contrib_tars=("photon-1.1.tar.bz2" "libcuckoo-1.0.tar.gz"
               "jemalloc-4.1.0.tar.bz2" "libffi-e9de7e3.tar.gz")
 # set matching md5sums for each tarball
-contrib_md5=("93862993183ba27281eb79b08cdcbf1c" "ee2bed68983b0f60eaad2f6dcd04fe7f"
+contrib_md5=("e8cd2c8c54656f325a13041c2218e01a" "ee2bed68983b0f60eaad2f6dcd04fe7f"
              "c4e53c947905a533d5899e5cc3da1f94" "c3f381d8fd2fd611b472fb4971c4f546")
 # and matching target contrib directories
 contrib_dirs=("photon" "libcuckoo" "jemalloc" "libffi")
