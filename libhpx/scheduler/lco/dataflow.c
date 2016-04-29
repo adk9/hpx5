@@ -94,6 +94,7 @@ static void _dataflow_reset(lco_t *lco) {
 }
 
 static hpx_status_t _dataflow_attach(lco_t *lco, hpx_parcel_t *p) {
+  return HPX_SUCCESS;
 }
 
 /// Invoke a set operation on the dataflow LCO.
@@ -103,10 +104,26 @@ static int _dataflow_set(lco_t *lco, int size, const void *from) {
 
 /// Invoke a get operation on the dataflow LCO.
 static hpx_status_t _dataflow_get(lco_t *lco, int size, void *out, int reset) {
+  lco_lock(lco);
+
+  _dataflow_t *d = (_dataflow_t *)lco;
+  hpx_status_t status = _wait(d);
+  if (status != HPX_SUCCESS) {
+    lco_unlock(lco);
+    return status;
+  }
+
+  if (reset) {
+    _reset(d);
+  }
+
+  lco_unlock(lco);
+  return HPX_SUCCESS;
 }
 
 // Invoke a wait operation on the dataflow LCO.
 static hpx_status_t _dataflow_wait(lco_t *lco, int reset) {
+  return _dataflow_get(lco, 0, NULL, reset);
 }
 
 // Get the reference to the reduction.
@@ -165,6 +182,64 @@ hpx_addr_t hpx_lco_dataflow_new(void) {
   return gva;
 }
 
-int _hpx_lco_dataflow_add(hpx_addr_t lco, hpx_action_t action, hpx_addr_t out, int n, ...) {
+typedef struct {
+  int n;
+  hpx_action_t action;
+  hpx_addr_t data[0];
+} _dataflow_handler_args_t;
+
+static int _run_dataflow_handler(_dataflow_handler_args_t *args, size_t size) {
+  int n = args->n;
+  hpx_addr_t *inputs = args->data;
+  size_t *sizes = (void*)((char*)inputs + (n * sizeof(hpx_addr_t)));
+  void *values[n];
+  for (int i = 0; i < n; ++i) {
+    values[i] = malloc(sizes[i]);
+    dbg_assert(values[i]);
+  }
+  int e = hpx_lco_get_all(n, inputs, sizes, values, NULL);
+  dbg_assert(e == HPX_SUCCESS);
+
+  hpx_action_handler_t handler = hpx_action_get_handler(args->action);
+  e = handler(values, n);
+  dbg_assert(e == HPX_SUCCESS);
+
+  for (int i = 0; i < n; ++i) {
+    free(values[i]);
+  }
+
+  return HPX_SUCCESS;
+}
+static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED,
+                  _run_dataflow, _run_dataflow_handler,
+                  HPX_POINTER, HPX_SIZE_T);
+
+int _hpx_lco_dataflow_add(hpx_addr_t lco, hpx_action_t action,
+                          hpx_addr_t out, int n, ...) {
+  dbg_assert(n);
+  int nargs = n >> 1;
+  size_t size = sizeof(_dataflow_handler_args_t) + nargs * sizeof(hpx_addr_t) + nargs * sizeof(size_t);
+  hpx_parcel_t *p = hpx_parcel_acquire(NULL, size);
+  _dataflow_handler_args_t *args = hpx_parcel_get_data(p);
+  hpx_addr_t *inputs = args->data;
+  size_t *sizes = (void*)((char*)inputs + (nargs * sizeof(hpx_addr_t)));
   
+  va_list vargs;
+  va_start(vargs, n);
+
+  args->action = action;
+  args->n = nargs;
+  for (int i = 0; i < nargs; ++i) {
+    inputs[i] = va_arg(vargs, hpx_addr_t);
+    sizes[i] = va_arg(vargs, size_t);
+  }
+
+  p->target = out;
+  p->action = _run_dataflow;
+  p->c_target = out;
+  p->c_action = hpx_lco_set_action;
+  hpx_parcel_send(p, HPX_NULL);
+
+  va_end(vargs);
+  return HPX_SUCCESS;
 }

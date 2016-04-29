@@ -32,26 +32,26 @@
 double _a = 'a';
 double _b = 'b';
 
-static int _add_handler(double *inputs, int n) {
+static int _add_handler(double *inputs[], int n) {
   double output = 0.0;
   for (int i = 0; i < n; ++i) {
-    output += inputs[i];
+    output += *inputs[i];
   }
   return HPX_THREAD_CONTINUE(output);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _add, _add_handler, HPX_POINTER, HPX_INT);
 
-static int _mul_handler(double *inputs, int n) {
+static int _mul_handler(double *inputs[], int n) {
   double output = 1.0;
   for (int i = 0; i < n; ++i) {
-    output *= inputs[i];
+    output *= *inputs[i];
   }
   return HPX_THREAD_CONTINUE(output);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _mul, _mul_handler, HPX_POINTER, HPX_INT);
 
 static int _main_handler(void) {
-  double _e;
+  double _e = 0.0;
   printf("e="); fflush(stdout);
   hpx_time_t now = hpx_time_now();
 
@@ -64,9 +64,12 @@ static int _main_handler(void) {
 
   // populate the dataflow LCO:
   hpx_addr_t df = hpx_lco_dataflow_new();
-  hpx_lco_dataflow_add(df, _add, c, a, b);
-  hpx_lco_dataflow_add(df, _add, d, b, c);
-  hpx_lco_dataflow_add(df, _mul, e, c, d);
+  hpx_lco_dataflow_add(df, _add, c,
+                       a, sizeof(double), b, sizeof(double));
+  hpx_lco_dataflow_add(df, _add, d,
+                       b, sizeof(double), c, sizeof(double));
+  hpx_lco_dataflow_add(df, _mul, e,
+                       c, sizeof(double), d, sizeof(double));
 
   // set the inputs:
   hpx_lco_set(a, sizeof(_a), &_a, HPX_NULL, HPX_NULL);
@@ -82,7 +85,7 @@ static int _main_handler(void) {
 
   double elapsed = hpx_time_elapsed_ms(now)/1e3;
 
-  printf("%d\n", _e);
+  printf("%lf\n", _e);
   printf("seconds: %.7f\n", elapsed);
   printf("localities: %d\n", HPX_LOCALITIES);
   printf("threads/locality: %d\n", HPX_THREADS);

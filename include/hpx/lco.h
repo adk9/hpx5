@@ -309,6 +309,11 @@ int hpx_lco_get_all(int n, hpx_addr_t lcos[], size_t sizes[], void *values[],
                     hpx_status_t statuses[])
   HPX_PUBLIC;
 
+/// Get the size of an LCO (including the size of its internal
+/// buffer).
+size_t hpx_lco_size(hpx_addr_t lco)
+  HPX_PUBLIC;
+
 /// Semaphores are builtin LCOs that represent resource usage.
 ///
 /// @param init initial value semaphore will be created with
@@ -754,7 +759,8 @@ hpx_addr_t hpx_lco_dataflow_new(void)
 /// @param ...      The input LCOs
 ///
 /// @returns        HPX_SUCCESS, or an error code.
-int _hpx_lco_dataflow_add(hpx_addr_t lco, hpx_action_t action, hpx_addr_t out, int n, ...)
+int _hpx_lco_dataflow_add(hpx_addr_t lco, hpx_action_t action,
+                          hpx_addr_t out, int n, ...)
   HPX_PUBLIC;
 
 #define hpx_lco_dataflow_add(lco, action, out, ...)                   \
