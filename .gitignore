@@ -110,6 +110,7 @@ contrib/libcuckoo/
 /libhpx/process/Makefile
 /libhpx/scheduler/Makefile
 /libhpx/scheduler/arch/Makefile
+/libhpx/scheduler/lco/Makefile
 /libhpx/system/Makefile
 /libhpx/system/linux/Makefile
 /libhpx/system/darwin/Makefile

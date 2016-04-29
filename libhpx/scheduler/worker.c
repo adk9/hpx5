@@ -44,7 +44,7 @@
 #include <libhpx/worker.h>
 #include "cvar.h"
 #include "events.h"
-#include "lco.h"
+#include "lco/lco.h"
 #include "thread.h"
 
 /// Storage for the thread-local worker pointer.
