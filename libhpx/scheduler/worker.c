@@ -768,7 +768,7 @@ int worker_start(void) {
 
   int code = sched->stopped;
   if (code != HPX_SUCCESS && here->rank == 0) {
-    log_error("application exited with a non-zero exit code: %d.\n", code);
+    log_error("hpx_run epoch exited with a non-zero exit code: %d.\n", code);
   }
 
   return code;
