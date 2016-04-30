@@ -60,7 +60,7 @@ typedef struct network {
   int (*send)(void*, hpx_parcel_t *p);
 
   int (*coll_init)(void*, coll_t** c);
-  int (*coll_sync)(void*, hpx_parcel_t *in, void* out, coll_t* c);
+  int (*coll_sync)(void*, void *in, size_t in_size, void* out, coll_t* c);
 
   int (*lco_wait)(void *, hpx_addr_t lco, int reset);
   int (*lco_get)(void *, hpx_addr_t lco, size_t n, void *to, int reset);

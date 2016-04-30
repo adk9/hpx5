@@ -97,9 +97,9 @@ static int _pwc_coll_init(void *network, coll_t **_c) {
   return LIBHPX_OK;
 }
 
-int _pwc_coll_sync(void *network, hpx_parcel_t *in, void *out, coll_t *c) {
-  void *sendbuf = in->buffer;
-  int count = in->size;
+int _pwc_coll_sync(void *network, void *in, size_t in_size, void *out, coll_t *c) {
+  void *sendbuf = in;
+  int count = in_size;
   char *comm = c->data + c->group_bytes;
   pwc_network_t *pwc = network;
 

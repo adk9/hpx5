@@ -160,6 +160,7 @@ LIBHPX_OPT_FLAG(coll_, network, 0)
 // Photon options
 // @{
 LIBHPX_OPT_SCALAR(photon_, backend, PHOTON_BACKEND_DEFAULT, photon_cfg_backend_t)
+LIBHPX_OPT_SCALAR(photon_, coll, PHOTON_COLL_IFACE_PWC, photon_cfg_coll_iface_t)
 LIBHPX_OPT_SCALAR(photon_, ibport, 1, int)
 LIBHPX_OPT_SCALAR(photon_, ibsrq, 0, int)
 LIBHPX_OPT_SCALAR(photon_, btethresh, -1, int)
