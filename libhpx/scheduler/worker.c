@@ -50,11 +50,6 @@
 /// Storage for the thread-local worker pointer.
 __thread worker_t * volatile self = NULL;
 
-#define SOURCE_LIFO 0
-#define SOURCE_YIELD 1
-#define SOURCE_STEAL 2
-#define SOURCE_FINAL 3
-
 /// Macro to record a parcel's GAS accesses.
 #if defined(HAVE_AGAS) && defined(HAVE_REBALANCING)
 # define GAS_TRACE_ACCESS(src, dst, block, size) \
@@ -583,15 +578,22 @@ static void _schedule_network(worker_t *w) {
 ///
 /// @returns            The status from _transfer.
 static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
+  enum {
+    LIFO = 0,
+    YIELD,
+    STEAL,
+    FINAL
+  };
+
   EVENT_SCHED_ENTER();
-  int source = -1;
-  int spins = 0;
+  INST(int source = -1);
+  INST(int spins = 0);
   hpx_parcel_t *p = NULL;
   worker_t *w = self;
   while (!worker_is_stopped()) {
     if (!block) {
       p = _schedule_lifo(w);
-      INST(source = SOURCE_LIFO);
+      INST(source = LIFO);
       break;
     }
 
@@ -608,7 +610,7 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
 
     // See if we have primary lifo work.
     if ((p = _schedule_lifo(w))) {
-      INST(source = SOURCE_LIFO);
+      INST(source = LIFO);
       break;
     }
 
@@ -620,7 +622,7 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
 
     // Try and steal some work
     if ((p = _schedule_steal(w))) {
-      source = SOURCE_STEAL;
+      INST(source = STEAL);
       log_sched("stole work %p\n", p);
       break;
     }
@@ -641,9 +643,6 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
   if (p != w->current) {
     _transfer(p, _checkpoint, &(_checkpoint_env_t){ .f = f, .env = env }, w);
   }
-
-  (void)source;
-  (void)spins;
 }
 
 int worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
