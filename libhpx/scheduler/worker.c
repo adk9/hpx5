@@ -543,7 +543,6 @@ static void _checkpoint(hpx_parcel_t *to, void *sp, void *env) {
 
 /// Probe and progress the network.
 static void _schedule_network(worker_t *w) {
-  EVENT_NETWORK_SCHED_ENTER();
   // suppress work-first scheduling while we're inside the network.
   w->work_first = -1;
   network_progress(w->network, 0);
@@ -555,7 +554,6 @@ static void _schedule_network(worker_t *w) {
     EVENT_PARCEL_RECV(p->id, p->action, p->size, p->src, p->target);
     _push_lifo(p, w);
   }
-  EVENT_NETWORK_SCHED_EXIT();
 }
 
 /// The main scheduling loop.
