@@ -583,7 +583,7 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
     FINAL
   };
 
-  EVENT_SCHED_ENTER();
+  EVENT_SCHED_BEGIN();
   INST(int source = -1);
   INST(int spins = 0);
   hpx_parcel_t *p = NULL;
@@ -634,8 +634,7 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
   // transfer to then pick the system stack
   p = (p) ? _try_bind(w, p) : w->system;
 
-  EVENT_SCHED_EXIT();
-  EVENT_SCHED_WORK(source, spins);
+  EVENT_SCHED_END(source, spins);
 
   // Don't transfer to the same parcel.
   if (p != w->current) {

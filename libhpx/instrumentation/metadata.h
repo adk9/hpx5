@@ -220,10 +220,8 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 #define SCHED_STEAL_METADATA _METADATA_ARGS(METADATA_PARCEL_ID(0), \
                                             METADATA_UINT64(1, "victim"))
 
-#define SCHED_ENTER_METADATA      _METADATA_NONE
-#define SCHED_EXIT_METADATA       _METADATA_NONE
-
-#define SCHED_WORK_METADATA                         \
+#define SCHED_BEGIN_METADATA      _METADATA_NONE
+#define SCHED_END_METADATA                          \
   _METADATA_ARGS(METADATA_UINT64(off, "source"),    \
                  METADATA_UINT64(off, "spins"))
 
