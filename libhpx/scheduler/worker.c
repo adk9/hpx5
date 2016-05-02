@@ -347,7 +347,7 @@ static int _push_half_handler(int src) {
   // send them back to the thief
   if (parcels) {
     scheduler_spawn_at(parcels, src);
-    EVENT_SCHED_STEAL_LIFO(parcels->id, self->id);
+    EVENT_SCHED_STEAL(parcels->id, self->id);
   }
   return HPX_SUCCESS;
 }
@@ -359,7 +359,7 @@ static hpx_parcel_t *_steal_from(worker_t *w, int id) {
   hpx_parcel_t *p = sync_chase_lev_ws_deque_steal(_work(victim));
   if (p) {
     w->last_victim = id;
-    EVENT_SCHED_STEAL_LIFO(p->id, victim->id);
+    EVENT_SCHED_STEAL(p->id, victim->id);
   } else {
     w->last_victim = -1;
   }
