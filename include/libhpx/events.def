@@ -94,15 +94,12 @@ LIBHPX_EVENT(PROCESS, DELETE, hpx_addr_t)
 /// Memory events
 /// Memory events mark when allocating or freeing any of registered memory,
 /// global memory, or cyclicly allocated memory, and also marks when any of
-/// these operations are begun using MEMORY_ENTER_ALLOC_FREE.
+/// these operations are begun.
 /// @{
-LIBHPX_EVENT(MEMORY, REGISTERED_ALLOC, void*, size_t, size_t)
-LIBHPX_EVENT(MEMORY, REGISTERED_FREE, void*)
-LIBHPX_EVENT(MEMORY, GLOBAL_ALLOC, void*, size_t, size_t)
-LIBHPX_EVENT(MEMORY, GLOBAL_FREE, void*)
-LIBHPX_EVENT(MEMORY, CYCLIC_ALLOC, void*, size_t, size_t)
-LIBHPX_EVENT(MEMORY, CYCLIC_FREE, void*)
-LIBHPX_EVENT(MEMORY, ENTER_ALLOC_FREE)
+LIBHPX_EVENT(MEMORY, ALLOC_BEGIN, int, size_t, size_t)
+LIBHPX_EVENT(MEMORY, ALLOC_END, int, void*)
+LIBHPX_EVENT(MEMORY, FREE_BEGIN, int, void*)
+LIBHPX_EVENT(MEMORY, FREE_END, int)
 /// @}
 
 /// Scheduler timing events

@@ -273,35 +273,26 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 #define PROCESS_DELETE_METADATA                             \
   _METADATA_ARGS(METADATA_PROCESS_ADDRESS(0))               \
 
-#define METADATA_MEMORY_ADDRESS(off) METADATA_UINT64(off, "memory address")
+#define METADATA_MEMORY_ADDRSPACE(off) METADATA_UINT64(off, "address space")
+#define METADATA_MEMORY_ADDRESS(off) METADATA_UINT64(off, "address")
 #define METADATA_MEMORY_BYTES(off) METADATA_UINT64(off, "bytes")
 #define METADATA_MEMORY_BOUNDARY(off) METADATA_UINT64(off, "boundary")
 
-#define MEMORY_REGISTERED_ALLOC_METADATA                    \
-  _METADATA_ARGS(METADATA_MEMORY_ADDRESS(0),                \
+#define MEMORY_ALLOC_BEGIN_METADATA                         \
+  _METADATA_ARGS(METADATA_MEMORY_ADDRSPACE(0),              \
                  METADATA_MEMORY_BYTES(1),                  \
                  METADATA_MEMORY_BOUNDARY(2))
 
-#define MEMORY_REGISTERED_FREE_METADATA                     \
-  _METADATA_ARGS(METADATA_MEMORY_ADDRESS(0))
+#define MEMORY_ALLOC_END_METADATA                           \
+  _METADATA_ARGS(METADATA_MEMORY_ADDRSPACE(0),              \
+                 METADATA_MEMORY_ADDRESS(0))
 
-#define MEMORY_GLOBAL_ALLOC_METADATA                        \
-  _METADATA_ARGS(METADATA_MEMORY_ADDRESS(0),                \
-                 METADATA_MEMORY_BYTES(1),                  \
-                 METADATA_MEMORY_BOUNDARY(2))
+#define MEMORY_FREE_BEGIN_METADATA                          \
+  _METADATA_ARGS(METADATA_MEMORY_ADDRSPACE(0),              \
+                 METADATA_MEMORY_ADDRESS(0))
 
-#define MEMORY_GLOBAL_FREE_METADATA                         \
-  _METADATA_ARGS(METADATA_MEMORY_ADDRESS(0))
-
-#define MEMORY_CYCLIC_ALLOC_METADATA                        \
-  _METADATA_ARGS(METADATA_MEMORY_ADDRESS(0),                \
-                 METADATA_MEMORY_BYTES(1),                  \
-                 METADATA_MEMORY_BOUNDARY(2))
-
-#define MEMORY_CYCLIC_FREE_METADATA                         \
-  _METADATA_ARGS(METADATA_MEMORY_ADDRESS(0))
-
-#define MEMORY_ENTER_ALLOC_FREE_METADATA _METADATA_NONE
+#define MEMORY_FREE_END_METADATA                            \
+  _METADATA_ARGS(METADATA_MEMORY_ADDRSPACE(0))
 
 #define TRACE_FILE_IO_BEGIN_METADATA _METADATA_NONE
 #define TRACE_FILE_IO_END_METADATA _METADATA_NONE

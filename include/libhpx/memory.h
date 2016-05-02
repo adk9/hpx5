@@ -195,84 +195,84 @@ void as_free(int id, void *ptr);
 
 
 static inline void *registered_malloc(size_t bytes) {
-  EVENT_MEMORY_ENTER_ALLOC_FREE();
+  EVENT_MEMORY_ALLOC_BEGIN(AS_REGISTERED, bytes, 0);
   void *ptr = as_malloc(AS_REGISTERED, bytes);
-  EVENT_MEMORY_REGISTERED_ALLOC(ptr, bytes, 0);
+  EVENT_MEMORY_ALLOC_END(AS_REGISTERED, ptr);
   return ptr;
 }
 
 static inline void *registered_calloc(size_t nmemb, size_t bytes) {
-  EVENT_MEMORY_ENTER_ALLOC_FREE();
+  EVENT_MEMORY_ALLOC_BEGIN(AS_REGISTERED, nmemb * bytes, 0);
   void *ptr = as_calloc(AS_REGISTERED, nmemb, bytes);
-  EVENT_MEMORY_REGISTERED_ALLOC(ptr, nmemb * bytes, 0);
+  EVENT_MEMORY_ALLOC_END(AS_REGISTERED, ptr);
   return ptr;
 }
 
 static inline void *registered_memalign(size_t boundary, size_t size) {
-  EVENT_MEMORY_ENTER_ALLOC_FREE();
+  EVENT_MEMORY_ALLOC_BEGIN(AS_REGISTERED, size, boundary);
   void *ptr = as_memalign(AS_REGISTERED, boundary, size);
-  EVENT_MEMORY_REGISTERED_ALLOC(ptr, size, boundary);
+  EVENT_MEMORY_ALLOC_END(AS_REGISTERED, ptr);
   return ptr;
 }
 
 static inline void registered_free(void *ptr)  {
-  EVENT_MEMORY_ENTER_ALLOC_FREE();
+  EVENT_MEMORY_FREE_BEGIN(AS_REGISTERED, ptr);
   as_free(AS_REGISTERED, ptr);
-  EVENT_MEMORY_REGISTERED_FREE(ptr);
+  EVENT_MEMORY_FREE_END(AS_REGISTERED);
 }
 
 static inline void *global_malloc(size_t bytes) {
-  EVENT_MEMORY_ENTER_ALLOC_FREE();
+  EVENT_MEMORY_ALLOC_BEGIN(AS_GLOBAL, bytes, 0);
   void *ptr = as_malloc(AS_GLOBAL, bytes);
-  EVENT_MEMORY_GLOBAL_ALLOC(ptr, bytes, 0);
+  EVENT_MEMORY_ALLOC_END(AS_GLOBAL, ptr);
   return ptr;
 }
 
 static inline void *global_calloc(size_t nmemb, size_t bytes) {
-  EVENT_MEMORY_ENTER_ALLOC_FREE();
+  EVENT_MEMORY_ALLOC_BEGIN(AS_GLOBAL, nmemb * bytes, 0);
   void *ptr = as_calloc(AS_GLOBAL, nmemb, bytes);
-  EVENT_MEMORY_GLOBAL_ALLOC(ptr, nmemb * bytes, 0);
+  EVENT_MEMORY_ALLOC_END(AS_GLOBAL, ptr);
   return ptr;
 }
 
 static inline void *global_memalign(size_t boundary, size_t size) {
-  EVENT_MEMORY_ENTER_ALLOC_FREE();
+  EVENT_MEMORY_ALLOC_BEGIN(AS_GLOBAL, size, boundary);
   void *ptr = as_memalign(AS_GLOBAL, boundary, size);
-  EVENT_MEMORY_GLOBAL_ALLOC(ptr, size, boundary);
+  EVENT_MEMORY_ALLOC_END(AS_GLOBAL, ptr);
   return ptr;
 }
 
 static inline void global_free(void *ptr)  {
-  EVENT_MEMORY_ENTER_ALLOC_FREE();
+  EVENT_MEMORY_FREE_BEGIN(AS_GLOBAL, ptr);
   as_free(AS_GLOBAL, ptr);
-  EVENT_MEMORY_GLOBAL_FREE(ptr);
+  EVENT_MEMORY_FREE_END(AS_GLOBAL);
 }
 
 static inline void *cyclic_malloc(size_t bytes) {
-  EVENT_MEMORY_ENTER_ALLOC_FREE();
+  EVENT_MEMORY_ALLOC_BEGIN(AS_CYCLIC, bytes, 0);
   void *ptr = as_malloc(AS_CYCLIC, bytes);
-  EVENT_MEMORY_CYCLIC_ALLOC(ptr, bytes, 0);
+  EVENT_MEMORY_ALLOC_END(AS_CYCLIC, ptr);
   return ptr;
 }
 
 static inline void *cyclic_calloc(size_t nmemb, size_t bytes) {
-  EVENT_MEMORY_ENTER_ALLOC_FREE();
+  EVENT_MEMORY_ALLOC_BEGIN(AS_CYCLIC, nmemb * bytes, 0);
   void *ptr = as_calloc(AS_CYCLIC, nmemb, bytes);
-  EVENT_MEMORY_CYCLIC_ALLOC(ptr, nmemb * bytes, 0);
+  EVENT_MEMORY_ALLOC_END(AS_CYCLIC, ptr);
   return ptr;
 }
 
 static inline void *cyclic_memalign(size_t boundary, size_t size) {
-  EVENT_MEMORY_ENTER_ALLOC_FREE();
+  EVENT_MEMORY_ALLOC_BEGIN(AS_CYCLIC, size, boundary);
   void *ptr = as_memalign(AS_CYCLIC, boundary, size);
-  EVENT_MEMORY_CYCLIC_ALLOC(ptr, size, boundary);
+  EVENT_MEMORY_ALLOC_END(AS_CYCLIC, ptr);
   return ptr;
 }
 
 static inline void cyclic_free(void *ptr)  {
-  EVENT_MEMORY_ENTER_ALLOC_FREE();
+  EVENT_MEMORY_FREE_BEGIN(AS_CYCLIC, ptr);
   as_free(AS_CYCLIC, ptr);
-  EVENT_MEMORY_CYCLIC_FREE(ptr);
+  EVENT_MEMORY_FREE_END(AS_CYCLIC);
 }
 
 #endif // LIBHPX_MEMORY_H
