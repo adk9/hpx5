@@ -635,7 +635,7 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
   p = (p) ? _try_bind(w, p) : w->system;
 
   EVENT_SCHED_EXIT();
-  EVENT_SCHEDTIMES_SCHED(source, spins);
+  EVENT_SCHED_WORK(source, spins);
 
   // Don't transfer to the same parcel.
   if (p != w->current) {

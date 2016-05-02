@@ -223,6 +223,10 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 #define SCHED_ENTER_METADATA      _METADATA_NONE
 #define SCHED_EXIT_METADATA       _METADATA_NONE
 
+#define SCHED_WORK_METADATA                         \
+  _METADATA_ARGS(METADATA_UINT64(off, "source"),    \
+                 METADATA_UINT64(off, "spins"))
+
 #define METADATA_LCO_ADDRESS(off) METADATA_UINT64(off, "lco address")
 #define METADATA_LCO_STATE(off)   METADATA_UINT64(off, "lco state")
 
@@ -298,16 +302,6 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
   _METADATA_ARGS(METADATA_MEMORY_ADDRESS(0))
 
 #define MEMORY_ENTER_ALLOC_FREE_METADATA _METADATA_NONE
-
-#define METADATA_SCHEDTIMES_SCHED_SOURCE(off)   \
-  METADATA_UINT64(off, "parcel source")
-
-#define METADATA_SCHEDTIMES_SCHED_SPINS(off)   \
-  METADATA_UINT64(off, "spins")
-
-#define SCHEDTIMES_SCHED_METADATA                          \
-  _METADATA_ARGS(METADATA_SCHEDTIMES_SCHED_SOURCE(0),      \
-                 METADATA_SCHEDTIMES_SCHED_SPINS(1))
 
 #define TRACE_FILE_IO_BEGIN_METADATA _METADATA_NONE
 #define TRACE_FILE_IO_END_METADATA _METADATA_NONE

@@ -64,6 +64,7 @@ LIBHPX_EVENT(SCHED, POP_LIFO, uint64_t)
 LIBHPX_EVENT(SCHED, STEAL, uint64_t, int)
 LIBHPX_EVENT(SCHED, ENTER)
 LIBHPX_EVENT(SCHED, EXIT)
+LIBHPX_EVENT(SCHED, WORK, int, int)
 /// @}
 
 /// LCO events
@@ -106,7 +107,7 @@ LIBHPX_EVENT(MEMORY, ENTER_ALLOC_FREE)
 
 /// Scheduler timing events
 /// @{
-LIBHPX_EVENT(SCHEDTIMES, SCHED, int, int)
+
 /// @}
 
 /// Trace events

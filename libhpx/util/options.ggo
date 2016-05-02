@@ -117,7 +117,7 @@ int optional multiple
 
 option "hpx-trace-classes" - "filter by class"
 typestr="class"
-values="parcel","network","sched","lco","process","memory","schedtimes","trace","gas","collective","all"
+values="parcel","network","sched","lco","process","memory","trace","gas","collective","all"
 enum optional multiple
 
 option "hpx-trace-buffersize" - "size of trace buffers"

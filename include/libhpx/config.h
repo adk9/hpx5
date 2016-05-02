@@ -168,10 +168,9 @@ static const char *const HPX_LOG_LEVEL_TO_STRING[] = {
 #define HPX_TRACE_LCO         (UINT64_C(1) << 3)
 #define HPX_TRACE_PROCESS     (UINT64_C(1) << 4)
 #define HPX_TRACE_MEMORY      (UINT64_C(1) << 5)
-#define HPX_TRACE_SCHEDTIMES  (UINT64_C(1) << 6)
-#define HPX_TRACE_TRACE       (UINT64_C(1) << 7)
-#define HPX_TRACE_GAS         (UINT64_C(1) << 8)
-#define HPX_TRACE_COLLECTIVE  (UINT64_C(1) << 9)
+#define HPX_TRACE_TRACE       (UINT64_C(1) << 6)
+#define HPX_TRACE_GAS         (UINT64_C(1) << 7)
+#define HPX_TRACE_COLLECTIVE  (UINT64_C(1) << 8)
 
 static const char *const HPX_TRACE_CLASS_TO_STRING[] = {
   "PARCEL",
@@ -180,7 +179,6 @@ static const char *const HPX_TRACE_CLASS_TO_STRING[] = {
   "LCO",
   "PROCESS",
   "MEMORY",
-  "SCHEDTIMES",
   "TRACE",
   "GAS",
   "COLLECTIVE"

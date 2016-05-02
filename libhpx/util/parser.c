@@ -63,7 +63,7 @@ const char *hpx_options_t_help[] = {
   "\nTracing:",
   "      --hpx-trace-dir=dir       file output directory",
   "      --hpx-trace-at=localities filter by locality, -1 for all (default all)",
-  "      --hpx-trace-classes=class filter by class  (possible values=\"parcel\",\n                                  \"network\", \"sched\", \"lco\", \"process\",\n                                  \"memory\", \"schedtimes\", \"trace\",\n                                  \"gas\", \"collective\", \"all\")",
+  "      --hpx-trace-classes=class filter by class  (possible values=\"parcel\",\n                                  \"network\", \"sched\", \"lco\", \"process\",\n                                  \"memory\", \"trace\", \"gas\",\n                                  \"collective\", \"all\")",
   "      --hpx-trace-buffersize=bytes\n                                size of trace buffers",
   "\nISIR Network Options:",
   "      --hpx-isir-testwindow=requests\n                                number of ISIR requests to test in progress\n                                  loop",
@@ -152,7 +152,7 @@ const char *hpx_option_parser_hpx_thread_affinity_values[] = {"default", "hwthre
 const char *hpx_option_parser_hpx_sched_policy_values[] = {"default", "random", "hier", 0}; /*< Possible values for hpx-sched-policy. */
 const char *hpx_option_parser_hpx_log_level_values[] = {"default", "boot", "sched", "gas", "lco", "net", "trans", "parcel", "action", "config", "memory", "coll", "all", 0}; /*< Possible values for hpx-log-level. */
 const char *hpx_option_parser_hpx_dbg_waitonsig_values[] = {"segv", "abrt", "fpe", "ill", "bus", "iot", "sys", "trap", "all", 0}; /*< Possible values for hpx-dbg-waitonsig. */
-const char *hpx_option_parser_hpx_trace_classes_values[] = {"parcel", "network", "sched", "lco", "process", "memory", "schedtimes", "trace", "gas", "collective", "all", 0}; /*< Possible values for hpx-trace-classes. */
+const char *hpx_option_parser_hpx_trace_classes_values[] = {"parcel", "network", "sched", "lco", "process", "memory", "trace", "gas", "collective", "all", 0}; /*< Possible values for hpx-trace-classes. */
 const char *hpx_option_parser_hpx_photon_backend_values[] = {"default", "verbs", "ugni", "fi", 0}; /*< Possible values for hpx-photon-backend. */
 const char *hpx_option_parser_hpx_photon_coll_values[] = {"default", "pwc", "nbc", 0}; /*< Possible values for hpx-photon-coll. */
 
