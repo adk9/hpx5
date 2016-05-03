@@ -316,6 +316,38 @@ static void _handle_mail(worker_t *w) {
   }
 }
 
+/// Steal a parcel from a worker with the given @p id.
+static hpx_parcel_t *_steal_from(worker_t *w, int id) {
+  worker_t *victim = scheduler_get_worker(here->sched, id);
+  hpx_parcel_t *p = sync_chase_lev_ws_deque_steal(_work(victim));
+  if (p) {
+    w->last_victim = id;
+  } else {
+    w->last_victim = -1;
+  }
+  EVENT_SCHED_STEAL(p ? p->id : 0, victim->id);
+  return p;
+}
+
+/// Steal a parcel from a random worker out of all workers.
+static hpx_parcel_t *_steal_random_all(worker_t *w) {
+  int id;
+  do {
+    id = rand_r(&w->seed) % here->sched->n_workers;
+  } while (id == w->id);
+  return _steal_from(w, id);
+}
+
+/// Steal a parcel from a random worker from the same NUMA node.
+static hpx_parcel_t *_steal_random_node(worker_t *w) {
+  int id;
+  do {
+    int cpu = rand_r(&w->seed) % here->topology->cpus_per_node;
+    id = here->topology->numa_to_cpus[w->numa_node][cpu];
+  } while (id == w->id);
+  return _steal_from(w, id);
+}
+
 /// The action that pushes half the work to a thief.
 static HPX_ACTION_DECL(_push_half);
 static int _push_half_handler(int src) {
@@ -347,43 +379,11 @@ static int _push_half_handler(int src) {
   // send them back to the thief
   if (parcels) {
     scheduler_spawn_at(parcels, src);
-    EVENT_SCHED_STEAL(parcels->id, self->id);
   }
+  EVENT_SCHED_STEAL(parcels ? parcels->id : 0, self->id);
   return HPX_SUCCESS;
 }
 static LIBHPX_ACTION(HPX_INTERRUPT, 0, _push_half, _push_half_handler, HPX_INT);
-
-/// Steal a parcel from a worker with the given @p id.
-static hpx_parcel_t *_steal_from(worker_t *w, int id) {
-  worker_t *victim = scheduler_get_worker(here->sched, id);
-  hpx_parcel_t *p = sync_chase_lev_ws_deque_steal(_work(victim));
-  if (p) {
-    w->last_victim = id;
-    EVENT_SCHED_STEAL(p->id, victim->id);
-  } else {
-    w->last_victim = -1;
-  }
-  return p;
-}
-
-/// Steal a parcel from a random worker out of all workers.
-static hpx_parcel_t *_steal_random_all(worker_t *w) {
-  int id;
-  do {
-    id = rand_r(&w->seed) % here->sched->n_workers;
-  } while (id == w->id);
-  return _steal_from(w, id);
-}
-
-/// Steal a parcel from a random worker from the same NUMA node.
-static hpx_parcel_t *_steal_random_node(worker_t *w) {
-  int id;
-  do {
-    int cpu = rand_r(&w->seed) % here->topology->cpus_per_node;
-    id = here->topology->numa_to_cpus[w->numa_node][cpu];
-  } while (id == w->id);
-  return _steal_from(w, id);
-}
 
 /// Hierarchical work-stealing policy.
 ///
