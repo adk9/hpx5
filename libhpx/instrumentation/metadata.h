@@ -213,7 +213,7 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 #define NETWORK_PROGRESS_END_METADATA _METADATA_NONE
 
 #define SCHED_WQSIZE_METADATA                                \
-  _METADATA_ARGS(METADATA_UINT64(0, "work_queue_size"))
+  _METADATA_ARGS(METADATA_UINT64(0, "workqueue_size"))
 
 #define SCHED_PUSH_LIFO_METADATA  _METADATA_ARGS(METADATA_PARCEL_ID(0))
 #define SCHED_POP_LIFO_METADATA   _METADATA_ARGS(METADATA_PARCEL_ID(0))
@@ -222,40 +222,23 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 
 #define SCHED_BEGIN_METADATA      _METADATA_NONE
 #define SCHED_END_METADATA                          \
-  _METADATA_ARGS(METADATA_UINT64(off, "source"),    \
-                 METADATA_UINT64(off, "spins"))
+  _METADATA_ARGS(METADATA_UINT64(0, "source"),      \
+                 METADATA_UINT64(1, "spins"))
 
-#define METADATA_LCO_ADDRESS(off) METADATA_UINT64(off, "lco address")
-#define METADATA_LCO_STATE(off)   METADATA_UINT64(off, "lco state")
+#define SCHED_YIELD_METADATA      _METADATA_NONE
+#define SCHED_MAIL_METADATA       _METADATA_NONE
 
-#define LCO_INIT_METADATA                                   \
-  _METADATA_ARGS(METADATA_LCO_ADDRESS(0),                   \
-                 METADATA_LCO_STATE(1))
+#define _LCO_METADATA_ARGS                              \
+ _METADATA_ARGS(METADATA_UINT64(0, "lco address"),      \
+                METADATA_UINT64(1, "lco state"))
 
-#define LCO_DELETE_METADATA                                 \
-  _METADATA_ARGS(METADATA_LCO_ADDRESS(0),                   \
-                 METADATA_LCO_STATE(1))
-
-#define LCO_SET_METADATA                                    \
-  _METADATA_ARGS(METADATA_LCO_ADDRESS(0),                   \
-                 METADATA_LCO_STATE(1))
-
-#define LCO_RESET_METADATA                                  \
-  _METADATA_ARGS(METADATA_LCO_ADDRESS(0),                   \
-                 METADATA_LCO_STATE(1))
-
-#define LCO_ATTACH_PARCEL_METADATA                          \
-  _METADATA_ARGS(METADATA_LCO_ADDRESS(0),                   \
-                 METADATA_LCO_STATE(1))
-
-#define LCO_WAIT_METADATA                                   \
-  _METADATA_ARGS(METADATA_LCO_ADDRESS(0),                   \
-                 METADATA_LCO_STATE(1))
-
-#define LCO_TRIGGER_METADATA                                \
-  _METADATA_ARGS(METADATA_LCO_ADDRESS(0),                   \
-                 METADATA_LCO_STATE(1))
-
+#define LCO_INIT_METADATA _LCO_METADATA_ARGS
+#define LCO_DELETE_METADATA _LCO_METADATA_ARGS
+#define LCO_SET_METADATA _LCO_METADATA_ARGS
+#define LCO_RESET_METADATA _LCO_METADATA_ARGS
+#define LCO_ATTACH_PARCEL_METADATA _LCO_METADATA_ARGS
+#define LCO_WAIT_METADATA _LCO_METADATA_ARGS
+#define LCO_TRIGGER_METADATA _LCO_METADATA_ARGS
 
 #define METADATA_PROCESS_ADDRESS(off) METADATA_UINT64(off, "process address")
 #define METADATA_PROCESS_LCO(off)     METADATA_UINT64(off, "termination lco")

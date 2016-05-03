@@ -309,7 +309,7 @@ static void _handle_mail(worker_t *w) {
   hpx_parcel_t *p = NULL;
   while ((parcels = sync_two_lock_queue_dequeue(&w->inbox))) {
     while ((p = parcel_stack_pop(&parcels))) {
-      EVENT_COUNT(++w->stats.mail);
+      EVENT_SCHED_MAIL(p);
       log_sched("got mail %p\n", p);
       _push_lifo(p, w);
     }
@@ -868,7 +868,7 @@ static void _yield(hpx_parcel_t *p, void *env) {
 
 void scheduler_yield(void) {
   if (action_is_default(self->current->action)) {
-    EVENT_COUNT(++self->stats.yields);
+    EVENT_SCHED_YIELD();
     self->yielded = true;
     // NB: no trace point, overwhelms infrastructure
     _schedule(_yield, NULL, 0);
