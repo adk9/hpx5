@@ -346,15 +346,6 @@ void hpx_finalize(void) {
   if (_hpx_143 != HPX_NULL) {
     hpx_gas_free(_hpx_143, HPX_NULL);
   }
-
-#if defined(HAVE_APEX)
-  // this will add the stats to the APEX data set
-  libhpx_save_apex_stats();
-#endif
-
-#if defined(ENABLE_PROFILING)
-  libhpx_stats_print();
-#endif
   _stop(here);
   _cleanup(here);
 }

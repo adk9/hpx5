@@ -470,12 +470,6 @@ static hpx_parcel_t *_schedule_steal(worker_t *w) {
       p = _steal_hier(w);
       break;
   }
-
-  if (p) {
-    EVENT_COUNT(++w->stats.steals);
-  } else {
-    EVENT_COUNT(++w->stats.failed_steals);
-  }
   return p;
 }
 
@@ -666,8 +660,6 @@ int worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
   sync_chase_lev_ws_deque_init(&w->queues[0].work, work_size);
   sync_chase_lev_ws_deque_init(&w->queues[1].work, work_size);
   sync_two_lock_queue_init(&w->inbox, NULL);
-  libhpx_stats_init(&w->stats);
-
   return LIBHPX_OK;
 }
 
@@ -794,7 +786,6 @@ void scheduler_spawn(hpx_parcel_t *p) {
   dbg_assert(w->id >= 0);
   dbg_assert(p);
   dbg_assert(actions[p->action].handler != NULL);
-  EVENT_COUNT(w->stats.spawns++);
 
   // If we're stopped down then push the parcel and return. This prevents an
   // infinite spawn from inhibiting termination.

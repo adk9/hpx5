@@ -25,7 +25,6 @@ extern "C" {
 #include <libsync/queues.h>
 #include <libhpx/instrumentation.h>
 #include <libhpx/padding.h>
-#include <libhpx/stats.h>
 
 /// Forward declarations.
 /// @{
@@ -65,8 +64,7 @@ struct worker {
   PAD_TO_CACHELINE(sizeof(int));
   padded_deque_t   queues[2];             //!< work and yield queues
   two_lock_queue_t  inbox;                //!< mail sent to me
-  libhpx_stats_t    stats;                //!< per-worker statistics
-  int           last_victim;              //!< last successful victim
+  int         last_victim;                //!< last successful victim
   int           numa_node;                //!< this worker's numa node
   void          *profiler;                //!< reference to the profiler
   void               *bst;                //!< reference to the profiler

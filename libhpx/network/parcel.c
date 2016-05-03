@@ -142,7 +142,6 @@ void parcel_launch(hpx_parcel_t *p) {
     scheduler_spawn(p);
   }
   else {
-    EVENT_COUNT(++self->stats.remote_msgs);
     int e = network_send(self->network, p);
     dbg_check(e, "failed to perform a network send\n");
   }
