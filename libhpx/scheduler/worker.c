@@ -309,7 +309,7 @@ static void _handle_mail(worker_t *w) {
   hpx_parcel_t *p = NULL;
   while ((parcels = sync_two_lock_queue_dequeue(&w->inbox))) {
     while ((p = parcel_stack_pop(&parcels))) {
-      EVENT_SCHED_MAIL(p);
+      EVENT_SCHED_MAIL(p->id);
       log_sched("got mail %p\n", p);
       _push_lifo(p, w);
     }
