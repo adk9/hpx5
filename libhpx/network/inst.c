@@ -44,6 +44,7 @@ static int _inst_progress(void *network, int id) {
 }
 
 static int _inst_send(void *network, hpx_parcel_t *p) {
+  EVENT_NETWORK_SEND();
   _inst_network_t *inst = network;
   return inst->impl->send(inst->impl, p);
 }

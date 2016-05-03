@@ -254,6 +254,7 @@ static hpx_parcel_t *_finish(irecv_buffer_t *irecvs, int i, void *status) {
   if (LIBHPX_OK != _start(irecvs, i)) {
     dbg_error("failed to regenerate an irecv\n");
   }
+  EVENT_NETWORK_RECV();
   return p;
 }
 
@@ -317,9 +318,7 @@ hpx_parcel_t *irecv_buffer_progress(irecv_buffer_t *buffer) {
     int j = out[i];
     void *status = _status_at(buffer, i);
     hpx_parcel_t *p = _finish(buffer, j, status);
-    if (p) {
-      parcel_stack_push(&completed, p);
-    }
+    parcel_stack_push(&completed, p);
   }
 
   return completed;

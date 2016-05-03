@@ -163,8 +163,8 @@ typedef struct inst_event_metadata {
 
 extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 
-#define METADATA_PARCEL_ID(off)        METADATA_UINT64(off, "parcel id")
-#define METADATA_PARCEL_SIZE(off)      METADATA_UINT64(off, "parcel size")
+#define METADATA_PARCEL_ID(off)        METADATA_UINT64(off, "id")
+#define METADATA_PARCEL_SIZE(off)      METADATA_UINT64(off, "size")
 #define METADATA_PARCEL_SOURCE_A(off)  METADATA_UINT64(off, "source addr")
 #define METADATA_PARCEL_SOURCE_R(off)  METADATA_UINT64(off, "source rank")
 #define METADATA_PARCEL_PARENT_ID(off) METADATA_UINT64(off, "parent id")
@@ -205,8 +205,8 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
                 METADATA_PARCEL_SIZE(2),                     \
                 METADATA_PARCEL_TARGET(3))
 
-#define NETWORK_PWC_SEND_METADATA _METADATA_NONE
-#define NETWORK_PWC_RECV_METADATA _METADATA_NONE
+#define NETWORK_SEND_METADATA _METADATA_NONE
+#define NETWORK_RECV_METADATA _METADATA_NONE
 #define NETWORK_PROBE_BEGIN_METADATA _METADATA_NONE
 #define NETWORK_PROBE_END_METADATA _METADATA_NONE
 #define NETWORK_PROGRESS_BEGIN_METADATA _METADATA_NONE
