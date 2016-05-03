@@ -44,7 +44,7 @@
 #include <libhpx/topology.h>
 
 // this will only be used during instrumentation
-__thread uint64_t parcel_count = 0;
+__thread uint64_t parcel_count = 1;
 
 static int _delete_launch_through_parcel_handler(hpx_parcel_t *p) {
   hpx_addr_t lsync = hpx_thread_current_target();
