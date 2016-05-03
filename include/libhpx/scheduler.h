@@ -31,7 +31,6 @@ extern "C" {
 #include <libsync/sync.h>
 #include <libsync/locks.h>
 #include <libsync/queues.h>
-#include <libhpx/stats.h>
 #include <libhpx/system.h>
 #include <libhpx/worker.h>
 
