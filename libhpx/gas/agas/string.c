@@ -69,6 +69,9 @@ static int _agas_invalidate_mapping_handler(hpx_addr_t dst, int to) {
   hpx_addr_t src = hpx_thread_current_target();
   gva_t gva = { .addr = src };
 
+  // instrument the move event
+  EVENT_GAS_MOVE(src, HPX_HERE, dst);
+
   uint32_t owner;
   btt_get_owner(agas->btt, gva, &owner);
   if (here->rank != owner) {
