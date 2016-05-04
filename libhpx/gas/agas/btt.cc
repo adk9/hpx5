@@ -265,7 +265,7 @@ int btt_remove_when_count_zero(void *obj, gva_t gva, void **lva) {
     .gva = gva
   };
 
-  scheduler_suspend(_btt_onunpin_continuation, &env, 0);
+  scheduler_suspend(_btt_onunpin_continuation, &env);
   if (lva) {
     *lva = btt_lookup(btt, gva);
   }
@@ -280,7 +280,7 @@ int btt_try_move(void *obj, gva_t gva, int to, void **lva, uint32_t *attr) {
     .gva = gva
   };
 
-  scheduler_suspend(_btt_onunpin_continuation, &env, 0);
+  scheduler_suspend(_btt_onunpin_continuation, &env);
   uint64_t key = gva_to_key(gva);
   Entry entry;
   bool found = btt->update_fn(key, [&](Entry& entry) {

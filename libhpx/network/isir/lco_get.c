@@ -100,6 +100,6 @@ int isir_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out, int reset) {
     .reset = reset
   };
 
-  scheduler_suspend(_lco_get_continuation, &env, 0);
+  scheduler_suspend(_lco_get_continuation, &env);
   return HPX_SUCCESS;
 }

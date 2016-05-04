@@ -44,8 +44,8 @@
 #include <libhpx/worker.h>
 #include "cvar.h"
 #include "events.h"
-#include "lco/lco.h"
 #include "thread.h"
+#include "lco/lco.h"
 
 /// Storage for the thread-local worker pointer.
 __thread worker_t * volatile self = NULL;
@@ -60,27 +60,69 @@ __thread worker_t * volatile self = NULL;
 # define GAS_TRACE_ACCESS(src, dst, block, size)
 #endif
 
-#ifdef ENABLE_DEBUG
-/// This transfer wrapper is used for logging, debugging, and instrumentation.
-///
-/// Internally, it will perform it's pre-transfer operations, call
-/// thread_transfer(), and then perform post-transfer operations on the return.
-static void _dbg_transfer(hpx_parcel_t *p, thread_transfer_cont_t c, void *e) {
-  thread_transfer(p, c, e);
-}
-#else
-# define _dbg_transfer thread_transfer
-#endif
+/// An enumeration used during instrumentation to define where we got work
+enum {
+  LIFO = 0,
+  YIELD,
+  STEAL,
+  FINAL,
+  SYSTEM
+} TRANSFER_SOURCES;
 
-static void _transfer(hpx_parcel_t *p, thread_transfer_cont_t c, void *e,
-                      worker_t *w) {
+/// Swap a worker's current parcel.
+///
+/// @param            p The parcel we're swapping in.
+/// @param           sp The checkpointed stack pointer for the current parcel.
+/// @param            w The current worker.
+///
+/// @@returns           The previous parcel.
+static hpx_parcel_t *_swap_current(hpx_parcel_t *p, void *sp, worker_t *w) {
+  hpx_parcel_t *q = w->current;
+  w->current = p;
+  q->ustack->sp = sp;
+  return q;
+}
+
+/// The environment for the _checkpoint() _transfer() continuation.
+typedef struct {
+  void (*f)(hpx_parcel_t *, void *);
+  void *env;
+} _checkpoint_env_t;
+
+/// The basic transfer continuation used by the scheduler.
+///
+/// This transfer continuation updates the `self->current` pointer to record
+/// that we are now running @p to, checkpoints the previous stack pointer in the
+/// previous stack, and then runs the continuation described in @p env.
+///
+/// @param           to The parcel we transferred to.
+/// @param           sp The stack pointer we transferred from.
+/// @param          env A _checkpoint_env_t that describes the closure.
+static void _checkpoint(hpx_parcel_t *to, void *sp, void *env) {
+  hpx_parcel_t *prev = _swap_current(to, sp, self);
+  _checkpoint_env_t *c = env;
+  c->f(prev, c->env);
+}
+
+/// Local wrapper for the thread transfer call.
+///
+/// This wrapper will reset the signal mask as part of the transfer if it is
+/// necessary, and it will always checkpoint the stack for the thread that we
+/// are transferring away from.
+///
+/// @param            p The parcel to transfer to.
+/// @param            f The checkpoint continuation.
+/// @param            e The checkpoint continuation environment.
+/// @param            w The current worker.
+static void _transfer(hpx_parcel_t *p, void (*f)(hpx_parcel_t *, void *),
+                      void *e, worker_t *w) {
   if (!w->current->ustack->masked) {
-    _dbg_transfer(p, c, e);
+    thread_transfer(p, _checkpoint, &(_checkpoint_env_t) { .f = f, .env = e });
   }
   else {
     sigset_t set;
     dbg_check(pthread_sigmask(SIG_SETMASK, &here->mask, &set));
-    _dbg_transfer(p, c, e);
+    thread_transfer(p, _checkpoint, &(_checkpoint_env_t) { .f = f, .env = e });
     dbg_check(pthread_sigmask(SIG_SETMASK, &set, NULL));
   }
 }
@@ -109,7 +151,7 @@ hpx_parcel_t *_hpx_thread_generate_continuation(int n, ...) {
 /// @param            p The parent parcel (usually self->current).
 /// @param            n The number of arguments to continue.
 /// @param         args The arguments we are continuing.
-static void _continue_parcel_va(hpx_parcel_t *p, int n, va_list *args) {
+static void _vcontinue_parcel(hpx_parcel_t *p, int n, va_list *args) {
   dbg_assert(p->ustack->cont == 0);
   p->ustack->cont = 1;
   if (p->c_action && p->c_target) {
@@ -118,14 +160,6 @@ static void _continue_parcel_va(hpx_parcel_t *p, int n, va_list *args) {
   else {
     process_recover_credit(p);
   }
-}
-
-/// Swap the current parcel for a worker.
-static hpx_parcel_t *_swap_current(hpx_parcel_t *p, void *sp, worker_t *w) {
-  hpx_parcel_t *q = w->current;
-  w->current = p;
-  q->ustack->sp = sp;
-  return q;
 }
 
 /// The entry function for all interrupts.
@@ -171,7 +205,7 @@ static void _execute_interrupt(hpx_parcel_t *p) {
    case HPX_SUCCESS:
     log_sched("completed interrupt %p\n", p);
     if (!stack->cont) {
-      _continue_parcel_va(p, 0, NULL);
+      _vcontinue_parcel(p, 0, NULL);
     }
     _swap_current(q, NULL, w);
     p->ustack = NULL;
@@ -238,14 +272,11 @@ static hpx_parcel_t *_try_bind(worker_t *w, hpx_parcel_t *p) {
   }
 
   ustack_t *old = parcel_swap_stack(p, stack);
-  DEBUG_IF(old != NULL) {
+  if (old) {
     dbg_error("Replaced stack %p with %p in %p: this usually means two workers "
               "are trying to start a lightweight thread at the same time.\n",
               (void*)old, (void*)stack, (void*)p);
   }
-
-  // avoid unused variable warning
-  (void)old;
 
   return p;
 }
@@ -265,26 +296,6 @@ static void _swap_epoch(worker_t *worker) {
   sync_store(&worker->work_id, 1 - id, SYNC_RELAXED);
 }
 
-/// Add a parcel to the top of the worker's work queue.
-///
-/// This interface is designed so that it can be used as a schedule()
-/// continuation.
-///
-/// @param            p The parcel that we're going to push.
-/// @param       worker The worker pointer.
-static void _push_lifo(hpx_parcel_t *p, void *worker) {
-  dbg_assert(p->target != HPX_NULL);
-  dbg_assert(actions[p->action].handler != NULL);
-  EVENT_SCHED_PUSH_LIFO(p->id);
-  GAS_TRACE_ACCESS(p->src, here->rank, p->target, p->size);
-  worker_t *w = worker;
-  uint64_t size = sync_chase_lev_ws_deque_push(_work(w), p);
-  if (w->work_first < 0) {
-    return;
-  }
-  w->work_first = (here->sched->wf_threshold < size);
-}
-
 /// Process the next available parcel from our work queue in a lifo order.
 static hpx_parcel_t *_schedule_lifo(worker_t *w) {
   hpx_parcel_t *p = sync_chase_lev_ws_deque_pop(_work(w));
@@ -294,26 +305,6 @@ static hpx_parcel_t *_schedule_lifo(worker_t *w) {
       &w->queues[sync_load(&w->work_id, SYNC_RELAXED)].work));
   }
   return p;
-}
-
-/// Send a mail message to another worker.
-static void _send_mail(hpx_parcel_t *p, void *worker) {
-  worker_t *w = worker;
-  log_sched("sending %p to worker %d\n", (void*)p, w->id);
-  sync_two_lock_queue_enqueue(&w->inbox, p);
-}
-
-/// Process my mail queue.
-static void _handle_mail(worker_t *w) {
-  hpx_parcel_t *parcels = NULL;
-  hpx_parcel_t *p = NULL;
-  while ((parcels = sync_two_lock_queue_dequeue(&w->inbox))) {
-    while ((p = parcel_stack_pop(&parcels))) {
-      EVENT_SCHED_MAIL(p->id);
-      log_sched("got mail %p\n", p);
-      _push_lifo(p, w);
-    }
-  }
 }
 
 /// Steal a parcel from a worker with the given @p id.
@@ -498,44 +489,128 @@ static void _free_stack(hpx_parcel_t *p, worker_t *w) {
   }
 }
 
-/// A _schedule() continuation that frees the current parcel.
-static void _free_parcel(hpx_parcel_t *p, void *env) {
+/// A null checkpoint continuation.
+///
+/// This continuation is used by the main pthread schedule operation. It is
+/// special because we don't need to do anything special when we're using the
+/// system stack and parcel.
+///
+/// @param      UNUSED1 The previous parcel.
+/// @param      UNUSED2 The continuation environment.
+static void _null(hpx_parcel_t *UNUSED1, void *UNUSED2) {
+}
+
+/// A checkpoint continuation that unlocks a lock.
+///
+/// This is used by threads that are blocking on condition variables.
+///
+/// @param            p The previous parcel.
+/// @param          env The continuation environment, which is a tatas lock.
+static void _unlock(hpx_parcel_t *to, void *lock) {
+  sync_tatas_release(lock);
+}
+
+/// A checkpoint continuation that frees the previous thread.
+///
+/// @param            p The previous parcel.
+/// @param       UNUSED The continuation environment.
+static void _free(hpx_parcel_t *p, void *UNUSED) {
   _free_stack(p, self);
   parcel_delete(p);
 }
 
-/// A _schedule() continuation that resends the current parcel.
-static void _resend_parcel(hpx_parcel_t *p, void *env) {
+/// A checkpoint continuation that resends the previous parcel.
+///
+/// @param            p The previous parcel.
+/// @param       UNUSED The continuation environment.
+static void _resend(hpx_parcel_t *p, void *UNUSED) {
   _free_stack(p, self);
   parcel_launch(p);
 }
 
-/// The environment for the _checkpoint() _transfer() continuation.
-typedef struct {
-  void (*f)(hpx_parcel_t *, void *);
-  void *env;
-} _checkpoint_env_t;
-
-/// This continuation updates the `self->current` pointer to record that we are
-/// now running @p to, checkpoints the previous stack pointer in the previous
-/// stack, and then runs the continuation described in @p env.
+/// A checkpoint continuation that sends the previous parcel as mail.
 ///
-/// This continuation *does not* record the previous parcel in any scheduler
-/// structures, it is completely invisible to the runtime. The expectation is
-/// that the continuation in @p env will ultimately cause the parcel to resume.
-///
-/// @param           to The parcel we transferred to.
-/// @param           sp The stack pointer we transferred from.
-/// @param          env A _checkpoint_env_t that describes the closure.
-///
-/// @return             The status from the closure continuation.
-static void _checkpoint(hpx_parcel_t *to, void *sp, void *env) {
-  hpx_parcel_t *prev = _swap_current(to, sp, self);
-  _checkpoint_env_t *c = env;
-  c->f(prev, c->env);
+/// @param            p The previous parcel.
+/// @param       UNUSED The continuation environment.
+static void _send_mail(hpx_parcel_t *p, void *worker) {
+  worker_t *w = worker;
+  log_sched("sending %p to worker %d\n", (void*)p, w->id);
+  sync_two_lock_queue_enqueue(&w->inbox, p);
 }
 
-/// Probe and progress the network.
+/// A checkpoint continuation that puts the previous thread into the yield
+/// queue.
+///
+/// @param            p The previous parcel.
+/// @param       UNUSED The continuation environment.
+static void _yield(hpx_parcel_t *p, void *env) {
+  worker_t *w = env;
+  sync_chase_lev_ws_deque_push(_yielded(w), p);
+  w->yielded = 0;
+}
+
+/// A transfer continuation that schedules a parcel for lifo work.
+///
+/// This continuation can change the local scheduling policy from help-first to
+/// work first, and will be used directly whenever we need to push lifo work.
+///
+/// @param            p The parcel that we're going to push.
+/// @param       worker The worker pointer.
+static void _push_lifo(hpx_parcel_t *p, void *worker) {
+  dbg_assert(p->target != HPX_NULL);
+  dbg_assert(actions[p->action].handler != NULL);
+  EVENT_SCHED_PUSH_LIFO(p->id);
+  GAS_TRACE_ACCESS(p->src, here->rank, p->target, p->size);
+  worker_t *w = worker;
+  uint64_t size = sync_chase_lev_ws_deque_push(_work(w), p);
+  if (w->work_first >= 0) {
+    w->work_first = (here->sched->wf_threshold < size);
+  }
+}
+
+/// Process a mail queue.
+///
+/// This processes all of the parcels in the mailbox of the worker, moving them
+/// into the work queue of the designated worker.
+///
+/// @param            w The worker to process mail (should be self).
+static void _handle_mail(worker_t *w) {
+  hpx_parcel_t *parcels = NULL;
+  hpx_parcel_t *p = NULL;
+  while ((parcels = sync_two_lock_queue_dequeue(&w->inbox))) {
+    while ((p = parcel_stack_pop(&parcels))) {
+      EVENT_SCHED_MAIL(p->id);
+      log_sched("got mail %p\n", p);
+      _push_lifo(p, w);
+    }
+  }
+}
+
+/// The non-blocking schedule operation.
+///
+/// This will schedule new work relatively quickly, in order to avoid delaying
+/// the execution of the user's continuation. If there is no local work we can
+/// find quickly we'll transfer back to the main pthread stack and go through an
+/// extended transfer time.
+///
+/// @param            f The continuation function.
+/// @param          env The continuation environment.
+static void _schedule_nb(void (*f)(hpx_parcel_t *, void*), void *env) {
+  EVENT_SCHED_BEGIN();
+  worker_t *w = self;
+  _handle_mail(w);
+  hpx_parcel_t *p = (worker_is_stopped()) ? w->system : _schedule_lifo(w);
+  p = (p) ? _try_bind(w, p) : w->system;
+  dbg_assert(p != w->current);
+  _transfer(p, f, env, w);
+  EVENT_SCHED_END(0, 0);
+}
+
+/// Probe and progress the network during scheduling.
+///
+/// This is used in the blocking scheduler loop in order to handle the network.
+///
+/// @param            w The current worker thread.
 static void _schedule_network(worker_t *w) {
   // suppress work-first scheduling while we're inside the network.
   w->work_first = -1;
@@ -550,7 +625,7 @@ static void _schedule_network(worker_t *w) {
   }
 }
 
-/// The main scheduling loop.
+/// The blocking scheduling loop.
 ///
 /// Selects a new lightweight thread to run and transfers to it. After the
 /// transfer has occurred, i.e. the worker has switched stacks and replaced its
@@ -558,37 +633,15 @@ static void _schedule_network(worker_t *w) {
 /// execute @p f, passing it the previous parcel and the @p env specified
 /// there.
 ///
-/// If the @p block parameter is 1 then the scheduler can block before running
-/// @p f. This is common, e.g., when the thread calling _schedule() is actually
-/// shutting down. At other times running @p f can be important for progress or
-/// performance, so the scheduler won't block. Blocking occurs in lightly loaded
-/// situations where the scheduler can't find work to do.
-///
 /// @param            f A transfer continuation.
 /// @param          env The transfer continuation environment.
-/// @param        block It's okay to block before running @p f.
-///
-/// @returns            The status from _transfer.
-static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
-  enum {
-    LIFO = 0,
-    YIELD,
-    STEAL,
-    FINAL
-  };
-
+static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env) {
   EVENT_SCHED_BEGIN();
   INST(int source = -1);
   INST(int spins = 0);
   hpx_parcel_t *p = NULL;
   worker_t *w = self;
   while (!worker_is_stopped()) {
-    if (!block) {
-      p = _schedule_lifo(w);
-      INST(source = LIFO);
-      break;
-    }
-
     _handle_mail(w);
 
     // If we're not supposed to be active, then don't schedule anything.
@@ -628,12 +681,11 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
   // transfer to then pick the system stack
   p = (p) ? _try_bind(w, p) : w->system;
 
-  EVENT_SCHED_END(source, spins);
-
   // Don't transfer to the same parcel.
   if (p != w->current) {
-    _transfer(p, _checkpoint, &(_checkpoint_env_t){ .f = f, .env = env }, w);
+    _transfer(p, f, env, w);
   }
+  EVENT_SCHED_END(0, 0);
 }
 
 int worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
@@ -680,9 +732,6 @@ void worker_fini(worker_t *w) {
     w->stacks = stack->next;
     thread_delete(stack);
   }
-}
-
-static void _null(hpx_parcel_t *p, void *env) {
 }
 
 int worker_start(void) {
@@ -746,11 +795,11 @@ int worker_start(void) {
       }
     }
 
-    _schedule(_null, NULL, 1);
+    _schedule(_null, NULL);
   }
 
-  w->system      = NULL;
-  w->current     = NULL;
+  w->system = NULL;
+  w->current = NULL;
 
   int code = sched->stopped;
   if (code != HPX_SUCCESS && here->rank == 0) {
@@ -819,56 +868,18 @@ void scheduler_spawn(hpx_parcel_t *p) {
   // Process p work-first. If we're running the system thread then we need to
   // prevent it from being stolen, which we can do by using the NULL
   // continuation.
-  _checkpoint_env_t env = {
-    .f = (current == w->system) ? _null : _push_lifo,
-     .env = w
-  };
-
   EVENT_THREAD_SUSPEND(current, w);
-  _transfer(_try_bind(w, p), _checkpoint, &env, w);
+  _transfer(_try_bind(w, p), (current == w->system) ? _null : _push_lifo, w, w);
   EVENT_THREAD_RESUME(current, self);
 }
 
-/// This is the _schedule() continuation that we use to yield a thread.
-///
-/// 1) We can't put a yielding thread onto our workqueue with the normal push
-///    operation, because two threads who are yielding will prevent progress
-///    in that scheduler.
-/// 2) We can't use our mailbox because we empty that as fast as possible, and
-///    we'll wind up with the same problem as above.
-/// 3) We don't want to use a separate local queue because we don't want to hide
-///    visibility of yielded threads in the case of heavy load.
-/// 4) We don't want to push onto the bottom of our workqueue because that
-///    requires counted pointers for stealing and yielding and won't solve the
-///    problem, a yielding thread can tie up a scheduler.
-/// 5) We'd like to use a global queue for yielded threads so that they can be
-///    processed in FIFO order by threads that don't have anything else to do.
-///
-static void _yield(hpx_parcel_t *p, void *env) {
-  // sync_two_lock_queue_enqueue(&here->sched->yielded, p);
-  worker_t *w = self;
-  sync_chase_lev_ws_deque_push(_yielded(w), p);
-  w->yielded = 0;
-}
-
 void scheduler_yield(void) {
-  if (action_is_default(self->current->action)) {
-    EVENT_SCHED_YIELD();
-    self->yielded = true;
-    // NB: no trace point, overwhelms infrastructure
-    _schedule(_yield, NULL, 0);
-  }
-}
-
-/// A _schedule() continuation that unlocks a lock.
-///
-/// We don't need to do anything with the previous parcel at this point because
-/// we know that it has already been enqueued on whatever LCO we need it to be.
-///
-/// @param           to The parcel we are transferring to.
-/// @param         lock A tatas lock to unlock.
-static void _unlock(hpx_parcel_t *to, void *lock) {
-  sync_tatas_release(lock);
+  worker_t *w = self;
+  dbg_assert(action_is_default(w->current->action));
+  EVENT_SCHED_YIELD();
+  self->yielded = true;
+  // NB: no trace point, overwhelms infrastructure
+  _schedule_nb(_yield, w);
 }
 
 hpx_status_t scheduler_wait(tatas_lock_t *lock, cvar_t *condition) {
@@ -887,7 +898,7 @@ hpx_status_t scheduler_wait(tatas_lock_t *lock, cvar_t *condition) {
   }
 
   EVENT_THREAD_SUSPEND(p, w);
-  _schedule(_unlock, (void*)lock, 0);
+  _schedule_nb(_unlock, (void*)lock);
   EVENT_THREAD_RESUME(p, self);
 
   // reacquire the lco lock before returning
@@ -934,21 +945,21 @@ void HPX_NORETURN worker_finish_thread(hpx_parcel_t *p, int status) {
     EVENT_THREAD_END(p, self);
     EVENT_PARCEL_RESEND(self->current->id, self->current->action,
                         self->current->size, self->current->src);
-    _schedule(_resend_parcel, NULL, 0);
+    _schedule_nb(_resend, NULL);
 
    case HPX_SUCCESS:
     if (!p->ustack->cont) {
-      _continue_parcel_va(p, 0, NULL);
+      _vcontinue_parcel(p, 0, NULL);
     }
     EVENT_THREAD_END(p, self);
-    _schedule(_free_parcel, NULL, 1);
+    _schedule_nb(_free, NULL);
 
    case HPX_LCO_ERROR:
     // rewrite to lco_error and continue the error status
     p->c_action = lco_error;
     _hpx_thread_continue(2, &status, sizeof(status));
     EVENT_THREAD_END(p, self);
-    _schedule(_free_parcel, NULL, 1);
+    _schedule_nb(_free, NULL);
 
    case HPX_ERROR:
    default:
@@ -964,7 +975,7 @@ int _hpx_thread_continue(int n, ...) {
 
   va_list args;
   va_start(args, n);
-  _continue_parcel_va(p, n, &args);
+  _vcontinue_parcel(p, n, &args);
   va_end(args);
 
   return HPX_SUCCESS;
@@ -1060,18 +1071,18 @@ void hpx_thread_set_affinity(int affinity) {
   // move this thread to the proper worker through the mailbox
   EVENT_THREAD_SUSPEND(p, worker);
   worker_t *w = scheduler_get_worker(here->sched, affinity);
-  _schedule(_send_mail, w, 0);
+  _schedule_nb(_send_mail, w);
   EVENT_THREAD_RESUME(p, self);
 }
 
-void scheduler_suspend(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
+void scheduler_suspend(void (*f)(hpx_parcel_t *, void*), void *env) {
   worker_t *w = self;
   hpx_parcel_t *p = w->current;
-  log_sched("suspending %p in %s\n", (void*)p, actions[p->action].key);
-  EVENT_THREAD_SUSPEND(p, w);
-  _schedule(f, env, block);
+  log_sched("suspending %p in %s\n", (void*)self->current, actions[p->action].key);
+  EVENT_THREAD_SUSPEND(self->current, self);
+  _schedule_nb(f, env);
   EVENT_THREAD_RESUME(p, self);
-  log_sched("resuming %p\n in %s", (void*)p, actions[p->action].key);
+  log_sched("resuming %p in %s\n", (void*)p, actions[p->action].key);
   (void)p;
 }
 

@@ -58,7 +58,7 @@ int pwc_lco_wait(void *obj, hpx_addr_t lco, int reset) {
     .lco = lco,
     .reset = reset
   };
-  scheduler_suspend(_pwc_lco_wait_continuation, &env, 0);
+  scheduler_suspend(_pwc_lco_wait_continuation, &env);
   // NB: we could return self->current->error
   return HPX_SUCCESS;
 }
