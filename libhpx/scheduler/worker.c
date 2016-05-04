@@ -198,8 +198,9 @@ static void _execute_interrupt(hpx_parcel_t *p) {
   // Suspend the outer thread, and start the interrupt
   EVENT_THREAD_SUSPEND(q, w);
   EVENT_THREAD_RUN(p, w);
-
+  EVENT_SCHED_END(0, 0);
   int e = action_exec_parcel(p->action, p);
+  EVENT_SCHED_BEGIN();
 
   switch (e) {
    case HPX_SUCCESS:
@@ -636,7 +637,6 @@ static void _schedule_network(worker_t *w) {
 /// @param            f A transfer continuation.
 /// @param          env The transfer continuation environment.
 static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env) {
-  EVENT_SCHED_BEGIN();
   INST(int source = -1);
   INST(int spins = 0);
   hpx_parcel_t *p = NULL;
@@ -685,7 +685,6 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env) {
   if (p != w->current) {
     _transfer(p, f, env, w);
   }
-  EVENT_SCHED_END(0, 0);
 }
 
 int worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
@@ -712,7 +711,6 @@ int worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
   return LIBHPX_OK;
 }
 
-
 void worker_fini(worker_t *w) {
   // clean up the mailbox
   _handle_mail(w);
@@ -735,6 +733,7 @@ void worker_fini(worker_t *w) {
 }
 
 int worker_start(void) {
+  EVENT_SCHED_BEGIN();
   worker_t *w = self;
   dbg_assert(w);
 
@@ -806,6 +805,7 @@ int worker_start(void) {
     log_error("hpx_run epoch exited with a non-zero exit code: %d.\n", code);
   }
 
+  EVENT_SCHED_END(0, 0);
   return code;
 }
 
@@ -878,8 +878,9 @@ void scheduler_yield(void) {
   dbg_assert(action_is_default(w->current->action));
   EVENT_SCHED_YIELD();
   self->yielded = true;
-  // NB: no trace point, overwhelms infrastructure
+  EVENT_THREAD_SUSPEND(w->current, w);
   _schedule_nb(_yield, w);
+  EVENT_THREAD_RESUME(w->current, self);
 }
 
 hpx_status_t scheduler_wait(tatas_lock_t *lock, cvar_t *condition) {
@@ -1069,8 +1070,8 @@ void hpx_thread_set_affinity(int affinity) {
   }
 
   // move this thread to the proper worker through the mailbox
-  EVENT_THREAD_SUSPEND(p, worker);
   worker_t *w = scheduler_get_worker(here->sched, affinity);
+  EVENT_THREAD_SUSPEND(p, worker);
   _schedule_nb(_send_mail, w);
   EVENT_THREAD_RESUME(p, self);
 }
