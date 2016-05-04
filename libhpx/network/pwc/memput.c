@@ -127,7 +127,7 @@ int pwc_memput_lsync(void *obj, hpx_addr_t to, const void *from, size_t n,
     .n = n,
     .rsync = rsync
   };
-  scheduler_suspend(_pwc_memput_lsync_continuation, &env, 0);
+  scheduler_suspend(_pwc_memput_lsync_continuation, &env);
   return HPX_SUCCESS;
 }
 /// @}
@@ -159,7 +159,7 @@ int pwc_memput_rsync(void *obj, hpx_addr_t to, const void *from, size_t n) {
     .from = from,
     .n = n
   };
-  scheduler_suspend(_pwc_memput_rsync_continuation, &env, 0);
+  scheduler_suspend(_pwc_memput_rsync_continuation, &env);
   return HPX_SUCCESS;
 }
 /// @}
