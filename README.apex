@@ -8,14 +8,14 @@ For example:
 
 export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/path/to/apex/installation/lib/pkgconfig
 
-Then, add the "--with-apex" option to the configure. For example:
+Then, add the "--with-apex --enable-instrumentation" options to the configure. For example:
 
-./configure --enable-photon --enable-mpi --with-apex={=system,PKG}
+./configure --enable-photon --enable-mpi --with-apex={=system,PKG} --enable-instrumentation
 
 For instructions on downloading and building APEX, please see:
 https://github.com/khuck/xpress-apex
 
-To build HPX-5 with APEX on Edison, do the following:
+To build HPX-5 with APEX on Edison or Cori (@NERSC), do the following:
 
 -----------------------------------------------------
 1) load the right modules
@@ -24,7 +24,6 @@ To build HPX-5 with APEX on Edison, do the following:
 module swap PrgEnv-intel PrgEnv-gnu
 module load gcc/4.9.2
 module load cmake/3.0.0
-module load boost
 module load automake/1.14
 module load autoconf
 module unload cray-shmem
@@ -41,13 +40,13 @@ for APEX are:
 -DCMAKE_INSTALL_PREFIX=<some path to an installation location>
 
 1. Get the code:
-wget https://github.com/khuck/xpress-apex/archive/v0.1.tar.gz
-tar -xvzf v0.1.tar.gz
-cd xpress-apex-v0.1
+wget https://github.com/khuck/xpress-apex/archive/v0.5.tar.gz
+tar -xvzf v0.5.tar.gz
+cd xpress-apex-v0.5
 
 2. Enter the repo directory, make a build directory:
 
-cd xpress-apex-0.1
+cd xpress-apex-0.5
 mkdir build
 cd build
 
@@ -89,7 +88,7 @@ export PATH=/path/to/install/bin:$PATH
 # bootstrap to make the configure script with APEX options
 ./bootstrap
 # run configure
-./configure --prefix=path-to-hpx-install --enable-mpi CC=cc PHOTON_CARGS="--enable-ugni" --enable-photon --with-apex
+./configure --prefix=path-to-hpx-install --enable-mpi CC=cc PHOTON_CARGS="--enable-ugni" --enable-photon --with-apex --enable-instrumentation
 make && make install
 
 -----------------------------------------------------
