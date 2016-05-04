@@ -63,10 +63,11 @@ __thread worker_t * volatile self = NULL;
 /// An enumeration used during instrumentation to define where we got work
 enum {
   LIFO = 0,
-  YIELD,
   STEAL,
-  FINAL,
-  SYSTEM
+  SYSTEM,
+  NETWORK,
+  MAIL,
+  EPOCH
 } TRANSFER_SOURCES;
 
 /// Swap a worker's current parcel.
@@ -81,6 +82,64 @@ static hpx_parcel_t *_swap_current(hpx_parcel_t *p, void *sp, worker_t *w) {
   w->current = p;
   q->ustack->sp = sp;
   return q;
+}
+
+/// Freelist a parcel's stack.
+static void _free_stack(hpx_parcel_t *p, worker_t *w) {
+  ustack_t *stack = parcel_swap_stack(p, NULL);
+  if (!stack) {
+    return;
+  }
+
+  stack->next = w->stacks;
+  w->stacks = stack;
+  int32_t count = ++w->nstacks;
+  int32_t limit = here->config->sched_stackcachelimit;
+  if (limit < 0 || count <= limit) {
+    return;
+  }
+
+  int32_t half = ceil_div_32(limit, 2);
+  log_sched("flushing half of the stack freelist (%d)\n", half);
+  while (count > half) {
+    stack = w->stacks;
+    w->stacks = stack->next;
+    count = --w->nstacks;
+    thread_delete(stack);
+  }
+}
+
+/// Bind a new stack to a parcel, so that we can execute it as a thread.
+///
+/// The newly created thread is runnable, and can be thread_transfer()ed to in
+/// the same way as any other lightweight thread can be. Calling _bind_stack()
+/// on a parcel that already has a stack (i.e., a thread) is permissible and has
+/// no effect.
+///
+/// @param          p The parcel that is generating this thread.
+/// @param          w The current worker (we will use its stack freelist)
+static void _bind_stack(hpx_parcel_t *p, worker_t *w) {
+  if (p->ustack) {
+    return;
+  }
+
+  // try and get a stack from the freelist, otherwise allocate a new one
+  ustack_t *stack = w->stacks;
+  if (stack) {
+    w->stacks = stack->next;
+    --w->nstacks;
+    thread_init(stack, p, worker_execute_thread, stack->size);
+  }
+  else {
+    stack = thread_new(p, worker_execute_thread);
+  }
+
+  ustack_t *old = parcel_swap_stack(p, stack);
+  if (old) {
+    dbg_error("Replaced stack %p with %p in %p: this usually means two workers "
+              "are trying to start a lightweight thread at the same time.\n",
+              (void*)old, (void*)stack, (void*)p);
+  }
 }
 
 /// The environment for the _checkpoint() _transfer() continuation.
@@ -116,6 +175,8 @@ static void _checkpoint(hpx_parcel_t *to, void *sp, void *env) {
 /// @param            w The current worker.
 static void _transfer(hpx_parcel_t *p, void (*f)(hpx_parcel_t *, void *),
                       void *e, worker_t *w) {
+  _bind_stack(p, w);
+
   if (!w->current->ustack->masked) {
     thread_transfer(p, _checkpoint, &(_checkpoint_env_t) { .f = f, .env = e });
   }
@@ -245,43 +306,6 @@ static void _execute_interrupt(hpx_parcel_t *p) {
   stack->cont = cont;
 }
 
-/// Create a new lightweight thread based on the parcel.
-///
-/// The newly created thread is runnable, and can be thread_transfer()ed to in
-/// the same way as any other lightweight thread can be. Calling _try_bind() on
-/// a parcel that already has a stack (i.e., a thread) is permissible and has no
-/// effect.
-///
-/// @param          w The current worker (we will use its stack freelist)
-/// @param          p The parcel that is generating this thread.
-///
-/// @returns          The parcel @p but with a valid stack.
-static hpx_parcel_t *_try_bind(worker_t *w, hpx_parcel_t *p) {
-  if (p->ustack) {
-    return p;
-  }
-
-  // try and get a stack from the freelist, otherwise allocate a new one
-  ustack_t *stack = w->stacks;
-  if (stack) {
-    w->stacks = stack->next;
-    --w->nstacks;
-    thread_init(stack, p, worker_execute_thread, stack->size);
-  }
-  else {
-    stack = thread_new(p, worker_execute_thread);
-  }
-
-  ustack_t *old = parcel_swap_stack(p, stack);
-  if (old) {
-    dbg_error("Replaced stack %p with %p in %p: this usually means two workers "
-              "are trying to start a lightweight thread at the same time.\n",
-              (void*)old, (void*)stack, (void*)p);
-  }
-
-  return p;
-}
-
 static chase_lev_ws_deque_t *_work(worker_t *worker) {
   int id = sync_load(&worker->work_id, SYNC_RELAXED);
   return &worker->queues[id].work;
@@ -290,11 +314,6 @@ static chase_lev_ws_deque_t *_work(worker_t *worker) {
 static chase_lev_ws_deque_t *_yielded(worker_t *worker) {
   int id = sync_load(&worker->work_id, SYNC_RELAXED);
   return &worker->queues[1 - id].work;
-}
-
-static void _swap_epoch(worker_t *worker) {
-  int id = sync_load(&worker->work_id, SYNC_RELAXED);
-  sync_store(&worker->work_id, 1 - id, SYNC_RELAXED);
 }
 
 /// Process the next available parcel from our work queue in a lifo order.
@@ -465,31 +484,6 @@ static hpx_parcel_t *_schedule_steal(worker_t *w) {
   return p;
 }
 
-/// Freelist a parcel's stack.
-static void _free_stack(hpx_parcel_t *p, worker_t *w) {
-  ustack_t *stack = parcel_swap_stack(p, NULL);
-  if (!stack) {
-    return;
-  }
-
-  stack->next = w->stacks;
-  w->stacks = stack;
-  int32_t count = ++w->nstacks;
-  int32_t limit = here->config->sched_stackcachelimit;
-  if (limit < 0 || count <= limit) {
-    return;
-  }
-
-  int32_t half = ceil_div_32(limit, 2);
-  log_sched("flushing half of the stack freelist (%d)\n", half);
-  while (count > half) {
-    stack = w->stacks;
-    w->stacks = stack->next;
-    count = --w->nstacks;
-    thread_delete(stack);
-  }
-}
-
 /// A null checkpoint continuation.
 ///
 /// This continuation is used by the main pthread schedule operation. It is
@@ -572,10 +566,13 @@ static void _push_lifo(hpx_parcel_t *p, void *worker) {
 /// Process a mail queue.
 ///
 /// This processes all of the parcels in the mailbox of the worker, moving them
-/// into the work queue of the designated worker.
+/// into the work queue of the designated worker. It will return a parcel if
+/// there was one.
 ///
-/// @param            w The worker to process mail (should be self).
-static void _handle_mail(worker_t *w) {
+/// @param            w The worker to process mail.
+///
+/// @returns            A parcel from the mailbox if there is one.
+static hpx_parcel_t *_handle_mail(worker_t *w) {
   hpx_parcel_t *parcels = NULL;
   hpx_parcel_t *p = NULL;
   while ((parcels = sync_two_lock_queue_dequeue(&w->inbox))) {
@@ -585,6 +582,42 @@ static void _handle_mail(worker_t *w) {
       _push_lifo(p, w);
     }
   }
+  return _schedule_lifo(w);
+}
+
+/// Handle the network.
+///
+/// This will return a parcel from the network if it finds any. It will also
+/// refill the local work queue.
+///
+/// @param            w The current worker.
+///
+/// @returns            A parcel from the network if there is one.
+static hpx_parcel_t *_handle_network(worker_t *w) {
+  // don't do work first scheduling in the network
+  int wf = w->work_first;
+  w->work_first = -1;
+  network_progress(w->network, 0);
+
+  hpx_parcel_t *stack = network_probe(w->network, 0);
+  w->work_first = wf;
+
+  hpx_parcel_t *p = NULL;
+  while ((p = parcel_stack_pop(&stack))) {
+    EVENT_PARCEL_RECV(p->id, p->action, p->size, p->src, p->target);
+    _push_lifo(p, w);
+  }
+  return _schedule_lifo(w);
+}
+
+/// Handle a scheduler worker epoch transition.
+///
+/// Currently we don't handle our yielded work eagerly---we'll try and prefer
+/// network and stolen work to yield work.
+static hpx_parcel_t *_handle_epoch(worker_t *w) {
+  int id = sync_load(&w->work_id, SYNC_RELAXED);
+  sync_store(&w->work_id, 1 - id, SYNC_RELAXED);
+  return NULL;
 }
 
 /// The non-blocking schedule operation.
@@ -599,91 +632,56 @@ static void _handle_mail(worker_t *w) {
 static void _schedule_nb(void (*f)(hpx_parcel_t *, void*), void *env) {
   EVENT_SCHED_BEGIN();
   worker_t *w = self;
-  _handle_mail(w);
-  hpx_parcel_t *p = (worker_is_stopped()) ? w->system : _schedule_lifo(w);
-  p = (p) ? _try_bind(w, p) : w->system;
+  hpx_parcel_t *p = NULL;
+  if (worker_is_stopped()) {
+    p = w->system;
+  }
+  else if ((p = _handle_mail(w))) {
+  }
+  else if ((p = _schedule_lifo(w))) {
+  }
+  else {
+    p = w->system;
+  }
   dbg_assert(p != w->current);
   _transfer(p, f, env, w);
   EVENT_SCHED_END(0, 0);
 }
 
-/// Probe and progress the network during scheduling.
+/// The primary schedule loop.
 ///
-/// This is used in the blocking scheduler loop in order to handle the network.
-///
-/// @param            w The current worker thread.
-static void _schedule_network(worker_t *w) {
-  // suppress work-first scheduling while we're inside the network.
-  w->work_first = -1;
-  network_progress(w->network, 0);
-  hpx_parcel_t *stack = network_probe(w->network, 0);
-  w->work_first = 0;
-
-  hpx_parcel_t *p = NULL;
-  while ((p = parcel_stack_pop(&stack))) {
-    EVENT_PARCEL_RECV(p->id, p->action, p->size, p->src, p->target);
-    _push_lifo(p, w);
-  }
-}
-
-/// The blocking scheduling loop.
-///
-/// Selects a new lightweight thread to run and transfers to it. After the
-/// transfer has occurred, i.e. the worker has switched stacks and replaced its
-/// current parcel, but before returning to user code, the scheduler will
-/// execute @p f, passing it the previous parcel and the @p env specified
-/// there.
-///
-/// @param            f A transfer continuation.
-/// @param          env The transfer continuation environment.
-static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env) {
-  INST(int source = -1);
+static void _schedule(worker_t *w) {
   INST(int spins = 0);
   hpx_parcel_t *p = NULL;
-  worker_t *w = self;
   while (!worker_is_stopped()) {
-    _handle_mail(w);
-
-    // If we're not supposed to be active, then don't schedule anything.
     if (!worker_is_active()) {
-      // make sure we don't have anything stuck in our yield queue
+      // make sure we don't have anything stuck in mail or yield
       while ((p = sync_chase_lev_ws_deque_pop(_yielded(w)))) {
+        _push_lifo(p, w);
+      }
+      if ((p = _handle_mail(w))) {
         _push_lifo(p, w);
       }
       continue;
     }
-
-    // See if we have primary lifo work.
-    if ((p = _schedule_lifo(w))) {
-      INST(source = LIFO);
-      break;
+    else if ((p = _handle_mail(w))) {
     }
-
-    // Swap our yield queue with our primary queue
-    _swap_epoch(w);
-
-    // Do some network stuff;
-    _schedule_network(w);
-
-    // Try and steal some work
-    if ((p = _schedule_steal(w))) {
-      INST(source = STEAL);
+    else if ((p = _schedule_lifo(w))) {
+    }
+    else if ((p = _handle_epoch(w))) {
+    }
+    else if ((p = _handle_network(w))) {
+    }
+    else if ((p = _schedule_steal(w))) {
       log_sched("stole work %p\n", p);
-      break;
+    }
+    else {
+      INST(spins++);
+      continue;
     }
 
-    // couldn't find any work to do, eagerly spin
-    INST(spins++);
-  }
-
-  // This somewhat clunky expression just makes sure that, if we found a parcel
-  // to transfer to then it has a stack, or if we didn't find anything to
-  // transfer to then pick the system stack
-  p = (p) ? _try_bind(w, p) : w->system;
-
-  // Don't transfer to the same parcel.
-  if (p != w->current) {
-    _transfer(p, f, env, w);
+    INST(spins = 0);
+    _transfer(p, _null, 0, w);
   }
 }
 
@@ -712,12 +710,14 @@ int worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
 }
 
 void worker_fini(worker_t *w) {
+  hpx_parcel_t *p = NULL;
   // clean up the mailbox
-  _handle_mail(w);
+  if ((p = _handle_mail(w))) {
+    parcel_delete(p);
+  }
   sync_two_lock_queue_fini(&w->inbox);
 
   // and clean up the workqueue parcels
-  hpx_parcel_t *p = NULL;
   while ((p = _schedule_lifo(w))) {
     parcel_delete(p);
   }
@@ -757,11 +757,11 @@ int worker_start(void) {
   w->numa_node = here->topology->cpu_to_numa[cpu];
 
   // allocate a parcel and a stack header for the system stack
-  hpx_parcel_t p;
-  parcel_init(0, 0, 0, 0, 0, NULL, 0, &p);
+  hpx_parcel_t system;
+  parcel_init(0, 0, 0, 0, 0, NULL, 0, &system);
   ustack_t stack = {
     .sp = NULL,
-    .parcel = &p,
+    .parcel = &system,
     .next = NULL,
     .lco_depth = 0,
     .tls_id = -1,
@@ -769,32 +769,27 @@ int worker_start(void) {
     .size = 0,
     .affinity = -1
   };
-  p.ustack = &stack;
+  system.ustack = &stack;
 
-  w->system = &p;
+  w->system = &system;
   w->current = w->system;
   w->work_first = 0;
 
   struct scheduler *sched = here->sched;
-  while (true) {
-    int stop = worker_is_stopped();
-    if (stop && w->id == 0) {
-      break;
-    }
+  if (w->id == 0) {
+    _schedule(w);
+  }
+  else {
+    int state = 0;
+    while (state != SCHED_SHUTDOWN) {
+      _schedule(w);
 
-    if (stop) {
-      int state = 0;
       pthread_mutex_lock(&sched->run_state.lock);
       while ((state = sched->run_state.state) == SCHED_STOP) {
         pthread_cond_wait(&sched->run_state.running, &sched->run_state.lock);
       }
       pthread_mutex_unlock(&sched->run_state.lock);
-      if (state == SCHED_SHUTDOWN) {
-        break;
-      }
     }
-
-    _schedule(_null, NULL);
   }
 
   w->system = NULL;
@@ -804,7 +799,6 @@ int worker_start(void) {
   if (code != HPX_SUCCESS && here->rank == 0) {
     log_error("hpx_run epoch exited with a non-zero exit code: %d.\n", code);
   }
-
   EVENT_SCHED_END(0, 0);
   return code;
 }
@@ -869,7 +863,7 @@ void scheduler_spawn(hpx_parcel_t *p) {
   // prevent it from being stolen, which we can do by using the NULL
   // continuation.
   EVENT_THREAD_SUSPEND(current, w);
-  _transfer(_try_bind(w, p), (current == w->system) ? _null : _push_lifo, w, w);
+  _transfer(p, (current == w->system) ? _null : _push_lifo, w, w);
   EVENT_THREAD_RESUME(current, self);
 }
 
