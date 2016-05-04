@@ -75,6 +75,6 @@ int isir_lco_wait(void *obj, hpx_addr_t lco, int reset) {
     .lco = lco,
     .reset = reset
   };
-  scheduler_suspend(_isir_lco_wait_continuation, &env, 0);
+  scheduler_suspend(_isir_lco_wait_continuation, &env);
   return HPX_SUCCESS;
 }
