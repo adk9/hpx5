@@ -15,8 +15,7 @@
 #include <hpx/hpx.h>
 #include "tests.h"
 
-/*static const int I = 32;*/
-static const int I = 100000;
+static const int I = 32;
 static const int N = 16;
 
 #define BSIZE (N * sizeof(element_t))
