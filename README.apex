@@ -22,13 +22,12 @@ To build HPX-5 with APEX on Edison or Cori (@NERSC), do the following:
 -----------------------------------------------------
 
 module swap PrgEnv-intel PrgEnv-gnu
-module load gcc/4.9.2
-module load cmake/3.0.0
-module load automake/1.14
+module load gcc/5.3.0
+module load cmake/3.3.2
+module load automake/1.15
 module load autoconf
-module unload cray-shmem
 module unload darshan
-module load papi
+module load papi/5.4.1.3
 
 -----------------------------------------------------
 2) build APEX
@@ -88,7 +87,7 @@ export PATH=/path/to/install/bin:$PATH
 # bootstrap to make the configure script with APEX options
 ./bootstrap
 # run configure
-./configure --prefix=path-to-hpx-install --enable-mpi CC=cc PHOTON_CARGS="--enable-ugni" --enable-photon --with-apex --enable-instrumentation
+./configure --prefix=path-to-hpx-install --enable-mpi CC=cc PHOTON_CARGS="--enable-ugni --disable-libfabric" --enable-photon --with-apex --enable-instrumentation
 make && make install
 
 -----------------------------------------------------
@@ -146,7 +145,8 @@ export APEX_THROTTLING_MIN_THREADS=12
 export APEX_THROTTLING_MAX_WATTS=200.0
 export APEX_THROTTLING_MIN_WATTS=180.0
 
-aprun -n 16 -N 1 -j2 -d 48 ./luleshparcels -n 343 -x 48 -i 100 --hpx-threads=48
+salloc -N 42
+srun -N 42 ./luleshparcels -n 1000 -x 48 -i 100 --hpx-threads=48 --hpx-network=pwc
 
 # To see the concurrency charts (contact khuck@cs.uoregon.edu for a python script
 # to aggregate them into one script):
