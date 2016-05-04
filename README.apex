@@ -132,7 +132,7 @@ index 9cd2fc5..3313a46 100644
 ./configure CC=cc CFLAGS="-O3"
 make
 
-# Set runtime environment variables for APEX before the aprun call.
+# Set runtime environment variables for APEX before the srun call.
 
 export APEX_PROFILE_OUTPUT=0
 export APEX_SCREEN_OUTPUT=1
