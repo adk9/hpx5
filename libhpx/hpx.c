@@ -255,7 +255,7 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
     va_start(args, n);
     hpx_parcel_t *p = action_new_parcel_va(*act, HPX_HERE, 0, 0, n, &args);
     va_end(args);
-    dbg_check(hpx_parcel_send(p, HPX_NULL), "failed to spawn initial action\n");
+    scheduler_spawn_at(p, 0);
   }
   log_dflt("hpx started running %"PRIu64"\n", here->epoch);
   int status = scheduler_restart(here->sched);
