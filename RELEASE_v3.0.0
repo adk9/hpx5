@@ -7,7 +7,8 @@ Distributed under the Indiana University License.
 (See accompanying file LICENSE.txt) 
 
 HPX-5 is the High Performance ParalleX runtime library, a state-of-the-art 
-runtime system from the Center for Research in Extreme Scale Technology (CREST) at Indiana University for exascale-scale computing. HPX-5 employs dynamic and 
+runtime system from the Center for Research in Extreme Scale Technology (CREST) 
+at Indiana University for exascale-scale computing. HPX-5 employs dynamic and 
 adaptive resource management and task scheduling to achieve the significant 
 improvements in efficiency and scalability necessary to deploy many classes of 
 parallel applications at exascale. Although still under development, HPX-5 
@@ -15,7 +16,8 @@ supports a diverse set of systems, is reliable and programmable, is scalable
 across multi-core and multi-node systems, and delivers efficiency improvements 
 for irregular, time-varying problems. HPX-5 is a realization of ParalleX, an 
 abstract crosscutting execution model, which establishes the runtime's roles 
-and responsibilities with respect to other interoperating system layers, and is evaluated within the SLOWER performance model that provide a framework for 
+and responsibilities with respect to other interoperating system layers, and is 
+evaluated within the SLOWER performance model that provide a framework for 
 performance, understanding, and optimization.
 
 HPX-5 is a reduction to practice of the revolutionary ParalleX execution model, 
@@ -40,7 +42,8 @@ Contents
 The HPX–5 distribution contains two top-level directories.
 
 /hpx
-This contains the HPX–5 interface and runtime library implementation, along with examples, the test suite, and third-party dependencies. The project installs 
+This contains the HPX–5 interface and runtime library implementation, along with
+ examples, the test suite, and third-party dependencies. The project installs 
 the HPX–5 headers and the libhpx.{a,so} runtime library, along with built 
 dependencies and an hpx.pc file for use with pkg-config for external projects.
 
@@ -115,7 +118,8 @@ Known bugs & limitations in the release
 1. The ISIR network has an occasional race around hpx_run, documented in issue 
 #65 (#65).
 2. HPX-5 on Mac OS X only builds with default xcode toolchain. Use 
-$ ./configure --with-hwloc=contrib --with-libffi=contrib CC=clang to configure. gcc installed with brew or port is not supported. We believe this is due to 
+$ ./configure --with-hwloc=contrib --with-libffi=contrib CC=clang to configure. 
+gcc installed with brew or port is not supported. We believe this is due to 
 https://gcc.gnu.org/bugzilla/show_bug.cgi?format=multiple&id=60893.
 3. The HPX C++ bindings, AGAS and TBBMalloc require a C++11 compiler.
 4. There are known regressions with TBBmalloc 4.4. Please use TBBmalloc 4.3 
