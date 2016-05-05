@@ -76,7 +76,7 @@ enum {
 /// @param           sp The checkpointed stack pointer for the current parcel.
 /// @param            w The current worker.
 ///
-/// @@returns           The previous parcel.
+/// @returns           The previous parcel.
 static hpx_parcel_t *_swap_current(hpx_parcel_t *p, void *sp, worker_t *w) {
   hpx_parcel_t *q = w->current;
   w->current = p;
@@ -85,6 +85,13 @@ static hpx_parcel_t *_swap_current(hpx_parcel_t *p, void *sp, worker_t *w) {
 }
 
 /// Freelist a parcel's stack.
+///
+/// This will push the parcel's stack onto the local worker's freelist, and
+/// possibly trigger a freelist flush if there are too many parcels cached
+/// locally.
+///
+/// @param            p The parcel that has the stack that we are freeing.
+/// @param            w The local worker.
 static void _free_stack(hpx_parcel_t *p, worker_t *w) {
   ustack_t *stack = parcel_swap_stack(p, NULL);
   if (!stack) {
