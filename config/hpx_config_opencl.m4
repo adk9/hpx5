@@ -31,7 +31,7 @@ AC_DEFUN([_HPX_CC_OPENCL], [
 
 AC_DEFUN([_HPX_PKG_OPENCL], [pkg=$1
  # check if we need to use a opencl package to access the functionality
- PKG_CHECK_MODULES([OPENCL], [$pkg],
+ PKG_CHECK_MODULES([OpenCL], [$pkg],
    [_HAVE_OPENCL
     LIBHPX_CFLAGS="$LIBHPX_CFLAGS $OPENCL_CFLAGS"
     LIBHPX_LIBS="$LIBHPX_LIBS $OPENCL_LIBS"
@@ -55,7 +55,7 @@ AC_DEFUN([HPX_CONFIG_OPENCL], [
  # allow the programmer to select to use opencl support
  AC_ARG_WITH(opencl,
    [AS_HELP_STRING([--with-opencl{=system,PKG}],
-                   [How we find OPENCL @<:@default=system,$pkg@:>@])],
+                   [How we find OpenCL @<:@default=system,$pkg@:>@])],
    [], [with_opencl=system])
 
  AS_IF([test "x$wanted" == xyes], [_HPX_WITH_OPENCL(pkg)])

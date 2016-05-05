@@ -60,7 +60,7 @@ static void _delete(void *percolation) {
 
 static void *_prepare(const void *percolation, const char *key,
                       const char *kernel) {
-  _opencl_percolation_t *cl = percolation;
+  const _opencl_percolation_t *cl = percolation;
 
   int e;
   cl_program program = clCreateProgramWithSource(cl->context, 1, &kernel,
@@ -80,7 +80,7 @@ static void *_prepare(const void *percolation, const char *key,
 
 static int _execute(const void *percolation, void *obj, int nargs,
                     void *vargs[], size_t sizes[]) {
-  _opencl_percolation_t *cl = percolation;
+  const _opencl_percolation_t *cl = percolation;
   cl_kernel kernel = (cl_kernel)obj;
 
   cl_mem buf[nargs];
@@ -131,7 +131,7 @@ static int _execute(const void *percolation, void *obj, int nargs,
     clReleaseMemObject(buf[i]);
   }
 
-  int e = hpx_thread_continue(output, osize);
+  e = hpx_thread_continue(output, osize);
 
   clReleaseMemObject(obuf);
   if (output) {
