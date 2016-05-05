@@ -30,10 +30,12 @@ AC_DEFUN([HPX_DO_AC_CONFIG_FILES], [
    libhpx/util/Makefile
    libhpx/scheduler/Makefile
    libhpx/scheduler/arch/Makefile
+   libhpx/scheduler/lco/Makefile
    libhpx/process/Makefile
    libhpx/instrumentation/Makefile
    include/Makefile
    include/libhpx/Makefile
+   include/libsync/queues.h
    examples/Makefile])
 
  AS_IF([test "x$have_hpxpp" != xno], [

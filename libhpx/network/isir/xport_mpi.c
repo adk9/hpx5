@@ -107,6 +107,12 @@ _mpi_clear(void *request) {
 
 static int
 _mpi_cancel(void *request, int *cancelled) {
+  MPI_Request *r = request;
+  if (*r == MPI_REQUEST_NULL) {
+    *cancelled = 1;
+    return LIBHPX_OK;
+  }
+
   if (MPI_SUCCESS != MPI_Cancel(request)) {
     return log_error("could not cancel MPI request\n");
   }
@@ -214,8 +220,8 @@ static void _mpi_allreduce(void *sendbuf, void *out, int count, void *datatype,
   int bytes = sizeof(val_t) + count;
 
   // prepare operands for function
-  char *val = malloc(bytes);
-  char *result = malloc(bytes);
+  char *val = calloc(bytes, sizeof(char));
+  char *result = calloc(bytes, sizeof(char));
   val_t *in = (val_t *)val;
   val_t *res = (val_t *)result;
   in->op = *hpx_handle;
@@ -229,6 +235,7 @@ static void _mpi_allreduce(void *sendbuf, void *out, int count, void *datatype,
   MPI_Allreduce(val, result, bytes, MPI_BYTE, usrOp, *comm);
   memcpy(out, res->operands, count);
 
+  MPI_Op_free( &usrOp );
   free(val);
   free(result);
 }

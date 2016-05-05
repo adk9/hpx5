@@ -94,10 +94,10 @@ void get(const global_ptr<LCO<void>>& lco, bool reset = false) {
 ///                      required
 template <typename T, template <typename> class LCO>
 std::vector<hpx_status_t>
-get_all(const std::vector<hpx::global_ptr<LCO<T>>>& lcos, 
-	std::vector<T>& values) {
+get_all(const std::vector<hpx::global_ptr<LCO<T>>>& lcos,
+    std::vector<T>& values) {
   assert(lcos.size() == values.size());
-  
+
   std::vector<hpx_addr_t> _lcos;
   std::transform(lcos.begin(), lcos.end(), std::back_inserter(_lcos),
     [](const hpx::global_ptr<LCO<T>>& f) {return f.get();});
@@ -107,10 +107,10 @@ get_all(const std::vector<hpx::global_ptr<LCO<T>>>& lcos,
   std::vector<T*> _values;
   std::transform(values.begin(), values.end(), std::back_inserter(_values),
     [](T& val) {return &val;});
-  
+
   std::vector<hpx_status_t> statuses;
   hpx_lco_get_all(_lcos.size(), _lcos.data(), _sizes.data(), (void**) _values.data(), statuses.data());
-  
+
   return statuses;
 }
 
@@ -118,6 +118,12 @@ template <typename T, typename U>
 void set(const global_ptr<T>& lco, U&& in) {
   static_assert(is_lco<T>::value, "LCO type required");
   hpx_lco_set_rsync(lco.get(), sizeof(in), std::forward<U>(in));
+}
+
+template <typename T>
+void set(const global_ptr<T>& lco) {
+  static_assert(is_lco<T>::value, "LCO type required");
+  hpx_lco_set_rsync(lco.get(), 0, NULL);
 }
 
 template <typename T>

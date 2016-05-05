@@ -37,7 +37,7 @@
 void handle_rendezvous_launch(int src, command_t cmd) {
   hpx_parcel_t *p = (hpx_parcel_t*)(uintptr_t)cmd.arg;
   parcel_set_state(p, PARCEL_SERIALIZED);
-  EVENT_PARCEL_RECV(p->id, p->action, p->size, p->src);
+  EVENT_PARCEL_RECV(p->id, p->action, p->size, p->src, p->target);
   scheduler_spawn(p);
 }
 
@@ -58,7 +58,7 @@ typedef struct {
 /// We need to use a marshaled operation because we send the transport key by
 /// value and we don't have an FFI type to capture that.
 static int _rendezvous_get_handler(_rendezvous_get_args_t *args, size_t size) {
-  hpx_parcel_t *p = hpx_parcel_acquire(NULL, args->n - sizeof(*p));
+  hpx_parcel_t *p = parcel_alloc(args->n - sizeof(*p));
   dbg_assert(p);
   xport_op_t op = {
     .rank = args->rank,

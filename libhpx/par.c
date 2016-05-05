@@ -88,8 +88,8 @@ int hpx_par_for_sync(hpx_for_action_t f, int min, int max, void *args) {
   return e;
 }
 
-/// HPX parallel "call".
-
+/// @struct par_call_async_args_t
+/// @brief HPX parallel "call".
 typedef struct {
   hpx_action_t action;
   int min;

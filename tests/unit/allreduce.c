@@ -97,12 +97,18 @@ static int _test_handler(void) {
 
   hpx_addr_t reduce = hpx_lco_reduce_new(HPX_LOCALITIES, sizeof(int), _init,
                                          _sum);
+  int my_rank = hpx_get_my_rank();
   for (int i = 0, e = I; i < e; ++i) {
     for (int j = 0, e = HPX_LOCALITIES; j < e; ++j) {
-      hpx_addr_t block = hpx_addr_add(base, j * BSIZE, BSIZE);
-      hpx_call(block, _reduce_block, reduce, &allreduce);
+      if(j != my_rank){	    
+        hpx_addr_t block = hpx_addr_add(base, j * BSIZE, BSIZE);
+        hpx_call(block, _reduce_block, reduce, &allreduce);
+      }
     }
 
+    hpx_addr_t block = hpx_addr_add(base, my_rank * BSIZE, BSIZE);
+    hpx_call(block, _reduce_block, reduce, &allreduce);
+    
     int result;
     hpx_lco_get_reset(reduce, sizeof(result), &result);
 
@@ -110,8 +116,10 @@ static int _test_handler(void) {
     int leaves = HPX_LOCALITIES * N;
     int total = (N * (N - 1) / 2) * HPX_LOCALITIES;
     int expected = leaves * total;
-    printf("expected = %d  result = %d  i = [%d] \n", expected, result, i);
     test_assert(result == expected);
+    if(i % 2000 == 0)
+      printf("expected = %d  result = %d  i = [%d] \n", expected, result, i);
+
   }
   hpx_lco_delete_sync(reduce);
 

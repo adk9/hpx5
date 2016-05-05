@@ -89,7 +89,7 @@ static int _agas_free_segment_handler(hpx_addr_t base) {
   // backing memory for cyclic segments.
   void *    lva = NULL;
   size_t blocks = 0;
-  int     found = btt_get_all(agas->btt, gva, &lva, &blocks, NULL);
+  int     found = btt_get_all(agas->btt, gva, &lva, &blocks, NULL, NULL, NULL);
   dbg_assert(found);
   size_t  bsize = UINT64_C(1) << gva.bits.size;
 
@@ -200,7 +200,7 @@ void agas_free(void *obj, hpx_addr_t addr, hpx_addr_t rsync) {
     void *lva;
     size_t blocks;
     int32_t count;
-    int found = btt_get_all(gas->btt, gva, &lva, &blocks, &count);
+    int found = btt_get_all(gas->btt, gva, &lva, &blocks, &count, NULL, NULL);
     dbg_assert(found);
     dbg_assert(blocks > 0);
     dbg_assert(count >= 0);

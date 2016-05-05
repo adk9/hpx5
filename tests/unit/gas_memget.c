@@ -239,9 +239,6 @@ int _putget_action(void *UNUSED, size_t size) {
   printf("sum = %d expected = %d\n", sum, expected);
   test_assert(sum == expected);
 
-  if (comm_rank == 0) {
-    hpx_lco_delete(barrier, HPX_NULL);
-  }
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _putget, _putget_action, HPX_POINTER, HPX_SIZE_T);
@@ -273,6 +270,7 @@ int memget_blocks_handler(void) {
   }
   hpx_lco_wait(complete);
   hpx_lco_delete(complete, HPX_NULL);
+  hpx_lco_delete(barrier, HPX_NULL);
   return HPX_SUCCESS;
 }
 HPX_ACTION(HPX_DEFAULT, 0, memget_blocks, memget_blocks_handler);

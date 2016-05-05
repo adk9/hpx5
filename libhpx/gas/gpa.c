@@ -99,25 +99,37 @@ static int64_t _sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize,
 
 /// Implementation of address addition to be called from the public interface.
 /// The debug parameter is used to stop recursion in debugging checks.
+///
+/// This code has been carefully tuned to minimize the number of `idiv`
+/// operations and to eliminate branching in the common case.
 static hpx_addr_t _add_cyclic(hpx_addr_t gpa, int64_t n, uint32_t bsize,
                               bool check) {
-  if (!bsize) {
-    return gpa + n;
-  }
+  // Add the extra bsize because this has no impact on % and correctly deals
+  // with the blocks when @p n is negative. The compiler is smart enough in this
+  // case to use one division for both the % and / operation.
+  int64_t _phase = _phase_of(gpa, bsize) + n + bsize;
+  int32_t  phase = _phase % bsize;
+  int32_t blocks = _phase / bsize - 1;
 
-  const uint32_t phase = (_phase_of(gpa, bsize) + n) % bsize;
-  const uint32_t blocks = (_phase_of(gpa, bsize) + n) / bsize;
-  const uint32_t rank = (gpa_to_rank(gpa) + blocks) % here->ranks;
-  const uint32_t cycles = (gpa_to_rank(gpa) + blocks) / here->ranks;
-  const uint64_t block = _block_of(gpa, bsize) + cycles;
+  // Add the extra here->ranks for the same reason as above.
+  int32_t  _rank = gpa_to_rank(gpa) + blocks + here->ranks;
+  int32_t   rank = _rank % here->ranks;
+  int32_t cycles = _rank / here->ranks - 1;
+  uint64_t block = _block_of(gpa, bsize) + cycles;
 
-  const hpx_addr_t addr = _triple_to_gpa(rank, block, phase, bsize);
+  // Fix phase and rank in case they were negative. The blocks and cycles are
+  // already fixed by the `-1` in their initialization.
+  phase += (phase < 0) ? bsize : 0;
+  rank += (rank < 0) ? here->ranks : 0;
+
   if (!check) {
-    return addr;
+    return _triple_to_gpa(rank, block, phase, bsize);
   }
 
-  // sanity check
-  const int64_t diff = _sub_cyclic(addr, gpa, bsize, false);
+  // Sanity check during debugging, the difference between the two addresses
+  // should be n.
+  hpx_addr_t addr = _triple_to_gpa(rank, block, phase, bsize);
+  int64_t    diff = _sub_cyclic(addr, gpa, bsize, false);
   dbg_assert_str(diff == n, "Address %"PRIu64"+%"PRId64" computed as %"PRIu64"."
                  " Expected %"PRId64".\n", gpa, n, addr, diff);
   return addr;
@@ -125,9 +137,9 @@ static hpx_addr_t _add_cyclic(hpx_addr_t gpa, int64_t n, uint32_t bsize,
 }
 
 int64_t gpa_sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
-  return _sub_cyclic(lhs, rhs, bsize, true);
+  return _sub_cyclic(lhs, rhs, bsize, DEBUG);
 }
 
 hpx_addr_t gpa_add_cyclic(hpx_addr_t gpa, int64_t bytes, uint32_t bsize) {
-  return _add_cyclic(gpa, bytes, bsize, true);
+  return (bsize) ? _add_cyclic(gpa, bytes, bsize, DEBUG) : gpa + bytes;
 }

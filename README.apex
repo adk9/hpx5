@@ -8,28 +8,26 @@ For example:
 
 export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/path/to/apex/installation/lib/pkgconfig
 
-Then, add the "--with-apex" option to the configure. For example:
+Then, add the "--with-apex --enable-instrumentation" options to the configure. For example:
 
-./configure --enable-photon --enable-mpi --with-apex={=system,PKG}
+./configure --enable-photon --enable-mpi --with-apex={=system,PKG} --enable-instrumentation
 
 For instructions on downloading and building APEX, please see:
 https://github.com/khuck/xpress-apex
 
-To build HPX-5 with APEX on Edison, do the following:
+To build HPX-5 with APEX on Edison or Cori (@NERSC), do the following:
 
 -----------------------------------------------------
 1) load the right modules
 -----------------------------------------------------
 
 module swap PrgEnv-intel PrgEnv-gnu
-module load gcc/4.9.2
-module load cmake/3.0.0
-module load boost
-module load automake/1.14
+module load gcc/5.3.0
+module load cmake/3.3.2
+module load automake/1.15
 module load autoconf
-module unload cray-shmem
 module unload darshan
-module load papi
+module load papi/5.4.1.3
 
 -----------------------------------------------------
 2) build APEX
@@ -41,13 +39,13 @@ for APEX are:
 -DCMAKE_INSTALL_PREFIX=<some path to an installation location>
 
 1. Get the code:
-wget https://github.com/khuck/xpress-apex/archive/v0.1.tar.gz
-tar -xvzf v0.1.tar.gz
-cd xpress-apex-v0.1
+wget https://github.com/khuck/xpress-apex/archive/v0.5.tar.gz
+tar -xvzf v0.5.tar.gz
+cd xpress-apex-v0.5
 
 2. Enter the repo directory, make a build directory:
 
-cd xpress-apex-0.1
+cd xpress-apex-0.5
 mkdir build
 cd build
 
@@ -89,7 +87,7 @@ export PATH=/path/to/install/bin:$PATH
 # bootstrap to make the configure script with APEX options
 ./bootstrap
 # run configure
-./configure --prefix=path-to-hpx-install --enable-mpi CC=cc PHOTON_CARGS="--enable-ugni" --enable-photon --with-apex
+./configure --prefix=path-to-hpx-install --enable-mpi CC=cc PHOTON_CARGS="--enable-ugni --disable-libfabric" --enable-photon --with-apex --enable-instrumentation
 make && make install
 
 -----------------------------------------------------
@@ -134,7 +132,7 @@ index 9cd2fc5..3313a46 100644
 ./configure CC=cc CFLAGS="-O3"
 make
 
-# Set runtime environment variables for APEX before the aprun call.
+# Set runtime environment variables for APEX before the srun call.
 
 export APEX_PROFILE_OUTPUT=0
 export APEX_SCREEN_OUTPUT=1
@@ -147,7 +145,8 @@ export APEX_THROTTLING_MIN_THREADS=12
 export APEX_THROTTLING_MAX_WATTS=200.0
 export APEX_THROTTLING_MIN_WATTS=180.0
 
-aprun -n 16 -N 1 -j2 -d 48 ./luleshparcels -n 343 -x 48 -i 100 --hpx-threads=48
+salloc -N 42
+srun -N 42 ./luleshparcels -n 1000 -x 48 -i 100 --hpx-threads=48 --hpx-network=pwc
 
 # To see the concurrency charts (contact khuck@cs.uoregon.edu for a python script
 # to aggregate them into one script):

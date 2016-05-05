@@ -14,6 +14,10 @@
 #ifndef HPX_SYNC_BARRIERS_H_
 #define HPX_SYNC_BARRIERS_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <hpx/attributes.h>
 
 /// ----------------------------------------------------------------------------
@@ -47,5 +51,9 @@ static inline int sync_barrier_join(barrier_t *barrier, int i) {
 /// occasional use, and it's really easy to implement and use.
 /// ----------------------------------------------------------------------------
 barrier_t *sr_barrier_new(int n_threads) HPX_PUBLIC;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* HPX_SYNC_BARRIERS_H_ */

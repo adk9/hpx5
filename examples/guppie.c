@@ -173,26 +173,25 @@ void Block(int mype, int npes, long totalsize, long *start,
 
 static int _mover_action(guppie_config_t *cfg, size_t n) {
   uint64_t src;
-  int dst;
-  hpx_addr_t lco;
+  uint64_t nmoves = ((double)_move/100) * (cfg->nupdate);
+  hpx_addr_t done = hpx_lco_and_new(nmoves);
+  hpx_time_t start = hpx_time_now();
 
-  int size = HPX_LOCALITIES;
-
-  while (1) {
+  for (uint64_t i = 0; i < nmoves; ++i) {
     // get a random number
-    src = (13719 * rand()) % (cfg->tabsize / sizeof(uint64_t));
-    assert(src < cfg->tabsize);
-    dst = (rand() % size);
+    src = i % (cfg->tabsize-1);
+    hpx_addr_t dst = HPX_THERE(rand() % HPX_LOCALITIES);
 
     // get the random address into the table.
     hpx_addr_t there = hpx_addr_add(cfg->table, src * BLOCK_SIZE, BLOCK_SIZE);
-    lco = hpx_lco_future_new(0);
     // initiate a move
-    hpx_gas_move(there, HPX_THERE(dst), lco);
-    hpx_lco_wait(lco);
-    hpx_lco_delete(lco, HPX_NULL);
+    hpx_gas_move(there, dst, done);
   }
-  // gets killed at shutdown
+
+  hpx_lco_wait(done);
+  double move_time = hpx_time_elapsed_ms(start)/1e3;
+  printf("move time: %.7f s (%ld moves)\n", move_time, nmoves);
+  hpx_lco_delete(done, HPX_NULL);
   return HPX_SUCCESS;
 }
 
@@ -243,6 +242,7 @@ void _main_action(guppie_config_t *cfg, size_t size)
   long j;
   hpx_addr_t lco;
   hpx_addr_t there;
+  double rebalance_time;
 
   printf("nThreads = %d\n", hpx_get_num_ranks());
   printf("Main table size = 2^%ld = %ld words\n", cfg->ltabsize, cfg->tabsize);
@@ -250,13 +250,13 @@ void _main_action(guppie_config_t *cfg, size_t size)
   fflush(stdout);
 
   // Allocate main table.
-  cfg->table = hpx_gas_alloc_cyclic_attr(cfg->tabsize, sizeof(uint64_t),
-                                         sizeof(uint64_t),
+  cfg->table = hpx_gas_alloc_cyclic_attr(cfg->tabsize, BLOCK_SIZE, BLOCK_SIZE,
                                          _rebalance ? HPX_GAS_ATTR_LB : HPX_GAS_ATTR_NONE);
 
   // Begin timing here
   icputime = -CPUSEC();
   is = -WSEC();
+  rebalance_time = 0.0;
 
   // Initialize main table
   int e = hpx_bcast_rsync(_init_table, cfg, sizeof(*cfg));
@@ -289,8 +289,10 @@ void _main_action(guppie_config_t *cfg, size_t size)
   if (_rebalance) {
     printf("Starting automatic rebalancing.\n");
     hpx_addr_t done = hpx_lco_future_new(0);
-    hpx_gas_rebalance(done);
+    rebalance_time = -WSEC();
+    hpx_gas_rebalance(HPX_NULL, HPX_NULL, done);
     hpx_lco_wait(done);
+    rebalance_time += WSEC();
     printf("Finished automatic rebalancing.\n");
     hpx_lco_delete(done, HPX_NULL);
   }
@@ -299,10 +301,12 @@ void _main_action(guppie_config_t *cfg, size_t size)
   cputime += CPUSEC();
   s += WSEC();
   // Print timing results
-  printf("init(c= %.4lf w= %.4lf) up(c= %.4lf w= %.4lf) up/sec= %.0lf\n",
-         icputime, is, cputime, s, ((double)cfg->nupdate / s));
+  printf("init(c= %.4lf w= %.4lf) up(c= %.4lf w= %.4lf, r= %.4lf)"
+         " up/sec= %.0lf\n", icputime, is, cputime, s, rebalance_time,
+         ((double)cfg->nupdate / s));
 
   // Verification of results (in serial or "safe" mode; optional)
+  hpx_exit(HPX_SUCCESS);
   temp = 0x1;
   lco = hpx_lco_and_new(cfg->nupdate);
   for (i=0; i<cfg->nupdate; i++) {
@@ -327,7 +331,7 @@ void _main_action(guppie_config_t *cfg, size_t size)
 
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: guppie [options] TABSIZE NUPDATES\n"
-          "\t-M, enable AGAS data movement\n"
+          "\t-M <num>, enable AGAS data movement with num (0-100)\% frequency\n"
           "\t-R, enable automatic AGAS-based rebalancing\n"
           "\t-h, show help\n");
   hpx_print_help();
@@ -337,6 +341,7 @@ static void _usage(FILE *stream) {
 // main routine
 int main(int argc, char *argv[])
 {
+  srand(42);
   guppie_config_t guppie_cfg = {
     .ltabsize = LTABSIZE,
     .tabsize  = TABSIZE,
@@ -358,10 +363,10 @@ int main(int argc, char *argv[])
   }
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "MRh?")) != -1) {
+  while ((opt = getopt(argc, argv, "M:Rh?")) != -1) {
     switch (opt) {
      case 'M':
-      _move = 1;
+      _move = (atoi(optarg)%100)+1;
       break;
      case 'R':
       _rebalance = 1;

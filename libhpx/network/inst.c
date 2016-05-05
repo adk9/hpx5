@@ -31,54 +31,54 @@ typedef struct {
 // Define the transports allowed for the SMP network
 static void _inst_delete(void *network) {
   _inst_network_t *inst = network;
-  inst->impl->delete(network);
+  inst->impl->delete(inst->impl);
   free(inst);
 }
 
 static int _inst_progress(void *network, int id) {
   _inst_network_t *inst = network;
-  int r = inst->impl->progress(network, id);
+  int r = inst->impl->progress(inst->impl, id);
   EVENT_SCHEDTIMES_PROGRESS();
   return r;
 }
 
 static int _inst_send(void *network, hpx_parcel_t *p) {
   _inst_network_t *inst = network;
-  return inst->impl->send(network, p);
+  return inst->impl->send(inst->impl, p);
 }
 
 static hpx_parcel_t *_inst_probe(void *network, int nrx) {
   _inst_network_t *inst = network;
-  hpx_parcel_t *p = inst->impl->probe(network, nrx);
+  hpx_parcel_t *p = inst->impl->probe(inst->impl, nrx);
   EVENT_SCHEDTIMES_PROBE();
   return p;
 }
 
 static void _inst_flush(void *network) {
   _inst_network_t *inst = network;
-  inst->impl->flush(network);
+  inst->impl->flush(inst->impl);
 }
 
 static void _inst_register_dma(void *network, const void *addr, size_t n,
                                void *key) {
   _inst_network_t *inst = network;
-  inst->impl->register_dma(network, addr, n, key);
+  inst->impl->register_dma(inst->impl, addr, n, key);
 }
 
 static void _inst_release_dma(void *network, const void *addr, size_t n) {
   _inst_network_t *inst = network;
-  inst->impl->release_dma(network, addr, n);
+  inst->impl->release_dma(inst->impl, addr, n);
 }
 
 static int _inst_lco_wait(void *network, hpx_addr_t lco, int reset) {
   _inst_network_t *inst = network;
-  return inst->impl->lco_wait(network, lco, reset);
+  return inst->impl->lco_wait(inst->impl, lco, reset);
 }
 
 static int _inst_lco_get(void *network, hpx_addr_t lco, size_t n, void *to,
                          int reset) {
   _inst_network_t *inst = network;
-  return inst->impl->lco_get(network, lco, n, to, reset);
+  return inst->impl->lco_get(inst->impl, lco, n, to, reset);
 }
 
 network_t *network_inst_new(network_t *impl) {

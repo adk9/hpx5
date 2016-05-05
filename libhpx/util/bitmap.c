@@ -102,34 +102,20 @@ static inline block_t _create_mask(uint32_t offset, uint32_t length) {
 }
 /// @}
 
-/// @struct bitmap
-/// @brief The bitmap structure.
+/// The bitmap structure.
 ///
 /// The bitmap is fundamentally an array of bits chunked up into blocks combined
 /// with some header data describing the block array and a lock for
 /// concurrency.
-///
-/// @var  bitmap::lock
-/// A single lock to serialize access to the bitmap.
-/// @var  bitmap::min
-/// An index such that there are no free bits < min.
-/// @var  bitmap::max
-/// An index such that there are no free bits >= max.
-/// @var  bitmap::nbits
-/// The number of bits in the bitmap.
-/// @var  bitmap::nblocks
-/// The number of blocks in the block array.
-/// @var  bitmap::blocks
-/// The block array.
 struct bitmap {
-  tatas_lock_t      lock;
+  tatas_lock_t      lock;  //!< A single lock to serialize access to the bitmap.
   uint32_t     min_align;
-  uint32_t    base_align;
-  uint32_t           min;
-  uint32_t           max;
-  uint32_t         nbits;
-  uint32_t       nblocks;
-  block_t       blocks[];
+  uint32_t    base_align;  
+  uint32_t           min;  //!< An index such that there are no free bits < min.
+  uint32_t           max;  //!< An index such that there are no free bits >= max.
+  uint32_t         nbits;  //!< The number of bits in the bitmap.
+  uint32_t       nblocks;  //!< The number of blocks in the block array.
+  block_t       blocks[];  //!< The block array.
 } HPX_ALIGNED(HPX_CACHELINE_SIZE);
 
 /// Try to match the range of bits from [@p bit, @p bit + @p nbits).

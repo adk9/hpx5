@@ -26,7 +26,7 @@ echo -n "Downloading packages to ${DLDIR}..."
 ${CMD} ${DLDIR}/${M4}.tar.gz http://ftp.gnu.org/gnu/m4/${M4}.tar.gz 
 ${CMD} ${DLDIR}/${AM}.tar.gz http://ftp.gnu.org/gnu/automake/${AM}.tar.gz
 ${CMD} ${DLDIR}/${AC}.tar.gz http://ftp.gnu.org/gnu/autoconf/${AC}.tar.gz
-${CMD} ${DLDIR}/${LT}.tar.gz http://mirrors.axint.net/repos/gnu.org/libtool/${LT}.tar.gz
+${CMD} ${DLDIR}/${LT}.tar.gz http://ftpmirror.gnu.org/libtool/${LT}.tar.gz
 echo "done"
 
 cd $DLDIR

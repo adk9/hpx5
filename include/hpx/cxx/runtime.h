@@ -34,7 +34,6 @@ namespace hpx {
 /// exit() is called from an HPX lightweight thread to terminate
 /// scheduler execution
 
-
 /// Initializes the HPX runtime.
 ///
 /// This must be called before other HPX functions.  init() initializes the
@@ -44,9 +43,8 @@ namespace hpx {
 /// @param argc   count of command-line arguments
 /// @param argv   array of command-line arguments
 /// @returns      HPX_SUCCESS on success
-inline
 int init(int *argc, char ***argv) {
-return hpx_init(argc, argv);
+  return hpx_init(argc, argv);
 }
 
 /// Finalize/cleanup from the HPX runtime.
@@ -54,9 +52,8 @@ return hpx_init(argc, argv);
 /// This function will remove almost all data structures and allocations, and
 /// will finalize the underlying network implementation. Note that run()
 /// must never be called after finalize().
-inline
 void finalize() {
-hpx_finalize();
+  hpx_finalize();
 }
 
 /// Start the HPX runtime, and run a given action.
@@ -81,10 +78,9 @@ hpx_finalize();
 /// @param  args arguments to pass to @p entry
 /// @returns     the status code passed to exit() upon
 ///              termination.
-template <typename... Args>
-inline
-int run(hpx_action_t *entry, Args... args) {
-return _hpx_run(entry, sizeof...(Args), args...);
+template <typename Act, typename... Args>
+int run(Act &action, Args &&... args) {
+  return action.run(std::forward<Args>(args)...);
 }
 
 /// Exit the HPX runtime.
@@ -100,9 +96,8 @@ return _hpx_run(entry, sizeof...(Args), args...);
 /// It is safe to call run() again after exit().
 ///
 /// @param code a status code to be returned by run()
-inline
 void HPX_NORETURN exit(int code) {
-hpx_exit(code);
+  hpx_exit(code);
 }
 
 /// Abort the HPX runtime.
@@ -115,24 +110,21 @@ hpx_exit(code);
 /// the state of the system after the return is not well defined. The
 /// application's main native thread should only rely on the async-safe
 /// interface provided in signal(7).
-inline
 void HPX_NORETURN abort(void) {
-hpx_abort();
+  hpx_abort();
 }
 
 /// Print the help string associated with the runtime configuration
 /// options supported by the HPX runtime.
 ///
-inline
 void print_help(void) {
-hpx_print_help();
+  hpx_print_help();
 }
 
 /// Print the version string associated with the HPX interface implemented by
 /// the runtime.
-inline
 void print_version(void) {
-hpx_print_version();
+  hpx_print_version();
 }
 
 /// @}

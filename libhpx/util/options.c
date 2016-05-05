@@ -20,8 +20,8 @@
 ///
 
 #include <assert.h>
-#include <stdlib.h>
 #include <ctype.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <utstring.h>
@@ -121,14 +121,14 @@ static void _from_env_all(UT_string *str) {
 /// that we can parse using the gengetopt command-line infrastructure.
 ///
 /// @param[out]    opts The option structure we will fill from the environment.
-/// @param     progname Required by the gengetopt parser.
-static void _process_env(hpx_options_t *opts, const char *progname) {
+static void _process_env(hpx_options_t *opts) {
   UT_string *hpx_opts = NULL;
   utstring_new(hpx_opts);
   _from_env_all(hpx_opts);
 
   const char *cmdline = utstring_body(hpx_opts);
   if (cmdline) {
+    const char *progname = system_get_program_name();
     int e = hpx_option_parser_string(cmdline, opts, progname);
     dbg_check(e, "failed to parse environment options: %s.\n", cmdline);
   }
@@ -305,27 +305,19 @@ config_t *config_new(int *argc, char ***argv) {
   dbg_assert(cfg);
   *cfg = _default_cfg;
 
-  if (!argc || !argv) {
-    log_dflt("hpx_init(NULL, NULL) called, using default configuration\n");
-    return cfg;
-  }
-
-  dbg_assert(*argc > 0 && *argv);
-
-  // The executable is used by the gengetopt parser internally.
-  const char *progname = (*argv)[0];
-
   // Process the environment.
   hpx_options_t opts;
-  _process_env(&opts, progname);
+  _process_env(&opts);
   _merge_opts(cfg, &opts);
   hpx_option_parser_free(&opts);
 
   // Use the command line arguments to override the environment values.
-  _process_cmdline(&opts, argc, argv);
-  _merge_opts(cfg, &opts);
-  hpx_option_parser_free(&opts);
+  if (argc) {
+    _process_cmdline(&opts, argc, argv);
+    _merge_opts(cfg, &opts);
+  }
 
+  hpx_option_parser_free(&opts);
 
   // the config file takes the highest precedence in determining the
   // runtime parameters
@@ -423,9 +415,9 @@ void config_print(const config_t *cfg, FILE *f) {
   }
   fprintf(f, "\n");
 
-  fprintf(f, "\nInstrumentation\n");
-  fprintf(f, "  dir\t\t\t\"%s\"\n", cfg->inst_dir);
-  fprintf(f, "  trace filesize\t\t%zu\n", cfg->trace_filesize);
+  fprintf(f, "\nTracinf\n");
+  fprintf(f, "  dir\t\t\t\"%s\"\n", cfg->trace_dir);
+  fprintf(f, "  trace buffer size\t%zu\n", cfg->trace_buffersize);
   fprintf(f, "  trace classes\t\t");
   for (int i = 0, e = _HPX_NELEM(HPX_TRACE_CLASS_TO_STRING); i < e; ++i) {
     uint64_t class = (1lu << i);
@@ -435,17 +427,17 @@ void config_print(const config_t *cfg, FILE *f) {
   }
   fprintf(f, "\n");
   fprintf(f, "  at\t\t\t");
-  if (!cfg->inst_at) {
+  if (!cfg->trace_at) {
     fprintf(f, "all");
   }
   else {
-    for (int i = 0; cfg->inst_at[i] != HPX_LOCALITY_NONE; ++i) {
-      if (cfg->inst_at[i] == HPX_LOCALITY_ALL) {
+    for (int i = 0; cfg->trace_at[i] != HPX_LOCALITY_NONE; ++i) {
+      if (cfg->trace_at[i] == HPX_LOCALITY_ALL) {
         fprintf(f, "all\n");
         break;
       }
       else {
-        fprintf(f, "%d, ", cfg->inst_at[i]);
+        fprintf(f, "%d, ", cfg->trace_at[i]);
       }
     }
   }
@@ -483,11 +475,10 @@ void config_print(const config_t *cfg, FILE *f) {
   fprintf(f, "  smp\t\t\t%d\n", cfg->opt_smp);
 
   fprintf(f, "\nCoalescing parameters\n");
-  fprintf(f, " Coalescing buffer size\t\t%d", cfg->coalescing_buffersize);
+  fprintf(f, " Coalescing buffer size\t\t%d\n", cfg->coalescing_buffersize);
 
 
-  fprintf(f, "------------------------\n"
-             "------------------------\n");
+  fprintf(f, "------------------------\n");
 }
 
 void config_delete(config_t *cfg) {

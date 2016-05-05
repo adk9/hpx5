@@ -248,7 +248,7 @@ int agas_graph_construct(hpx_addr_t graph, char *buf, size_t size,
 }
 
 static void _dump_agas_graph(_agas_graph_t *g) {
-#ifdef ENABLE_INSTRUMENTATION
+#if defined(ENABLE_INSTRUMENTATION) && defined(ENABLE_DEBUG)
   char filename[256];
   snprintf(filename, 256, "rebalancer_%d.graph", HPX_LOCALITY_ID);
   FILE *file = fopen(filename, "w");
@@ -277,6 +277,13 @@ static void _dump_agas_graph(_agas_graph_t *g) {
 #endif
 }
 
+int _update_partition_id(int i, void *p) {
+  uint64_t *partition = p;
+  int id = partition[i];
+  partition[i] = partition[id];
+  return HPX_SUCCESS;
+}
+
 #ifdef HAVE_METIS
 static size_t _metis_partition(_agas_graph_t *g, idx_t nparts,
                                uint64_t **partition) {
@@ -303,6 +310,8 @@ static size_t _metis_partition(_agas_graph_t *g, idx_t nparts,
   if (e != METIS_OK) {
     return 0;
   }
+
+  hpx_par_for_sync(_update_partition_id, HPX_LOCALITIES, nvtxs, *partition);
   return g->nvtxs;
 }
 #endif
@@ -384,31 +393,25 @@ size_t agas_graph_get_vtxs(void *graph, uint64_t **vtxs) {
   return g->nvtxs;
 }
 
-// Get the count of the number of entries in the owner map of the AGAS
-// graph.
-size_t agas_graph_get_owner_count(void *graph) {
-  _agas_graph_t *g = (_agas_graph_t*)graph;
-  return g->count;
-}
-
 // Get the owner entries associated with the owner map of the AGAS
 // graph.
-int agas_graph_get_owner_entry(void *graph, uint64_t id, int *start,
+void agas_graph_get_owner_entry(void *graph, int id, int *start,
                                int *end, int *owner) {
   _agas_graph_t *g = (_agas_graph_t*)graph;
-  dbg_assert(g);
-  dbg_assert(id >= 0 && id <= g->count);
-
+  dbg_assert(id >= 0 && id < here->ranks);
   _owner_map_t entry = g->owner_map[id];
-  *start = entry.start;
   *owner = entry.owner;
 
-  if (id == g->count-1) {
+  if (id == g->count - 1) {
+    *start = entry.start;
     *end = g->nvtxs - 1;
+  } else if (id >= g->count) {
+    *start = 0;
+    *end = 0;
   } else {
+    *start = entry.start;
     _owner_map_t next_entry = g->owner_map[id+1];
     *end = next_entry.start - 1;
   }
-  return HPX_SUCCESS;
 }
 

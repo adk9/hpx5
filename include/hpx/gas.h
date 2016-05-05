@@ -35,6 +35,9 @@ typedef enum {
   HPX_DIST_TYPE_BLOCKED,   //!< Blocked sequential distribution.
 } hpx_gas_dist_type_t;
 
+/// The largest block size supported by the implementation.
+extern HPX_PUBLIC const uint64_t HPX_GAS_BLOCK_BYTES_MAX;
+
 /// User-defined GAS distribution function.
 typedef hpx_addr_t (*hpx_gas_dist_t)(uint32_t i, size_t n, uint32_t bsize);
 
@@ -336,7 +339,7 @@ void *hpx_malloc_registered(size_t bytes)
 ///
 /// @param     elements The number of elements to allocate.
 /// @param        bytes The number of bytes to allocate.
-void *hpx_calloc_regisered(size_t elements, size_t bytes)
+void *hpx_calloc_registered(size_t elements, size_t bytes)
   HPX_PUBLIC;
 
 /// Allocate local aligned memory for use in the memget/memput functions.
@@ -570,9 +573,9 @@ _hpx_gas_bcast_sync(hpx_action_t action, hpx_addr_t base, int n,
 /// distribution.
 ///
 /// @param       sync  Notification of completion.
-void hpx_gas_rebalance(hpx_addr_t sync)
+void hpx_gas_rebalance(hpx_addr_t async, hpx_addr_t psync, hpx_addr_t msync)
   HPX_PUBLIC;
-    
+
 /// @}
 
 #ifdef __cplusplus

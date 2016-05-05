@@ -17,6 +17,7 @@
 
 #include <fcntl.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
@@ -30,10 +31,6 @@
 #include "file_header.h"
 #include "logtable.h"
 
-static size_t _header_size(logtable_t *log) {
-  return (size_t)((uintptr_t)log->records - (uintptr_t)log->header);
-}
-
 static int _create_file(const char *filename, size_t size) {
   static const int flags = O_RDWR | O_CREAT;
   static const int perm = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
@@ -43,68 +40,44 @@ static int _create_file(const char *filename, size_t size) {
     return -1;
   }
 
-  lseek(fd, size - 1, SEEK_SET);
-  if (write(fd, "", 1) != 1) {
-    log_error("could not create log file %s\n", filename);
-    close(fd);
-    return -1;
-  }
-
   return fd;
 }
 
-static void *_create_mmap(size_t size, int file) {
-  static const int prot = PROT_WRITE;
-  static const int flags = MAP_SHARED | MAP_NORESERVE;
-  void *base = mmap(NULL, size * sizeof(record_t), prot, flags, file, 0);
-  if (base == MAP_FAILED) {
-    log_error("could not mmap log file\n");
-    return NULL;
-  }
-  else {
-    log_dflt("mapped %zu byte trace file at %p.\n", size * sizeof(record_t), base);
-  }
-
-  if ((uintptr_t)base % HPX_CACHELINE_SIZE) {
-    log_dflt("log records are not cacheline aligned\n");
-  }
-
-  return base;
-}
-
-int logtable_init(logtable_t *log, const char* filename, size_t size,
-                  int class, int id) {
+void logtable_init(logtable_t *log, const char* filename, size_t size,
+                   int class, int id) {
   log->fd = -1;
-  log->class = class;
   log->id = id;
-  sync_store(&log->next, 0, SYNC_RELEASE);
-  sync_store(&log->last, 0, SYNC_RELEASE);
+  log->record_bytes = 0;
   log->max_size = size;
-  log->records = NULL;
+  log->buffer = NULL;
 
   if (filename == NULL || size == 0) {
-    return LIBHPX_OK;
+    return;
   }
 
   log->fd = _create_file(filename, size);
   if (log->fd == -1) {
-    goto unwind;
+    log_error("could not create log file %s\n", filename);
+    return;
   }
 
-  log->header = _create_mmap(size, log->fd);
-  if (!log->header) {
-    goto unwind;
+  log->buffer = malloc(size);
+  if (!log->buffer) {
+    log_error("problem allocating buffer for %s\n", filename);
+    close(log->fd);
+    return;
   }
 
-  size_t header_size = write_trace_header(log->header, class, id);
-  assert(((uintptr_t)log->header + header_size) % 8 == 0);
-  log->records = (void*)((uintptr_t)log->header + header_size);
+  int fields = TRACE_EVENT_NUM_FIELDS[id];
+  log->record_bytes = sizeof(record_t) + fields * sizeof(uint64_t);
+  log->next = log->buffer - log->record_bytes;
 
-  return LIBHPX_OK;
-
- unwind:
-  logtable_fini(log);
-  return LIBHPX_ERROR;
+  char *buffer = calloc(1, 32768);
+  log->header_size = write_trace_header(buffer, class, id);
+  if (write(log->fd, buffer, log->header_size) != log->header_size) {
+    log_error("failed to write header to file\n");
+  }
+  free(buffer);
 }
 
 void logtable_fini(logtable_t *log) {
@@ -112,40 +85,30 @@ void logtable_fini(logtable_t *log) {
     return;
   }
 
-  if (log->header) {
-    int e = munmap(log->header, log->max_size);
-    if (e) {
-      log_error("failed to unmap trace file\n");
-    }
-  }
-
   if (log->fd != -1) {
-    size_t filesize =
-      (uintptr_t)&log->records[log->last] - (uintptr_t)log->header;
-    int e = ftruncate(log->fd, filesize);
-    if (e) {
-      log_error("failed to truncate trace file\n");
-    }
-    e = close(log->fd);
-    if (e) {
+    size_t filesize = log->next - log->buffer;
+    write(log->fd, log->buffer, filesize);
+    if (close(log->fd)) {
       log_error("failed to close trace file\n");
     }
   }
 }
 
-void logtable_append(logtable_t *log, uint64_t u1, uint64_t u2, uint64_t u3,
-                     uint64_t u4) {
-  size_t i = sync_fadd(&log->next, 1, SYNC_ACQ_REL);
-  if (_header_size(log) + (i+1) * sizeof(record_t) > log->max_size) {
-    return;
+void logtable_vappend(logtable_t *log, int n, va_list *args) {
+  uint64_t time = hpx_time_from_start_ns(hpx_time_now());
+  char *next = log->next + log->record_bytes;
+  if (next - log->buffer > log->max_size) {
+    EVENT_TRACE_FILE_IO_BEGIN();
+    write(log->fd, log->buffer, log->next - log->buffer);
+    EVENT_TRACE_FILE_IO_END();
+    next = log->buffer;
   }
-  sync_fadd(&log->last, 1, SYNC_ACQ_REL); // update size
+  log->next = next;
 
-  record_t *r = &log->records[i];
-  r->worker = HPX_THREAD_ID;
-  r->ns = hpx_time_from_start_ns(hpx_time_now());
-  r->user[0] = u1;
-  r->user[1] = u2;
-  r->user[2] = u3;
-  r->user[3] = u4;
+  record_t *r = (record_t*)next;
+  r->worker = self->id;
+  r->ns = time;
+  for (int i = 0, e = n; i < e; ++i) {
+    r->user[i] = va_arg(*args, uint64_t);
+  }
 }

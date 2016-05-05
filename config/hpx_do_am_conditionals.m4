@@ -9,7 +9,7 @@ AC_DEFUN([HPX_DO_AM_CONDITIONALS], [
  AM_CONDITIONAL([OS_LINUX], [[[[ "x$host_os" = xlinux* ]]]])
  AM_CONDITIONAL([OS_DARWIN], [[[[ "x$host_os" = xdarwin* ]]]])
  AM_CONDITIONAL([CPU_X86_64], [test "x$host_cpu" = xx86_64])
- AM_CONDITIONAL([CPU_ARM], [test "x$host_cpu" = xarmv7l])
+ AM_CONDITIONAL([CPU_ARM], [test "x$host_cpu" = xarmv7l -o "x$host_cpu" = xarm])
  AM_CONDITIONAL([CPU_AARCH64], [test "x$host_cpu" = xaarch64])
 
  AM_CONDITIONAL([GNU_PE_ENV], [test "x$hpx_pe_env" = xGNU])

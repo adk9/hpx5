@@ -167,6 +167,7 @@ bst_serialize_to_parcel(void* obj, hpx_parcel_t **parcel) {
   char *buf = static_cast<char*>(hpx_parcel_get_data(*parcel));
   size_t size = _bst_serialize(bst, buf);
   (*parcel)->size = size;
+  bst->clear();
   return size;
 }
 

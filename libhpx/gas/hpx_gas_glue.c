@@ -21,9 +21,12 @@
 #include <libhpx/action.h>
 #include <libhpx/debug.h>
 #include <libhpx/gas.h>
+#include <libhpx/gpa.h>
 #include <libhpx/locality.h>
 #include <libhpx/rebalancer.h>
 #include <libhpx/worker.h>
+
+const uint64_t HPX_GAS_BLOCK_BYTES_MAX = UINT64_C(1) << GPA_MAX_LG_BSIZE;
 
 hpx_addr_t HPX_HERE = 0;
 
@@ -266,6 +269,7 @@ void hpx_gas_move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) {
   dbg_assert(here && here->gas);
   gas_t *gas = here->gas;
   dbg_assert(gas->move);
+  EVENT_COUNT(++self->stats.moves);
   gas->move(here->gas, src, dst, lco);
 }
 
@@ -399,6 +403,6 @@ void hpx_gas_set_attr(hpx_addr_t addr, uint32_t attr) {
 static LIBHPX_ACTION(HPX_INTERRUPT, 0, _set_attr_action,
                      hpx_gas_set_attr, HPX_ADDR, HPX_UINT32);
 
-void hpx_gas_rebalance(hpx_addr_t sync) {
-  rebalancer_start(sync);
+void hpx_gas_rebalance(hpx_addr_t async, hpx_addr_t psync, hpx_addr_t msync) {
+  rebalancer_start(async, psync, msync);
 }

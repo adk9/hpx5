@@ -15,32 +15,9 @@
 # include "config.h"
 #endif
 
-/// @file trace.c
-///
-/// Print a backtrace to stdout
-#include <stdio.h>
-#include <stdlib.h>
+#include <errno.h>
+#include <libhpx/system.h>
 
-#ifdef HAVE_EXECINFO_H
-#include <execinfo.h>
-#endif
-
-/* Obtain a backtrace and print it to stdout. */
-void system_print_trace(void *fd) {
-#ifdef HAVE_EXECINFO_H
-  void *array[32];
-  size_t size;
-  char **strings;
-  size_t i;
-
-  size = backtrace (array, 10);
-  strings = backtrace_symbols (array, size);
-
-  fprintf (fd, "Obtained %zd stack frames.\n", size);
-
-  for (i = 0; i < size; i++) {
-    printf ("%s\n", strings[i]);
-  }
-  free (strings);
-#endif
+const char *system_get_program_name(void) {
+  return program_invocation_name;
 }

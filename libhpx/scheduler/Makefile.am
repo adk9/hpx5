@@ -1,14 +1,16 @@
-SUBDIRS = arch
+SUBDIRS = arch lco
 
-# The networking library
+# The scheduler library
 noinst_LTLIBRARIES       = libscheduler.la
-noinst_HEADERS           = cvar.h lco.h thread.h
+noinst_HEADERS           = cvar.h thread.h
 
 libscheduler_la_CPPFLAGS = -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
 libscheduler_la_CFLAGS   = $(LIBHPX_CFLAGS)
 libscheduler_la_CXXFLAGS = $(LIBHPX_CXXFLAGS)
-libscheduler_la_SOURCES  = cvar.c scheduler.c worker.c thread.c lco.c future.c \
-                           and.c stats.c sema.c gencount.c allreduce.c \
-                           reduce.c gather.c alltoall.c user_lco.c apex.c \
+libscheduler_la_SOURCES  = cvar.c scheduler.c worker.c thread.c apex.c \
                            sigmask.c execute_thread.cc
-libscheduler_la_LIBADD   = arch/libarch.la
+libscheduler_la_LIBADD   = arch/libarch.la lco/liblco.la
+
+if ENABLE_INSTRUMENTATION
+libscheduler_la_SOURCES += events.c
+endif

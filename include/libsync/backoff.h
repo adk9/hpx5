@@ -14,6 +14,10 @@
 #ifndef LIBSYNC_BACKOFF_H
 #define LIBSYNC_BACKOFF_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "hpx/attributes.h"
 
 void sync_backoff(unsigned int i) HPX_PUBLIC;
@@ -21,5 +25,8 @@ void sync_backoff(unsigned int i) HPX_PUBLIC;
 void sync_backoff_exp_r(unsigned int *prev)
   HPX_NON_NULL(1) HPX_PUBLIC;
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIBSYNC_BACKOFF_H

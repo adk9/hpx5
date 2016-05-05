@@ -210,6 +210,7 @@ static int _reduce_release(lco_t *lco, void *out) {
 
 // vtable
 static const lco_class_t _reduce_vtable = {
+  .type        = LCO_REDUCE,
   .on_fini     = _reduce_fini,
   .on_error    = _reduce_error,
   .on_set      = _reduce_set,
@@ -221,6 +222,10 @@ static const lco_class_t _reduce_vtable = {
   .on_reset    = _reduce_reset,
   .on_size     = _reduce_size
 };
+
+static void HPX_CONSTRUCTOR _register_vtable(void) {
+  lco_vtables[LCO_REDUCE] = &_reduce_vtable;
+}
 
 static int _reduce_init_handler(_reduce_t *r, int inputs, size_t size,
                                 hpx_action_t id, hpx_action_t op) {

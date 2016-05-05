@@ -6,6 +6,7 @@ before_script:
 stages:
   - scan
   - check
+  - cross
 
 scan-build:
   stage: scan
@@ -33,3 +34,13 @@ check-build:
   - make -C tests check || check_check
   - export HPX_NETWORK=pwc
   - make -C tests check || check_check
+
+cross-build:
+  stage: cross
+  script:
+  - ./bootstrap
+  - ./configure --enable-debug --enable-instrumentation --enable-percolation --enable-agas --enable-hpx++
+                --enable-testsuite --enable-parallel-config --with-libffi=contrib
+                --host=arm-linux-gnueabihf CC=arm-linux-gnueabihf-gcc CXX=arm-linux-gnueabihf-g++
+                CFLAGS="-g -O0" CXXFLAGS="-g -O0"
+  - make -j 8

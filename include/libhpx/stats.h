@@ -20,9 +20,9 @@
 /// @brief The libhpx stats definitions.
 
 #if defined(ENABLE_PROFILING) || defined(HAVE_APEX)
-#define COUNTER_SAMPLE(e) e
+#define EVENT_COUNT(e) e
 #else
-#define COUNTER_SAMPLE(e)
+#define EVENT_COUNT(e)
 #endif
 
 /// libhpx statistics.
@@ -33,22 +33,18 @@
 /// separately. Global (per-scheduler) statistics are accumulated
 /// after each worker shuts down.
 typedef struct libhpx_stats {
+  // Scheduler statistics
   unsigned long        spawns;
   unsigned long failed_steals;
   unsigned long        steals;
   unsigned long          mail;
   unsigned long        stacks;
   unsigned long        yields;
+  // Network statistics
+  unsigned long   remote_msgs;
+  // GAS statistics
+  unsigned long         moves;
 } libhpx_stats_t;
-
-#define LIBHPX_STATS_INIT { \
-    .spawns        = 0,     \
-    .failed_steals = 0,     \
-    .steals        = 0,     \
-    .mail          = 0,     \
-    .stacks        = 0,     \
-    .yields        = 0,     \
-  }
 
 /// Initialize the libhpx statistics structure.
 void libhpx_stats_init(struct libhpx_stats *stats)

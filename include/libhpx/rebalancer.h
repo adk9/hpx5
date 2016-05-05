@@ -28,7 +28,7 @@ void rebalancer_finalize(void);
 
 // Record a GAS block access in the BST
 void rebalancer_add_entry(int src, int dst, hpx_addr_t block, size_t size);
-int rebalancer_start(hpx_addr_t sync);
+int rebalancer_start(hpx_addr_t async, hpx_addr_t psync, hpx_addr_t msync);
 
 #else
 

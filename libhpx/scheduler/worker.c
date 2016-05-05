@@ -43,16 +43,12 @@
 #include <libhpx/topology.h>
 #include <libhpx/worker.h>
 #include "cvar.h"
-#include "lco.h"
+#include "events.h"
+#include "lco/lco.h"
 #include "thread.h"
 
 /// Storage for the thread-local worker pointer.
 __thread worker_t * volatile self = NULL;
-
-#define SOURCE_LIFO 0
-#define SOURCE_YIELD 1
-#define SOURCE_STEAL 2
-#define SOURCE_FINAL 3
 
 /// Macro to record a parcel's GAS accesses.
 #if defined(HAVE_AGAS) && defined(HAVE_REBALANCING)
@@ -121,7 +117,6 @@ static void _continue_parcel_va(hpx_parcel_t *p, int n, va_list *args) {
   }
   else {
     process_recover_credit(p);
-    EVENT_THREAD_RUN(p, self);
   }
 }
 
@@ -256,15 +251,18 @@ static hpx_parcel_t *_try_bind(worker_t *w, hpx_parcel_t *p) {
 }
 
 static chase_lev_ws_deque_t *_work(worker_t *worker) {
-  return &worker->queues[worker->work_id].work;
+  int id = sync_load(&worker->work_id, SYNC_RELAXED);
+  return &worker->queues[id].work;
 }
 
 static chase_lev_ws_deque_t *_yielded(worker_t *worker) {
-  return &worker->queues[1 - worker->work_id].work;
+  int id = sync_load(&worker->work_id, SYNC_RELAXED);
+  return &worker->queues[1 - id].work;
 }
 
 static void _swap_epoch(worker_t *worker) {
-  worker->work_id = 1 - worker->work_id;
+  int id = sync_load(&worker->work_id, SYNC_RELAXED);
+  sync_store(&worker->work_id, 1 - id, SYNC_RELAXED);
 }
 
 /// Add a parcel to the top of the worker's work queue.
@@ -277,7 +275,7 @@ static void _swap_epoch(worker_t *worker) {
 static void _push_lifo(hpx_parcel_t *p, void *worker) {
   dbg_assert(p->target != HPX_NULL);
   dbg_assert(actions[p->action].handler != NULL);
-  EVENT_SCHED_PUSH_LIFO(p);
+  EVENT_SCHED_PUSH_LIFO(p->id);
   GAS_TRACE_ACCESS(p->src, here->rank, p->target, p->size);
   worker_t *w = worker;
   uint64_t size = sync_chase_lev_ws_deque_push(_work(w), p);
@@ -290,8 +288,11 @@ static void _push_lifo(hpx_parcel_t *p, void *worker) {
 /// Process the next available parcel from our work queue in a lifo order.
 static hpx_parcel_t *_schedule_lifo(worker_t *w) {
   hpx_parcel_t *p = sync_chase_lev_ws_deque_pop(_work(w));
-  EVENT_SCHED_POP_LIFO(p);
-  EVENT_SCHED_WQSIZE(sync_chase_lev_ws_deque_size(&w->queues[w->work_id].work));
+  INST_IF (p) {
+    EVENT_SCHED_POP_LIFO(p->id);
+    EVENT_SCHED_WQSIZE(sync_chase_lev_ws_deque_size(
+      &w->queues[sync_load(&w->work_id, SYNC_RELAXED)].work));
+  }
   return p;
 }
 
@@ -308,7 +309,7 @@ static void _handle_mail(worker_t *w) {
   hpx_parcel_t *p = NULL;
   while ((parcels = sync_two_lock_queue_dequeue(&w->inbox))) {
     while ((p = parcel_stack_pop(&parcels))) {
-      COUNTER_SAMPLE(++w->stats.mail);
+      EVENT_COUNT(++w->stats.mail);
       log_sched("got mail %p\n", p);
       _push_lifo(p, w);
     }
@@ -346,7 +347,7 @@ static int _push_half_handler(int src) {
   // send them back to the thief
   if (parcels) {
     scheduler_spawn_at(parcels, src);
-    EVENT_SCHED_STEAL_LIFO(parcels, self->id);
+    EVENT_SCHED_STEAL_LIFO(parcels->id, self->id);
   }
   return HPX_SUCCESS;
 }
@@ -358,7 +359,7 @@ static hpx_parcel_t *_steal_from(worker_t *w, int id) {
   hpx_parcel_t *p = sync_chase_lev_ws_deque_steal(_work(victim));
   if (p) {
     w->last_victim = id;
-    EVENT_SCHED_STEAL_LIFO(p, victim->id);
+    EVENT_SCHED_STEAL_LIFO(p->id, victim->id);
   } else {
     w->last_victim = -1;
   }
@@ -471,9 +472,9 @@ static hpx_parcel_t *_schedule_steal(worker_t *w) {
   }
 
   if (p) {
-    COUNTER_SAMPLE(++w->stats.steals);
+    EVENT_COUNT(++w->stats.steals);
   } else {
-    COUNTER_SAMPLE(++w->stats.failed_steals);
+    EVENT_COUNT(++w->stats.failed_steals);
   }
   return p;
 }
@@ -537,13 +538,12 @@ typedef struct {
 static void _checkpoint(hpx_parcel_t *to, void *sp, void *env) {
   hpx_parcel_t *prev = _swap_current(to, sp, self);
   _checkpoint_env_t *c = env;
-  EVENT_THREAD_RUN(to, self);
   c->f(prev, c->env);
-  EVENT_THREAD_END(to, self);
 }
 
 /// Probe and progress the network.
 static void _schedule_network(worker_t *w) {
+  EVENT_NETWORK_SCHED_ENTER();
   // suppress work-first scheduling while we're inside the network.
   w->work_first = -1;
   network_progress(w->network, 0);
@@ -552,9 +552,10 @@ static void _schedule_network(worker_t *w) {
 
   hpx_parcel_t *p = NULL;
   while ((p = parcel_stack_pop(&stack))) {
-    EVENT_PARCEL_RECV(p->id, p->action, p->size, p->src);
+    EVENT_PARCEL_RECV(p->id, p->action, p->size, p->src, p->target);
     _push_lifo(p, w);
   }
+  EVENT_NETWORK_SCHED_EXIT();
 }
 
 /// The main scheduling loop.
@@ -577,15 +578,22 @@ static void _schedule_network(worker_t *w) {
 ///
 /// @returns            The status from _transfer.
 static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
-  int source = -1;
-  int spins = 0;
+  enum {
+    LIFO = 0,
+    YIELD,
+    STEAL,
+    FINAL
+  };
+
+  EVENT_SCHED_ENTER();
+  INST(int source = -1);
+  INST(int spins = 0);
   hpx_parcel_t *p = NULL;
   worker_t *w = self;
   while (!worker_is_stopped()) {
-    EVENT_SCHED_ENTER();
     if (!block) {
       p = _schedule_lifo(w);
-      INST(source = SOURCE_LIFO);
+      INST(source = LIFO);
       break;
     }
 
@@ -602,7 +610,7 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
 
     // See if we have primary lifo work.
     if ((p = _schedule_lifo(w))) {
-      INST(source = SOURCE_LIFO);
+      INST(source = LIFO);
       break;
     }
 
@@ -614,7 +622,7 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
 
     // Try and steal some work
     if ((p = _schedule_steal(w))) {
-      source = SOURCE_STEAL;
+      INST(source = STEAL);
       log_sched("stole work %p\n", p);
       break;
     }
@@ -631,15 +639,10 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
   EVENT_SCHED_EXIT();
   EVENT_SCHEDTIMES_SCHED(source, spins);
 
-  // don't transfer to the same parcel
+  // Don't transfer to the same parcel.
   if (p != w->current) {
-    EVENT_THREAD_RUN(p, w);
     _transfer(p, _checkpoint, &(_checkpoint_env_t){ .f = f, .env = env }, w);
   }
-
-  EVENT_THREAD_RESUME(w->current, w);
-  (void)source;
-  (void)spins;
 }
 
 int worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
@@ -653,11 +656,15 @@ int worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
   w->system      = NULL;
   w->current     = NULL;
   w->stacks      = NULL;
-  w->work_id     = 0;
+  sync_store(&w->work_id, 0, SYNC_RELAXED);
   w->active      = true;
   w->profiler    = NULL;
   w->bst         = NULL;
   w->network     = here->net;
+
+  if (inst_init(here->config, w)) {
+    log_dflt("error detected while initializing instrumentation\n");
+  }
 
   sync_chase_lev_ws_deque_init(&w->queues[0].work, work_size);
   sync_chase_lev_ws_deque_init(&w->queues[1].work, work_size);
@@ -680,6 +687,9 @@ void worker_fini(worker_t *w) {
   }
   sync_chase_lev_ws_deque_fini(&w->queues[0].work);
   sync_chase_lev_ws_deque_fini(&w->queues[1].work);
+
+  // and clean up any instrumentation data
+  inst_fini(w);
 
   // and delete any cached stacks
   ustack_t *stack = NULL;
@@ -761,7 +771,7 @@ int worker_start(void) {
 
   int code = sched->stopped;
   if (code != HPX_SUCCESS && here->rank == 0) {
-    log_error("application exited with a non-zero exit code: %d.\n", code);
+    log_error("hpx_run epoch exited with a non-zero exit code: %d.\n", code);
   }
 
   return code;
@@ -787,7 +797,7 @@ void scheduler_spawn(hpx_parcel_t *p) {
   dbg_assert(w->id >= 0);
   dbg_assert(p);
   dbg_assert(actions[p->action].handler != NULL);
-  COUNTER_SAMPLE(w->stats.spawns++);
+  EVENT_COUNT(w->stats.spawns++);
 
   // If we're stopped down then push the parcel and return. This prevents an
   // infinite spawn from inhibiting termination.
@@ -861,7 +871,7 @@ static void _yield(hpx_parcel_t *p, void *env) {
 
 void scheduler_yield(void) {
   if (action_is_default(self->current->action)) {
-    COUNTER_SAMPLE(++self->stats.yields);
+    EVENT_COUNT(++self->stats.yields);
     self->yielded = true;
     // NB: no trace point, overwhelms infrastructure
     _schedule(_yield, NULL, 0);
@@ -874,12 +884,12 @@ void scheduler_yield(void) {
 /// we know that it has already been enqueued on whatever LCO we need it to be.
 ///
 /// @param           to The parcel we are transferring to.
-/// @param         lock A lockable_ptr_t to unlock.
+/// @param         lock A tatas lock to unlock.
 static void _unlock(hpx_parcel_t *to, void *lock) {
-  sync_lockable_ptr_unlock(lock);
+  sync_tatas_release(lock);
 }
 
-hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
+hpx_status_t scheduler_wait(tatas_lock_t *lock, cvar_t *condition) {
   // push the current thread onto the condition variable---no lost-update
   // problem here because we're holing the @p lock
   worker_t *w = self;
@@ -899,7 +909,7 @@ hpx_status_t scheduler_wait(lockable_ptr_t *lock, cvar_t *condition) {
   EVENT_THREAD_RESUME(p, self);
 
   // reacquire the lco lock before returning
-  sync_lockable_ptr_lock(lock);
+  sync_tatas_acquire(lock);
   return cvar_get_error(condition);
 }
 

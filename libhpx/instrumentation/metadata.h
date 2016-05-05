@@ -24,36 +24,30 @@
 typedef struct record {
   int worker;
   uint64_t ns;
-  uint64_t user[4];
+  uint64_t user[];
 } record_t;
 
-/// The number of columns for a recorded event; some may be unused
-#define _NUM_COLS 6
-
-#define _COL_OFFSET_WORKER offsetof(record_t, worker)
-#define _COL_OFFSET_NS     offsetof(record_t, ns)
-#define _COL_OFFSET_USER0  offsetof(record_t, user)
-#define _COL_OFFSET_USER1  offsetof(record_t, user) + 8
-#define _COL_OFFSET_USER2  offsetof(record_t, user) + 16
-#define _COL_OFFSET_USER3  offsetof(record_t, user) + 24
+#define _COL_OFFSET_WORKER    offsetof(record_t, worker)
+#define _COL_OFFSET_NS        offsetof(record_t, ns)
+#define _COL_OFFSET_USER(off) offsetof(record_t, user) + (off * 8)
 
 // ==================== Event metadata =========================================
 // Header file format:
 //
-// Magic file identifier bytes = 
+// Magic file identifier bytes =
 //   {'h', 'p', 'x', ' ', 'l', 'o', 'g', '\0', 0xFF, 0x00, 0xAA, 0x55}
 // table offset
 // [metadata-id, length, data]*
 //
 //
 //
-// * "table offset" is 4 bytes 
+// * "table offset" is 4 bytes
 // Then,
-// * "metadata-id" is 4 bytes 
-// * "length" is 4 bytes, indicates how many bytes to read for the data 
+// * "metadata-id" is 4 bytes
+// * "length" is 4 bytes, indicates how many bytes to read for the data
 //   portion of this header entry
 // * the data is a set of bytes, interpreted in a context-specific manner
-// 
+//
 // Metadata-id numbers:
 // -1 -- Named value
 // 0 -- types
@@ -101,13 +95,13 @@ typedef struct inst_named_value {
 } HPX_PACKED inst_named_value_t;
 
 typedef struct inst_event_col_metadata {
-  const char mask;           // this should an OR of all the following values:
-  const char data_type;      // mask 0x1
-  const unsigned int offset; // mask 0x2
-  const uint64_t min;        // mask 0x4
-  const uint64_t max;        // mask 0x8
-  const char printf_code[8]; // mask 0x10 (this value must be nul terminated)
-  const char name[256];      // mask 0x20 (this value must be nul terminated)
+  const char mask;           //!< this should an OR of all the following values:
+  const char data_type;      //!< mask 0x1
+  const unsigned int offset; //!< mask 0x2
+  const uint64_t min;        //!< mask 0x4
+  const uint64_t max;        //!< mask 0x8
+  const char printf_code[8]; //!< mask 0x10 (this value must be nul terminated)
+  const char name[256];      //!< mask 0x20 (this value must be nul terminated)
 } inst_event_col_metadata_t;
 
 #define METADATA_WORKER                       \
@@ -131,7 +125,7 @@ typedef struct inst_event_col_metadata {
 #define METADATA_UINT(width, off, _name)      \
   { .mask = 0x3f,                             \
     .data_type = METADATA_TYPE_INT64,         \
-    .offset = _COL_OFFSET_USER##off,          \
+    .offset = _COL_OFFSET_USER(off),          \
     .min = 0,                                 \
     .max = UINT##width##_MAX,                 \
     .printf_code = "zu",                      \
@@ -143,42 +137,38 @@ typedef struct inst_event_col_metadata {
 
 /// Helper metadata generation macros for commonly used types
 
-#define METADATA_EMPTY(off)         METADATA_UINT64(off, "")
-
 #define METADATA_SIZE(off)          METADATA_UINT64(off, "size")
-#define METADATA_ACTION(off)        METADATA_UINT16(off, "action")
-#define METADATA_HPX_ADDR(off)      METADATA_UINT(64, off, "global address")
-#define METADATA_PTR(off)           METADATA_UINT(64, off, "local address")
+#define METADATA_ACTION(off)        METADATA_UINT64(off, "action")
+#define METADATA_HPX_ADDR(off)      METADATA_UINT64(off, "global address")
+#define METADATA_PTR(off)           METADATA_UINT64(off, "local address")
 
-/// Event metadata
-
+/// Event metadata struct.
+/// In theory the number of columns need not match the number of fields in
+/// an event. In practice, right now they do.
 typedef struct inst_event_metadata {
   const int num_cols;
-  // In theory the number of columns need not match the number of fields in
-  // an event. In practice, right now they do.
-  const  inst_event_col_metadata_t col_metadata[_NUM_COLS];
+  const inst_event_col_metadata_t *col_metadata;
 } inst_event_metadata_t;
 
-#define _METADATA_ARGS(a1,a2,a3,a4) {         \
-  .num_cols = 6,                              \
-  .col_metadata = {                           \
-    METADATA_WORKER,                          \
-    METADATA_NS,                              \
-    a1, a2, a3, a4                            \
-  }                                           \
+#define _METADATA_ARGS(...) {                                       \
+  .num_cols = __HPX_NARGS(__VA_ARGS__)+2,                           \
+  .col_metadata =                                                   \
+    (const inst_event_col_metadata_t[__HPX_NARGS(__VA_ARGS__)+2]) { \
+    METADATA_WORKER,                                                \
+    METADATA_NS,                                                    \
+    __VA_ARGS__                                                     \
+  }                                                                 \
 }
-#define _METADATA_NONE _METADATA_ARGS(        \
-  METADATA_EMPTY(0), METADATA_EMPTY(1),       \
-  METADATA_EMPTY(2), METADATA_EMPTY(3))
-  
+#define _METADATA_NONE _METADATA_ARGS()
 
 extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 
 #define METADATA_PARCEL_ID(off)        METADATA_UINT64(off, "parcel id")
 #define METADATA_PARCEL_SIZE(off)      METADATA_UINT64(off, "parcel size")
-#define METADATA_PARCEL_SOURCE(off)    METADATA_UINT32(off, "source rank")
+#define METADATA_PARCEL_SOURCE_A(off)  METADATA_UINT64(off, "source addr")
+#define METADATA_PARCEL_SOURCE_R(off)  METADATA_UINT64(off, "source rank")
 #define METADATA_PARCEL_PARENT_ID(off) METADATA_UINT64(off, "parent id")
-#define METADATA_PARCEL_TARGET(off)    METADATA_UINT64(off, "parent id")
+#define METADATA_PARCEL_TARGET(off)    METADATA_UINT64(off, "target addr")
 
 #define PARCEL_CREATE_METADATA                               \
   _METADATA_ARGS(METADATA_PARCEL_ID(0), METADATA_ACTION(1),  \
@@ -188,45 +178,47 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 #define PARCEL_SEND_METADATA                                 \
   _METADATA_ARGS(METADATA_PARCEL_ID(0), METADATA_ACTION(1),  \
                  METADATA_PARCEL_SIZE(2),                    \
-                 METADATA_PARCEL_TARGET(3))
+                 METADATA_PARCEL_SOURCE_A(3),                \
+                 METADATA_PARCEL_TARGET(4))
 
 #define PARCEL_RECV_METADATA                                 \
  _METADATA_ARGS(METADATA_PARCEL_ID(0), METADATA_ACTION(1),   \
                  METADATA_PARCEL_SIZE(2),                    \
-                 METADATA_PARCEL_SOURCE(3))
+                 METADATA_PARCEL_SOURCE_R(3),                \
+                 METADATA_PARCEL_TARGET(4))
 
 #define PARCEL_RUN_METADATA                                  \
   _METADATA_ARGS(METADATA_PARCEL_ID(0), METADATA_ACTION(1),  \
-                 METADATA_PARCEL_SIZE(2), METADATA_EMPTY(3))
+                 METADATA_PARCEL_SIZE(2))
 
 #define PARCEL_END_METADATA                                  \
-  _METADATA_ARGS(METADATA_PARCEL_ID(0), METADATA_ACTION(1),  \
-                 METADATA_EMPTY(2), METADATA_EMPTY(3))
+  _METADATA_ARGS(METADATA_PARCEL_ID(0), METADATA_ACTION(1))
 
 #define PARCEL_SUSPEND_METADATA                              \
- _METADATA_ARGS(METADATA_PARCEL_ID(0), METADATA_ACTION(1),   \
-                METADATA_EMPTY(2), METADATA_EMPTY(3))
+ _METADATA_ARGS(METADATA_PARCEL_ID(0), METADATA_ACTION(1))
 
 #define PARCEL_RESUME_METADATA                               \
- _METADATA_ARGS(METADATA_PARCEL_ID(0), METADATA_ACTION(1),   \
-                METADATA_EMPTY(2), METADATA_EMPTY(3))
+ _METADATA_ARGS(METADATA_PARCEL_ID(0), METADATA_ACTION(1))
 
 #define PARCEL_RESEND_METADATA                               \
  _METADATA_ARGS(METADATA_PARCEL_ID(0), METADATA_ACTION(1),   \
                 METADATA_PARCEL_SIZE(2),                     \
                 METADATA_PARCEL_TARGET(3))
 
+#define NETWORK_SCHED_ENTER_METADATA _METADATA_NONE
+#define NETWORK_SCHED_EXIT_METADATA _METADATA_NONE
+
 #define NETWORK_PWC_SEND_METADATA _METADATA_NONE
 #define NETWORK_PWC_RECV_METADATA _METADATA_NONE
 
 #define SCHED_WQSIZE_METADATA                                \
-  _METADATA_ARGS(METADATA_UINT64(0, "work_queue_size"),      \
-                 METADATA_EMPTY(1), METADATA_EMPTY(2),       \
-                 METADATA_EMPTY(3))
+  _METADATA_ARGS(METADATA_UINT64(0, "work_queue_size"))
 
-#define SCHED_PUSH_LIFO_METADATA  _METADATA_NONE
-#define SCHED_POP_LIFO_METADATA   _METADATA_NONE
-#define SCHED_STEAL_LIFO_METADATA _METADATA_NONE
+#define SCHED_PUSH_LIFO_METADATA  _METADATA_ARGS(METADATA_PARCEL_ID(0))
+#define SCHED_POP_LIFO_METADATA   _METADATA_ARGS(METADATA_PARCEL_ID(0))
+#define SCHED_STEAL_LIFO_METADATA _METADATA_ARGS(METADATA_PARCEL_ID(0), \
+                                                 METADATA_UINT64(1, "victim"))
+
 #define SCHED_ENTER_METADATA      _METADATA_NONE
 #define SCHED_EXIT_METADATA       _METADATA_NONE
 
@@ -234,32 +226,32 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 #define METADATA_LCO_STATE(off)   METADATA_UINT64(off, "lco state")
 
 #define LCO_INIT_METADATA                                   \
-  _METADATA_ARGS(METADATA_LCO_ADDRESS(0), METADATA_EMPTY(1),\
-                 METADATA_LCO_STATE(2), METADATA_EMPTY(3))
+  _METADATA_ARGS(METADATA_LCO_ADDRESS(0),                   \
+                 METADATA_LCO_STATE(1))
 
 #define LCO_DELETE_METADATA                                 \
-  _METADATA_ARGS(METADATA_LCO_ADDRESS(0), METADATA_EMPTY(1),\
-                 METADATA_LCO_STATE(2), METADATA_EMPTY(3))
+  _METADATA_ARGS(METADATA_LCO_ADDRESS(0),                   \
+                 METADATA_LCO_STATE(1))
 
 #define LCO_SET_METADATA                                    \
-  _METADATA_ARGS(METADATA_LCO_ADDRESS(0), METADATA_EMPTY(1),\
-                 METADATA_LCO_STATE(2), METADATA_EMPTY(3))
+  _METADATA_ARGS(METADATA_LCO_ADDRESS(0),                   \
+                 METADATA_LCO_STATE(1))
 
 #define LCO_RESET_METADATA                                  \
-  _METADATA_ARGS(METADATA_LCO_ADDRESS(0), METADATA_EMPTY(1),\
-                 METADATA_LCO_STATE(2), METADATA_EMPTY(3))
+  _METADATA_ARGS(METADATA_LCO_ADDRESS(0),                   \
+                 METADATA_LCO_STATE(1))
 
 #define LCO_ATTACH_PARCEL_METADATA                          \
-  _METADATA_ARGS(METADATA_LCO_ADDRESS(0), METADATA_EMPTY(1),\
-                 METADATA_LCO_STATE(2), METADATA_PARCEL_ID(3))
+  _METADATA_ARGS(METADATA_LCO_ADDRESS(0),                   \
+                 METADATA_LCO_STATE(1))
 
 #define LCO_WAIT_METADATA                                   \
-  _METADATA_ARGS(METADATA_LCO_ADDRESS(0), METADATA_EMPTY(1),\
-                 METADATA_LCO_STATE(2), METADATA_EMPTY(3))
+  _METADATA_ARGS(METADATA_LCO_ADDRESS(0),                   \
+                 METADATA_LCO_STATE(1))
 
 #define LCO_TRIGGER_METADATA                                \
-  _METADATA_ARGS(METADATA_LCO_ADDRESS(0), METADATA_EMPTY(1),\
-                 METADATA_LCO_STATE(2), METADATA_EMPTY(3))
+  _METADATA_ARGS(METADATA_LCO_ADDRESS(0),                   \
+                 METADATA_LCO_STATE(1))
 
 
 #define METADATA_PROCESS_ADDRESS(off) METADATA_UINT64(off, "process address")
@@ -267,25 +259,43 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 
 #define PROCESS_NEW_METADATA                                \
   _METADATA_ARGS(METADATA_PROCESS_ADDRESS(0),               \
-                 METADATA_PROCESS_LCO(1),                   \
-                 METADATA_EMPTY(2), METADATA_EMPTY(3))
+                 METADATA_PROCESS_LCO(1))
 
 #define PROCESS_CALL_METADATA                               \
   _METADATA_ARGS(METADATA_PROCESS_ADDRESS(0),               \
-                 METADATA_PARCEL_ID(1),                     \
-                 METADATA_EMPTY(2), METADATA_EMPTY(3))
+                 METADATA_PARCEL_ID(1))
 
 #define PROCESS_DELETE_METADATA                             \
-  _METADATA_ARGS(METADATA_PROCESS_ADDRESS(0),               \
-                 METADATA_EMPTY(1), METADATA_EMPTY(2),      \
-                 METADATA_EMPTY(3))
+  _METADATA_ARGS(METADATA_PROCESS_ADDRESS(0))               \
 
-#define MEMORY_REGISTERED_ALLOC_METADATA _METADATA_NONE
-#define MEMORY_REGISTERED_FREE_METADATA  _METADATA_NONE
-#define MEMORY_GLOBAL_ALLOC_METADATA     _METADATA_NONE
-#define MEMORY_GLOBAL_FREE_METADATA      _METADATA_NONE
-#define MEMORY_CYCLIC_ALLOC_METADATA     _METADATA_NONE
-#define MEMORY_CYCLIC_FREE_METADATA      _METADATA_NONE
+#define METADATA_MEMORY_ADDRESS(off) METADATA_UINT64(off, "memory address")
+#define METADATA_MEMORY_BYTES(off) METADATA_UINT64(off, "bytes")
+#define METADATA_MEMORY_BOUNDARY(off) METADATA_UINT64(off, "boundary")
+
+#define MEMORY_REGISTERED_ALLOC_METADATA                    \
+  _METADATA_ARGS(METADATA_MEMORY_ADDRESS(0),                \
+                 METADATA_MEMORY_BYTES(1),                  \
+                 METADATA_MEMORY_BOUNDARY(2))
+
+#define MEMORY_REGISTERED_FREE_METADATA                     \
+  _METADATA_ARGS(METADATA_MEMORY_ADDRESS(0))
+
+#define MEMORY_GLOBAL_ALLOC_METADATA                        \
+  _METADATA_ARGS(METADATA_MEMORY_ADDRESS(0),                \
+                 METADATA_MEMORY_BYTES(1),                  \
+                 METADATA_MEMORY_BOUNDARY(2))
+
+#define MEMORY_GLOBAL_FREE_METADATA                         \
+  _METADATA_ARGS(METADATA_MEMORY_ADDRESS(0))
+
+#define MEMORY_CYCLIC_ALLOC_METADATA                        \
+  _METADATA_ARGS(METADATA_MEMORY_ADDRESS(0),                \
+                 METADATA_MEMORY_BYTES(1),                  \
+                 METADATA_MEMORY_BOUNDARY(2))
+
+#define MEMORY_CYCLIC_FREE_METADATA                         \
+  _METADATA_ARGS(METADATA_MEMORY_ADDRESS(0))
+
 #define MEMORY_ENTER_ALLOC_FREE_METADATA _METADATA_NONE
 
 #define METADATA_SCHEDTIMES_SCHED_SOURCE(off)   \
@@ -296,23 +306,48 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 
 #define SCHEDTIMES_SCHED_METADATA                          \
   _METADATA_ARGS(METADATA_SCHEDTIMES_SCHED_SOURCE(0),      \
-                     METADATA_SCHEDTIMES_SCHED_SPINS(0),   \
-                 METADATA_EMPTY(2), METADATA_EMPTY(3))
+                 METADATA_SCHEDTIMES_SCHED_SPINS(1))
 
-#define SCHEDTIMES_PROBE_METADATA                          \
-  _METADATA_ARGS(METADATA_EMPTY(0), METADATA_EMPTY(1),     \
-                 METADATA_EMPTY(2), METADATA_EMPTY(3))
+#define SCHEDTIMES_PROBE_METADATA _METADATA_NONE
+#define SCHEDTIMES_PROGRESS_METADATA _METADATA_NONE
 
-#define SCHEDTIMES_PROGRESS_METADATA                       \
-  _METADATA_ARGS(METADATA_EMPTY(0), METADATA_EMPTY(1),     \
-                 METADATA_EMPTY(2), METADATA_EMPTY(3))
-
-#define BOOKEND_BOOKEND_METADATA _METADATA_NONE
+#define TRACE_FILE_IO_BEGIN_METADATA _METADATA_NONE
+#define TRACE_FILE_IO_END_METADATA _METADATA_NONE
 
 #define GAS_ACCESS_METADATA                                \
-  _METADATA_ARGS(METADATA_UINT32(0, "source"),             \
-                 METADATA_UINT32(1, "destination"),        \
+  _METADATA_ARGS(METADATA_UINT64(0, "source"),             \
+                 METADATA_UINT64(1, "destination"),        \
                  METADATA_UINT64(2, "target"),             \
                  METADATA_SIZE(3))
+
+#define GAS_MOVE_METADATA                                  \
+  _METADATA_ARGS(METADATA_UINT64(0, "block"),              \
+                 METADATA_UINT64(1, "old"),                \
+                 METADATA_UINT64(2, "new"))
+
+#define COLLECTIVE_NEW_METADATA \
+  _METADATA_ARGS(METADATA_HPX_ADDR(0))
+
+#define COLLECTIVE_DELETE_METADATA \
+  _METADATA_ARGS(METADATA_HPX_ADDR(0))
+
+#define COLLECTIVE_SUBSCRIBE_METADATA                           \
+  _METADATA_ARGS(METADATA_HPX_ADDR(0),                          \
+                 METADATA_UINT64(1, "continuation action"),     \
+                 METADATA_UINT64(2, "continuation address"),    \
+                 METADATA_UINT64(3, "user id"),                 \
+                 METADATA_UINT64(4, "rank"))
+
+#define COLLECTIVE_UNSUBSCRIBE_METADATA         \
+  _METADATA_ARGS(METADATA_HPX_ADDR(0),          \
+                 METADATA_UINT64(3, "user id"), \
+                 METADATA_UINT64(4, "rank"))
+
+#define COLLECTIVE_JOIN_METADATA                \
+  _METADATA_ARGS(METADATA_HPX_ADDR(0),          \
+                 METADATA_UINT64(1, "proxy"),   \
+                 METADATA_UINT64(2, "bytes"),   \
+                 METADATA_UINT64(3, "user id"), \
+                 METADATA_UINT64(4, "rank"))
 
 #endif

@@ -87,13 +87,18 @@ static int _start(irecv_buffer_t *irecvs, int i) {
   // payload for this class of parcels
   int tag = irecvs->records[i].tag;
   uint32_t payload = tag_to_payload_size(tag);
-  hpx_parcel_t *p = hpx_parcel_acquire(NULL, payload);
+  hpx_parcel_t *p = parcel_alloc(payload);
+
+  p->ustack = NULL;
+  p->next = NULL;
+  parcel_set_state(p, PARCEL_SERIALIZED);
 
   void  *request = _request_at(irecvs, i);
   int n = payload_size_to_isir_bytes(payload);
   void *b = isir_network_offset(p);
   int e = irecvs->xport->irecv(b, n, tag, request);
   if (LIBHPX_OK != e) {
+    parcel_delete(p);
     return e;
   }
 
@@ -107,7 +112,7 @@ static int _start(irecv_buffer_t *irecvs, int i) {
 /// Buffer sizes can either be increased or decreased. The increase in size is
 /// saturated by the buffers limit, unless the limit is 0 in which case
 /// unbounded growth is permitted. A decrease in size could cancel active
-/// irecvs, which may in tern match real sends, so this routine returns
+/// irecvs, which may in turn match real sends, so this routine returns
 /// successfully received parcels.
 ///
 /// @param       buffer The buffer to resize.
@@ -150,8 +155,10 @@ int _resize(irecv_buffer_t *buffer, uint32_t size, hpx_parcel_t **out) {
   }
 #endif
 
-  buffer->requests = realloc(buffer->requests, size * buffer->xport->sizeof_request());
-  buffer->statuses = realloc(buffer->statuses, size * buffer->xport->sizeof_status());
+  buffer->requests = realloc(buffer->requests,
+                             size * buffer->xport->sizeof_request());
+  buffer->statuses = realloc(buffer->statuses,
+                             size * buffer->xport->sizeof_status());
   buffer->out = realloc(buffer->out, size * sizeof(int));
   buffer->records = realloc(buffer->records, size * sizeof(*buffer->records));
 
@@ -241,14 +248,6 @@ static hpx_parcel_t *_finish(irecv_buffer_t *irecvs, int i, void *status) {
   irecvs->xport->finish(status, &src, &n);
 
   hpx_parcel_t *p = irecvs->records[i].parcel;
-  if (here->config->gas == HPX_GAS_AGAS) {
-    int to = gas_owner_of(here->gas, p->target);
-    if (to != here->rank) {
-      network_send(self->network, p);
-      return NULL;
-    }
-  }
-
   p->src = src;
   p->size = isir_bytes_to_payload_size(n);
   log_net("finished a recv for a %u-byte payload\n", p->size);

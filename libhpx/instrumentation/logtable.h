@@ -17,40 +17,46 @@
 struct record;
 
 /// All of the data needed to keep the state of an individual event log
-typedef struct {
-  int                 fd;       // file backing the log
-  int              class;       // the class we're logging
-  int                 id;       // the event we're logging
-  int             UNUSED;       // padding
-  size_t        max_size;       // max size in bytes
-  void           *header;       // pointer to file header
-  struct record *records;       // pointer to data for log
-  volatile size_t   next;       // the next element to write
-  volatile size_t   last;       // the last element written
-} logtable_t;
-
-#define LOGTABLE_INIT {          \
-  .fd       = -1,                \
-  .class    = -1,                \
-  .id       = -1,                \
-  .UNUSED   = 0,                 \
-  .max_size = 0,                 \
-  .header   = NULL,              \
-  .records  = NULL,              \
-  .next     = 0,                 \
-  .last     = 0                  \
-}
+struct logtable {
+  int               fd;                         //!< file backing the log
+  int               id;                         //!< the event we're logging
+  int     record_bytes;                         //!< record size
+  char         *buffer;                         //!< pointer to buffer
+  char * volatile next;                         //!< pointer to next record
+  size_t      max_size;                         //!< max size in bytes
+  size_t   header_size;                         //!< header size in bytes
+};
 
 /// Initialize a logtable.
 ///
-/// If filename is NULL or size == 0 this will not generate a file.
-int logtable_init(logtable_t *lt, const char* filename, size_t size,
+/// This will create a file-backed mmaped buffer for this event for logging
+/// purposes.
+///
+/// @param           lt The log table to initialize.
+/// @param     filename The name of the file to create and map.
+/// @param         size The number of bytes to allocate.
+/// @param        class The event class.
+/// @param        event The event type.
+void logtable_init(logtable_t *lt, const char* filename, size_t size,
                   int class, int event);
 
+/// Clean up a log table.
+///
+/// It is safe to call this on an uninitialized log table. If the log table was
+/// initialized this will unmap its buffer, and truncate and close the
+/// corresponding file.
+///
+/// @param           lt The log table to finalize.
 void logtable_fini(logtable_t *lt);
 
 /// Append a record to a log table.
-void logtable_append(logtable_t *log, uint64_t u1, uint64_t u2, uint64_t u3,
-                     uint64_t u4);
+///
+/// Log tables have variable length record sizes based on their event type. This
+/// allows the user to log a variable number of features with each trace point.
+///
+/// @param           lt The log table.
+/// @param            n The number of features to log.
+/// @param         args The features to log.
+void logtable_vappend(logtable_t *lt, int n, va_list *args);
 
 #endif // LIBHPX_INSTRUMENTATION_LOGTABLE_H

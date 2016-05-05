@@ -12,25 +12,26 @@
 // =============================================================================
 
 #ifdef HAVE_CONFIG_H
-# include "config.h"
+#include "config.h"
 #endif
 
-#include <iostream>
 #include <hpx/hpx++.h>
+#include <iostream>
 
 namespace {
 int echo_handler(char *message, size_t size) {
   std::cout << message << " from " << HPX_LOCALITY_ID << "\n";
   return hpx::SUCCESS;
 }
-HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, echo, echo_handler, HPX_POINTER, HPX_SIZE_T);
+HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, echo, echo_handler, HPX_POINTER,
+           HPX_SIZE_T);
 
 int test_handler(void) {
-  const char message[] = { 'h', 'e', 'l', 'l', 'o', '\0' };
+  const char message[] = {'h', 'e', 'l', 'l', 'o', '\0'};
   hpx::system::broadcast(echo, message, sizeof(message));
   hpx::exit(hpx::SUCCESS);
 }
-HPX_ACTION(HPX_DEFAULT, 0, test, test_handler);
+auto test = hpx::make_action(test_handler);
 }
 
 int main(int argc, char *argv[]) {
@@ -38,7 +39,7 @@ int main(int argc, char *argv[]) {
     return e;
   }
 
-  if (int e = hpx::run(&test)) {
+  if (int e = hpx::run(test)) {
     return e;
   }
 

@@ -29,7 +29,7 @@ extern "C" {
 #include <pthread.h>
 #include <hpx/hpx.h>
 #include <libsync/sync.h>
-#include <libsync/lockable_ptr.h>
+#include <libsync/locks.h>
 #include <libsync/queues.h>
 #include <libhpx/stats.h>
 #include <libhpx/system.h>
@@ -211,7 +211,7 @@ void scheduler_suspend(void (*f)(hpx_parcel_t *, void*), void *env, int block);
 /// @param          con The condition we'd like to wait for.
 ///
 /// @returns            LIBHPX_OK or an error
-hpx_status_t scheduler_wait(lockable_ptr_t *lock, struct cvar *con)
+hpx_status_t scheduler_wait(tatas_lock_t *lock, struct cvar *con)
   HPX_NON_NULL(1, 2);
 
 /// Signal a condition.

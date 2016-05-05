@@ -20,6 +20,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include <hpx/hpx.h>
 #include <libsync/sync.h>
@@ -29,15 +30,10 @@
 #include <libhpx/locality.h>
 #include <libhpx/stats.h>
 
-static libhpx_stats_t _global_stats = LIBHPX_STATS_INIT;
+static libhpx_stats_t _global_stats;
 
 void libhpx_stats_init(struct libhpx_stats *stats) {
-  stats->spawns        = 0;
-  stats->failed_steals = 0;
-  stats->steals        = 0;
-  stats->mail          = 0;
-  stats->stacks        = 0;
-  stats->yields        = 0;
+  memset(stats, 0, sizeof(*stats));
 }
 
 struct libhpx_stats *libhpx_stats_accum(struct libhpx_stats *lhs,
@@ -49,6 +45,9 @@ struct libhpx_stats *libhpx_stats_accum(struct libhpx_stats *lhs,
   lhs->stacks        += rhs->stacks;
   lhs->mail          += rhs->mail;
   lhs->yields        += rhs->yields;
+
+  lhs->remote_msgs   += rhs->remote_msgs;
+  lhs->moves         += rhs->moves;
 
   return lhs;
 }
@@ -67,6 +66,8 @@ void _print_stats(const char *id, const struct libhpx_stats *counts)
   printf("steals: %lu, ", counts->steals);
   printf("stacks: %lu, ", counts->stacks);
   printf("mail: %lu, ", counts->mail);
+  printf("remote msgs: %lu, ", counts->remote_msgs);
+  printf("agas moves: %lu, ", counts->moves);
   printf("\n");
   fflush(stdout);
 #endif

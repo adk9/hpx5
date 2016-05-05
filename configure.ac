@@ -8,8 +8,8 @@
 # Research in Extreme Scale Technologies (CREST).
 
 AC_PREREQ([2.63])
-m4_define([LIBHPX_MAJOR], [2])
-m4_define([LIBHPX_MINOR], [2])
+m4_define([LIBHPX_MAJOR], [3])
+m4_define([LIBHPX_MINOR], [0])
 m4_define([LIBHPX_PATCH], [0])
 AC_INIT([hpx-5], LIBHPX_MAJOR.LIBHPX_MINOR.LIBHPX_PATCH, [hpx@indiana.edu])
 
@@ -157,7 +157,6 @@ HPX_CONFIG_UTHASH([contrib/uthash])
 HPX_CONFIG_VALGRIND([contrib/valgrind])
 HPX_CONFIG_LIBFFI([contrib/$libffi_contrib_dir], [libffi])
 HPX_CONFIG_AGAS
-#HPX_CONFIG_TASKSCALES([taskscales], [$have_agas_rebalancing])
 HPX_CONFIG_METIS([metis], [$have_agas_rebalancing])
 HPX_CONFIG_LIBCUCKOO([contrib/libcuckoo], [$have_agas])
 HPX_CONFIG_PERCOLATION
@@ -165,7 +164,7 @@ HPX_CONFIG_OPENCL([opencl], [$have_percolation])
 HPX_CONFIG_DOCS
 HPX_CONFIG_DEBUG
 HPX_CONFIG_INSTRUMENTATION
-HPX_CONFIG_PAPI([papi], [$have_instrumentation])
+#HPX_CONFIG_PAPI([papi], [$have_instrumentation])
 HPX_CONFIG_APEX([apex])
 HPX_CONFIG_TESTS
 HPX_CONFIG_LIBHPX

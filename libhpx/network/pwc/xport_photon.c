@@ -81,6 +81,7 @@ _init_photon_config(const config_t *cfg, boot_t *boot,
   pcfg->exch.allgather      = (__typeof__(pcfg->exch.allgather))boot->allgather;
   pcfg->exch.barrier        = (__typeof__(pcfg->exch.barrier))boot->barrier;
   pcfg->backend             = cfg->photon_backend;
+  pcfg->coll                = cfg->photon_coll;
 }
 
 static void

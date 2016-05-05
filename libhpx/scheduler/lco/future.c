@@ -160,6 +160,7 @@ static hpx_status_t _future_get(lco_t *lco, int size, void *out, int reset) {
   lco_lock(lco);
 
   _future_t *f = (_future_t *)lco;
+  log_lco("getting future %p (%d bytes)\n", (void*)f, size);
   hpx_status_t status = _wait(f);
   if (status != HPX_SUCCESS) {
     lco_unlock(lco);
@@ -217,6 +218,7 @@ static int _future_release(lco_t *lco, void *out) {
 
 // the future vtable
 static const lco_class_t _future_vtable = {
+  .type        = LCO_FUTURE,
   .on_fini     = _future_fini,
   .on_error    = _future_error,
   .on_set      = _future_set,
@@ -228,6 +230,10 @@ static const lco_class_t _future_vtable = {
   .on_reset    = _future_reset,
   .on_size     = _future_size
 };
+
+static void HPX_CONSTRUCTOR _register_vtable(void) {
+  lco_vtables[LCO_FUTURE] = &_future_vtable;
+}
 
 /// initialize the future
 static int _future_init_handler(_future_t *f, int size) {
@@ -280,7 +286,7 @@ hpx_addr_t hpx_lco_future_array_new(int n, int size, int futures_per_block) {
   // perform the global allocation
   uint32_t       blocks = ceil_div_32(n, futures_per_block);
   uint32_t future_bytes = sizeof(_future_t) + size;
-  uint32_t  block_bytes = futures_per_block * future_bytes;
+  uint64_t  block_bytes = futures_per_block * future_bytes;
   hpx_addr_t       base = lco_alloc_cyclic(blocks, block_bytes, 0);
 
   // for each block, initialize the future
@@ -301,8 +307,8 @@ hpx_addr_t hpx_lco_future_array_new(int n, int size, int futures_per_block) {
 // provide this array indexer.
 hpx_addr_t hpx_lco_future_array_at(hpx_addr_t array, int i, int size, int bsize)
 {
-  uint32_t future_bytes = sizeof(_future_t) + size;
-  uint32_t  block_bytes = bsize * future_bytes;
+  uint64_t future_bytes = sizeof(_future_t) + size;
+  uint64_t  block_bytes = bsize * future_bytes;
   return hpx_addr_add(array, i * future_bytes, block_bytes);
 }
 

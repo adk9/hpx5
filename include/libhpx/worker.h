@@ -23,6 +23,7 @@ extern "C" {
 #include <hpx/attributes.h>
 #include <libsync/deques.h>
 #include <libsync/queues.h>
+#include <libhpx/instrumentation.h>
 #include <libhpx/padding.h>
 #include <libhpx/stats.h>
 
@@ -45,33 +46,36 @@ typedef struct {
   PAD_TO_CACHELINE(sizeof(chase_lev_ws_deque_t));
 } padded_deque_t;
 
-typedef struct {
-  pthread_t          thread;                    // this worker's native thread
-  int                    id;                    // this worker's id
-  unsigned             seed;                    // my random seed
-  int            work_first;                    // this worker's mode
-  int               nstacks;                    // count of freelisted stacks
-  int               yielded;                    // used by APEX
-  int                active;                    // used by APEX scheduler throttling
-  hpx_parcel_t      *system;                    // this worker's native parcel
-  hpx_parcel_t     *current;                    // current thread
-  struct ustack     *stacks;                    // freelisted stacks
+struct worker {
+  pthread_t        thread;                //!< this worker's native thread
+  int                  id;                //!< this worker's id
+  unsigned           seed;                //!< my random seed
+  int          work_first;                //!< this worker's mode
+  int             nstacks;                //!< count of freelisted stacks
+  int             yielded;                //!< used by APEX
+  int              active;                //!< used by APEX scheduler throttling
+  hpx_parcel_t    *system;                //!< this worker's native parcel
+  hpx_parcel_t   *current;                //!< current thread
+  struct ustack   *stacks;                //!< freelisted stacks
   PAD_TO_CACHELINE(sizeof(pthread_t) +
                    sizeof(int) * 6 +
                    sizeof(hpx_parcel_t*) * 2 +
                    sizeof(struct ustack*));
-  int               work_id;                    // which queue are we using
+  volatile int    work_id;                      //!< which queue are we using
   PAD_TO_CACHELINE(sizeof(int));
-  padded_deque_t  queues[2];
-  two_lock_queue_t    inbox;                    // mail sent to me
-  libhpx_stats_t      stats;                    // per-worker statistics
-  int           last_victim;                    // last successful victim
-  int             numa_node;                    // this worker's numa node
-  void            *profiler;                    // reference to the profiler
-  void                 *bst;                    // reference to the profiler
-  struct network   *network;                    // reference to the network
-} worker_t HPX_ALIGNED(HPX_CACHELINE_SIZE);
+  padded_deque_t   queues[2];             //!< work and yield queues
+  two_lock_queue_t  inbox;                //!< mail sent to me
+  libhpx_stats_t    stats;                //!< per-worker statistics
+  int           last_victim;              //!< last successful victim
+  int           numa_node;                //!< this worker's numa node
+  void          *profiler;                //!< reference to the profiler
+  void               *bst;                //!< reference to the profiler
+  struct network *network;                //!< reference to the network
+  inst_t            *inst;                //!< reference to instrumentation data
+};
+typedef struct worker worker_t;
 /// @}
+
 
 extern __thread worker_t * volatile self;
 
