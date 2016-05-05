@@ -55,13 +55,17 @@ static int _hpx_143_fix_handler(void) {
 }
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _hpx_143_fix, _hpx_143_fix_handler);
 
-/// Stop HPX
+/// Cleanup utility function.
 ///
-/// This will stop HPX by stopping the network and scheduler, and cleaning up
-/// anything that should not persist between hpx_run() calls.
-static void _stop(locality_t *l) {
-  if (!l)
+/// This will delete the global objects, if they've been allocated.
+static void _cleanup(locality_t *l) {
+  if (!l) {
     return;
+  }
+
+#ifdef HAVE_APEX
+  apex_finalize();
+#endif
 
   if (l->tracer) {
     trace_destroy(l->tracer);
@@ -77,18 +81,6 @@ static void _stop(locality_t *l) {
     network_delete(l->net);
     l->net = NULL;
   }
-}
-
-/// Cleanup utility function.
-///
-/// This will delete the global objects, if they've been allocated.
-static void _cleanup(locality_t *l) {
-  if (!l)
-    return;
-
-#ifdef HAVE_APEX
-  apex_finalize();
-#endif
 
   if (l->percolation) {
     percolation_delete(l->percolation);
@@ -251,7 +243,6 @@ int hpx_init(int *argc, char ***argv) {
 
   return status;
  unwind1:
-  _stop(here);
   _cleanup(here);
  unwind0:
   return status;
@@ -354,6 +345,5 @@ void hpx_finalize(void) {
   if (_hpx_143 != HPX_NULL) {
     hpx_gas_free(_hpx_143, HPX_NULL);
   }
-  _stop(here);
   _cleanup(here);
 }
