@@ -49,7 +49,7 @@ typedef struct {
 } _opencl_percolation_t;
 
 static HPX_RETURNS_NON_NULL const char *_id(void) {
-  return "OPENCL";
+  return "OpenCL";
 }
 
 static void _delete(void *percolation) {
@@ -60,7 +60,7 @@ static void _delete(void *percolation) {
 
 static void *_prepare(const void *percolation, const char *key,
                       const char *kernel) {
-  _opencl_percolation_t *cl = percolation;
+  const _opencl_percolation_t *cl = percolation;
 
   int e;
   cl_program program = clCreateProgramWithSource(cl->context, 1, &kernel,
@@ -80,7 +80,7 @@ static void *_prepare(const void *percolation, const char *key,
 
 static int _execute(const void *percolation, void *obj, int nargs,
                     void *vargs[], size_t sizes[]) {
-  _opencl_percolation_t *cl = percolation;
+  const _opencl_percolation_t *cl = percolation;
   cl_kernel kernel = (cl_kernel)obj;
 
   cl_mem buf[nargs];
@@ -89,37 +89,33 @@ static int _execute(const void *percolation, void *obj, int nargs,
     buf[i] = clCreateBuffer(cl->context,
                             CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
                             sizes[i], vargs[i], &e);
-    dbg_assert_str(e >= 0, "failed to create OpenCL input buffer.\n");
+    dbg_assert_str(e == CL_SUCCESS, "failed to create OpenCL input buffer.\n");
 
     e = clSetKernelArg(kernel, i*2, sizeof(cl_mem), &buf[i]);
-    dbg_assert_str(e >= 0, "failed to set OpenCL kernel input arg.\n");
-
-    e = clSetKernelArg(kernel, (i*2)+1, sizeof(size_t), &sizes[i]);
-    dbg_assert_str(e >= 0, "failed to set OpenCL kernel input arg.\n");
+    dbg_assert_str(e == CL_SUCCESS, "failed to set OpenCL kernel input arg.\n");
+    unsigned int size = sizes[i];
+    e = clSetKernelArg(kernel, (i*2)+1, sizeof(unsigned int), &size);
+    dbg_assert_str(e == CL_SUCCESS, "failed to set OpenCL kernel input arg.\n");
   }
 
   // TODO: support arbitrarily-sized outputs
-  size_t osize = sizes[0];
+  unsigned int osize = sizes[0];
   void *output = calloc(1, osize);
   dbg_assert(output);
 
   cl_mem obuf = clCreateBuffer(cl->context, CL_MEM_WRITE_ONLY,
                                osize, NULL, &e);
-  dbg_assert_str(e >= 0, "failed to create OpenCL output buffer.\n");
+  dbg_assert_str(e == CL_SUCCESS, "failed to create OpenCL output buffer.\n");
 
-  e = clSetKernelArg(kernel, nargs, sizeof(cl_mem), &obuf);
-  dbg_assert_str(e >= 0, "failed to set OpenCL kernel output arg.\n");
+  e = clSetKernelArg(kernel, nargs*2, sizeof(cl_mem), &obuf);
+  dbg_assert_str(e == CL_SUCCESS, "failed to set OpenCL kernel output arg.\n");
 
-  e = clSetKernelArg(kernel, nargs+1, sizeof(size_t), &osize);
-  dbg_assert_str(e >= 0, "failed to set OpenCL kernel output arg.\n");
+  e = clSetKernelArg(kernel, (nargs*2)+1, sizeof(unsigned int), &osize);
+  dbg_assert_str(e == CL_SUCCESS, "failed to set OpenCL kernel output arg.\n");
 
-  // TODO: determine optimal work group size.
-  // TODO: look at clEnqueueTask.
-  size_t local_size = 64;
-  size_t global_size = ((osize+local_size)/local_size)*local_size;
-
-  e = clEnqueueNDRangeKernel(cl->queue, kernel, 1, NULL, &global_size,
-                             &local_size, 0, NULL, NULL);
+  size_t global_work_size = CL_DEVICE_MAX_WORK_ITEM_SIZES;
+  e = clEnqueueNDRangeKernel(cl->queue, kernel, 1, NULL, &global_work_size,
+                             NULL, 0, NULL, NULL);
 
   // TODO: make kernel execution asynchronous
   clFinish(cl->queue);
@@ -131,7 +127,7 @@ static int _execute(const void *percolation, void *obj, int nargs,
     clReleaseMemObject(buf[i]);
   }
 
-  int e = hpx_thread_continue(output, osize);
+  e = hpx_thread_continue(output, osize);
 
   clReleaseMemObject(obuf);
   if (output) {
@@ -169,7 +165,7 @@ percolation_t *percolation_new_opencl(void) {
   _opencl_percolation_t *class = &_opencl_percolation_class;
 
   int e = clGetPlatformIDs(1, &class->platform, NULL);
-  dbg_assert_str(e >= 0, "failed to identify the OpenCL platform.\n");
+  dbg_assert_str(e == CL_SUCCESS, "failed to identify the OpenCL platform.\n");
 
   e = clGetDeviceIDs(class->platform, CL_DEVICE_TYPE_GPU, 1,
                      &class->device, NULL);
