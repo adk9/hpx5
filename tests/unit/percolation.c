@@ -17,19 +17,19 @@
 #include "tests.h"
 
 /// Simple vec add kernel.
-const char *_vec_add_kernel =                    "\n" \
-  "#pragma OPENCL EXTENSION cl_khr_fp64 : enable  \n" \
-  "__kernel void _vec_add(__global double *a,     \n" \
-  "                     const unsigned int n_a,   \n" \
-  "                     __global double *b,       \n" \
-  "                     const unsigned int n_b,   \n" \
-  "                     __global double *c,       \n" \
-  "                     const unsigned int n_c) { \n" \
-  "    int id = get_global_id(0);                 \n" \
-  "    if (id < n_a) {                            \n" \
-  "      c[id] = a[id] + b[id];                   \n" \
-  "    }                                          \n" \
-  "}                                              \n" \
+const char *_vec_add_kernel =                        "\n" \
+  "#pragma OPENCL EXTENSION cl_khr_fp64 : enable      \n" \
+  "__kernel void _vec_add(__global double *a,         \n" \
+  "                     const unsigned int a_bytes,   \n" \
+  "                     __global double *b,           \n" \
+  "                     const unsigned int b_bytes,   \n" \
+  "                     __global double *c,           \n" \
+  "                     const unsigned int c_bytes) { \n" \
+  "    int id = get_global_id(0);                     \n" \
+  "    if (id < a_bytes/sizeof(double)) {             \n" \
+  "      c[id] = a[id] + b[id];                       \n" \
+  "    }                                              \n" \
+  "}                                                  \n" \
   "\n";
 static HPX_ACTION(HPX_OPENCL, HPX_MARSHALLED | HPX_VECTORED,
                   _vec_add, _vec_add_kernel,
@@ -53,13 +53,14 @@ _test_percolation_handler(void) {
     b[i] = cosf(i) * cosf(i);
   }
 
-  CHECK( hpx_call_sync(HPX_HERE, _vec_add, c, n, a, n, b, n) );
+  size_t size = n * sizeof(double);
+  CHECK( hpx_call_sync(HPX_HERE, _vec_add, c, size, a, size, b, size) );
 
   double sum = 0.0;
   for (int i = 0; i < n; ++i) {
     sum += c[i];
   }
-  printf("RESULT: %f\n", sum/n);
+  printf("RESULT: %lf\n", sum/n);
 
   free(a);
   free(b);
