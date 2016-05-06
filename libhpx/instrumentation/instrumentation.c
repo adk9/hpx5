@@ -58,7 +58,7 @@ trace_t *trace_new(const config_t *cfg) {
   if (type == HPX_TRACE_BACKEND_DEFAULT || type == HPX_TRACE_BACKEND_FILE) {
     return trace_file_new(cfg);
   } else if (type == HPX_TRACE_BACKEND_CONSOLE) {
-    dbg_error("unimplemented.\n");
+    return trace_console_new(cfg);
   } else {
     dbg_error("unknown trace backend type.\n");
   }

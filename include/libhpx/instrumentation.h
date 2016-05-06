@@ -91,4 +91,10 @@ static inline bool inst_trace_class(int type) {
 }
 #endif
 
+// Constructor for a "file" tracer object.
+trace_t *trace_file_new(const config_t *cfg);
+
+// Constructor for a "console" tracer object.
+trace_t *trace_console_new(const config_t *cfg);
+
 #endif

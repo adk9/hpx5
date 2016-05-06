@@ -14,9 +14,6 @@
 #ifndef LIBHPX_INSTRUMENTATION_FILE_H
 #define LIBHPX_INSTRUMENTATION_FILE_H
 
-// Constructor for a "file" tracer object.
-trace_t *trace_file_new(const config_t *cfg);
-
 // Output the header for the trace file.
 size_t write_trace_header(void *base, int class, int id);
 
