@@ -106,7 +106,7 @@ static const int TRACE_OFFSETS[] = {
 # define LIBHPX_EVENT(class, event, ...)                                \
   static inline void                                                    \
   EVENT_##class##_##event(_HPX_CAT2(_DECL, __HPX_NARGS(__VA_ARGS__))(__VA_ARGS__)) { \
-    inst_trace(HPX_TRACE_##class, TRACE_EVENT_##class##_##event         \
+    trace_append(HPX_TRACE_##class, TRACE_EVENT_##class##_##event         \
               _HPX_CAT2(_ARGS, __HPX_NARGS(__VA_ARGS__)));              \
   }
 # include "events.def"

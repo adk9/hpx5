@@ -107,9 +107,10 @@ flag off
 
 section "Tracing"
 
-option "hpx-trace-dir" - "file output directory"
-typestr="dir"
-string optional
+option "hpx-trace-backend" - "type of tracing backend to use"
+typestr="type"
+values="default","file","console"
+enum optional
 
 option "hpx-trace-at" - "filter by locality, -1 for all (default all)"
 typestr="localities"
@@ -120,7 +121,11 @@ typestr="class"
 values="parcel","network","sched","lco","process","memory","trace","gas","collective","all"
 enum optional multiple
 
-option "hpx-trace-buffersize" - "size of trace buffers"
+option "hpx-trace-dir" - "output directory (file backend)"
+typestr="dir"
+string optional
+
+option "hpx-trace-buffersize" - "size of trace buffers (file backend)"
 typestr="bytes"
 long optional
 

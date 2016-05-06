@@ -147,6 +147,9 @@ int hpx_init(int *argc, char ***argv) {
     dbg_wait();
   }
 
+  // initialize the tracing backend
+  here->tracer = trace_new(here->config);
+
   // bootstrap
   here->boot = boot_new(here->config->boot);
   if (!here->boot) {
@@ -228,7 +231,6 @@ int hpx_init(int *argc, char ***argv) {
 #endif
 
   action_registration_finalize();
-  inst_start();
 
   // start the scheduler, this will return after scheduler_shutdown()
   if (scheduler_startup(here->sched, here->config) != LIBHPX_OK) {

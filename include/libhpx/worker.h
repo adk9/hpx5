@@ -60,20 +60,19 @@ struct worker {
                    sizeof(int) * 6 +
                    sizeof(hpx_parcel_t*) * 2 +
                    sizeof(struct ustack*));
-  volatile int    work_id;                      //!< which queue are we using
+  volatile int    work_id;                //!< which queue are we using
   PAD_TO_CACHELINE(sizeof(int));
   padded_deque_t   queues[2];             //!< work and yield queues
   two_lock_queue_t  inbox;                //!< mail sent to me
   int         last_victim;                //!< last successful victim
   int           numa_node;                //!< this worker's numa node
   void          *profiler;                //!< reference to the profiler
-  void               *bst;                //!< reference to the profiler
+  void               *bst;                //!< the block statistics table
   struct network *network;                //!< reference to the network
-  inst_t            *inst;                //!< reference to instrumentation data
+  struct logtable   *logs;                //!< reference to tracer data
 };
 typedef struct worker worker_t;
 /// @}
-
 
 extern __thread worker_t * volatile self;
 

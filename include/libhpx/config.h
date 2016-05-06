@@ -161,7 +161,22 @@ static const char *const HPX_LOG_LEVEL_TO_STRING[] = {
   "MEMORY"
 };
 
-//! Configuration options for instrumentation in HPX.
+//! Configuration options for tracing backends in HPX.
+typedef enum {
+  HPX_TRACE_BACKEND_DEFAULT = 0,
+  HPX_TRACE_BACKEND_FILE,
+  HPX_TRACE_BACKEND_CONSOLE,
+  HPX_TRACE_BACKEND_MAX
+} libhpx_trace_backend_t;
+
+static const char * const HPX_TRACE_BACKEND_TO_STRING[] = {
+  "DEFAULT",
+  "FILE",
+  "CONSOLE",
+  "INVALID_ID"
+};
+
+//! Configuration options for tracing in HPX.
 #define HPX_TRACE_PARCEL      (UINT64_C(1) << 0)
 #define HPX_TRACE_NETWORK     (UINT64_C(1) << 1)
 #define HPX_TRACE_SCHED       (UINT64_C(1) << 2)

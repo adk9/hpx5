@@ -651,11 +651,8 @@ int worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
   w->active      = true;
   w->profiler    = NULL;
   w->bst         = NULL;
+  w->logs        = NULL;
   w->network     = here->net;
-
-  if (inst_init(here->config, w)) {
-    log_dflt("error detected while initializing instrumentation\n");
-  }
 
   sync_chase_lev_ws_deque_init(&w->queues[0].work, work_size);
   sync_chase_lev_ws_deque_init(&w->queues[1].work, work_size);
@@ -678,7 +675,7 @@ void worker_fini(worker_t *w) {
   sync_chase_lev_ws_deque_fini(&w->queues[1].work);
 
   // and clean up any instrumentation data
-  inst_fini(w);
+  trace_destroy(here->tracer, w);
 
   // and delete any cached stacks
   ustack_t *stack = NULL;
