@@ -318,14 +318,12 @@ static void _start(void) {
     // Allocate memory for pointers to the logs
     w->logs = calloc(TRACE_NUM_EVENTS, sizeof(logtable_t));
 
-    // Scan through each trace event class and create logs for the associated
-    // class events that that we are going to be tracing.
-    int nclasses = _HPX_NELEM(HPX_TRACE_CLASS_TO_STRING);
-    for (int c = 0, e = nclasses; c < e; ++c) {
-      if (inst_trace_class(1 << c)) {
-        for (int i = TRACE_OFFSETS[c], e = TRACE_OFFSETS[c + 1]; i < e; ++i) {
-          _create_logtable(w, c, i, here->config->trace_buffersize);
-        }
+    // Scan through each trace event and create logs for the associated
+    // events that that we are going to be tracing.
+    for (int i = 0; i < TRACE_NUM_EVENTS; ++i) {
+      int c = TRACE_EVENT_TO_CLASS[i];
+      if (inst_trace_class(c)) {
+        _create_logtable(w, c, i, here->config->trace_buffersize);
       }
     }
   }

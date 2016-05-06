@@ -39,6 +39,15 @@ typedef enum {
 #undef LIBHPX_EVENT
 } libhpx_trace_events_t;
 
+/// Event to class mapping
+///
+/// This generates a table that maps tracing events to their class.
+static const int TRACE_EVENT_TO_CLASS[] = {
+#define LIBHPX_EVENT(class, event, ...) [TRACE_EVENT_##class##_##event] = HPX_TRACE_##class,
+# include "events.def"
+#undef LIBHPX_EVENT
+};
+
 /// Event names
 ///
 /// This generates a table that maps tracing events to their names.
@@ -62,21 +71,6 @@ static const int TRACE_EVENT_NUM_FIELDS[] = {
 
 /// Total number of trace events.
 #define TRACE_NUM_EVENTS _HPX_NELEM(TRACE_EVENT_TO_STRING)
-
-/// Offsets into the trace table indicating the beginning of each
-/// trace class.
-static const int TRACE_OFFSETS[] = {
-  TRACE_EVENT_PARCEL_CREATE,
-  TRACE_EVENT_NETWORK_SEND,
-  TRACE_EVENT_SCHED_WQSIZE,
-  TRACE_EVENT_LCO_INIT,
-  TRACE_EVENT_PROCESS_NEW,
-  TRACE_EVENT_MEMORY_ALLOC_BEGIN,
-  TRACE_EVENT_TRACE_FILE_IO_BEGIN,
-  TRACE_EVENT_GAS_ACCESS,
-  TRACE_EVENT_COLLECTIVE_NEW,
-  TRACE_NUM_EVENTS
-};
 
 /// Trace event macros.
 ///

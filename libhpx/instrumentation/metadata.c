@@ -21,9 +21,6 @@
 #include <libhpx/instrumentation.h>
 #include "metadata.h"
 
-// Possibly, we might want to move more macros from the header into here as
-// variables
-
 const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS] =
 {
 #define LIBHPX_EVENT(class, event, ...) class##_##event##_METADATA,
