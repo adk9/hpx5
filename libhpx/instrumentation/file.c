@@ -28,6 +28,7 @@
 
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
+#include <libhpx/scheduler.h>
 #include <hpx/hpx.h>
 #include "metadata.h"
 #include "file.h"
@@ -311,17 +312,20 @@ static void _vappend(int UNUSED, int n, int id, ...) {
   va_end(vargs);
 }
 
-static void _start(struct worker *w) {
-  // Allocate memory for pointers to the logs and their respective locks
-  int nclasses = _HPX_NELEM(HPX_TRACE_CLASS_TO_STRING);
-  w->logs = calloc(TRACE_OFFSETS[nclasses], sizeof(logtable_t *));
+static void _start(void) {
+  for (int k = 0; k < here->sched->n_workers; ++k) {
+    worker_t *w = scheduler_get_worker(here->sched, k);
+    // Allocate memory for pointers to the logs
+    int nclasses = _HPX_NELEM(HPX_TRACE_CLASS_TO_STRING);
+    w->logs = calloc(TRACE_OFFSETS[nclasses], sizeof(logtable_t *));
 
-  // Scan through each trace event class and create logs for the associated
-  // class events that that we are going to be tracing.
-  for (int c = 0, e = nclasses; c < e; ++c) {
-    if (inst_trace_class(1 << c)) {
-      for (int i = TRACE_OFFSETS[c], e = TRACE_OFFSETS[c + 1]; i < e; ++i) {
-        _create_logtable(w, c, i, here->config->trace_buffersize);
+    // Scan through each trace event class and create logs for the associated
+    // class events that that we are going to be tracing.
+    for (int c = 0, e = nclasses; c < e; ++c) {
+      if (inst_trace_class(1 << c)) {
+        for (int i = TRACE_OFFSETS[c], e = TRACE_OFFSETS[c + 1]; i < e; ++i) {
+          _create_logtable(w, c, i, here->config->trace_buffersize);
+        }
       }
     }
   }
@@ -339,22 +343,23 @@ static void _start(struct worker *w) {
   }
 }
 
-static void _destroy(worker_t *w) {
+static void _destroy(void) {
   if (_log_path) {
     free((char*)_log_path);
     _log_path = NULL;
   }
 
-  if (!w->logs) {
-    return;
+  for (int k = 0; k < here->sched->n_workers; ++k) {
+    worker_t *w = scheduler_get_worker(here->sched, k);
+    if (w->logs) {
+      // deallocate the log tables
+      for (int i = 0, e = TRACE_NUM_EVENTS; i < e; ++i) {
+        logtable_fini(&w->logs[i]);
+      }
+      free(w->logs);
+      w->logs = NULL;
+    }
   }
-
-  // deallocate the log tables
-  for (int i = 0, e = TRACE_NUM_EVENTS; i < e; ++i) {
-    logtable_fini(&w->logs[i]);
-  }
-  free(w->logs);
-  w->logs = NULL;
 }
 
 trace_t *trace_file_new(const config_t *cfg) {

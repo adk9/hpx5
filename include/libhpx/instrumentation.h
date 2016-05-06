@@ -25,8 +25,6 @@ extern "C" {
 #include <libhpx/config.h>
 #include <libhpx/locality.h>
 
-struct worker;
-
 /// INST will do @p stmt only if instrumentation is enabled
 #ifdef ENABLE_INSTRUMENTATION
 # define INST(stmt) stmt;
@@ -38,8 +36,8 @@ struct worker;
 
 typedef struct trace {
   int type;
-  void (*start)(struct worker *w);
-  void (*destroy)(struct worker *w);
+  void (*start)(void);
+  void (*destroy)(void);
   void (*vappend)(int type, int n, int id, ...);
 } trace_t;
 
@@ -53,24 +51,22 @@ trace_t *trace_new(const config_t *cfg)
 /// complete,
 /// specifically action registration.
 static inline
-void trace_start(void *obj, struct worker *w) {
-  if (!obj) {
-    return;
+void trace_start(void *obj) {
+  if (obj) {
+    const trace_t *t = (trace_t*)obj;
+    t->start();
   }
-  const trace_t *t = (trace_t*)obj;
-  t->start(w);
 }
   
 /// Delete a trace object.
 ///
 /// @param      obj The trace object to delete.
 static inline void
-trace_destroy(void *obj, struct worker *w) {
-  if (!obj) {
-    return;
+trace_destroy(void *obj) {
+  if (obj) {
+    trace_t *t = (trace_t*)obj;
+    t->destroy();
   }
-  trace_t *t = (trace_t*)obj;
-  t->destroy(w);
 }
 
 /// Record an event to the log
@@ -80,9 +76,8 @@ trace_destroy(void *obj, struct worker *w) {
 /// @param           id The event id (see hpx_inst_event_type_t)
 #ifdef ENABLE_INSTRUMENTATION
 # define trace_append(type, ...)                                 \
-  if (here->tracer) {                                            \
     here->tracer->vappend(type, __HPX_NARGS(__VA_ARGS__) - 1,    \
-                          __VA_ARGS__); }
+                          __VA_ARGS__);
 #else
 # define trace_append(type, id, ...)
 #endif

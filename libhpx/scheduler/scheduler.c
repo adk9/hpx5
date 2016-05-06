@@ -201,7 +201,6 @@ void scheduler_delete(struct scheduler *sched) {
       worker_t *worker = scheduler_get_worker(sched, i);
       worker_fini(worker);
     }
-    free(here->tracer);
     free(sched->workers);
   }
 
@@ -243,7 +242,6 @@ int scheduler_startup(struct scheduler *sched, const config_t *cfg) {
   // start all of the other worker threads
   for (int i = 1, e = sched->n_workers; i < e; ++i) {
     worker = scheduler_get_worker(sched, i);
-    trace_start(here->tracer, worker);
     status = _create(worker, cfg);
 
     if (status != LIBHPX_OK) {

@@ -63,6 +63,11 @@ static void _stop(locality_t *l) {
   if (!l)
     return;
 
+  if (l->tracer) {
+    trace_destroy(l->tracer);
+    l->tracer = NULL;
+  }
+
   if (l->sched) {
     scheduler_delete(l->sched);
     l->sched = NULL;
@@ -231,6 +236,7 @@ int hpx_init(int *argc, char ***argv) {
 #endif
 
   action_registration_finalize();
+  trace_start(here->tracer);
 
   // start the scheduler, this will return after scheduler_shutdown()
   if (scheduler_startup(here->sched, here->config) != LIBHPX_OK) {
