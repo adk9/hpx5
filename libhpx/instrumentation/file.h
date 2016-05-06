@@ -11,19 +11,10 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
+#ifndef LIBHPX_INSTRUMENTATION_FILE_H
+#define LIBHPX_INSTRUMENTATION_FILE_H
 
-#include <limits.h>
-#include <stdint.h>
+// Output the header for the trace file.
+size_t write_trace_header(void *base, int class, int id);
 
-#include <libhpx/instrumentation.h>
-#include "metadata.h"
-
-const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS] =
-{
-#define LIBHPX_EVENT(class, event, ...) class##_##event##_METADATA,
-# include <libhpx/events.def>
-#undef LIBHPX_EVENT
-};
+#endif // LIBHPX_INSTRUMENTATION_FILE_H

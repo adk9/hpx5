@@ -44,7 +44,7 @@
 #include <libhpx/topology.h>
 
 // this will only be used during instrumentation
-__thread uint64_t parcel_count = 0;
+__thread uint64_t parcel_count = 1;
 
 static int _delete_launch_through_parcel_handler(hpx_parcel_t *p) {
   hpx_addr_t lsync = hpx_thread_current_target();
@@ -142,7 +142,6 @@ void parcel_launch(hpx_parcel_t *p) {
     scheduler_spawn(p);
   }
   else {
-    EVENT_COUNT(++self->stats.remote_msgs);
     int e = network_send(self->network, p);
     dbg_check(e, "failed to perform a network send\n");
   }

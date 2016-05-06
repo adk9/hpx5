@@ -61,10 +61,11 @@ const char *hpx_options_t_help[] = {
   "      --hpx-dbg-mprotectstacks  use mprotect() to bracket stacks to look for\n                                  stack overflows  (default=off)",
   "      --hpx-dbg-syncfree        use synchronous GAS free operations\n                                  (default=off)",
   "\nTracing:",
-  "      --hpx-trace-dir=dir       file output directory",
+  "      --hpx-trace-backend=type  type of tracing backend to use  (possible\n                                  values=\"default\", \"file\", \"console\")",
   "      --hpx-trace-at=localities filter by locality, -1 for all (default all)",
-  "      --hpx-trace-classes=class filter by class  (possible values=\"parcel\",\n                                  \"network\", \"sched\", \"lco\", \"process\",\n                                  \"memory\", \"schedtimes\", \"trace\",\n                                  \"gas\", \"collective\", \"all\")",
-  "      --hpx-trace-buffersize=bytes\n                                size of trace buffers",
+  "      --hpx-trace-classes=class filter by class  (possible values=\"parcel\",\n                                  \"network\", \"sched\", \"lco\", \"process\",\n                                  \"memory\", \"trace\", \"gas\",\n                                  \"collective\", \"all\")",
+  "      --hpx-trace-dir=dir       output directory (file backend)",
+  "      --hpx-trace-buffersize=bytes\n                                size of trace buffers (file backend)",
   "\nISIR Network Options:",
   "      --hpx-isir-testwindow=requests\n                                number of ISIR requests to test in progress\n                                  loop",
   "      --hpx-isir-sendlimit=requests\n                                ISIR network send limit",
@@ -152,7 +153,8 @@ const char *hpx_option_parser_hpx_thread_affinity_values[] = {"default", "hwthre
 const char *hpx_option_parser_hpx_sched_policy_values[] = {"default", "random", "hier", 0}; /*< Possible values for hpx-sched-policy. */
 const char *hpx_option_parser_hpx_log_level_values[] = {"default", "boot", "sched", "gas", "lco", "net", "trans", "parcel", "action", "config", "memory", "coll", "all", 0}; /*< Possible values for hpx-log-level. */
 const char *hpx_option_parser_hpx_dbg_waitonsig_values[] = {"segv", "abrt", "fpe", "ill", "bus", "iot", "sys", "trap", "all", 0}; /*< Possible values for hpx-dbg-waitonsig. */
-const char *hpx_option_parser_hpx_trace_classes_values[] = {"parcel", "network", "sched", "lco", "process", "memory", "schedtimes", "trace", "gas", "collective", "all", 0}; /*< Possible values for hpx-trace-classes. */
+const char *hpx_option_parser_hpx_trace_backend_values[] = {"default", "file", "console", 0}; /*< Possible values for hpx-trace-backend. */
+const char *hpx_option_parser_hpx_trace_classes_values[] = {"parcel", "network", "sched", "lco", "process", "memory", "trace", "gas", "collective", "all", 0}; /*< Possible values for hpx-trace-classes. */
 const char *hpx_option_parser_hpx_photon_backend_values[] = {"default", "verbs", "ugni", "fi", 0}; /*< Possible values for hpx-photon-backend. */
 const char *hpx_option_parser_hpx_photon_coll_values[] = {"default", "pwc", "nbc", 0}; /*< Possible values for hpx-photon-coll. */
 
@@ -184,9 +186,10 @@ void clear_given (struct hpx_options_t *args_info)
   args_info->hpx_dbg_waitonsig_given = 0 ;
   args_info->hpx_dbg_mprotectstacks_given = 0 ;
   args_info->hpx_dbg_syncfree_given = 0 ;
-  args_info->hpx_trace_dir_given = 0 ;
+  args_info->hpx_trace_backend_given = 0 ;
   args_info->hpx_trace_at_given = 0 ;
   args_info->hpx_trace_classes_given = 0 ;
+  args_info->hpx_trace_dir_given = 0 ;
   args_info->hpx_trace_buffersize_given = 0 ;
   args_info->hpx_isir_testwindow_given = 0 ;
   args_info->hpx_isir_sendlimit_given = 0 ;
@@ -254,12 +257,14 @@ void clear_args (struct hpx_options_t *args_info)
   args_info->hpx_dbg_waitonsig_orig = NULL;
   args_info->hpx_dbg_mprotectstacks_flag = 0;
   args_info->hpx_dbg_syncfree_flag = 0;
-  args_info->hpx_trace_dir_arg = NULL;
-  args_info->hpx_trace_dir_orig = NULL;
+  args_info->hpx_trace_backend_arg = hpx_trace_backend__NULL;
+  args_info->hpx_trace_backend_orig = NULL;
   args_info->hpx_trace_at_arg = NULL;
   args_info->hpx_trace_at_orig = NULL;
   args_info->hpx_trace_classes_arg = NULL;
   args_info->hpx_trace_classes_orig = NULL;
+  args_info->hpx_trace_dir_arg = NULL;
+  args_info->hpx_trace_dir_orig = NULL;
   args_info->hpx_trace_buffersize_orig = NULL;
   args_info->hpx_isir_testwindow_orig = NULL;
   args_info->hpx_isir_sendlimit_orig = NULL;
@@ -332,41 +337,42 @@ void init_args_info(struct hpx_options_t *args_info)
   args_info->hpx_dbg_waitonsig_max = 0;
   args_info->hpx_dbg_mprotectstacks_help = hpx_options_t_help[25] ;
   args_info->hpx_dbg_syncfree_help = hpx_options_t_help[26] ;
-  args_info->hpx_trace_dir_help = hpx_options_t_help[28] ;
+  args_info->hpx_trace_backend_help = hpx_options_t_help[28] ;
   args_info->hpx_trace_at_help = hpx_options_t_help[29] ;
   args_info->hpx_trace_at_min = 0;
   args_info->hpx_trace_at_max = 0;
   args_info->hpx_trace_classes_help = hpx_options_t_help[30] ;
   args_info->hpx_trace_classes_min = 0;
   args_info->hpx_trace_classes_max = 0;
-  args_info->hpx_trace_buffersize_help = hpx_options_t_help[31] ;
-  args_info->hpx_isir_testwindow_help = hpx_options_t_help[33] ;
-  args_info->hpx_isir_sendlimit_help = hpx_options_t_help[34] ;
-  args_info->hpx_isir_recvlimit_help = hpx_options_t_help[35] ;
-  args_info->hpx_pwc_parcelbuffersize_help = hpx_options_t_help[37] ;
-  args_info->hpx_pwc_parceleagerlimit_help = hpx_options_t_help[38] ;
-  args_info->hpx_coll_network_help = hpx_options_t_help[40] ;
-  args_info->hpx_photon_backend_help = hpx_options_t_help[42] ;
-  args_info->hpx_photon_coll_help = hpx_options_t_help[43] ;
-  args_info->hpx_photon_ibdev_help = hpx_options_t_help[44] ;
-  args_info->hpx_photon_ethdev_help = hpx_options_t_help[45] ;
-  args_info->hpx_photon_ibport_help = hpx_options_t_help[46] ;
-  args_info->hpx_photon_usecma_help = hpx_options_t_help[47] ;
-  args_info->hpx_photon_ibsrq_help = hpx_options_t_help[48] ;
-  args_info->hpx_photon_btethresh_help = hpx_options_t_help[49] ;
-  args_info->hpx_photon_fiprov_help = hpx_options_t_help[50] ;
-  args_info->hpx_photon_fidev_help = hpx_options_t_help[51] ;
-  args_info->hpx_photon_ledgersize_help = hpx_options_t_help[52] ;
-  args_info->hpx_photon_pwcbufsize_help = hpx_options_t_help[53] ;
-  args_info->hpx_photon_eagerbufsize_help = hpx_options_t_help[54] ;
-  args_info->hpx_photon_smallpwcsize_help = hpx_options_t_help[55] ;
-  args_info->hpx_photon_maxrd_help = hpx_options_t_help[56] ;
-  args_info->hpx_photon_defaultrd_help = hpx_options_t_help[57] ;
-  args_info->hpx_photon_numcq_help = hpx_options_t_help[58] ;
-  args_info->hpx_photon_usercq_help = hpx_options_t_help[59] ;
-  args_info->hpx_opt_smp_help = hpx_options_t_help[61] ;
-  args_info->hpx_parcel_compression_help = hpx_options_t_help[62] ;
-  args_info->hpx_coalescing_buffersize_help = hpx_options_t_help[63] ;
+  args_info->hpx_trace_dir_help = hpx_options_t_help[31] ;
+  args_info->hpx_trace_buffersize_help = hpx_options_t_help[32] ;
+  args_info->hpx_isir_testwindow_help = hpx_options_t_help[34] ;
+  args_info->hpx_isir_sendlimit_help = hpx_options_t_help[35] ;
+  args_info->hpx_isir_recvlimit_help = hpx_options_t_help[36] ;
+  args_info->hpx_pwc_parcelbuffersize_help = hpx_options_t_help[38] ;
+  args_info->hpx_pwc_parceleagerlimit_help = hpx_options_t_help[39] ;
+  args_info->hpx_coll_network_help = hpx_options_t_help[41] ;
+  args_info->hpx_photon_backend_help = hpx_options_t_help[43] ;
+  args_info->hpx_photon_coll_help = hpx_options_t_help[44] ;
+  args_info->hpx_photon_ibdev_help = hpx_options_t_help[45] ;
+  args_info->hpx_photon_ethdev_help = hpx_options_t_help[46] ;
+  args_info->hpx_photon_ibport_help = hpx_options_t_help[47] ;
+  args_info->hpx_photon_usecma_help = hpx_options_t_help[48] ;
+  args_info->hpx_photon_ibsrq_help = hpx_options_t_help[49] ;
+  args_info->hpx_photon_btethresh_help = hpx_options_t_help[50] ;
+  args_info->hpx_photon_fiprov_help = hpx_options_t_help[51] ;
+  args_info->hpx_photon_fidev_help = hpx_options_t_help[52] ;
+  args_info->hpx_photon_ledgersize_help = hpx_options_t_help[53] ;
+  args_info->hpx_photon_pwcbufsize_help = hpx_options_t_help[54] ;
+  args_info->hpx_photon_eagerbufsize_help = hpx_options_t_help[55] ;
+  args_info->hpx_photon_smallpwcsize_help = hpx_options_t_help[56] ;
+  args_info->hpx_photon_maxrd_help = hpx_options_t_help[57] ;
+  args_info->hpx_photon_defaultrd_help = hpx_options_t_help[58] ;
+  args_info->hpx_photon_numcq_help = hpx_options_t_help[59] ;
+  args_info->hpx_photon_usercq_help = hpx_options_t_help[60] ;
+  args_info->hpx_opt_smp_help = hpx_options_t_help[62] ;
+  args_info->hpx_parcel_compression_help = hpx_options_t_help[63] ;
+  args_info->hpx_coalescing_buffersize_help = hpx_options_t_help[64] ;
   
 }
 
@@ -517,12 +523,13 @@ hpx_option_parser_release (struct hpx_options_t *args_info)
   args_info->hpx_dbg_waitat_arg = 0;
   free_multiple_field (args_info->hpx_dbg_waitonsig_given, (void *)(args_info->hpx_dbg_waitonsig_arg), &(args_info->hpx_dbg_waitonsig_orig));
   args_info->hpx_dbg_waitonsig_arg = 0;
-  free_string_field (&(args_info->hpx_trace_dir_arg));
-  free_string_field (&(args_info->hpx_trace_dir_orig));
+  free_string_field (&(args_info->hpx_trace_backend_orig));
   free_multiple_field (args_info->hpx_trace_at_given, (void *)(args_info->hpx_trace_at_arg), &(args_info->hpx_trace_at_orig));
   args_info->hpx_trace_at_arg = 0;
   free_multiple_field (args_info->hpx_trace_classes_given, (void *)(args_info->hpx_trace_classes_arg), &(args_info->hpx_trace_classes_orig));
   args_info->hpx_trace_classes_arg = 0;
+  free_string_field (&(args_info->hpx_trace_dir_arg));
+  free_string_field (&(args_info->hpx_trace_dir_orig));
   free_string_field (&(args_info->hpx_trace_buffersize_orig));
   free_string_field (&(args_info->hpx_isir_testwindow_orig));
   free_string_field (&(args_info->hpx_isir_sendlimit_orig));
@@ -671,10 +678,12 @@ hpx_option_parser_dump(FILE *outfile, struct hpx_options_t *args_info)
     write_into_file(outfile, "hpx-dbg-mprotectstacks", 0, 0 );
   if (args_info->hpx_dbg_syncfree_given)
     write_into_file(outfile, "hpx-dbg-syncfree", 0, 0 );
-  if (args_info->hpx_trace_dir_given)
-    write_into_file(outfile, "hpx-trace-dir", args_info->hpx_trace_dir_orig, 0);
+  if (args_info->hpx_trace_backend_given)
+    write_into_file(outfile, "hpx-trace-backend", args_info->hpx_trace_backend_orig, hpx_option_parser_hpx_trace_backend_values);
   write_multiple_into_file(outfile, args_info->hpx_trace_at_given, "hpx-trace-at", args_info->hpx_trace_at_orig, 0);
   write_multiple_into_file(outfile, args_info->hpx_trace_classes_given, "hpx-trace-classes", args_info->hpx_trace_classes_orig, hpx_option_parser_hpx_trace_classes_values);
+  if (args_info->hpx_trace_dir_given)
+    write_into_file(outfile, "hpx-trace-dir", args_info->hpx_trace_dir_orig, 0);
   if (args_info->hpx_trace_buffersize_given)
     write_into_file(outfile, "hpx-trace-buffersize", args_info->hpx_trace_buffersize_orig, 0);
   if (args_info->hpx_isir_testwindow_given)
@@ -1949,9 +1958,10 @@ hpx_option_parser_internal (
         { "hpx-dbg-waitonsig",	2, NULL, 0 },
         { "hpx-dbg-mprotectstacks",	0, NULL, 0 },
         { "hpx-dbg-syncfree",	0, NULL, 0 },
-        { "hpx-trace-dir",	1, NULL, 0 },
+        { "hpx-trace-backend",	1, NULL, 0 },
         { "hpx-trace-at",	1, NULL, 0 },
         { "hpx-trace-classes",	1, NULL, 0 },
+        { "hpx-trace-dir",	1, NULL, 0 },
         { "hpx-trace-buffersize",	1, NULL, 0 },
         { "hpx-isir-testwindow",	1, NULL, 0 },
         { "hpx-isir-sendlimit",	1, NULL, 0 },
@@ -2285,16 +2295,16 @@ hpx_option_parser_internal (
               goto failure;
           
           }
-          /* file output directory.  */
-          else if (strcmp (long_options[option_index].name, "hpx-trace-dir") == 0)
+          /* type of tracing backend to use.  */
+          else if (strcmp (long_options[option_index].name, "hpx-trace-backend") == 0)
           {
           
           
-            if (update_arg( (void *)&(args_info->hpx_trace_dir_arg), 
-                 &(args_info->hpx_trace_dir_orig), &(args_info->hpx_trace_dir_given),
-                &(local_args_info.hpx_trace_dir_given), optarg, 0, 0, ARG_STRING,
+            if (update_arg( (void *)&(args_info->hpx_trace_backend_arg), 
+                 &(args_info->hpx_trace_backend_orig), &(args_info->hpx_trace_backend_given),
+                &(local_args_info.hpx_trace_backend_given), optarg, hpx_option_parser_hpx_trace_backend_values, 0, ARG_ENUM,
                 check_ambiguity, override, 0, 0,
-                "hpx-trace-dir", '-',
+                "hpx-trace-backend", '-',
                 additional_error))
               goto failure;
           
@@ -2321,7 +2331,21 @@ hpx_option_parser_internal (
               goto failure;
           
           }
-          /* size of trace buffers.  */
+          /* output directory (file backend).  */
+          else if (strcmp (long_options[option_index].name, "hpx-trace-dir") == 0)
+          {
+          
+          
+            if (update_arg( (void *)&(args_info->hpx_trace_dir_arg), 
+                 &(args_info->hpx_trace_dir_orig), &(args_info->hpx_trace_dir_given),
+                &(local_args_info.hpx_trace_dir_given), optarg, 0, 0, ARG_STRING,
+                check_ambiguity, override, 0, 0,
+                "hpx-trace-dir", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* size of trace buffers (file backend).  */
           else if (strcmp (long_options[option_index].name, "hpx-trace-buffersize") == 0)
           {
           

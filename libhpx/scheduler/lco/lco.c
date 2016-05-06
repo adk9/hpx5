@@ -47,7 +47,7 @@ const lco_class_t *lco_vtables[LCO_MAX];
 #define _STATE_MASK        (0x7)
 
 #define EVENT_LCO(lco, event)                           \
-  inst_trace(HPX_TRACE_LCO, event, lco, (lco)->state)
+  trace_append(HPX_TRACE_LCO, event, lco, (lco)->state)
 
 /// return the class pointer, masking out the state.
 static const lco_class_t *_class(lco_t *lco) {

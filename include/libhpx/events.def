@@ -46,10 +46,12 @@ LIBHPX_EVENT(PARCEL, RESEND, uint64_t, hpx_action_t, size_t, hpx_addr_t)
 /// Network events include when the scheduler handles network probing and 
 /// whenever PWC send/receive operations occur.
 /// @{
-LIBHPX_EVENT(NETWORK, SCHED_ENTER)
-LIBHPX_EVENT(NETWORK, SCHED_EXIT)
-LIBHPX_EVENT(NETWORK, PWC_SEND)
-LIBHPX_EVENT(NETWORK, PWC_RECV)
+LIBHPX_EVENT(NETWORK, SEND)
+LIBHPX_EVENT(NETWORK, RECV)
+LIBHPX_EVENT(NETWORK, PROBE_BEGIN)
+LIBHPX_EVENT(NETWORK, PROBE_END)
+LIBHPX_EVENT(NETWORK, PROGRESS_BEGIN)
+LIBHPX_EVENT(NETWORK, PROGRESS_END)
 /// @}
 
 /// Scheduler events
@@ -59,9 +61,11 @@ LIBHPX_EVENT(NETWORK, PWC_RECV)
 LIBHPX_EVENT(SCHED, WQSIZE, size_t)
 LIBHPX_EVENT(SCHED, PUSH_LIFO, uint64_t)
 LIBHPX_EVENT(SCHED, POP_LIFO, uint64_t)
-LIBHPX_EVENT(SCHED, STEAL_LIFO, uint64_t, int)
-LIBHPX_EVENT(SCHED, ENTER)
-LIBHPX_EVENT(SCHED, EXIT)
+LIBHPX_EVENT(SCHED, STEAL, uint64_t, int)
+LIBHPX_EVENT(SCHED, BEGIN)
+LIBHPX_EVENT(SCHED, END, int, int)
+LIBHPX_EVENT(SCHED, YIELD)
+LIBHPX_EVENT(SCHED, MAIL, uint64_t)
 /// @}
 
 /// LCO events
@@ -91,22 +95,17 @@ LIBHPX_EVENT(PROCESS, DELETE, hpx_addr_t)
 /// Memory events
 /// Memory events mark when allocating or freeing any of registered memory,
 /// global memory, or cyclicly allocated memory, and also marks when any of
-/// these operations are begun using MEMORY_ENTER_ALLOC_FREE.
+/// these operations are begun.
 /// @{
-LIBHPX_EVENT(MEMORY, REGISTERED_ALLOC, void*, size_t, size_t)
-LIBHPX_EVENT(MEMORY, REGISTERED_FREE, void*)
-LIBHPX_EVENT(MEMORY, GLOBAL_ALLOC, void*, size_t, size_t)
-LIBHPX_EVENT(MEMORY, GLOBAL_FREE, void*)
-LIBHPX_EVENT(MEMORY, CYCLIC_ALLOC, void*, size_t, size_t)
-LIBHPX_EVENT(MEMORY, CYCLIC_FREE, void*)
-LIBHPX_EVENT(MEMORY, ENTER_ALLOC_FREE)
+LIBHPX_EVENT(MEMORY, ALLOC_BEGIN, int, size_t, size_t)
+LIBHPX_EVENT(MEMORY, ALLOC_END, int, void*)
+LIBHPX_EVENT(MEMORY, FREE_BEGIN, int, void*)
+LIBHPX_EVENT(MEMORY, FREE_END, int)
 /// @}
 
 /// Scheduler timing events
 /// @{
-LIBHPX_EVENT(SCHEDTIMES, SCHED, int, int)
-LIBHPX_EVENT(SCHEDTIMES, PROBE)
-LIBHPX_EVENT(SCHEDTIMES, PROGRESS)
+
 /// @}
 
 /// Trace events

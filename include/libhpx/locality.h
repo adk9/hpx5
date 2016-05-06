@@ -41,6 +41,7 @@ struct config;
 struct network;
 struct scheduler;
 struct topology;
+struct tracer;
 /// @}
 
 /// The locality object.
@@ -68,6 +69,7 @@ typedef struct locality {
                               //!< configuration values and/or the defaults.
   struct topology *topology;  //!< The topology information.
   void         *percolation;  //!< An interface for dealing with GPU backends.
+  struct trace      *tracer;  //!< Reference to the tracer object
   sigset_t             mask;  //!< The default signal mask.
 } locality_t;
 

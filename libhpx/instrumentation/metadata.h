@@ -163,8 +163,8 @@ typedef struct inst_event_metadata {
 
 extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 
-#define METADATA_PARCEL_ID(off)        METADATA_UINT64(off, "parcel id")
-#define METADATA_PARCEL_SIZE(off)      METADATA_UINT64(off, "parcel size")
+#define METADATA_PARCEL_ID(off)        METADATA_UINT64(off, "id")
+#define METADATA_PARCEL_SIZE(off)      METADATA_UINT64(off, "size")
 #define METADATA_PARCEL_SOURCE_A(off)  METADATA_UINT64(off, "source addr")
 #define METADATA_PARCEL_SOURCE_R(off)  METADATA_UINT64(off, "source rank")
 #define METADATA_PARCEL_PARENT_ID(off) METADATA_UINT64(off, "parent id")
@@ -205,54 +205,40 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
                 METADATA_PARCEL_SIZE(2),                     \
                 METADATA_PARCEL_TARGET(3))
 
-#define NETWORK_SCHED_ENTER_METADATA _METADATA_NONE
-#define NETWORK_SCHED_EXIT_METADATA _METADATA_NONE
-
-#define NETWORK_PWC_SEND_METADATA _METADATA_NONE
-#define NETWORK_PWC_RECV_METADATA _METADATA_NONE
+#define NETWORK_SEND_METADATA _METADATA_NONE
+#define NETWORK_RECV_METADATA _METADATA_NONE
+#define NETWORK_PROBE_BEGIN_METADATA _METADATA_NONE
+#define NETWORK_PROBE_END_METADATA _METADATA_NONE
+#define NETWORK_PROGRESS_BEGIN_METADATA _METADATA_NONE
+#define NETWORK_PROGRESS_END_METADATA _METADATA_NONE
 
 #define SCHED_WQSIZE_METADATA                                \
-  _METADATA_ARGS(METADATA_UINT64(0, "work_queue_size"))
+  _METADATA_ARGS(METADATA_UINT64(0, "workqueue_size"))
 
-#define SCHED_PUSH_LIFO_METADATA  _METADATA_ARGS(METADATA_PARCEL_ID(0))
-#define SCHED_POP_LIFO_METADATA   _METADATA_ARGS(METADATA_PARCEL_ID(0))
-#define SCHED_STEAL_LIFO_METADATA _METADATA_ARGS(METADATA_PARCEL_ID(0), \
-                                                 METADATA_UINT64(1, "victim"))
+#define SCHED_PUSH_LIFO_METADATA _METADATA_ARGS(METADATA_PARCEL_ID(0))
+#define SCHED_POP_LIFO_METADATA _METADATA_ARGS(METADATA_PARCEL_ID(0))
+#define SCHED_STEAL_METADATA _METADATA_ARGS(METADATA_PARCEL_ID(0), \
+                                            METADATA_UINT64(1, "victim"))
 
-#define SCHED_ENTER_METADATA      _METADATA_NONE
-#define SCHED_EXIT_METADATA       _METADATA_NONE
+#define SCHED_BEGIN_METADATA      _METADATA_NONE
+#define SCHED_END_METADATA                              \
+  _METADATA_ARGS(METADATA_UINT64(0, "source"),          \
+                 METADATA_UINT64(1, "spins"))
 
-#define METADATA_LCO_ADDRESS(off) METADATA_UINT64(off, "lco address")
-#define METADATA_LCO_STATE(off)   METADATA_UINT64(off, "lco state")
+#define SCHED_YIELD_METADATA _METADATA_NONE
+#define SCHED_MAIL_METADATA _METADATA_ARGS(METADATA_PARCEL_ID(0))
 
-#define LCO_INIT_METADATA                                   \
-  _METADATA_ARGS(METADATA_LCO_ADDRESS(0),                   \
-                 METADATA_LCO_STATE(1))
+#define _LCO_METADATA_ARGS                              \
+ _METADATA_ARGS(METADATA_UINT64(0, "lco address"),      \
+                METADATA_UINT64(1, "lco state"))
 
-#define LCO_DELETE_METADATA                                 \
-  _METADATA_ARGS(METADATA_LCO_ADDRESS(0),                   \
-                 METADATA_LCO_STATE(1))
-
-#define LCO_SET_METADATA                                    \
-  _METADATA_ARGS(METADATA_LCO_ADDRESS(0),                   \
-                 METADATA_LCO_STATE(1))
-
-#define LCO_RESET_METADATA                                  \
-  _METADATA_ARGS(METADATA_LCO_ADDRESS(0),                   \
-                 METADATA_LCO_STATE(1))
-
-#define LCO_ATTACH_PARCEL_METADATA                          \
-  _METADATA_ARGS(METADATA_LCO_ADDRESS(0),                   \
-                 METADATA_LCO_STATE(1))
-
-#define LCO_WAIT_METADATA                                   \
-  _METADATA_ARGS(METADATA_LCO_ADDRESS(0),                   \
-                 METADATA_LCO_STATE(1))
-
-#define LCO_TRIGGER_METADATA                                \
-  _METADATA_ARGS(METADATA_LCO_ADDRESS(0),                   \
-                 METADATA_LCO_STATE(1))
-
+#define LCO_INIT_METADATA _LCO_METADATA_ARGS
+#define LCO_DELETE_METADATA _LCO_METADATA_ARGS
+#define LCO_SET_METADATA _LCO_METADATA_ARGS
+#define LCO_RESET_METADATA _LCO_METADATA_ARGS
+#define LCO_ATTACH_PARCEL_METADATA _LCO_METADATA_ARGS
+#define LCO_WAIT_METADATA _LCO_METADATA_ARGS
+#define LCO_TRIGGER_METADATA _LCO_METADATA_ARGS
 
 #define METADATA_PROCESS_ADDRESS(off) METADATA_UINT64(off, "process address")
 #define METADATA_PROCESS_LCO(off)     METADATA_UINT64(off, "termination lco")
@@ -268,48 +254,26 @@ extern const inst_event_metadata_t INST_EVENT_METADATA[TRACE_NUM_EVENTS];
 #define PROCESS_DELETE_METADATA                             \
   _METADATA_ARGS(METADATA_PROCESS_ADDRESS(0))               \
 
-#define METADATA_MEMORY_ADDRESS(off) METADATA_UINT64(off, "memory address")
+#define METADATA_MEMORY_ADDRSPACE(off) METADATA_UINT64(off, "address space")
+#define METADATA_MEMORY_ADDRESS(off) METADATA_UINT64(off, "address")
 #define METADATA_MEMORY_BYTES(off) METADATA_UINT64(off, "bytes")
 #define METADATA_MEMORY_BOUNDARY(off) METADATA_UINT64(off, "boundary")
 
-#define MEMORY_REGISTERED_ALLOC_METADATA                    \
-  _METADATA_ARGS(METADATA_MEMORY_ADDRESS(0),                \
+#define MEMORY_ALLOC_BEGIN_METADATA                         \
+  _METADATA_ARGS(METADATA_MEMORY_ADDRSPACE(0),              \
                  METADATA_MEMORY_BYTES(1),                  \
                  METADATA_MEMORY_BOUNDARY(2))
 
-#define MEMORY_REGISTERED_FREE_METADATA                     \
-  _METADATA_ARGS(METADATA_MEMORY_ADDRESS(0))
+#define MEMORY_ALLOC_END_METADATA                           \
+  _METADATA_ARGS(METADATA_MEMORY_ADDRSPACE(0),              \
+                 METADATA_MEMORY_ADDRESS(0))
 
-#define MEMORY_GLOBAL_ALLOC_METADATA                        \
-  _METADATA_ARGS(METADATA_MEMORY_ADDRESS(0),                \
-                 METADATA_MEMORY_BYTES(1),                  \
-                 METADATA_MEMORY_BOUNDARY(2))
+#define MEMORY_FREE_BEGIN_METADATA                          \
+  _METADATA_ARGS(METADATA_MEMORY_ADDRSPACE(0),              \
+                 METADATA_MEMORY_ADDRESS(0))
 
-#define MEMORY_GLOBAL_FREE_METADATA                         \
-  _METADATA_ARGS(METADATA_MEMORY_ADDRESS(0))
-
-#define MEMORY_CYCLIC_ALLOC_METADATA                        \
-  _METADATA_ARGS(METADATA_MEMORY_ADDRESS(0),                \
-                 METADATA_MEMORY_BYTES(1),                  \
-                 METADATA_MEMORY_BOUNDARY(2))
-
-#define MEMORY_CYCLIC_FREE_METADATA                         \
-  _METADATA_ARGS(METADATA_MEMORY_ADDRESS(0))
-
-#define MEMORY_ENTER_ALLOC_FREE_METADATA _METADATA_NONE
-
-#define METADATA_SCHEDTIMES_SCHED_SOURCE(off)   \
-  METADATA_UINT64(off, "parcel source")
-
-#define METADATA_SCHEDTIMES_SCHED_SPINS(off)   \
-  METADATA_UINT64(off, "spins")
-
-#define SCHEDTIMES_SCHED_METADATA                          \
-  _METADATA_ARGS(METADATA_SCHEDTIMES_SCHED_SOURCE(0),      \
-                 METADATA_SCHEDTIMES_SCHED_SPINS(1))
-
-#define SCHEDTIMES_PROBE_METADATA _METADATA_NONE
-#define SCHEDTIMES_PROGRESS_METADATA _METADATA_NONE
+#define MEMORY_FREE_END_METADATA                            \
+  _METADATA_ARGS(METADATA_MEMORY_ADDRSPACE(0))
 
 #define TRACE_FILE_IO_BEGIN_METADATA _METADATA_NONE
 #define TRACE_FILE_IO_END_METADATA _METADATA_NONE

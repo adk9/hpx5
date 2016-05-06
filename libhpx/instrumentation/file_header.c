@@ -20,7 +20,21 @@
 
 #include <hpx/hpx.h>
 #include "metadata.h"
-#include "file_header.h"
+#include "file.h"
+
+/// The header needed for our data file format
+typedef struct {
+  const char magic_number[8];
+  const uint32_t order;
+  uint32_t table_offset;
+  char header_data[];
+} logtable_header_t;
+
+#define _LOGTABLE_HEADER                                       \
+  {                                                            \
+    .magic_number = {'h', 'p', 'x', ' ', 'l', 'o', 'g', '\0'}, \
+    .order = 0xFF00AA55                                        \
+  }
 
 typedef struct _cols_metadata {
   int kind;
@@ -28,7 +42,7 @@ typedef struct _cols_metadata {
   char metadata[];
 } _cols_metadata_t;
 
-logtable_header_t LOGTABLE_HEADER = _LOGTABLE_HEADER;
+static logtable_header_t LOGTABLE_HEADER = _LOGTABLE_HEADER;
 
 static size_t
 _write_event_metadata_named_value(void* base, inst_named_value_t const *nv_md)

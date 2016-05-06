@@ -63,6 +63,11 @@ static void _stop(locality_t *l) {
   if (!l)
     return;
 
+  if (l->tracer) {
+    trace_destroy(l->tracer);
+    l->tracer = NULL;
+  }
+
   if (l->sched) {
     scheduler_delete(l->sched);
     l->sched = NULL;
@@ -147,6 +152,9 @@ int hpx_init(int *argc, char ***argv) {
     dbg_wait();
   }
 
+  // initialize the tracing backend
+  here->tracer = trace_new(here->config);
+
   // bootstrap
   here->boot = boot_new(here->config->boot);
   if (!here->boot) {
@@ -228,7 +236,7 @@ int hpx_init(int *argc, char ***argv) {
 #endif
 
   action_registration_finalize();
-  inst_start();
+  trace_start(here->tracer);
 
   // start the scheduler, this will return after scheduler_shutdown()
   if (scheduler_startup(here->sched, here->config) != LIBHPX_OK) {
@@ -346,15 +354,6 @@ void hpx_finalize(void) {
   if (_hpx_143 != HPX_NULL) {
     hpx_gas_free(_hpx_143, HPX_NULL);
   }
-
-#if defined(HAVE_APEX)
-  // this will add the stats to the APEX data set
-  libhpx_save_apex_stats();
-#endif
-
-#if defined(ENABLE_PROFILING)
-  libhpx_stats_print();
-#endif
   _stop(here);
   _cleanup(here);
 }

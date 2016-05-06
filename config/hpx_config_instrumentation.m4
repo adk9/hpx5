@@ -9,7 +9,6 @@ AC_DEFUN([HPX_CONFIG_INSTRUMENTATION], [
 
  AS_IF([test "x$enable_instrumentation" != xno],
   [AC_DEFINE([ENABLE_INSTRUMENTATION], [1], [Enable instrumentationging stuff])
-   AC_DEFINE([ENABLE_PROFILING], [1], [Enable profiling support])
    have_instrumentation=yes],
  AC_CONFIG_COMMANDS([include/libhpx/event_stubs.h],
   [mkdir -p "${objroot}include/libhpx/"

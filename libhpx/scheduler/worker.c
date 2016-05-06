@@ -309,11 +309,43 @@ static void _handle_mail(worker_t *w) {
   hpx_parcel_t *p = NULL;
   while ((parcels = sync_two_lock_queue_dequeue(&w->inbox))) {
     while ((p = parcel_stack_pop(&parcels))) {
-      EVENT_COUNT(++w->stats.mail);
+      EVENT_SCHED_MAIL(p->id);
       log_sched("got mail %p\n", p);
       _push_lifo(p, w);
     }
   }
+}
+
+/// Steal a parcel from a worker with the given @p id.
+static hpx_parcel_t *_steal_from(worker_t *w, int id) {
+  worker_t *victim = scheduler_get_worker(here->sched, id);
+  hpx_parcel_t *p = sync_chase_lev_ws_deque_steal(_work(victim));
+  if (p) {
+    w->last_victim = id;
+  } else {
+    w->last_victim = -1;
+  }
+  EVENT_SCHED_STEAL(p ? p->id : 0, victim->id);
+  return p;
+}
+
+/// Steal a parcel from a random worker out of all workers.
+static hpx_parcel_t *_steal_random_all(worker_t *w) {
+  int id;
+  do {
+    id = rand_r(&w->seed) % here->sched->n_workers;
+  } while (id == w->id);
+  return _steal_from(w, id);
+}
+
+/// Steal a parcel from a random worker from the same NUMA node.
+static hpx_parcel_t *_steal_random_node(worker_t *w) {
+  int id;
+  do {
+    int cpu = rand_r(&w->seed) % here->topology->cpus_per_node;
+    id = here->topology->numa_to_cpus[w->numa_node][cpu];
+  } while (id == w->id);
+  return _steal_from(w, id);
 }
 
 /// The action that pushes half the work to a thief.
@@ -347,43 +379,11 @@ static int _push_half_handler(int src) {
   // send them back to the thief
   if (parcels) {
     scheduler_spawn_at(parcels, src);
-    EVENT_SCHED_STEAL_LIFO(parcels->id, self->id);
   }
+  EVENT_SCHED_STEAL(parcels ? parcels->id : 0, self->id);
   return HPX_SUCCESS;
 }
 static LIBHPX_ACTION(HPX_INTERRUPT, 0, _push_half, _push_half_handler, HPX_INT);
-
-/// Steal a parcel from a worker with the given @p id.
-static hpx_parcel_t *_steal_from(worker_t *w, int id) {
-  worker_t *victim = scheduler_get_worker(here->sched, id);
-  hpx_parcel_t *p = sync_chase_lev_ws_deque_steal(_work(victim));
-  if (p) {
-    w->last_victim = id;
-    EVENT_SCHED_STEAL_LIFO(p->id, victim->id);
-  } else {
-    w->last_victim = -1;
-  }
-  return p;
-}
-
-/// Steal a parcel from a random worker out of all workers.
-static hpx_parcel_t *_steal_random_all(worker_t *w) {
-  int id;
-  do {
-    id = rand_r(&w->seed) % here->sched->n_workers;
-  } while (id == w->id);
-  return _steal_from(w, id);
-}
-
-/// Steal a parcel from a random worker from the same NUMA node.
-static hpx_parcel_t *_steal_random_node(worker_t *w) {
-  int id;
-  do {
-    int cpu = rand_r(&w->seed) % here->topology->cpus_per_node;
-    id = here->topology->numa_to_cpus[w->numa_node][cpu];
-  } while (id == w->id);
-  return _steal_from(w, id);
-}
 
 /// Hierarchical work-stealing policy.
 ///
@@ -470,12 +470,6 @@ static hpx_parcel_t *_schedule_steal(worker_t *w) {
       p = _steal_hier(w);
       break;
   }
-
-  if (p) {
-    EVENT_COUNT(++w->stats.steals);
-  } else {
-    EVENT_COUNT(++w->stats.failed_steals);
-  }
   return p;
 }
 
@@ -543,7 +537,6 @@ static void _checkpoint(hpx_parcel_t *to, void *sp, void *env) {
 
 /// Probe and progress the network.
 static void _schedule_network(worker_t *w) {
-  EVENT_NETWORK_SCHED_ENTER();
   // suppress work-first scheduling while we're inside the network.
   w->work_first = -1;
   network_progress(w->network, 0);
@@ -555,7 +548,6 @@ static void _schedule_network(worker_t *w) {
     EVENT_PARCEL_RECV(p->id, p->action, p->size, p->src, p->target);
     _push_lifo(p, w);
   }
-  EVENT_NETWORK_SCHED_EXIT();
 }
 
 /// The main scheduling loop.
@@ -585,7 +577,7 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
     FINAL
   };
 
-  EVENT_SCHED_ENTER();
+  EVENT_SCHED_BEGIN();
   INST(int source = -1);
   INST(int spins = 0);
   hpx_parcel_t *p = NULL;
@@ -636,8 +628,7 @@ static void _schedule(void (*f)(hpx_parcel_t *, void*), void *env, int block) {
   // transfer to then pick the system stack
   p = (p) ? _try_bind(w, p) : w->system;
 
-  EVENT_SCHED_EXIT();
-  EVENT_SCHEDTIMES_SCHED(source, spins);
+  EVENT_SCHED_END(source, spins);
 
   // Don't transfer to the same parcel.
   if (p != w->current) {
@@ -660,17 +651,12 @@ int worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
   w->active      = true;
   w->profiler    = NULL;
   w->bst         = NULL;
+  w->logs        = NULL;
   w->network     = here->net;
-
-  if (inst_init(here->config, w)) {
-    log_dflt("error detected while initializing instrumentation\n");
-  }
 
   sync_chase_lev_ws_deque_init(&w->queues[0].work, work_size);
   sync_chase_lev_ws_deque_init(&w->queues[1].work, work_size);
   sync_two_lock_queue_init(&w->inbox, NULL);
-  libhpx_stats_init(&w->stats);
-
   return LIBHPX_OK;
 }
 
@@ -687,9 +673,6 @@ void worker_fini(worker_t *w) {
   }
   sync_chase_lev_ws_deque_fini(&w->queues[0].work);
   sync_chase_lev_ws_deque_fini(&w->queues[1].work);
-
-  // and clean up any instrumentation data
-  inst_fini(w);
 
   // and delete any cached stacks
   ustack_t *stack = NULL;
@@ -797,7 +780,6 @@ void scheduler_spawn(hpx_parcel_t *p) {
   dbg_assert(w->id >= 0);
   dbg_assert(p);
   dbg_assert(actions[p->action].handler != NULL);
-  EVENT_COUNT(w->stats.spawns++);
 
   // If we're stopped down then push the parcel and return. This prevents an
   // infinite spawn from inhibiting termination.
@@ -871,7 +853,7 @@ static void _yield(hpx_parcel_t *p, void *env) {
 
 void scheduler_yield(void) {
   if (action_is_default(self->current->action)) {
-    EVENT_COUNT(++self->stats.yields);
+    EVENT_SCHED_YIELD();
     self->yielded = true;
     // NB: no trace point, overwhelms infrastructure
     _schedule(_yield, NULL, 0);
