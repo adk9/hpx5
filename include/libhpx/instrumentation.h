@@ -76,8 +76,9 @@ trace_destroy(void *obj) {
 /// @param           id The event id (see hpx_inst_event_type_t)
 #ifdef ENABLE_INSTRUMENTATION
 # define trace_append(type, ...)                                 \
+  if (here->tracer) {                                            \
     here->tracer->vappend(type, __HPX_NARGS(__VA_ARGS__) - 1,    \
-                          __VA_ARGS__);
+                          __VA_ARGS__); }
 #else
 # define trace_append(type, id, ...)
 #endif

@@ -306,7 +306,7 @@ static void _vappend(int UNUSED, int n, int id, ...) {
   r->worker = self->id;
   r->ns = time;
   for (int i = 0, e = n; i < e; ++i) {
-    r->user[i] = va_arg(&vargs, uint64_t);
+    r->user[i] = va_arg(vargs, uint64_t);
   }
 
   va_end(vargs);
@@ -316,11 +316,11 @@ static void _start(void) {
   for (int k = 0; k < here->sched->n_workers; ++k) {
     worker_t *w = scheduler_get_worker(here->sched, k);
     // Allocate memory for pointers to the logs
-    int nclasses = _HPX_NELEM(HPX_TRACE_CLASS_TO_STRING);
-    w->logs = calloc(TRACE_OFFSETS[nclasses], sizeof(logtable_t *));
+    w->logs = calloc(TRACE_NUM_EVENTS, sizeof(logtable_t));
 
     // Scan through each trace event class and create logs for the associated
     // class events that that we are going to be tracing.
+    int nclasses = _HPX_NELEM(HPX_TRACE_CLASS_TO_STRING);
     for (int c = 0, e = nclasses; c < e; ++c) {
       if (inst_trace_class(1 << c)) {
         for (int i = TRACE_OFFSETS[c], e = TRACE_OFFSETS[c + 1]; i < e; ++i) {
