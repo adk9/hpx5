@@ -73,8 +73,6 @@ struct hpx_options_t
   enum enum_hpx_network hpx_network_arg;	/**< @brief type of network to use.  */
   char * hpx_network_orig;	/**< @brief type of network to use original value given at command line.  */
   const char *hpx_network_help; /**< @brief type of network to use help description.  */
-  int hpx_statistics_flag;	/**< @brief print HPX runtime statistics (default=off).  */
-  const char *hpx_statistics_help; /**< @brief print HPX runtime statistics help description.  */
   char * hpx_configfile_arg;	/**< @brief HPX runtime configuration file.  */
   char * hpx_configfile_orig;	/**< @brief HPX runtime configuration file original value given at command line.  */
   const char *hpx_configfile_help; /**< @brief HPX runtime configuration file help description.  */
@@ -227,7 +225,6 @@ struct hpx_options_t
   unsigned int hpx_boot_given ;	/**< @brief Whether hpx-boot was given.  */
   unsigned int hpx_transport_given ;	/**< @brief Whether hpx-transport was given.  */
   unsigned int hpx_network_given ;	/**< @brief Whether hpx-network was given.  */
-  unsigned int hpx_statistics_given ;	/**< @brief Whether hpx-statistics was given.  */
   unsigned int hpx_configfile_given ;	/**< @brief Whether hpx-configfile was given.  */
   unsigned int hpx_threads_given ;	/**< @brief Whether hpx-threads was given.  */
   unsigned int hpx_thread_affinity_given ;	/**< @brief Whether hpx-thread-affinity was given.  */
