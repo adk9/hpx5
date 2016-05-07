@@ -70,8 +70,13 @@ struct worker {
   void               *bst;                //!< the block statistics table
   struct network *network;                //!< reference to the network
   struct logtable   *logs;                //!< reference to tracer data
+  PAD_TO_CACHELINE(sizeof(int) * 2 +
+                   sizeof(void*) * 4);
 };
 typedef struct worker worker_t;
+
+_HPX_ASSERT((sizeof(worker_t) & (HPX_CACHELINE_SIZE - 1)) == 0, worker_align);
+
 /// @}
 
 extern __thread worker_t * volatile self;

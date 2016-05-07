@@ -28,8 +28,6 @@ extern "C" {
 
 #include <pthread.h>
 #include <hpx/hpx.h>
-#include <libsync/sync.h>
-#include <libsync/locks.h>
 #include <libsync/queues.h>
 #include <libhpx/system.h>
 #include <libhpx/worker.h>
@@ -43,7 +41,6 @@ extern "C" {
 
 /// Forward declarations
 /// @{
-struct barrier;
 struct config;
 struct cvar;
 /// @}
@@ -71,11 +68,17 @@ struct scheduler {
   } run_state;
 
   volatile int next_tls_id;
-  int            n_workers;
-  uint32_t    wf_threshold;
   system_barrier_t barrier;
-  worker_t        *workers;
-  int     n_active_workers;           // used by APEX scheduler throttling : akp
+  int            n_workers;                     //!< total number of workers
+  int             n_active;                     //!< number of active workers
+  PAD_TO_CACHELINE(sizeof(int) +
+                   sizeof(int) +
+                   sizeof(pthread_mutex_t) +
+                   sizeof(pthread_cond_t) +
+                   sizeof(int) +
+                   sizeof(system_barrier_t) +
+                   sizeof(int) * 2);
+  worker_t         workers[];                   //!< array of worker data
 };
 
 #define SCHED_RUN INT_MAX
@@ -206,11 +209,11 @@ void scheduler_suspend(void (*f)(hpx_parcel_t *, void*), void *env);
 /// scheduler_wait() will call _schedule() and transfer away from the calling
 /// thread.
 ///
-/// @param         lock The lock protecting the condition.
+/// @param         lock The tatas lock protecting the condition.
 /// @param          con The condition we'd like to wait for.
 ///
 /// @returns            LIBHPX_OK or an error
-hpx_status_t scheduler_wait(tatas_lock_t *lock, struct cvar *con)
+hpx_status_t scheduler_wait(void *lock, struct cvar *con)
   HPX_NON_NULL(1, 2);
 
 /// Signal a condition.

@@ -566,7 +566,7 @@ static void _push_lifo(hpx_parcel_t *p, void *worker) {
   worker_t *w = worker;
   uint64_t size = sync_chase_lev_ws_deque_push(_work(w), p);
   if (w->work_first >= 0) {
-    w->work_first = (here->sched->wf_threshold < size);
+    w->work_first = (here->config->sched_wfthreshold < size);
   }
 }
 
@@ -884,7 +884,7 @@ void scheduler_yield(void) {
   EVENT_THREAD_RESUME(w->current, self);
 }
 
-hpx_status_t scheduler_wait(tatas_lock_t *lock, cvar_t *condition) {
+hpx_status_t scheduler_wait(void *lock, cvar_t *condition) {
   // push the current thread onto the condition variable---no lost-update
   // problem here because we're holing the @p lock
   worker_t *w = self;
@@ -900,7 +900,7 @@ hpx_status_t scheduler_wait(tatas_lock_t *lock, cvar_t *condition) {
   }
 
   EVENT_THREAD_SUSPEND(p, w);
-  _schedule_nb(_unlock, (void*)lock);
+  _schedule_nb(_unlock, lock);
   EVENT_THREAD_RESUME(p, self);
 
   // reacquire the lco lock before returning
