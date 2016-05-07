@@ -30,6 +30,7 @@ extern "C" {
 /// @{
 struct ustack;
 struct network;
+struct scheduler;
 /// @}
 
 /// Class representing a worker thread's state.
@@ -70,8 +71,9 @@ struct worker {
   void               *bst;                //!< the block statistics table
   struct network *network;                //!< reference to the network
   struct logtable   *logs;                //!< reference to tracer data
+  struct scheduler *sched;                //!< pointer to the scheduler
   PAD_TO_CACHELINE(sizeof(int) * 2 +
-                   sizeof(void*) * 4);
+                   sizeof(void*) * 5);
 };
 typedef struct worker worker_t;
 
@@ -84,12 +86,11 @@ extern __thread worker_t * volatile self;
 /// Initialize a worker structure.
 ///
 /// @param            w The worker structure to initialize.
+/// @param        sched The scheduler associated with this worker.
 /// @param           id The worker's id.
-/// @param         seed The random seed for this worker.
-/// @param    work_size The initial size of the work queue.
 ///
 /// @returns  LIBHPX_OK or an error code
-int worker_init(worker_t *w, int id, unsigned seed, unsigned work_size)
+int worker_init(worker_t *w, struct scheduler *sche, int id)
   HPX_NON_NULL(1);
 
 /// Finalize a worker structure.
@@ -126,10 +127,10 @@ void worker_finish_thread(hpx_parcel_t *p, int status)
   HPX_NORETURN;
 
 /// Check to see if the current worker is active.
-int worker_is_active(void);
+int worker_is_active(const worker_t *w);
 
 /// Check to see if the current worker is stopped.
-int worker_is_stopped(void);
+int worker_is_stopped(const worker_t *w);
 
 #ifdef __cplusplus
 }

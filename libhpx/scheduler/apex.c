@@ -22,12 +22,12 @@
 #include <libhpx/worker.h>
 
 #ifndef HAVE_APEX
-int worker_is_active(void) {
+int worker_is_active(const worker_t *w) {
   return 1;
 }
 
-int worker_is_stopped(void) {
-  return scheduler_is_stopped(here->sched);
+int worker_is_stopped(const worker_t *w) {
+  return scheduler_is_stopped(w->sched);
 }
 #else
 # include <pthread.h>
@@ -129,12 +129,12 @@ static void _apex_worker_shutdown(void) {
   }
 }
 
-int worker_is_active(void) {
+int worker_is_active(const worker_t *w) {
   return _apex_check_active();
 }
 
-int worker_is_stopped(void) {
-  int e = scheduler_is_stopped(here->sched);
+int worker_is_stopped(const worker_t *w) {
+  int e = scheduler_is_stopped(w->sched);
   if (e) {
     _apex_worker_shutdown();
   }

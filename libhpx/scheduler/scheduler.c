@@ -39,16 +39,6 @@
 #include <libhpx/scheduler.h>
 #include "thread.h"
 
-static void _bind_self(worker_t *worker) {
-  dbg_assert(worker);
-
-  if (self && self != worker) {
-    dbg_error("HPX does not permit worker structure switching.\n");
-  }
-  self = worker;
-  self->thread = pthread_self();
-}
-
 /// The pthread entry function for dedicated worker threads.
 ///
 /// This is used by _create().
@@ -57,7 +47,7 @@ static void *_run(void *worker) {
   dbg_assert(here->gas);
   dbg_assert(worker);
 
-  _bind_self(worker);
+  self = worker;
 
   // Ensure that all of the threads have joined the address spaces.
   as_join(AS_REGISTERED);
@@ -86,12 +76,11 @@ static void *_run(void *worker) {
   return (self = NULL);
 }
 
-static int _create(worker_t *worker, const config_t *cfg) {
-  pthread_t thread;
-
-  int e = pthread_create(&thread, NULL, _run, worker);
+static int _create(worker_t *w) {
+  int e = pthread_create(&w->thread, NULL, _run, w);
   if (e) {
     dbg_error("failed to start a scheduler worker pthread.\n");
+    w->thread = 0;
     return e;
   }
   return LIBHPX_OK;
@@ -106,16 +95,9 @@ static void _join(worker_t *worker) {
   }
 }
 
-/// Cancel a worker thread.
-static void _cancel(const worker_t *worker) {
-  dbg_assert(worker);
-  dbg_assert(worker->thread != pthread_self());
-  if (pthread_cancel(worker->thread)) {
-    dbg_error("cannot cancel worker thread %d.\n", worker->id);
-  }
-}
-
 struct scheduler *scheduler_new(const config_t *cfg) {
+  thread_set_stack_size(cfg->stacksize);
+
   const int workers = cfg->threads;
   struct scheduler *s = NULL;
   size_t bytes = sizeof(*s) + workers * sizeof(worker_t);
@@ -129,51 +111,56 @@ struct scheduler *scheduler_new(const config_t *cfg) {
   s->n_workers = workers;
   s->n_active = workers;
 
-  s->run_state.state = SCHED_STOP;
-  s->run_state.lock = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
-  s->run_state.running = (pthread_cond_t)PTHREAD_COND_INITIALIZER;
+  s->state = SCHED_STOP;
+  s->lock = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
+  s->running = (pthread_cond_t)PTHREAD_COND_INITIALIZER;
 
+  // initialize the worker data structures
   for (int i = 0, e = workers; i < e; ++i) {
-    if (worker_init(&s->workers[i], i, i, 64)) {
+    if (worker_init(&s->workers[i], s, i) != LIBHPX_OK) {
       dbg_error("failed to initialize a worker.\n");
+      return NULL;
+    }
+  }
+
+  // start all of the other worker threads
+  for (int i = 1, e = workers; i < e; ++i) {
+    if (_create(&s->workers[i]) != LIBHPX_OK) {
       scheduler_delete(s);
       return NULL;
     }
   }
 
-  thread_set_stack_size(cfg->stacksize);
   log_sched("initialized a new scheduler.\n");
-
-  // bind a worker for this thread so that we can spawn lightweight threads
-  _bind_self(&s->workers[0]);
+  self = &s->workers[0];
+  self->thread = pthread_self();
   log_sched("worker 0 ready.\n");
   return s;
 }
 
 void scheduler_delete(struct scheduler *sched) {
-  if (!sched) {
-    return;
-  }
-
   // shut everyone down
-  pthread_mutex_lock(&sched->run_state.lock);
-  sched->run_state.state = SCHED_SHUTDOWN;
-  pthread_cond_broadcast(&sched->run_state.running);
-  pthread_mutex_unlock(&sched->run_state.lock);
+  pthread_mutex_lock(&sched->lock);
+  sched->state = SCHED_SHUTDOWN;
+  pthread_cond_broadcast(&sched->running);
+  pthread_mutex_unlock(&sched->lock);
 
   for (int i = 1, e = sched->n_workers; i < e; ++i) {
-    _join(scheduler_get_worker(sched, i));
+    worker_t *w = scheduler_get_worker(sched, i);
+    if (w->thread) {
+      _join(w);
+    }
   }
 
   log_sched("joined worker threads.\n");
-  // unbind this thread's worker
-  self = NULL;
 
   for (int i = 0, e = sched->n_workers; i < e; ++i) {
     worker_fini(scheduler_get_worker(sched, i));
   }
 
   free(sched);
+
+  self = NULL;
 }
 
 worker_t *scheduler_get_worker(struct scheduler *sched, int id) {
@@ -191,41 +178,19 @@ int scheduler_restart(struct scheduler *sched) {
   sync_store(&sched->stopped, SCHED_RUN, SYNC_RELEASE);
 
   // now switch the state of the running condition
-  pthread_mutex_lock(&sched->run_state.lock);
-  sched->run_state.state = SCHED_RUN;
-  pthread_cond_broadcast(&sched->run_state.running);
-  pthread_mutex_unlock(&sched->run_state.lock);
+  pthread_mutex_lock(&sched->lock);
+  sched->state = SCHED_RUN;
+  pthread_cond_broadcast(&sched->running);
+  pthread_mutex_unlock(&sched->lock);
 
   status = worker_start();
 
   // now switch the state to stopped
-  pthread_mutex_lock(&sched->run_state.lock);
-  sched->run_state.state = SCHED_STOP;
-  pthread_mutex_unlock(&sched->run_state.lock);
+  pthread_mutex_lock(&sched->lock);
+  sched->state = SCHED_STOP;
+  pthread_mutex_unlock(&sched->lock);
 
   return status;
-}
-
-int scheduler_startup(struct scheduler *sched, const config_t *cfg) {
-  // start all of the other worker threads
-  for (int i = 1, e = sched->n_workers; i < e; ++i) {
-    int status = _create(scheduler_get_worker(sched, i), cfg);
-    if (status != LIBHPX_OK) {
-      dbg_error("could not start worker %d.\n", i);
-
-      for (int j = 1; j < i; ++j) {
-        _cancel(scheduler_get_worker(sched, j));
-      }
-
-      for (int j = 1; j < i; ++j) {
-        _join(scheduler_get_worker(sched, j));
-      }
-
-      return status;
-    }
-  }
-
-  return HPX_SUCCESS;
 }
 
 void scheduler_stop(struct scheduler *sched, int code) {
