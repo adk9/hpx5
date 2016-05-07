@@ -336,7 +336,7 @@ static hpx_parcel_t *_schedule_lifo(worker_t *w) {
 
 /// Steal a parcel from a worker with the given @p id.
 static hpx_parcel_t *_steal_from(worker_t *w, int id) {
-  worker_t *victim = scheduler_get_worker(here->sched, id);
+  worker_t *victim = scheduler_get_worker(w->sched, id);
   hpx_parcel_t *p = sync_chase_lev_ws_deque_steal(_work(victim));
   if (p) {
     w->last_victim = id;
@@ -351,7 +351,7 @@ static hpx_parcel_t *_steal_from(worker_t *w, int id) {
 static hpx_parcel_t *_steal_random_all(worker_t *w) {
   int id;
   do {
-    id = rand_r(&w->seed) % here->sched->n_workers;
+    id = rand_r(&w->seed) % w->sched->n_workers;
   } while (id == w->id);
   return _steal_from(w, id);
 }
@@ -470,7 +470,7 @@ static hpx_parcel_t *_steal_hier(worker_t *w) {
 /// steal. Ultimately though, we're building a distributed runtime so SMP work
 /// stealing isn't that big a deal.
 static hpx_parcel_t *_schedule_steal(worker_t *w) {
-  int n = here->sched->n_workers;
+  int n = w->sched->n_workers;
   if (n == 1) {
     return NULL;
   }
@@ -640,7 +640,7 @@ static void _schedule_nb(void (*f)(hpx_parcel_t *, void*), void *env) {
   EVENT_SCHED_BEGIN();
   worker_t *w = self;
   hpx_parcel_t *p = NULL;
-  if (worker_is_stopped()) {
+  if (worker_is_stopped(w)) {
     p = w->system;
   }
   else if ((p = _handle_mail(w))) {
@@ -660,8 +660,8 @@ static void _schedule_nb(void (*f)(hpx_parcel_t *, void*), void *env) {
 static void _schedule(worker_t *w) {
   INST(int spins = 0);
   hpx_parcel_t *p = NULL;
-  while (!worker_is_stopped()) {
-    if (!worker_is_active()) {
+  while (!worker_is_stopped(w)) {
+    if (!worker_is_active(w)) {
       // make sure we don't have anything stuck in mail or yield
       while ((p = sync_chase_lev_ws_deque_pop(_yielded(w)))) {
         _push_lifo(p, w);
@@ -692,10 +692,10 @@ static void _schedule(worker_t *w) {
   }
 }
 
-int worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
+int worker_init(worker_t *w, struct scheduler *sched, int id) {
   w->thread      = 0;
   w->id          = id;
-  w->seed        = seed;
+  w->seed        = id;
   w->work_first  = 0;
   w->nstacks     = 0;
   w->yielded     = 0;
@@ -708,10 +708,11 @@ int worker_init(worker_t *w, int id, unsigned seed, unsigned work_size) {
   w->profiler    = NULL;
   w->bst         = NULL;
   w->logs        = NULL;
+  w->sched       = sched;
   w->network     = here->net;
 
-  sync_chase_lev_ws_deque_init(&w->queues[0].work, work_size);
-  sync_chase_lev_ws_deque_init(&w->queues[1].work, work_size);
+  sync_chase_lev_ws_deque_init(&w->queues[0].work, 32);
+  sync_chase_lev_ws_deque_init(&w->queues[1].work, 32);
   sync_two_lock_queue_init(&w->inbox, NULL);
   return LIBHPX_OK;
 }
@@ -782,7 +783,7 @@ int worker_start(void) {
   w->current = w->system;
   w->work_first = 0;
 
-  struct scheduler *sched = here->sched;
+  struct scheduler *sched = w->sched;
   if (w->id == 0) {
     _schedule(w);
   }
@@ -791,11 +792,15 @@ int worker_start(void) {
     while (state != SCHED_SHUTDOWN) {
       _schedule(w);
 
-      pthread_mutex_lock(&sched->run_state.lock);
-      while ((state = sched->run_state.state) == SCHED_STOP) {
-        pthread_cond_wait(&sched->run_state.running, &sched->run_state.lock);
+      pthread_mutex_lock(&sched->lock);
+      while ((state = sched->state) == SCHED_STOP) {
+        sched->n_active--;
+        assert(sched->n_active >= 0);
+        pthread_cond_wait(&sched->running, &sched->lock);
+        sched->n_active++;
+        assert(sched->n_active <= sched->n_workers);
       }
-      pthread_mutex_unlock(&sched->run_state.lock);
+      pthread_mutex_unlock(&sched->lock);
     }
   }
 
@@ -813,7 +818,7 @@ int worker_start(void) {
 // Spawn a parcel on a specified worker thread.
 void scheduler_spawn_at(hpx_parcel_t *p, int thread) {
   dbg_assert(thread >= 0);
-  dbg_assert(thread < here->sched->n_workers);
+  dbg_assert(here && here->sched && (here->sched->n_workers > thread));
 
   worker_t *w = scheduler_get_worker(here->sched, thread);
   dbg_assert(w);
@@ -833,7 +838,7 @@ void scheduler_spawn(hpx_parcel_t *p) {
 
   // If we're stopped down then push the parcel and return. This prevents an
   // infinite spawn from inhibiting termination.
-  if (worker_is_stopped()) {
+  if (worker_is_stopped(w)) {
     _push_lifo(p, w);
     return;
   }
@@ -1032,9 +1037,10 @@ uint32_t hpx_thread_current_credit(void) {
 }
 
 int hpx_thread_get_tls_id(void) {
-  ustack_t *stack = self->current->ustack;
+  worker_t *w = self;
+  ustack_t *stack = w->current->ustack;
   if (stack->tls_id < 0) {
-    stack->tls_id = sync_fadd(&here->sched->next_tls_id, 1, SYNC_ACQ_REL);
+    stack->tls_id = sync_fadd(&w->sched->next_tls_id, 1, SYNC_ACQ_REL);
   }
 
   return stack->tls_id;
@@ -1071,7 +1077,7 @@ void hpx_thread_set_affinity(int affinity) {
   }
 
   // move this thread to the proper worker through the mailbox
-  worker_t *w = scheduler_get_worker(here->sched, affinity);
+  worker_t *w = scheduler_get_worker(worker->sched, affinity);
   EVENT_THREAD_SUSPEND(p, worker);
   _schedule_nb(_send_mail, w);
   EVENT_THREAD_RESUME(p, self);

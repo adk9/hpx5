@@ -58,19 +58,16 @@ struct cvar;
 /// table, though all of the functionality that is required to make this work is
 /// not implemented.
 struct scheduler {
-  volatile int     stopped;                     // fast flag to avoid locking
-  volatile int next_tls_id;
+  volatile int     stopped;                     //!< fast flag to avoid locking
+  volatile int next_tls_id;                     //!< lightweight thread ids
   int            n_workers;                     //!< total number of workers
   int             n_active;                     //!< number of active workers
-  struct {
-    volatile int     state;
-    pthread_mutex_t   lock;
-    pthread_cond_t running;
-  } run_state;
-
+  volatile int       state;                     //!< the run state
+  pthread_mutex_t     lock;                     //!< lock for running condition
+  pthread_cond_t   running;                     //!< the running condition
   PAD_TO_CACHELINE(sizeof(int) * 5 +
                    sizeof(pthread_mutex_t) +
-                   sizeof(pthread_cond_t));
+                   sizeof(pthread_cond_t));     //!< padding to align workers
   worker_t         workers[];                   //!< array of worker data
 };
 
@@ -94,19 +91,6 @@ struct scheduler *scheduler_new(const struct config *config)
 ///
 /// @param    scheduler The scheduler to free.
 void scheduler_delete(struct scheduler *scheduler);
-
-/// Starts the scheduler.
-///
-/// This starts all of the low-level scheduler threads. After this call, threads
-/// can be spawned using the scheduler_spawn() routine. Parcels for this queue
-/// may come from the network, or from the main thread.
-///
-/// @param    scheduler The scheduler to start.
-/// @param          cfg The configuration object.
-///
-/// @returns            LIBHPX_OK or an error code.
-int scheduler_startup(struct scheduler *scheduler, const struct config *cfg)
-  HPX_NON_NULL(1);
 
 /// Restart the scheduler.
 ///

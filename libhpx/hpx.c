@@ -230,12 +230,6 @@ int hpx_init(int *argc, char ***argv) {
   action_registration_finalize();
   trace_start(here->tracer);
 
-  // start the scheduler, this will return after scheduler_shutdown()
-  if (scheduler_startup(here->sched, here->config) != LIBHPX_OK) {
-    log_error("scheduler shut down with error.\n");
-    goto unwind1;
-  }
-
   if ((here->ranks > 1 && here->config->gas != HPX_GAS_AGAS) ||
       !here->config->opt_smp) {
     status = hpx_run(&_hpx_143_fix);
