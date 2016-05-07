@@ -69,9 +69,6 @@ static void *_run(void *worker) {
   apex_register_thread("HPX WORKER THREAD");
 #endif
 
-  // wait for the other threads to join
-  system_barrier_wait(&here->sched->barrier);
-
   if (worker_start()) {
     dbg_error("failed to start processing lightweight threads.\n");
     return NULL;
@@ -127,6 +124,15 @@ struct scheduler *scheduler_new(const config_t *cfg) {
     return NULL;
   }
 
+  sync_store(&s->stopped, SCHED_STOP, SYNC_RELEASE);
+  sync_store(&s->next_tls_id, 0, SYNC_RELEASE);
+  s->n_workers = workers;
+  s->n_active = workers;
+
+  s->run_state.state = SCHED_STOP;
+  s->run_state.lock = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
+  s->run_state.running = (pthread_cond_t)PTHREAD_COND_INITIALIZER;
+
   for (int i = 0, e = workers; i < e; ++i) {
     if (worker_init(&s->workers[i], i, i, 64)) {
       dbg_error("failed to initialize a worker.\n");
@@ -135,21 +141,6 @@ struct scheduler *scheduler_new(const config_t *cfg) {
     }
   }
 
-  s->n_workers = workers;
-  s->n_active = workers;
-
-  if (system_barrier_init(&s->barrier, NULL, workers)) {
-    dbg_error("failed to allocate the scheduler barrier.\n");
-    scheduler_delete(s);
-    return NULL;
-  }
-
-  // initialize the run state.
-  sync_store(&s->stopped, SCHED_STOP, SYNC_RELEASE);
-  s->run_state.state = SCHED_STOP;
-  s->run_state.lock = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
-  s->run_state.running = (pthread_cond_t)PTHREAD_COND_INITIALIZER;
-  sync_store(&s->next_tls_id, 0, SYNC_RELEASE);
   thread_set_stack_size(cfg->stacksize);
   log_sched("initialized a new scheduler.\n");
 
@@ -170,20 +161,16 @@ void scheduler_delete(struct scheduler *sched) {
   pthread_cond_broadcast(&sched->run_state.running);
   pthread_mutex_unlock(&sched->run_state.lock);
 
-  worker_t *worker = NULL;
   for (int i = 1, e = sched->n_workers; i < e; ++i) {
-    worker = scheduler_get_worker(sched, i);
-    _join(worker);
+    _join(scheduler_get_worker(sched, i));
   }
+
   log_sched("joined worker threads.\n");
   // unbind this thread's worker
   self = NULL;
 
-  system_barrier_destroy(&sched->barrier);
-
   for (int i = 0, e = sched->n_workers; i < e; ++i) {
-    worker_t *worker = scheduler_get_worker(sched, i);
-    worker_fini(worker);
+    worker_fini(scheduler_get_worker(sched, i));
   }
 
   free(sched);
@@ -220,35 +207,25 @@ int scheduler_restart(struct scheduler *sched) {
 }
 
 int scheduler_startup(struct scheduler *sched, const config_t *cfg) {
-  worker_t *worker = NULL;
-  int status = LIBHPX_OK;
-
   // start all of the other worker threads
   for (int i = 1, e = sched->n_workers; i < e; ++i) {
-    worker = scheduler_get_worker(sched, i);
-    status = _create(worker, cfg);
-
+    int status = _create(scheduler_get_worker(sched, i), cfg);
     if (status != LIBHPX_OK) {
       dbg_error("could not start worker %d.\n", i);
 
       for (int j = 1; j < i; ++j) {
-        worker = scheduler_get_worker(sched, j);
-        _cancel(worker);
+        _cancel(scheduler_get_worker(sched, j));
       }
 
       for (int j = 1; j < i; ++j) {
-        worker = scheduler_get_worker(sched, j);
-        _join(worker);
+        _join(scheduler_get_worker(sched, j));
       }
 
       return status;
     }
   }
 
-  // wait for the other slave worker threads to launch
-  system_barrier_wait(&sched->barrier);
-
-  return status;
+  return HPX_SUCCESS;
 }
 
 void scheduler_stop(struct scheduler *sched, int code) {

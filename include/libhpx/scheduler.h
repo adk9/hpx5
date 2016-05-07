@@ -29,7 +29,6 @@ extern "C" {
 #include <pthread.h>
 #include <hpx/hpx.h>
 #include <libsync/queues.h>
-#include <libhpx/system.h>
 #include <libhpx/worker.h>
 
 /// Preprocessor define that tells us if the scheduler is cooperative or
@@ -60,24 +59,18 @@ struct cvar;
 /// not implemented.
 struct scheduler {
   volatile int     stopped;                     // fast flag to avoid locking
-
+  volatile int next_tls_id;
+  int            n_workers;                     //!< total number of workers
+  int             n_active;                     //!< number of active workers
   struct {
     volatile int     state;
     pthread_mutex_t   lock;
     pthread_cond_t running;
   } run_state;
 
-  volatile int next_tls_id;
-  system_barrier_t barrier;
-  int            n_workers;                     //!< total number of workers
-  int             n_active;                     //!< number of active workers
-  PAD_TO_CACHELINE(sizeof(int) +
-                   sizeof(int) +
+  PAD_TO_CACHELINE(sizeof(int) * 5 +
                    sizeof(pthread_mutex_t) +
-                   sizeof(pthread_cond_t) +
-                   sizeof(int) +
-                   sizeof(system_barrier_t) +
-                   sizeof(int) * 2);
+                   sizeof(pthread_cond_t));
   worker_t         workers[];                   //!< array of worker data
 };
 
