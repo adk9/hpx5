@@ -26,17 +26,17 @@
 # include <apex.h>
 #endif
 
-#include "hpx/builtins.h"
-#include "libhpx/action.h"
-#include "libhpx/config.h"
-#include "libhpx/debug.h"
-#include "libhpx/gas.h"
-#include "libhpx/libhpx.h"
-#include "libhpx/locality.h"
-#include "libhpx/memory.h"
-#include "libhpx/network.h"
-#include "libhpx/rebalancer.h"
-#include "libhpx/scheduler.h"
+#include <hpx/builtins.h>
+#include <libhpx/action.h>
+#include <libhpx/config.h>
+#include <libhpx/debug.h>
+#include <libhpx/gas.h>
+#include <libhpx/libhpx.h>
+#include <libhpx/locality.h>
+#include <libhpx/memory.h>
+#include <libhpx/network.h>
+#include <libhpx/rebalancer.h>
+#include <libhpx/scheduler.h>
 #include "thread.h"
 
 static void _bind_self(worker_t *worker) {
@@ -120,34 +120,25 @@ static void _cancel(const worker_t *worker) {
 
 struct scheduler *scheduler_new(const config_t *cfg) {
   const int workers = cfg->threads;
-
-  struct scheduler *s = malloc(sizeof(*s));
-  if (!s) {
+  struct scheduler *s = NULL;
+  size_t bytes = sizeof(*s) + workers * sizeof(worker_t);
+  if (posix_memalign((void**)&s, HPX_CACHELINE_SIZE, bytes)) {
     dbg_error("could not allocate a scheduler.\n");
     return NULL;
   }
 
-  size_t r = HPX_CACHELINE_SIZE - sizeof(s->workers[0]) % HPX_CACHELINE_SIZE;
-  size_t padded_size = sizeof(s->workers[0]) + r;
-  size_t total = workers * padded_size;
-  int e = posix_memalign((void**)&s->workers, HPX_CACHELINE_SIZE, total);
-  if (e) {
-    dbg_error("could not allocate a worker array.\n");
-    scheduler_delete(s);
-    return NULL;
-  }
-
-  for (int i = 0; i < workers; ++i) {
-    e = worker_init(&s->workers[i], i, i, 64);
-    if (e) {
+  for (int i = 0, e = workers; i < e; ++i) {
+    if (worker_init(&s->workers[i], i, i, 64)) {
       dbg_error("failed to initialize a worker.\n");
       scheduler_delete(s);
       return NULL;
     }
   }
 
-  e = system_barrier_init(&s->barrier, NULL, workers);
-  if (e) {
+  s->n_workers = workers;
+  s->n_active = workers;
+
+  if (system_barrier_init(&s->barrier, NULL, workers)) {
     dbg_error("failed to allocate the scheduler barrier.\n");
     scheduler_delete(s);
     return NULL;
@@ -158,18 +149,12 @@ struct scheduler *scheduler_new(const config_t *cfg) {
   s->run_state.state = SCHED_STOP;
   s->run_state.lock = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
   s->run_state.running = (pthread_cond_t)PTHREAD_COND_INITIALIZER;
-
   sync_store(&s->next_tls_id, 0, SYNC_RELEASE);
-  s->n_workers    = workers;
-  s->n_active_workers = workers;
-  s->wf_threshold = cfg->sched_wfthreshold;
-
   thread_set_stack_size(cfg->stacksize);
   log_sched("initialized a new scheduler.\n");
 
   // bind a worker for this thread so that we can spawn lightweight threads
   _bind_self(&s->workers[0]);
-
   log_sched("worker 0 ready.\n");
   return s;
 }
@@ -186,7 +171,7 @@ void scheduler_delete(struct scheduler *sched) {
   pthread_mutex_unlock(&sched->run_state.lock);
 
   worker_t *worker = NULL;
-  for (int i = 1; i < sched->n_workers; ++i) {
+  for (int i = 1, e = sched->n_workers; i < e; ++i) {
     worker = scheduler_get_worker(sched, i);
     _join(worker);
   }
@@ -196,12 +181,9 @@ void scheduler_delete(struct scheduler *sched) {
 
   system_barrier_destroy(&sched->barrier);
 
-  if (sched->workers) {
-    for (int i = 0, e = sched->n_workers; i < e; ++i) {
-      worker_t *worker = scheduler_get_worker(sched, i);
-      worker_fini(worker);
-    }
-    free(sched->workers);
+  for (int i = 0, e = sched->n_workers; i < e; ++i) {
+    worker_t *worker = scheduler_get_worker(sched, i);
+    worker_fini(worker);
   }
 
   free(sched);
@@ -210,7 +192,9 @@ void scheduler_delete(struct scheduler *sched) {
 worker_t *scheduler_get_worker(struct scheduler *sched, int id) {
   assert(id >= 0);
   assert(id < sched->n_workers);
-  return &sched->workers[id];
+  worker_t *w = &sched->workers[id];
+  assert(((uintptr_t)w & (HPX_CACHELINE_SIZE - 1)) == 0);
+  return w;
 }
 
 int scheduler_restart(struct scheduler *sched) {
