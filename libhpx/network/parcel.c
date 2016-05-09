@@ -129,7 +129,7 @@ void parcel_launch(hpx_parcel_t *p) {
              actions[p->c_action].key,
              p->c_target);
 
-  EVENT_PARCEL_SEND(p->id, p->action, p->size, 
+  EVENT_PARCEL_SEND(p->id, p->action, p->size,
                     (self && self->current) ? self->current->target : HPX_NULL,
                     p->target);
 
@@ -219,7 +219,7 @@ hpx_parcel_t *parcel_new(hpx_addr_t target, hpx_action_t action,
   hpx_parcel_t *p = parcel_alloc(len);
   parcel_init(target, action, c_target, c_action, pid, data, len, p);
   EVENT_PARCEL_CREATE(p->id, p->action, p->size,
-                      ((self->current) ? self->current->id : 0));
+                      ((self && self->current) ? self->current->id : 0));
   return p;
 }
 
