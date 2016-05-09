@@ -44,7 +44,7 @@
 #include <libhpx/topology.h>
 
 #ifdef HAVE_APEX
-#include "apex.h"
+# include "apex.h"
 #endif
 
 static hpx_addr_t _hpx_143;
@@ -59,9 +59,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, 0, _hpx_143_fix, _hpx_143_fix_handler);
 ///
 /// This will delete the global objects, if they've been allocated.
 static void _cleanup(locality_t *l) {
-  if (!l) {
-    return;
-  }
+  as_leave();
 
 #ifdef HAVE_APEX
   apex_finalize();
@@ -244,20 +242,17 @@ int hpx_init(int *argc, char ***argv) {
 
 /// Called to run HPX.
 int _hpx_run(hpx_action_t *act, int n, ...) {
-  if (here->rank == 0) {
-    va_list args;
-    va_start(args, n);
-    hpx_parcel_t *p = action_new_parcel_va(*act, HPX_HERE, 0, 0, n, &args);
-    va_end(args);
-    scheduler_spawn_at(p, 0);
-  }
+  va_list args;
+  va_start(args, n);
+  hpx_parcel_t *p = action_new_parcel_va(*act, HPX_HERE, 0, 0, n, &args);
   log_dflt("hpx started running %"PRIu64"\n", here->epoch);
-  int status = scheduler_restart(here->sched);
+  int status = scheduler_start(here->sched, p, 0);
   log_dflt("hpx stopped running %"PRIu64"\n", here->epoch);
+  va_end(args);
 
   // We need to flush the network here, because it might have messages that are
   // required for progress.
-  self->network->flush(self->network);
+  network_flush(here->net);
 
   // Bump our epoch, and enforce the "collective" nature of run with a boot
   // barrier.
