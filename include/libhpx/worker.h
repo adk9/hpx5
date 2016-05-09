@@ -85,20 +85,49 @@ extern __thread worker_t * volatile self;
 
 /// Initialize a worker structure.
 ///
+/// This initializes a worker.
+///
 /// @param            w The worker structure to initialize.
 /// @param        sched The scheduler associated with this worker.
 /// @param           id The worker's id.
 ///
 /// @returns  LIBHPX_OK or an error code
-int worker_init(worker_t *w, struct scheduler *sche, int id)
-  HPX_NON_NULL(1);
+void worker_init(worker_t *w, struct scheduler *sched, int id)
+  HPX_NON_NULL(1, 2);
 
 /// Finalize a worker structure.
+///
+/// This will cleanup any queues and free any stacks and parcels associated with
+/// the worker. This should only be called once *all* of the workers have been
+/// joined so that an _in-flight_ mail message doesn't get missed.
+///
+/// @param            w The worker structure to finalize.
 void worker_fini(worker_t *w)
   HPX_NON_NULL(1);
 
-/// Start processing lightweight threads.
-int worker_start(void);
+/// Create a scheduler worker thread.
+///
+/// This starts an underlying system thread for the scheduler. Assuming the
+/// scheduler is stopped the underlying thread will immediately sleep waiting
+/// for a run condition.
+///
+/// @param            w The worker structure to initialize.
+/// @param        sched The scheduler associated with this worker.
+/// @param           id The worker's id.
+///
+/// @returns  LIBHPX_OK or an error code
+int worker_create(worker_t *w)
+  HPX_NON_NULL(1);
+
+/// Join with a scheduler worker thread.
+///
+/// This will block waiting for the designated worker thread to exit. It should
+/// be used before calling worker_fini() on this thread in order to avoid race
+/// conditions on the mailbox and scheduling and whatnot.
+///
+/// @param            w The worker to join (should be active).
+void worker_join(worker_t *w)
+  HPX_NON_NULL(1);
 
 /// The thread entry function that the worker uses to start a thread.
 ///
