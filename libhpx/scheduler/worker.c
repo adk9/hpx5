@@ -346,7 +346,7 @@ static hpx_parcel_t *_steal_from(worker_t *this, int id) {
 /// Steal a parcel from a random worker out of all workers.
 static hpx_parcel_t *_steal_random_all(worker_t *this) {
   int n = this->sched->n_workers;
-  int id = this->id;
+  int id;
   do {
     id = rand_r(&this->seed) % n;
   } while (id == this->id);
@@ -356,7 +356,7 @@ static hpx_parcel_t *_steal_random_all(worker_t *this) {
 /// Steal a parcel from a random worker from the same NUMA node.
 static hpx_parcel_t *_steal_random_node(worker_t *this) {
   int n = here->topology->cpus_per_node;
-  int id = this->id;
+  int id;
   do {
     int cpu = rand_r(&this->seed) % n;
     id = here->topology->numa_to_cpus[this->numa_node][cpu];
