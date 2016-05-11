@@ -21,15 +21,7 @@
 #include <libhpx/scheduler.h>
 #include <libhpx/worker.h>
 
-#ifndef HAVE_APEX
-int worker_is_active(void) {
-  return 1;
-}
-
-int worker_is_stopped(void) {
-  return scheduler_is_stopped(here->sched);
-}
-#else
+#ifdef HAVE_APEX
 # include <pthread.h>
 # include <apex.h>
 # include <apex_policies.h>
@@ -54,29 +46,29 @@ static void _apex_signal(void) {
 /// Try to deactivate a worker.
 ///
 /// @returns          1 If the worker remains active, 0 if it was deactivated
-static int _apex_try_deactivate(volatile int *n_active_workers) {
-  if (sync_fadd(n_active_workers, -1, SYNC_ACQ_REL) > apex_get_thread_cap()) {
+static int _apex_try_deactivate(volatile int *n_active) {
+  if (sync_fadd(n_active, -1, SYNC_ACQ_REL) > apex_get_thread_cap()) {
     self->active = false;
     apex_set_state(APEX_THROTTLED);
     return 0;
   }
 
-  sync_fadd(n_active_workers, 1, SYNC_ACQ_REL);
+  sync_fadd(n_active, 1, SYNC_ACQ_REL);
   return 1;
 }
 
 /// Try to reactivate an inactive worker.
 ///
 /// @returns          1 If the thread reactivated, 0 if it is still inactive.
-static int _apex_try_reactivate(volatile int *n_active_workers) {
-  if (sync_fadd(n_active_workers, 1, SYNC_ACQ_REL) <= apex_get_thread_cap()) {
+static int _apex_try_reactivate(volatile int *n_active) {
+  if (sync_fadd(n_active, 1, SYNC_ACQ_REL) <= apex_get_thread_cap()) {
     // I fit inside the cap!
     self->active = true;
     apex_set_state(APEX_BUSY);
     return 1;
   }
 
-  sync_fadd(n_active_workers, -1, SYNC_ACQ_REL);
+  sync_fadd(n_active, -1, SYNC_ACQ_REL);
   return 0;
 }
 
@@ -94,12 +86,12 @@ static int _apex_check_active(void) {
   }
 
   // we use this address a bunch of times, so just remember it
-  volatile int * n_active_workers = &(here->sched->n_active_workers);
+  volatile int *n_active = &(here->sched->n_active);
 
   if (!self->active) {
     // because I can't change the power level, sleep instead.
     _apex_wait();
-    return _apex_try_reactivate(n_active_workers);
+    return _apex_try_reactivate(n_active);
   }
 
   if (!apex_throttleOn || self->yielded) {
@@ -107,12 +99,12 @@ static int _apex_check_active(void) {
   }
 
   // If there are too many threads running, then try and become inactive.
-  if (sync_load(n_active_workers, SYNC_ACQUIRE) > apex_get_thread_cap()) {
-    return _apex_try_deactivate(n_active_workers);
+  if (sync_load(n_active, SYNC_ACQUIRE) > apex_get_thread_cap()) {
+    return _apex_try_deactivate(n_active);
   }
 
   // Go ahead and signal the condition variable if we need to
-  if (sync_load(n_active_workers, SYNC_ACQUIRE) < apex_get_thread_cap()) {
+  if (sync_load(n_active, SYNC_ACQUIRE) < apex_get_thread_cap()) {
     _apex_signal();
   }
 
@@ -129,12 +121,12 @@ static void _apex_worker_shutdown(void) {
   }
 }
 
-int worker_is_active(void) {
+int worker_is_active(const worker_t *w) {
   return _apex_check_active();
 }
 
-int worker_is_stopped(void) {
-  int e = scheduler_is_stopped(here->sched);
+int worker_is_stopped(const worker_t *w) {
+  int e = scheduler_is_stopped(w->sched);
   if (e) {
     _apex_worker_shutdown();
   }

@@ -44,7 +44,7 @@
 #include <libhpx/topology.h>
 
 #ifdef HAVE_APEX
-#include "apex.h"
+# include "apex.h"
 #endif
 
 static hpx_addr_t _hpx_143;
@@ -55,13 +55,15 @@ static int _hpx_143_fix_handler(void) {
 }
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _hpx_143_fix, _hpx_143_fix_handler);
 
-/// Stop HPX
+/// Cleanup utility function.
 ///
-/// This will stop HPX by stopping the network and scheduler, and cleaning up
-/// anything that should not persist between hpx_run() calls.
-static void _stop(locality_t *l) {
-  if (!l)
-    return;
+/// This will delete the global objects, if they've been allocated.
+static void _cleanup(locality_t *l) {
+  as_leave();
+
+#ifdef HAVE_APEX
+  apex_finalize();
+#endif
 
   if (l->tracer) {
     trace_destroy(l->tracer);
@@ -77,18 +79,6 @@ static void _stop(locality_t *l) {
     network_delete(l->net);
     l->net = NULL;
   }
-}
-
-/// Cleanup utility function.
-///
-/// This will delete the global objects, if they've been allocated.
-static void _cleanup(locality_t *l) {
-  if (!l)
-    return;
-
-#ifdef HAVE_APEX
-  apex_finalize();
-#endif
 
   if (l->percolation) {
     percolation_delete(l->percolation);
@@ -238,12 +228,6 @@ int hpx_init(int *argc, char ***argv) {
   action_registration_finalize();
   trace_start(here->tracer);
 
-  // start the scheduler, this will return after scheduler_shutdown()
-  if (scheduler_startup(here->sched, here->config) != LIBHPX_OK) {
-    log_error("scheduler shut down with error.\n");
-    goto unwind1;
-  }
-
   if ((here->ranks > 1 && here->config->gas != HPX_GAS_AGAS) ||
       !here->config->opt_smp) {
     status = hpx_run(&_hpx_143_fix);
@@ -251,7 +235,6 @@ int hpx_init(int *argc, char ***argv) {
 
   return status;
  unwind1:
-  _stop(here);
   _cleanup(here);
  unwind0:
   return status;
@@ -259,20 +242,17 @@ int hpx_init(int *argc, char ***argv) {
 
 /// Called to run HPX.
 int _hpx_run(hpx_action_t *act, int n, ...) {
-  if (here->rank == 0) {
-    va_list args;
-    va_start(args, n);
-    hpx_parcel_t *p = action_new_parcel_va(*act, HPX_HERE, 0, 0, n, &args);
-    va_end(args);
-    dbg_check(hpx_parcel_send(p, HPX_NULL), "failed to spawn initial action\n");
-  }
+  va_list args;
+  va_start(args, n);
+  hpx_parcel_t *p = action_new_parcel_va(*act, HPX_HERE, 0, 0, n, &args);
   log_dflt("hpx started running %"PRIu64"\n", here->epoch);
-  int status = scheduler_restart(here->sched);
+  int status = scheduler_start(here->sched, p, 0);
   log_dflt("hpx stopped running %"PRIu64"\n", here->epoch);
+  va_end(args);
 
   // We need to flush the network here, because it might have messages that are
   // required for progress.
-  self->network->flush(self->network);
+  network_flush(here->net);
 
   // Bump our epoch, and enforce the "collective" nature of run with a boot
   // barrier.
@@ -354,6 +334,5 @@ void hpx_finalize(void) {
   if (_hpx_143 != HPX_NULL) {
     hpx_gas_free(_hpx_143, HPX_NULL);
   }
-  _stop(here);
   _cleanup(here);
 }
