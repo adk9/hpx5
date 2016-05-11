@@ -468,7 +468,7 @@ static hpx_parcel_t *_steal_hier(worker_t *this) {
 /// NB: we can be much smarter about who to steal from and how much to
 /// steal. Ultimately though, we're building a distributed runtime so SMP work
 /// stealing isn't that big a deal.
-static hpx_parcel_t *_schedule_steal(worker_t *this) {
+static hpx_parcel_t *_handle_steal(worker_t *this) {
   int n = this->sched->n_workers;
   if (n == 1) {
     return NULL;
@@ -633,11 +633,12 @@ static hpx_parcel_t *_handle_epoch(worker_t *this) {
 /// find quickly we'll transfer back to the main pthread stack and go through an
 /// extended transfer time.
 ///
+/// @param         this The current worker.
 /// @param            f The continuation function.
 /// @param          env The continuation environment.
-static void _schedule_nb(void (*f)(hpx_parcel_t *, void*), void *env) {
+static void _schedule_nb(worker_t *this, void (*f)(hpx_parcel_t *, void*),
+                         void *env) {
   EVENT_SCHED_BEGIN();
-  worker_t *this = self;
   hpx_parcel_t *p = NULL;
   if (worker_is_stopped(this)) {
     p = this->system;
@@ -678,7 +679,7 @@ static void _schedule(worker_t *this) {
     }
     else if ((p = _handle_network(this))) {
     }
-    else if ((p = _schedule_steal(this))) {
+    else if ((p = _handle_steal(this))) {
       log_sched("stole work %p\n", p);
     }
     else {
@@ -913,7 +914,7 @@ void scheduler_yield(void) {
   EVENT_SCHED_YIELD();
   self->yielded = true;
   EVENT_THREAD_SUSPEND(w->current, w);
-  _schedule_nb(_yield, w);
+  _schedule_nb(w, _yield, w);
   EVENT_THREAD_RESUME(w->current, self);
 }
 
@@ -933,7 +934,7 @@ hpx_status_t scheduler_wait(void *lock, cvar_t *condition) {
   }
 
   EVENT_THREAD_SUSPEND(p, w);
-  _schedule_nb(_unlock, lock);
+  _schedule_nb(w, _unlock, lock);
   EVENT_THREAD_RESUME(p, self);
 
   // reacquire the lco lock before returning
@@ -980,21 +981,21 @@ void HPX_NORETURN worker_finish_thread(hpx_parcel_t *p, int status) {
     EVENT_THREAD_END(p, self);
     EVENT_PARCEL_RESEND(self->current->id, self->current->action,
                         self->current->size, self->current->src);
-    _schedule_nb(_resend, NULL);
+    _schedule_nb(self, _resend, NULL);
 
    case HPX_SUCCESS:
     if (!p->ustack->cont) {
       _vcontinue_parcel(p, 0, NULL);
     }
     EVENT_THREAD_END(p, self);
-    _schedule_nb(_free, NULL);
+    _schedule_nb(self, _free, NULL);
 
    case HPX_LCO_ERROR:
     // rewrite to lco_error and continue the error status
     p->c_action = lco_error;
     _hpx_thread_continue(2, &status, sizeof(status));
     EVENT_THREAD_END(p, self);
-    _schedule_nb(_free, NULL);
+    _schedule_nb(self, _free, NULL);
 
    case HPX_ERROR:
    default:
@@ -1084,13 +1085,13 @@ void hpx_thread_set_affinity(int affinity) {
   dbg_assert(affinity >= -1);
   dbg_assert(affinity < here->sched->n_workers);
 
-  worker_t *worker = self;
-  dbg_assert(worker->current);
-  dbg_assert(worker->current->ustack);
-  dbg_assert(worker->current != worker->system);
+  worker_t *this = self;
+  dbg_assert(this->current);
+  dbg_assert(this->current->ustack);
+  dbg_assert(this->current != this->system);
 
   // set the soft affinity
-  hpx_parcel_t  *p = worker->current;
+  hpx_parcel_t  *p = this->current;
   ustack_t *thread = p->ustack;
   thread->affinity = affinity;
 
@@ -1100,14 +1101,14 @@ void hpx_thread_set_affinity(int affinity) {
   }
 
   // if this is already running on the correct worker return
-  if (affinity == worker->id) {
+  if (affinity == this->id) {
     return;
   }
 
   // move this thread to the proper worker through the mailbox
-  worker_t *w = scheduler_get_worker(worker->sched, affinity);
-  EVENT_THREAD_SUSPEND(p, worker);
-  _schedule_nb(_send_mail, w);
+  worker_t *w = scheduler_get_worker(this->sched, affinity);
+  EVENT_THREAD_SUSPEND(p, this);
+  _schedule_nb(this, _send_mail, w);
   EVENT_THREAD_RESUME(p, self);
 }
 
@@ -1116,7 +1117,7 @@ void scheduler_suspend(void (*f)(hpx_parcel_t *, void*), void *env) {
   hpx_parcel_t *p = w->current;
   log_sched("suspending %p in %s\n", (void*)self->current, actions[p->action].key);
   EVENT_THREAD_SUSPEND(self->current, self);
-  _schedule_nb(f, env);
+  _schedule_nb(w, f, env);
   EVENT_THREAD_RESUME(p, self);
   log_sched("resuming %p in %s\n", (void*)p, actions[p->action].key);
   (void)p;
