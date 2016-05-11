@@ -166,6 +166,7 @@ typedef enum {
   HPX_TRACE_BACKEND_DEFAULT = 0,
   HPX_TRACE_BACKEND_FILE,
   HPX_TRACE_BACKEND_CONSOLE,
+  HPX_TRACE_BACKEND_STATS,
   HPX_TRACE_BACKEND_MAX
 } libhpx_trace_backend_t;
 
@@ -173,6 +174,7 @@ static const char * const HPX_TRACE_BACKEND_TO_STRING[] = {
   "DEFAULT",
   "FILE",
   "CONSOLE",
+  "STATS",
   "INVALID_ID"
 };
 

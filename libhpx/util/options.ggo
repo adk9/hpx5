@@ -106,7 +106,7 @@ section "Tracing"
 
 option "hpx-trace-backend" - "type of tracing backend to use"
 typestr="type"
-values="default","file","console"
+values="default","file","console","stats"
 enum optional
 
 option "hpx-trace-at" - "filter by locality, -1 for all (default all)"

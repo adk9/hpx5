@@ -97,4 +97,7 @@ trace_t *trace_file_new(const config_t *cfg);
 // Constructor for a "console" tracer object.
 trace_t *trace_console_new(const config_t *cfg);
 
+// Constructor for the "stats" tracer object.
+trace_t *trace_stats_new(const config_t *cfg);
+
 #endif

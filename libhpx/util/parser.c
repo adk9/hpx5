@@ -60,7 +60,7 @@ const char *hpx_options_t_help[] = {
   "      --hpx-dbg-mprotectstacks  use mprotect() to bracket stacks to look for\n                                  stack overflows  (default=off)",
   "      --hpx-dbg-syncfree        use synchronous GAS free operations\n                                  (default=off)",
   "\nTracing:",
-  "      --hpx-trace-backend=type  type of tracing backend to use  (possible\n                                  values=\"default\", \"file\", \"console\")",
+  "      --hpx-trace-backend=type  type of tracing backend to use  (possible\n                                  values=\"default\", \"file\", \"console\",\n                                  \"stats\")",
   "      --hpx-trace-at=localities filter by locality, -1 for all (default all)",
   "      --hpx-trace-classes=class filter by class  (possible values=\"parcel\",\n                                  \"network\", \"sched\", \"lco\", \"process\",\n                                  \"memory\", \"trace\", \"gas\",\n                                  \"collective\", \"all\")",
   "      --hpx-trace-dir=dir       output directory (file backend)",
@@ -152,7 +152,7 @@ const char *hpx_option_parser_hpx_thread_affinity_values[] = {"default", "hwthre
 const char *hpx_option_parser_hpx_sched_policy_values[] = {"default", "random", "hier", 0}; /*< Possible values for hpx-sched-policy. */
 const char *hpx_option_parser_hpx_log_level_values[] = {"default", "boot", "sched", "gas", "lco", "net", "trans", "parcel", "action", "config", "memory", "coll", "all", 0}; /*< Possible values for hpx-log-level. */
 const char *hpx_option_parser_hpx_dbg_waitonsig_values[] = {"segv", "abrt", "fpe", "ill", "bus", "iot", "sys", "trap", "all", 0}; /*< Possible values for hpx-dbg-waitonsig. */
-const char *hpx_option_parser_hpx_trace_backend_values[] = {"default", "file", "console", 0}; /*< Possible values for hpx-trace-backend. */
+const char *hpx_option_parser_hpx_trace_backend_values[] = {"default", "file", "console", "stats", 0}; /*< Possible values for hpx-trace-backend. */
 const char *hpx_option_parser_hpx_trace_classes_values[] = {"parcel", "network", "sched", "lco", "process", "memory", "trace", "gas", "collective", "all", 0}; /*< Possible values for hpx-trace-classes. */
 const char *hpx_option_parser_hpx_photon_backend_values[] = {"default", "verbs", "ugni", "fi", 0}; /*< Possible values for hpx-photon-backend. */
 const char *hpx_option_parser_hpx_photon_coll_values[] = {"default", "pwc", "nbc", 0}; /*< Possible values for hpx-photon-coll. */

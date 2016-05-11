@@ -60,13 +60,14 @@ struct worker {
   void               *bst;                      //!< the block statistics table
   struct network *network;                      //!< reference to the network
   struct logtable   *logs;                      //!< reference to tracer data
+  uint64_t         *stats;                      //!< reference to statistics data
   struct scheduler *sched;                      //!< pointer to the scheduler
   hpx_parcel_t    *system;                      //!< this worker's native parcel
   hpx_parcel_t   *current;                      //!< current thread
   struct ustack   *stacks;                      //!< freelisted stacks
   PAD_TO_CACHELINE(sizeof(pthread_t) +
                    sizeof(int) * 8 +
-                   sizeof(void*) * 8);
+                   sizeof(void*) * 9);
   pthread_mutex_t    lock;                      //!< state lock
   pthread_cond_t  running;                      //!< local condition for sleep
   volatile int      state;                      //!< what state are we in
