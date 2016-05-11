@@ -58,16 +58,17 @@ struct cvar;
 /// table, though all of the functionality that is required to make this work is
 /// not implemented.
 struct scheduler {
-  volatile int     stopped;                     //!< fast flag to avoid locking
+  pthread_mutex_t     lock;                     //!< lock for running condition
+  pthread_cond_t   stopped;                     //!< the running condition
+  volatile int       state;                     //!< the run state
   volatile int next_tls_id;                     //!< lightweight thread ids
   int            n_workers;                     //!< total number of workers
-  int             n_active;                     //!< number of active workers
-  volatile int       state;                     //!< the run state
-  pthread_mutex_t     lock;                     //!< lock for running condition
-  pthread_cond_t   running;                     //!< the running condition
-  PAD_TO_CACHELINE(sizeof(int) * 5 +
-                   sizeof(pthread_mutex_t) +
-                   sizeof(pthread_cond_t));     //!< padding to align workers
+  int             n_target;                     //!< target number of workers
+  volatile int    n_active;                     //!< active number of workers
+  int                 code;                     //!< the exit code
+  PAD_TO_CACHELINE(sizeof(pthread_mutex_t) +
+                   sizeof(pthread_cond_t) +
+                   sizeof(int) * 6);            //!< padding to align workers
   worker_t         workers[];                   //!< array of worker data
 };
 typedef struct scheduler scheduler_t;
