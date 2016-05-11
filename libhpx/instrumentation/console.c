@@ -46,7 +46,7 @@ static void _print_actions(void) {
   fprintf(stderr, "%d,%d,%lu,%s,%s" fmt "\n",   \
     here->rank, self->id,                       \
     hpx_time_from_start_ns(hpx_time_now()),     \
-    HPX_TRACE_CLASS_TO_STRING[c],               \
+    HPX_TRACE_CLASS_TO_STRING[ceil_log2_32(c)], \
     TRACE_EVENT_TO_STRING[id], ##__VA_ARGS__)
 
 static void _vappend(int UNUSED, int n, int id, ...) {
