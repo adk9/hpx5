@@ -118,6 +118,7 @@ void rebalancer_finalize(void) {
 // This function takes the thread-local BST and merges it with the
 // per-node global BST.
 int _local_to_global_bst(int id, void *UNUSED) {
+  hpx_thread_set_affinity(id);
   worker_t *w = scheduler_get_worker(here->sched, id);
   dbg_assert(w);
 
