@@ -47,30 +47,35 @@ typedef struct {
 } padded_deque_t;
 
 struct worker {
-  pthread_t        thread;                //!< this worker's native thread
-  int                  id;                //!< this worker's id
-  unsigned           seed;                //!< my random seed
-  int          work_first;                //!< this worker's mode
-  int             nstacks;                //!< count of freelisted stacks
-  int             yielded;                //!< used by APEX
-  int              active;                //!< used by APEX scheduler throttling
-  int         last_victim;                //!< last successful victim
-  int           numa_node;                //!< this worker's numa node
-  void          *profiler;                //!< reference to the profiler
-  void               *bst;                //!< the block statistics table
-  struct network *network;                //!< reference to the network
-  struct logtable   *logs;                //!< reference to tracer data
-  struct scheduler *sched;                //!< pointer to the scheduler
-  hpx_parcel_t    *system;                //!< this worker's native parcel
-  hpx_parcel_t   *current;                //!< current thread
-  struct ustack   *stacks;                //!< freelisted stacks
+  pthread_t        thread;                      //!< this worker's native thread
+  int                  id;                      //!< this worker's id
+  unsigned           seed;                      //!< my random seed
+  int          work_first;                      //!< this worker's mode
+  int             nstacks;                      //!< count of freelisted stacks
+  int             yielded;                      //!< used by APEX
+  int              active;                      //!< used by APEX
+  int         last_victim;                      //!< last successful victim
+  int           numa_node;                      //!< this worker's numa node
+  void          *profiler;                      //!< reference to the profiler
+  void               *bst;                      //!< the block statistics table
+  struct network *network;                      //!< reference to the network
+  struct logtable   *logs;                      //!< reference to tracer data
+  struct scheduler *sched;                      //!< pointer to the scheduler
+  hpx_parcel_t    *system;                      //!< this worker's native parcel
+  hpx_parcel_t   *current;                      //!< current thread
+  struct ustack   *stacks;                      //!< freelisted stacks
   PAD_TO_CACHELINE(sizeof(pthread_t) +
                    sizeof(int) * 8 +
                    sizeof(void*) * 8);
-  volatile int    work_id;                //!< which queue are we using
-  PAD_TO_CACHELINE(sizeof(int));
-  padded_deque_t   queues[2];             //!< work and yield queues
-  two_lock_queue_t  inbox;                //!< mail sent to me
+  pthread_mutex_t    lock;                      //!< state lock
+  pthread_cond_t  running;                      //!< local condition for sleep
+  volatile int      state;                      //!< what state are we in
+  volatile int    work_id;                      //!< which queue are we using
+  PAD_TO_CACHELINE(sizeof(pthread_mutex_t) +
+                   sizeof(pthread_cond_t) +
+                   sizeof(int) * 2);
+  padded_deque_t   queues[2];                   //!< work and yield queues
+  two_lock_queue_t  inbox;                      //!< mail sent to me
 };
 typedef struct worker worker_t;
 
@@ -126,6 +131,15 @@ int worker_create(worker_t *w)
 void worker_join(worker_t *w)
   HPX_NON_NULL(1);
 
+void worker_stop(worker_t *w)
+  HPX_NON_NULL(1);
+
+void worker_start(worker_t *w)
+  HPX_NON_NULL(1);
+
+void worker_shutdown(worker_t *w)
+  HPX_NON_NULL(1);
+
 /// The thread entry function that the worker uses to start a thread.
 ///
 /// This is the function that sits at the outermost stack frame for a
@@ -155,8 +169,8 @@ void worker_finish_thread(hpx_parcel_t *p, int status)
 /// Check to see if the current worker is active.
 int worker_is_active(const worker_t *w);
 
-/// Check to see if the current worker is stopped.
-int worker_is_stopped(const worker_t *w);
+/// Check to see if the current worker is running.
+int worker_is_running(const worker_t *w);
 
 #ifdef __cplusplus
 }

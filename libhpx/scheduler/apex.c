@@ -21,15 +21,7 @@
 #include <libhpx/scheduler.h>
 #include <libhpx/worker.h>
 
-#ifndef HAVE_APEX
-int worker_is_active(const worker_t *w) {
-  return 1;
-}
-
-int worker_is_stopped(const worker_t *w) {
-  return scheduler_is_stopped(w->sched);
-}
-#else
+#ifdef HAVE_APEX
 # include <pthread.h>
 # include <apex.h>
 # include <apex_policies.h>

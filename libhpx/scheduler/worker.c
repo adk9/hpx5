@@ -640,7 +640,7 @@ static void _schedule_nb(worker_t *this, void (*f)(hpx_parcel_t *, void*),
                          void *env) {
   EVENT_SCHED_BEGIN();
   hpx_parcel_t *p = NULL;
-  if (worker_is_stopped(this)) {
+  if (!worker_is_running(this)) {
     p = this->system;
   }
   else if ((p = _handle_mail(this))) {
@@ -660,18 +660,8 @@ static void _schedule_nb(worker_t *this, void (*f)(hpx_parcel_t *, void*),
 static void _schedule(worker_t *this) {
   INST(int spins = 0);
   hpx_parcel_t *p = NULL;
-  while (!worker_is_stopped(this)) {
-    if (!worker_is_active(this)) {
-      // make sure we don't have anything stuck in mail or yield
-      while ((p = sync_chase_lev_ws_deque_pop(_yielded(this)))) {
-        _push_lifo(p, this);
-      }
-      if ((p = _handle_mail(this))) {
-        _push_lifo(p, this);
-      }
-      continue;
-    }
-    else if ((p = _handle_mail(this))) {
+  while (worker_is_running(this)) {
+    if ((p = _handle_mail(this))) {
     }
     else if ((p = _pop_lifo(this))) {
     }
@@ -743,20 +733,29 @@ static void *_run(void *worker) {
   this->current = this->system;
   this->work_first = 0;
 
-  struct scheduler *sched = this->sched;
-  int state = 0;
+  int state = sync_load(&this->state, SYNC_ACQUIRE);
   while (state != SCHED_SHUTDOWN) {
     _schedule(this);
 
-    pthread_mutex_lock(&sched->lock);
-    while ((state = sched->state) == SCHED_STOP) {
-      sched->n_active--;
-      assert(sched->n_active >= 0);
-      pthread_cond_wait(&sched->running, &sched->lock);
-      sched->n_active++;
-      assert(sched->n_active <= sched->n_workers);
+    pthread_mutex_lock(&this->lock);
+    state = sync_load(&this->state, SYNC_ACQUIRE);
+    while (state == SCHED_STOP) {
+      hpx_parcel_t *p;
+      // make sure we don't have anything stuck in mail or yield
+      while ((p = sync_chase_lev_ws_deque_pop(_yielded(this)))) {
+        _push_lifo(p, this);
+      }
+      if ((p = _handle_mail(this))) {
+        _push_lifo(p, this);
+      }
+      int active = sync_addf(&this->sched->n_active, -1, SYNC_ACQ_REL);
+      dbg_assert(active >= 0);
+      pthread_cond_wait(&this->running, &this->lock);
+      active = sync_addf(&this->sched->n_active, 1, SYNC_ACQ_REL);
+      dbg_assert(active <= this->sched->n_workers);
+      state = sync_load(&this->state, SYNC_ACQUIRE);
     }
-    pthread_mutex_unlock(&sched->lock);
+    pthread_mutex_unlock(&this->lock);
   }
 
   this->system = NULL;
@@ -793,7 +792,14 @@ void worker_init(worker_t *this, struct scheduler *sched, int id) {
   this->current     = NULL;
   this->stacks      = NULL;
 
+  if (pthread_mutex_init(&this->lock, NULL)) {
+    dbg_error("could not initialize the lock for %d\n", id);
+  }
+  if (pthread_cond_init(&this->running, NULL)) {
+    dbg_error("could not initialize the condition for %d\n", id);
+  }
   sync_store(&this->work_id, 0, SYNC_RELAXED);
+  sync_store(&this->state, SCHED_STOP, SYNC_RELAXED);
 
   sync_chase_lev_ws_deque_init(&this->queues[0].work, 32);
   sync_chase_lev_ws_deque_init(&this->queues[1].work, 32);
@@ -801,6 +807,13 @@ void worker_init(worker_t *this, struct scheduler *sched, int id) {
 }
 
 void worker_fini(worker_t *this) {
+  if (pthread_cond_destroy(&this->running)) {
+    dbg_error("Failed to destroy the running condition for %d\n", self->id);
+  }
+  if (pthread_mutex_destroy(&this->lock)) {
+    dbg_error("Failed to destroy the lock for %d\n", self->id);
+  }
+
   hpx_parcel_t *p = NULL;
   // clean up the mailbox
   if ((p = _handle_mail(this))) {
@@ -846,6 +859,30 @@ void worker_join(worker_t *this) {
   }
 }
 
+void worker_stop(worker_t *w) {
+  pthread_mutex_lock(&w->lock);
+  sync_store(&w->state, SCHED_STOP, SYNC_RELEASE);
+  pthread_mutex_unlock(&w->lock);
+}
+
+void worker_start(worker_t *w) {
+  pthread_mutex_lock(&w->lock);
+  sync_store(&w->state, SCHED_RUN, SYNC_RELEASE);
+  pthread_cond_broadcast(&w->running);
+  pthread_mutex_unlock(&w->lock);
+}
+
+void worker_shutdown(worker_t *w) {
+  pthread_mutex_lock(&w->lock);
+  sync_store(&w->state, SCHED_SHUTDOWN, SYNC_RELEASE);
+  pthread_cond_broadcast(&w->running);
+  pthread_mutex_unlock(&w->lock);
+}
+
+int worker_is_running(const worker_t *w) {
+  return (sync_load(&w->state, SYNC_ACQUIRE) == SCHED_RUN);
+}
+
 // Spawn a parcel on a specified worker thread.
 void scheduler_spawn_at(hpx_parcel_t *p, int thread) {
   dbg_assert(thread >= 0);
@@ -867,9 +904,9 @@ void scheduler_spawn(hpx_parcel_t *p) {
   dbg_assert(p);
   dbg_assert(actions[p->action].handler != NULL);
 
-  // If we're stopped down then push the parcel and return. This prevents an
+  // If we're not running then push the parcel and return. This prevents an
   // infinite spawn from inhibiting termination.
-  if (worker_is_stopped(w)) {
+  if (!worker_is_running(w)) {
     _push_lifo(p, w);
     return;
   }

@@ -29,14 +29,6 @@
 #include <libhpx/scheduler.h>
 #include "thread.h"
 
-static void _shutdown(scheduler_t *this) {
-  pthread_mutex_lock(&this->lock);
-  sync_store(&this->stopped, SCHED_SHUTDOWN, SYNC_RELEASE);
-  this->state = SCHED_SHUTDOWN;
-  pthread_cond_broadcast(&this->running);
-  pthread_mutex_unlock(&this->lock);
-}
-
 scheduler_t *scheduler_new(const config_t *cfg) {
   thread_set_stack_size(cfg->stacksize);
 
@@ -48,19 +40,18 @@ scheduler_t *scheduler_new(const config_t *cfg) {
     return NULL;
   }
 
-  sync_store(&this->stopped, SCHED_STOP, SYNC_RELEASE);
-  sync_store(&this->next_tls_id, 0, SYNC_RELEASE);
-  this->n_workers = workers;
-  this->n_active = workers;
-
-  this->state = SCHED_STOP;
-  this->lock = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
-  this->running = (pthread_cond_t)PTHREAD_COND_INITIALIZER;
-
   // This thread can allocate even though it's not a scheduler thread.
   as_join(AS_REGISTERED);
   as_join(AS_GLOBAL);
   as_join(AS_CYCLIC);
+
+  pthread_mutex_init(&this->lock, NULL);
+  pthread_cond_init(&this->stopped, NULL);
+  sync_store(&this->state, SCHED_STOP, SYNC_RELEASE);
+  sync_store(&this->next_tls_id, 0, SYNC_RELEASE);
+  this->n_workers = workers;
+  this->n_target = workers;
+  sync_store(&this->n_active, workers, SYNC_RELEASE);
 
   // Initialize the worker data structures.
   for (int i = 0, e = workers; i < e; ++i) {
@@ -81,10 +72,9 @@ scheduler_t *scheduler_new(const config_t *cfg) {
 }
 
 void scheduler_delete(scheduler_t *this) {
-  _shutdown(this);
-
-  // join all of the worker threads
+  // shutdown and join all of the worker threads
   for (int i = 0, e = this->n_workers; i < e; ++i) {
+    worker_shutdown(&this->workers[i]);
     worker_join(&this->workers[i]);
   }
 
@@ -111,18 +101,24 @@ int scheduler_start(scheduler_t *this, hpx_parcel_t *p, int spmd)
     scheduler_spawn_at(p, 0);
   }
 
-  // switch the state of the running condition
+  // switch the state and start all the workers
+  int code = HPX_SUCCESS;
+  int state = SCHED_RUN;
   pthread_mutex_lock(&this->lock);
-  sync_store(&this->stopped, SCHED_RUN, SYNC_RELEASE);
-  int state = (this->state = SCHED_RUN);
-  pthread_cond_broadcast(&this->running);
+  sync_store(&this->state, SCHED_RUN, SYNC_RELEASE);
+  for (int i = 0, e = this->n_target; i < e; ++i) {
+    worker_start(&this->workers[i]);
+  }
   while ((state = this->state) == SCHED_RUN) {
-    pthread_cond_wait(&this->running, &this->lock);
+    pthread_cond_wait(&this->stopped, &this->lock);
+  }
+  code = this->code;
+  for (int i = 0, e = this->n_target; i < e; ++i) {
+    worker_stop(&this->workers[i]);
   }
   pthread_mutex_unlock(&this->lock);
 
   // return the exit code
-  int code = this->stopped;
   if (code != HPX_SUCCESS && here->rank == 0) {
     log_error("hpx_run epoch exited with a non-zero exit code: %d.\n", code);
   }
@@ -131,13 +127,12 @@ int scheduler_start(scheduler_t *this, hpx_parcel_t *p, int spmd)
 
 void scheduler_stop(scheduler_t *this, int code) {
   pthread_mutex_lock(&this->lock);
-  sync_store(&this->stopped, code, SYNC_RELEASE);
-  this->state = SCHED_STOP;
-  pthread_cond_broadcast(&this->running);
+  this->code = code;
+  sync_store(&this->state, SCHED_STOP, SYNC_RELEASE);
+  pthread_cond_broadcast(&this->stopped);
   pthread_mutex_unlock(&this->lock);
 }
 
 int scheduler_is_stopped(const scheduler_t *this) {
-  int stopped = sync_load(&this->stopped, SYNC_ACQUIRE);
-  return (stopped != SCHED_RUN);
+  return (sync_load(&this->state, SYNC_ACQUIRE) != SCHED_RUN);
 }
