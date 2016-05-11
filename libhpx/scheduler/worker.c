@@ -781,17 +781,19 @@ void worker_init(worker_t *this, struct scheduler *sched, int id) {
   this->work_first  = 0;
   this->nstacks     = 0;
   this->yielded     = 0;
+  this->active      = 1;
   this->last_victim = -1;
+  this->numa_node   = -1;
+  this->profiler    = NULL;
+  this->bst         = NULL;
+  this->network     = here->net;
+  this->logs        = NULL;
+  this->sched       = sched;
   this->system      = NULL;
   this->current     = NULL;
   this->stacks      = NULL;
+
   sync_store(&this->work_id, 0, SYNC_RELAXED);
-  this->active      = true;
-  this->profiler    = NULL;
-  this->bst         = NULL;
-  this->logs        = NULL;
-  this->sched       = sched;
-  this->network     = here->net;
 
   sync_chase_lev_ws_deque_init(&this->queues[0].work, 32);
   sync_chase_lev_ws_deque_init(&this->queues[1].work, 32);
