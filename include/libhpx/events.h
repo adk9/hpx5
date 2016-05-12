@@ -64,7 +64,7 @@ static const char *const TRACE_EVENT_TO_STRING[] = {
 /// information by counting the number of arguments to the event
 /// definition.
 static const int TRACE_EVENT_NUM_FIELDS[] = {
-#define LIBHPX_EVENT(class, event, ...) __HPX_NARGS(__VA_ARGS__),
+#define LIBHPX_EVENT(class, event, ...) __HPX_NARGS(__VA_ARGS__)/2,
 # include "events.def"
 #undef LIBHPX_EVENT
 };
@@ -86,37 +86,41 @@ static const int TRACE_EVENT_NUM_FIELDS[] = {
 # include <libhpx/event_stubs.h>
 #else
 # define _DECL0() void
-# define _DECL1(t0) t0 u0
-# define _DECL2(t0,t1) t0 u0, t1 u1
-# define _DECL3(t0,t1,t2) t0 u0, t1 u1, t2 u2
-# define _DECL4(t0,t1,t2,t3) t0 u0, t1 u1, t2 u2, t3 u3
-# define _DECL5(t0,t1,t2,t3,t4) t0 u0, t1 u1, t2 u2, t3 u3, t4 u4
-# define _ARGS0
-# define _ARGS1 , u0
-# define _ARGS2 , u0, u1
-# define _ARGS3 , u0, u1, u2
-# define _ARGS4 , u0, u1, u2, u3
-# define _ARGS5 , u0, u1, u2, u3, u4
+# define _DECL2(t0,n0) t0 u0
+# define _DECL4(t0,n0,t1,n1) t0 u0, t1 u1
+# define _DECL6(t0,n0,t1,n1,t2,n2) t0 u0, t1 u1, t2 u2
+# define _DECL8(t0,n0,t1,n1,t2,n2,t3,n3) t0 u0, t1 u1, t2 u2, t3 u3
+# define _DECL10(t0,n0,t1,n1,t2,n2,t3,n3,t4,n4) t0 u0, t1 u1, t2 u2, t3 u3, t4 u4
+# define _DECLN(...) _HPX_CAT2(_DECL, __HPX_NARGS(__VA_ARGS__))(__VA_ARGS__)
+# define _ARGS0()
+# define _ARGS2(t0,n0) , u0
+# define _ARGS4(t0,n0,t1,n1) , u0, u1
+# define _ARGS6(t0,n0,t1,n1,t2,n2) , u0, u1, u2
+# define _ARGS8(t0,n0,t1,n1,t2,n2,t3,n3) , u0, u1, u2, u3
+# define _ARGS10(t0,n0,t1,n1,t2,n2,t3,n3,t4,n4) , u0, u1, u2, u3, u4
+# define _ARGSN(...) _HPX_CAT2(_ARGS, __HPX_NARGS(__VA_ARGS__))(__VA_ARGS__)
 # define LIBHPX_EVENT(class, event, ...)                                \
   static inline void                                                    \
-  EVENT_##class##_##event(_HPX_CAT2(_DECL, __HPX_NARGS(__VA_ARGS__))(__VA_ARGS__)) { \
-    trace_append(HPX_TRACE_##class, TRACE_EVENT_##class##_##event         \
-              _HPX_CAT2(_ARGS, __HPX_NARGS(__VA_ARGS__)));              \
+  EVENT_##class##_##event(_DECLN(__VA_ARGS__)) {                        \
+    trace_append(HPX_TRACE_##class, TRACE_EVENT_##class##_##event       \
+                 _ARGSN(__VA_ARGS__));                                  \
   }
 # include "events.def"
 # undef LIBHPX_EVENT
 # undef _ARGS0
-# undef _ARGS1
 # undef _ARGS2
-# undef _ARGS3
 # undef _ARGS4
-# undef _ARGS5
+# undef _ARGS6
+# undef _ARGS8
+# undef _ARGS10
+# undef _ARGSN
 # undef _DECL0
-# undef _DECL1
 # undef _DECL2
-# undef _DECL3
 # undef _DECL4
-# undef _DECL5
+# undef _DECL6
+# undef _DECL8
+# undef _DECL10
+# undef _DECLN
 #endif
 
 #ifdef __cplusplus
