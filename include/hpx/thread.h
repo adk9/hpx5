@@ -134,14 +134,14 @@ void hpx_thread_set_affinity(int thread_id)
 
 /// Initiate the current thread's continuation.
 ///
-/// This logically terminates the logical HPX thread, however the physical
-/// thread (lightweight) HPX thread will continue to run until it returns from
-/// the main action.
-///
-/// During this post-configure phase threads can clean up local resources, unpin
-/// pinned buffers, and perform HPX operations, however applications must not
+/// This logically terminates the lightweight HPX thread, however it will
+/// continue to run until it returns from the main action. During this
+/// post-continue phase threads can clean up local resources, unpin pinned
+/// buffers, and perform some HPX operations, however applications must not
 /// infer an order between the continued action and the cleanup phase in the
-/// current thread, and must not continue twice.
+/// current thread.
+///
+/// Threads must not continue twice.
 ///
 /// @param      n The number of arguments being passed in.
 /// @param    ... The arguments to continue (same as hpx_call)
