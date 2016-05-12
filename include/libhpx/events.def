@@ -115,25 +115,25 @@ LIBHPX_EVENT(SCHED, MAIL,
 /// it.
 /// @{
 LIBHPX_EVENT(LCO, INIT,
-             void*, addr,
+             uintptr_t, addr,
              uint64_t, state)
 LIBHPX_EVENT(LCO, DELETE,
-             void*, addr,
+             uintptr_t, addr,
              uint64_t, state)
 LIBHPX_EVENT(LCO, SET,
-             void*, addr,
+             uintptr_t, addr,
              uint64_t, state)
 LIBHPX_EVENT(LCO, RESET,
-             void*, addr,
+             uintptr_t, addr,
              uint64_t, state)
 LIBHPX_EVENT(LCO, ATTACH_PARCEL,
-             void*, addr,
+             uintptr_t, addr,
              uint64_t, state)
 LIBHPX_EVENT(LCO, WAIT,
-             void*, addr,
+             uintptr_t, addr,
              uint64_t, state)
 LIBHPX_EVENT(LCO, TRIGGER,
-             void*, addr,
+             uintptr_t, addr,
              uint64_t, state)
 /// @}
 
@@ -162,10 +162,10 @@ LIBHPX_EVENT(MEMORY, ALLOC_BEGIN,
              size_t, boundary)
 LIBHPX_EVENT(MEMORY, ALLOC_END,
              int, addr_space,
-             void*, addr)
+             uintptr_t, addr)
 LIBHPX_EVENT(MEMORY, FREE_BEGIN,
              int, addr_space,
-             void*, addr)
+             uintptr_t, addr)
 LIBHPX_EVENT(MEMORY, FREE_END,
              int, addr_space)
 /// @}

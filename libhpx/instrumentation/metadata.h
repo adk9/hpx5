@@ -115,7 +115,7 @@ typedef struct inst_event_col_metadata {
     .printf_code = "zu",                      \
     .name        = "nanoseconds"}
 
-#define METADATA_UINT(width, off, _name)            \
+#define METADATA_uint(width, off, _name)            \
   { .mask        = 0x3f,                            \
     .data_type   = METADATA_TYPE_INT64,             \
     .offset      = offsetof(record_t, user)+(off*8),\
@@ -124,9 +124,23 @@ typedef struct inst_event_col_metadata {
     .printf_code = "zu",                            \
     .name        = _name}
 
-#define METADATA_UINT16(off, _name) METADATA_UINT(16, off, _name)
-#define METADATA_UINT32(off, _name) METADATA_UINT(32, off, _name)
-#define METADATA_UINT64(off, _name) METADATA_UINT(64, off, _name)
+#define METADATA_int(off, _name)                    \
+  { .mask        = 0x3f,                            \
+    .data_type   = METADATA_TYPE_INT32,             \
+    .offset      = offsetof(record_t, user)+(off*8),\
+    .min         = 0,                               \
+    .max         = INT_MAX,                         \
+    .printf_code = "d",                             \
+    .name        = _name}
+
+#define METADATA_uint16_t(off, _name) METADATA_uint(16, off, _name)
+#define METADATA_uint32_t(off, _name) METADATA_uint(32, off, _name)
+#define METADATA_uint64_t(off, _name) METADATA_uint(64, off, _name)
+
+#define METADATA_size_t METADATA_uint64_t
+#define METADATA_hpx_addr_t METADATA_uint64_t
+#define METADATA_hpx_action_t METADATA_uint16_t
+#define METADATA_uintptr_t METADATA_uint64_t
 
 /// Event metadata struct.
 /// In theory the number of columns need not match the number of fields in
@@ -148,18 +162,20 @@ typedef struct inst_event_metadata {
 
 static const inst_event_metadata_t INST_EVENT_METADATA[] =
 {
-# define _MD(o,n) METADATA_UINT64(o,_HPX_XSTR(n))
+# define _MD(o,t,n) METADATA_##t(o,_HPX_XSTR(n))
 # define _ARGS0() _ENTRY()
 # define _ARGS2(t0,n0)                                  \
-  _ENTRY(_MD(0,n0))
+  _ENTRY(_MD(0,t0,n0))
 # define _ARGS4(t0,n0,t1,n1)                            \
-  _ENTRY(_MD(0,n0),_MD(1,n1))
+  _ENTRY(_MD(0,t0,n0),_MD(1,t1,n1))
 # define _ARGS6(t0,n0,t1,n1,t2,n2)                      \
-  _ENTRY(_MD(0,n0),_MD(1,n1),_MD(2,n2))
+  _ENTRY(_MD(0,t0,n0),_MD(1,t1,n1),_MD(2,t2,n2))
 # define _ARGS8(t0,n0,t1,n1,t2,n2,t3,n3)                \
-  _ENTRY(_MD(0,n0),_MD(1,n1),_MD(2,n2),_MD(3,n3))
+  _ENTRY(_MD(0,t0,n0),_MD(1,t1,n1),_MD(2,t2,n2),        \
+         _MD(3,t3,n3))
 # define _ARGS10(t0,n0,t1,n1,t2,n2,t3,n3,t4,n4)         \
-  _ENTRY(_MD(0,n0),_MD(1,n1),_MD(2,n2),_MD(3,n3),_MD(4,n4))
+  _ENTRY(_MD(0,t0,n0),_MD(1,t1,n1),_MD(2,t2,n2),        \
+         _MD(3,t3,n3),_MD(4,t4,n4))
 # define _ARGSN(...) _HPX_CAT2(_ARGS, __HPX_NARGS(__VA_ARGS__))(__VA_ARGS__)
 # define LIBHPX_EVENT(class, event, ...) _ARGSN(__VA_ARGS__),
 # include <libhpx/events.def>
