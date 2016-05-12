@@ -101,34 +101,40 @@ int scheduler_start(scheduler_t *this, hpx_parcel_t *p, int spmd)
     scheduler_spawn_at(p, 0);
   }
 
-  // switch the state and start all the workers
-  int code = HPX_SUCCESS;
-  int state = SCHED_RUN;
-  pthread_mutex_lock(&this->lock);
-  sync_store(&this->state, SCHED_RUN, SYNC_RELEASE);
+  // switch the state and then start all the workers
+  this->code = HPX_SUCCESS;
+  this->state = SCHED_RUN;
   for (int i = 0, e = this->n_target; i < e; ++i) {
     worker_start(&this->workers[i]);
   }
-  while ((state = this->state) == SCHED_RUN) {
+
+  // wait for someone to stop the scheduler
+  pthread_mutex_lock(&this->lock);
+  while (this->state == SCHED_RUN) {
     pthread_cond_wait(&this->stopped, &this->lock);
-  }
-  code = this->code;
-  for (int i = 0, e = this->n_target; i < e; ++i) {
-    worker_stop(&this->workers[i]);
   }
   pthread_mutex_unlock(&this->lock);
 
-  // return the exit code
-  if (code != HPX_SUCCESS && here->rank == 0) {
-    log_error("hpx_run epoch exited with a non-zero exit code: %d.\n", code);
+  // stop all of the worker threads
+  for (int i = 0, e = this->n_target; i < e; ++i) {
+    worker_stop(&this->workers[i]);
   }
-  return code;
+
+  // Use this crude barrier to wait for the worker threads to stop.
+  while (sync_load(&this->n_active, SYNC_ACQUIRE)) {
+  }
+
+  // return the exit code
+  DEBUG_IF (this->code != HPX_SUCCESS && here->rank == 0) {
+    log_error("hpx_run epoch exited with exit code (%d).\n", this->code);
+  }
+  return this->code;
 }
 
 void scheduler_stop(scheduler_t *this, int code) {
   pthread_mutex_lock(&this->lock);
   this->code = code;
-  sync_store(&this->state, SCHED_STOP, SYNC_RELEASE);
+  this->state = SCHED_STOP;
   pthread_cond_broadcast(&this->stopped);
   pthread_mutex_unlock(&this->lock);
 }

@@ -65,7 +65,7 @@ struct scheduler {
   int            n_workers;                     //!< total number of workers
   int             n_target;                     //!< target number of workers
   volatile int    n_active;                     //!< active number of workers
-  int                 code;                     //!< the exit code
+  volatile int        code;                     //!< the exit code
   PAD_TO_CACHELINE(sizeof(pthread_mutex_t) +
                    sizeof(pthread_cond_t) +
                    sizeof(int) * 6);            //!< padding to align workers
