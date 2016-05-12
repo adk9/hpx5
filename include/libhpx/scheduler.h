@@ -44,6 +44,15 @@ struct config;
 struct cvar;
 /// @}
 
+/// Scheduler states.
+/// @{
+enum {
+  SCHED_SHUTDOWN,
+  SCHED_STOP,
+  SCHED_RUN,
+};
+/// @}
+
 /// The scheduler class.
 ///
 /// The scheduler class represents the shared-memory state of the entire
@@ -72,10 +81,6 @@ struct scheduler {
   worker_t         workers[];                   //!< array of worker data
 };
 typedef struct scheduler scheduler_t;
-
-#define SCHED_RUN INT_MAX
-#define SCHED_STOP HPX_SUCCESS
-#define SCHED_SHUTDOWN 2
 
 /// Allocate and initialize a new scheduler.
 ///

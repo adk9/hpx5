@@ -167,12 +167,6 @@ void worker_execute_thread(hpx_parcel_t *p)
 void worker_finish_thread(hpx_parcel_t *p, int status)
   HPX_NORETURN;
 
-/// Check to see if the current worker is active.
-int worker_is_active(const worker_t *w);
-
-/// Check to see if the current worker is running.
-int worker_is_running(const worker_t *w);
-
 #ifdef __cplusplus
 }
 #endif

@@ -626,6 +626,21 @@ static hpx_parcel_t *_handle_epoch(worker_t *this) {
   return NULL;
 }
 
+/// Check to see if the worker is running.
+static int _is_running(const worker_t *w) {
+  return (sync_load(&w->state, SYNC_ACQUIRE) == SCHED_RUN);
+}
+
+/// Check to see if the worker is running.
+static int _is_stopped(const worker_t *w) {
+  return (sync_load(&w->state, SYNC_ACQUIRE) == SCHED_STOP);
+}
+
+/// Check to see if the worker is shutdown.
+static int _is_shutdown(const worker_t *w) {
+  return (sync_load(&w->state, SYNC_ACQUIRE) == SCHED_SHUTDOWN);
+}
+
 /// The non-blocking schedule operation.
 ///
 /// This will schedule new work relatively quickly, in order to avoid delaying
@@ -640,7 +655,7 @@ static void _schedule_nb(worker_t *this, void (*f)(hpx_parcel_t *, void*),
                          void *env) {
   EVENT_SCHED_BEGIN();
   hpx_parcel_t *p = NULL;
-  if (!worker_is_running(this)) {
+  if (!_is_running(this)) {
     p = this->system;
   }
   else if ((p = _handle_mail(this))) {
@@ -657,10 +672,13 @@ static void _schedule_nb(worker_t *this, void (*f)(hpx_parcel_t *, void*),
 
 /// The primary schedule loop.
 ///
+/// This will continue to try and schedule lightweight threads while the
+/// worker's state is SCHED_RUN.
+///
+/// @param         this The current worker thread.
 static void _schedule(worker_t *this) {
-  INST(int spins = 0);
-  hpx_parcel_t *p = NULL;
-  while (worker_is_running(this)) {
+  while (_is_running(this)) {
+    hpx_parcel_t *p;
     if ((p = _handle_mail(this))) {
     }
     else if ((p = _pop_lifo(this))) {
@@ -670,16 +688,39 @@ static void _schedule(worker_t *this) {
     else if ((p = _handle_network(this))) {
     }
     else if ((p = _handle_steal(this))) {
-      log_sched("stole work %p\n", p);
     }
     else {
-      INST(spins++);
       continue;
     }
-
-    INST(spins = 0);
     _transfer(p, _null, 0, this);
   }
+}
+
+/// The stop loop.
+///
+/// This will continue to deal with the stopped state while the worker's state
+/// is SCHED_STOP. The current implementation does this using a condition
+/// variable.
+///
+/// @param         this The current worker thread.
+static void _stop(worker_t *this) {
+  pthread_mutex_lock(&this->lock);
+  while (_is_stopped(this)) {
+    // make sure we don't have anything stuck in mail or yield
+    hpx_parcel_t *p;
+    while ((p = sync_chase_lev_ws_deque_pop(_yielded(this)))) {
+      _push_lifo(p, this);
+    }
+
+    if ((p = _handle_mail(this))) {
+      _push_lifo(p, this);
+    }
+
+    sync_addf(&this->sched->n_active, -1, SYNC_ACQ_REL);
+    pthread_cond_wait(&this->running, &this->lock);
+    sync_addf(&this->sched->n_active, 1, SYNC_ACQ_REL);
+  }
+  pthread_mutex_unlock(&this->lock);
 }
 
 static void *_run(void *worker) {
@@ -733,29 +774,12 @@ static void *_run(void *worker) {
   this->current = this->system;
   this->work_first = 0;
 
-  int state = sync_load(&this->state, SYNC_ACQUIRE);
-  while (state != SCHED_SHUTDOWN) {
+  // The worker threads hang out inside this loop until they are shut down. They
+  // will continuously schedule until their run state is not SCHED_RUN, and they
+  // will stay in the stop state until their state is not SCHED_STOP.
+  while (!_is_shutdown(this)) {
     _schedule(this);
-
-    pthread_mutex_lock(&this->lock);
-    state = sync_load(&this->state, SYNC_ACQUIRE);
-    while (state == SCHED_STOP) {
-      hpx_parcel_t *p;
-      // make sure we don't have anything stuck in mail or yield
-      while ((p = sync_chase_lev_ws_deque_pop(_yielded(this)))) {
-        _push_lifo(p, this);
-      }
-      if ((p = _handle_mail(this))) {
-        _push_lifo(p, this);
-      }
-      int active = sync_addf(&this->sched->n_active, -1, SYNC_ACQ_REL);
-      dbg_assert(active >= 0);
-      pthread_cond_wait(&this->running, &this->lock);
-      active = sync_addf(&this->sched->n_active, 1, SYNC_ACQ_REL);
-      dbg_assert(active <= this->sched->n_workers);
-      state = sync_load(&this->state, SYNC_ACQUIRE);
-    }
-    pthread_mutex_unlock(&this->lock);
+    _stop(this);
   }
 
   this->system = NULL;
@@ -879,10 +903,6 @@ void worker_shutdown(worker_t *w) {
   pthread_mutex_unlock(&w->lock);
 }
 
-int worker_is_running(const worker_t *w) {
-  return (sync_load(&w->state, SYNC_ACQUIRE) == SCHED_RUN);
-}
-
 // Spawn a parcel on a specified worker thread.
 void scheduler_spawn_at(hpx_parcel_t *p, int thread) {
   dbg_assert(thread >= 0);
@@ -906,7 +926,7 @@ void scheduler_spawn(hpx_parcel_t *p) {
 
   // If we're not running then push the parcel and return. This prevents an
   // infinite spawn from inhibiting termination.
-  if (!worker_is_running(w)) {
+  if (!_is_running(w)) {
     _push_lifo(p, w);
     return;
   }
