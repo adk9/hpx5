@@ -49,7 +49,7 @@ _new_bitmap(const heap_t *heap) {
 static bool
 _chunks_are_used(const heap_t *heap, uint64_t offset, size_t n) {
   uint32_t from = offset / heap->bytes_per_chunk;
-  uint32_t to = (offset + n) / heap->bytes_per_chunk + 1;
+  uint32_t to = ceil_div_64(offset + n, heap->bytes_per_chunk);
   return bitmap_is_set(heap->chunks, from, to - from);
 }
 
