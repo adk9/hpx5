@@ -61,6 +61,8 @@ static bool _global_chunk_free(void *addr, size_t n, bool commited,
   return 0;
 }
 
+static int* _hpx_143_fix = NULL;
+
 void global_allocator_init(int rank) {
   static const chunk_hooks_t global_hooks = {
     .alloc    = _global_chunk_alloc,
@@ -73,7 +75,17 @@ void global_allocator_init(int rank) {
   };
 
   as_set_allocator(AS_GLOBAL, &global_hooks);
+
+  // prevent 0 from being a valid address (if the first global alloc is giant
+  // then jemalloc won't use any chunk header, so we eagerly ensure that the
+  // first chunk is a small allocation).
+  if (rank == 0) {
+    _hpx_143_fix = as_malloc(AS_GLOBAL, sizeof(*_hpx_143_fix));
+  }
 }
 
 void global_allocator_fini(void) {
+  if (_hpx_143_fix) {
+    as_free(AS_GLOBAL, _hpx_143_fix);
+  }
 }

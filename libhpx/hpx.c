@@ -47,14 +47,6 @@
 # include "apex.h"
 #endif
 
-static hpx_addr_t _hpx_143;
-static int _hpx_143_fix_handler(void) {
-  _hpx_143 = hpx_gas_alloc_cyclic(sizeof(void*), HPX_LOCALITIES, 0);
-  hpx_exit(HPX_SUCCESS);
-  return LIBHPX_OK;
-}
-static LIBHPX_ACTION(HPX_DEFAULT, 0, _hpx_143_fix, _hpx_143_fix_handler);
-
 /// Cleanup utility function.
 ///
 /// This will delete the global objects, if they've been allocated.
@@ -227,12 +219,6 @@ int hpx_init(int *argc, char ***argv) {
 
   action_registration_finalize();
   trace_start(here->tracer);
-
-  if ((here->ranks > 1 && here->config->gas != HPX_GAS_AGAS) ||
-      !here->config->opt_smp) {
-    status = hpx_run(&_hpx_143_fix);
-  }
-
   return status;
  unwind1:
   _cleanup(here);
@@ -330,9 +316,5 @@ const char *hpx_strerror(hpx_status_t s) {
 }
 
 void hpx_finalize(void) {
-  // clean up after _hpx_143
-  if (_hpx_143 != HPX_NULL) {
-    hpx_gas_free(_hpx_143, HPX_NULL);
-  }
   _cleanup(here);
 }
