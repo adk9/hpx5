@@ -137,10 +137,15 @@ static uint32_t
 _agas_owner_of(const void *gas, hpx_addr_t addr) {
   const agas_t *agas = gas;
   gva_t gva = { .addr = addr };
+
   uint32_t owner;
-  bool found = btt_get_owner(agas->btt, gva, &owner);
-  INST_IF(!found) {
-    EVENT_GAS_MISS(addr, owner);
+  if (gva.bits.offset == AGAS_THERE_OFFSET) {
+    owner = gva.bits.home;
+  } else {
+    bool found = btt_get_owner(agas->btt, gva, &owner);
+    INST_IF(!found) {
+      EVENT_GAS_MISS(addr, owner);
+    }
   }
   dbg_assert(owner < here->ranks);
   return owner;
