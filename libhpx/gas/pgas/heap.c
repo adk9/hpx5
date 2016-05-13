@@ -58,8 +58,6 @@ heap_init(heap_t *heap, size_t size) {
   assert(heap);
   assert(size);
 
-  sync_store(&heap->csbrk, 0, SYNC_RELEASE);
-
   // align size to bytes-per-chunk boundary
   heap->bytes_per_chunk = as_bytes_per_chunk();
   log_gas("heap bytes per chunk is %zu\n", heap->bytes_per_chunk);
@@ -93,6 +91,9 @@ heap_init(heap_t *heap, size_t size) {
   heap->chunks = _new_bitmap(heap);
   log_gas("allocated chunk bitmap to manage %zu chunks.\n", heap->nchunks);
 
+
+  sync_store(&heap->csbrk, heap->nbytes, SYNC_RELEASE);
+
   log_gas("allocated heap.\n");
   return LIBHPX_OK;
 }
@@ -108,7 +109,7 @@ heap_fini(heap_t *heap) {
 }
 
 void *
-heap_chunk_alloc(heap_t *heap, void *addr, size_t bytes, size_t align) {
+heap_cyclic_chunk_alloc(heap_t *heap, void *addr, size_t bytes, size_t align) {
   assert(bytes % heap->bytes_per_chunk == 0);
   assert(bytes / heap->bytes_per_chunk < UINT32_MAX);
   uint32_t bits = bytes / heap->bytes_per_chunk;
@@ -120,17 +121,14 @@ heap_chunk_alloc(heap_t *heap, void *addr, size_t bytes, size_t align) {
   }
 
   uint64_t offset = bit * heap->bytes_per_chunk;
-  assert(offset % align == 0);
-
-  if (offset < heap->csbrk) {
-    dbg_error("out-of-memory detected\n");
-  }
-
-  return heap->base + offset;
+  heap_set_csbrk(heap, offset);
+  void *p = heap_offset_to_lva(heap, offset);
+  dbg_assert(((uintptr_t)p & (align - 1)) == 0);
+  return p;
 }
 
 void *
-heap_cyclic_chunk_alloc(heap_t *heap, void *addr, size_t bytes, size_t align) {
+heap_chunk_alloc(heap_t *heap, void *addr, size_t bytes, size_t align) {
   assert(bytes % heap->bytes_per_chunk == 0);
   assert(bytes / heap->bytes_per_chunk < UINT32_MAX);
   uint32_t bits = bytes / heap->bytes_per_chunk;
@@ -142,7 +140,12 @@ heap_cyclic_chunk_alloc(heap_t *heap, void *addr, size_t bytes, size_t align) {
   }
 
   uint64_t offset = bit * heap->bytes_per_chunk;
-  heap_set_csbrk(heap, offset + bytes);
+  assert(offset % align == 0);
+
+  if (offset + bytes > heap->csbrk) {
+    dbg_error("out-of-memory detected\n");
+  }
+
   void *p = heap_offset_to_lva(heap, offset);
   dbg_assert(((uintptr_t)p & (align - 1)) == 0);
   return p;
@@ -232,7 +235,7 @@ heap_offset_is_cyclic(const heap_t *heap, uint64_t offset) {
     return false;
   }
 
-  return (offset < heap->csbrk);
+  return (offset >= heap->csbrk);
 }
 
 uint64_t
@@ -242,16 +245,15 @@ heap_get_csbrk(const heap_t *heap) {
 
 int
 heap_set_csbrk(heap_t *heap, uint64_t offset) {
-  // csbrk is monotonically increasing, so if we see a value in the csbrk field
-  // larger than the new offset, it means that this is happening out of order
+  // csbrk is monotonically decreasing
   uint64_t old = sync_load(&heap->csbrk, SYNC_RELAXED);
-  if (old < offset) {
-    sync_cas(&heap->csbrk, &old, offset, SYNC_RELAXED, SYNC_RELAXED);
-    int used = _chunks_are_used(heap, old, offset - old);
-    return (used) ? HPX_ERROR : HPX_SUCCESS;
+  if (old <= offset) {
+    return HPX_SUCCESS;
   }
-  // otherwise we have an old allocation and it's fine
-  return HPX_SUCCESS;
+
+  sync_cas(&heap->csbrk, &old, offset, SYNC_RELAXED, SYNC_RELAXED);
+  int used = _chunks_are_used(heap, offset, old - offset);
+  return (used) ? HPX_ERROR : HPX_SUCCESS;
 }
 
 uint32_t

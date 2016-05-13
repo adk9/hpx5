@@ -27,10 +27,8 @@ using namespace rml;
 static void *
 _global_chunk_alloc(intptr_t pool_id, size_t &bytes) {
   assert(pool_id == AS_GLOBAL);
-  void *chunk = heap_chunk_alloc(global_heap, NULL, bytes,
+  return heap_chunk_alloc(global_heap, NULL, bytes,
                           global_heap->bytes_per_chunk);
-  // std::cout << "(" << chunk << ", " << bytes << ")\n";
-  return chunk;
 }
 
 static int
@@ -40,8 +38,7 @@ _global_chunk_free(intptr_t pool_id, void* raw_ptr, size_t raw_bytes) {
   return 0;
 }
 
-void
-global_allocator_init(void) {
+void global_allocator_init(int rank) {
   int id = AS_GLOBAL;
   size_t granularity = as_bytes_per_chunk();
   const MemPoolPolicy policy(_global_chunk_alloc, _global_chunk_free,
@@ -49,4 +46,7 @@ global_allocator_init(void) {
   MemoryPool* pool = NULL;
   pool_create_v1(id, &policy, &pool);
   pools[id] = pool;
+}
+
+void global_allocator_fini(void) {
 }

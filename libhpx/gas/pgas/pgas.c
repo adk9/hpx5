@@ -50,6 +50,8 @@
 heap_t *global_heap = NULL;
 
 static void _pgas_dealloc(void *gas) {
+  cyclic_allocator_fini();
+  global_allocator_fini();
   if (global_heap) {
     heap_fini(global_heap);
     free(global_heap);
@@ -285,10 +287,7 @@ gas_t *gas_pgas_new(const config_t *cfg, boot_t *boot) {
     return NULL;
   }
 
-  global_allocator_init();
-  if (here->rank == 0) {
-    cyclic_allocator_init();
-  }
-
+  global_allocator_init(here->rank);
+  cyclic_allocator_init(here->rank);
   return &_pgas_vtable;
 }

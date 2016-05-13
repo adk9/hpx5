@@ -23,19 +23,26 @@
 #include "global.h"
 #include "heap.h"
 
-void
-cyclic_allocator_init(void) {
+void cyclic_allocator_init(int rank) {
+  if (rank) {
+    return;
+  }
   dbg_assert(global_heap);
   size_t bytes = ceil_div_size_t(global_heap->nbytes, 2);
   heap_set_csbrk(global_heap, bytes);
   mspaces[AS_CYCLIC] = create_mspace_with_base(global_heap->base, bytes, 1);
 }
 
-void
-global_allocator_init(void) {
+void global_allocator_init(int rank) {
   dbg_assert(global_heap);
   size_t offset = ceil_div_size_t(global_heap->nbytes, 2);
   size_t bytes = global_heap->nbytes - offset;
   mspaces[AS_GLOBAL] = create_mspace_with_base(global_heap->base+offset, bytes, 1);
 }
 
+void global_allocator_fini(void) {
+}
+
+
+void cyclic_allocator_fini(void) {
+}
