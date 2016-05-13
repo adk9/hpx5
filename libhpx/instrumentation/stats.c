@@ -66,7 +66,10 @@ static void _destroy(void) {
   for (int i = 0; i < TRACE_NUM_EVENTS; ++i) {
     int c = TRACE_EVENT_TO_CLASS[i];
     if (inst_trace_class(c)) {
-      printf("%s,%lu\n", TRACE_EVENT_TO_STRING[i], master->stats[i]);
+      printf("%d,%s,%lu\n",
+             here->rank,
+             TRACE_EVENT_TO_STRING[i],
+             master->stats[i]);
     }
   }
   free(master->stats);
