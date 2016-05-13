@@ -138,7 +138,10 @@ _agas_owner_of(const void *gas, hpx_addr_t addr) {
   const agas_t *agas = gas;
   gva_t gva = { .addr = addr };
   uint32_t owner;
-  btt_get_owner(agas->btt, gva, &owner);
+  bool found = btt_get_owner(agas->btt, gva, &owner);
+  INST_IF(!found) {
+    EVENT_GAS_MISS(addr, owner);
+  }
   dbg_assert(owner < here->ranks);
   return owner;
 }

@@ -195,6 +195,9 @@ LIBHPX_EVENT(GAS, MOVE,
              hpx_addr_t, addr,
              hpx_addr_t, old,
              hpx_addr_t, new)
+LIBHPX_EVENT(GAS, MISS,
+             hpx_addr_t, addr,
+             uint32_t, owner)
 /// @}
 
 /// Collective events
