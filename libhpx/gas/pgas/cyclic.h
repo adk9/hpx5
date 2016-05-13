@@ -18,7 +18,8 @@
 extern "C" {
 #endif
 
-void cyclic_allocator_init(void);
+void cyclic_allocator_init(int rank);
+void cyclic_allocator_fini(void);
 
 #ifdef __cplusplus
 }

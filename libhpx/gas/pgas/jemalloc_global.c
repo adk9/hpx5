@@ -61,8 +61,8 @@ static bool _global_chunk_free(void *addr, size_t n, bool commited,
   return 0;
 }
 
-void global_allocator_init(void) {
-  static const chunk_hooks_t _global_hooks = {
+void global_allocator_init(int rank) {
+  static const chunk_hooks_t global_hooks = {
     .alloc    = _global_chunk_alloc,
     .dalloc   = _global_chunk_free,
     .commit   = as_null_commit,
@@ -72,5 +72,8 @@ void global_allocator_init(void) {
     .merge    = as_null_merge
   };
 
-  as_set_allocator(AS_GLOBAL, &_global_hooks);
+  as_set_allocator(AS_GLOBAL, &global_hooks);
+}
+
+void global_allocator_fini(void) {
 }
