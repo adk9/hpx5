@@ -242,7 +242,7 @@ static void _btt_continuation(hpx_parcel_t *p, void *e) {
   (void)found;
 }
 
-int btt_remove_when_count_zero(void *obj, gva_t gva, void **lva) {
+int btt_try_delete(void *obj, gva_t gva, void **lva) {
   BTT *btt = static_cast<BTT*>(obj);
   _btt_cont_env_t env = {
     .btt = btt,
