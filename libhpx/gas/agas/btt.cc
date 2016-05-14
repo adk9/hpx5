@@ -143,8 +143,7 @@ bool btt_get_lva(const void* obj, gva_t gva, void **lva) {
   return found;
 }
 
-bool
-btt_get_owner(const void* obj, gva_t gva, uint32_t *owner) {
+bool btt_get_owner(const void* obj, gva_t gva, uint32_t *owner) {
   const BTT *btt = static_cast<const BTT*>(obj);
   Entry entry;
   uint64_t key = gva_to_key(gva);
@@ -155,8 +154,17 @@ btt_get_owner(const void* obj, gva_t gva, uint32_t *owner) {
   return found;
 }
 
-bool
-btt_get_attr(const void* obj, gva_t gva, uint32_t *attr) {
+void btt_set_owner(const void* obj, gva_t gva, uint32_t owner) {
+  const BTT *btt = static_cast<const BTT*>(obj);
+  Entry entry;
+  uint64_t key = gva_to_key(gva);
+  bool found = btt->update_fn(key, [&](Entry& entry) {
+      entry.owner = owner;
+    });
+  assert(found);
+}
+
+bool btt_get_attr(const void* obj, gva_t gva, uint32_t *attr) {
   const BTT *btt = static_cast<const BTT*>(obj);
   Entry entry;
   uint64_t key = gva_to_key(gva);
@@ -165,8 +173,7 @@ btt_get_attr(const void* obj, gva_t gva, uint32_t *attr) {
   return found;
 }
 
-void
-btt_set_attr(void* obj, gva_t gva, uint32_t attr) {
+void btt_set_attr(void* obj, gva_t gva, uint32_t attr) {
   BTT *btt = static_cast<BTT*>(obj);
   Entry entry;
   uint64_t key = gva_to_key(gva);
@@ -176,8 +183,7 @@ btt_set_attr(void* obj, gva_t gva, uint32_t attr) {
   assert(found);
 }
 
-size_t
-btt_get_blocks(const void* obj, gva_t gva) {
+size_t btt_get_blocks(const void* obj, gva_t gva) {
   const BTT *btt = static_cast<const BTT*>(obj);
   Entry entry;
   uint64_t key = gva_to_key(gva);
@@ -188,9 +194,8 @@ btt_get_blocks(const void* obj, gva_t gva) {
   return 0;
 }
 
-int
-btt_get_all(const void *o, gva_t gva, void **lva, size_t *blocks,
-            int32_t *cnt, uint32_t *owner, uint32_t *attr) {
+int btt_get_all(const void *o, gva_t gva, void **lva, size_t *blocks,
+                int32_t *cnt, uint32_t *owner, uint32_t *attr) {
   const BTT *btt = static_cast<const BTT*>(o);
   Entry entry;
   uint64_t key = gva_to_key(gva);
