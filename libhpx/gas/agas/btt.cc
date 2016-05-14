@@ -28,11 +28,11 @@ namespace {
     uint32_t owner;
     void *lva;
     size_t blocks;
-    hpx_parcel_t *onunpin;
+    hpx_parcel_t *cont;
     uint32_t attr;
-    Entry() : count(0), owner(0), lva(NULL), blocks(1), onunpin(NULL), attr(0) {
+    Entry() : count(0), owner(0), lva(NULL), blocks(1), cont(NULL), attr(0) {
     }
-    Entry(int32_t o, void *l, size_t b, uint32_t a) : count(0), owner(o), lva(l), blocks(b), onunpin(NULL), attr(a) {
+    Entry(int32_t o, void *l, size_t b, uint32_t a) : count(0), owner(o), lva(l), blocks(b), cont(NULL), attr(a) {
     }
   };
 
@@ -41,22 +41,60 @@ namespace {
   class BTT : public Map {
    public:
     BTT(size_t);
-    bool tryPin(gva_t gva, void** lva);
-    hpx_parcel_t *unpin(gva_t gva);
   };
 }
 
 BTT::BTT(size_t size) : Map(size) {
 }
 
-bool
-BTT::tryPin(gva_t gva, void** lva) {
+void *btt_new(size_t size) {
+  return new BTT(size);
+}
+
+void btt_delete(void* obj) {
+  BTT *btt = static_cast<BTT*>(obj);
+  delete btt;
+}
+
+void btt_insert(void *obj, gva_t gva, uint32_t owner, void *lva,
+                size_t blocks, uint32_t attr) {
+  BTT *btt = static_cast<BTT*>(obj);
   uint64_t key = gva_to_key(gva);
+  bool inserted = btt->insert(key, Entry(owner, lva, blocks, attr));
+  assert(inserted);
+  (void)inserted;
+}
+
+void btt_upsert(void *obj, gva_t gva, uint32_t owner, void *lva,
+                size_t blocks, uint32_t attr) {
+  BTT *btt = static_cast<BTT*>(obj);
+  uint64_t key = gva_to_key(gva);
+  auto updatefn = [&](Entry& entry) {
+    entry = Entry(owner, lva, blocks, attr);
+  };
+  btt->upsert(key, updatefn, Entry(owner, lva, blocks, attr));
+}
+
+void btt_remove(void *obj, gva_t gva) {
+  BTT *btt = static_cast<BTT*>(obj);
+  uint64_t key = gva_to_key(gva);
+  bool erased = btt->erase(key);
+  assert(erased);
+  (void)erased;
+}
+
+bool btt_try_pin(void* obj, gva_t gva, void** lva) {
+  BTT *btt = static_cast<BTT*>(obj);
   bool ret = false;
-  bool found = update_fn(key, [&](Entry& entry) {
-      // If we do not own the block or if there is a pending delete on
-      // this block, the try-pin operation fails.
-      if (entry.owner != here->rank || entry.onunpin) {
+  uint64_t key = gva_to_key(gva);
+  bool found = btt->update_fn(key, [&](Entry& entry) {
+      // fail if there is a pending delete or move on this block
+      if (entry.cont) {
+        return;
+      }
+
+      // fail if we do not own the block
+      if (entry.owner != here->rank) {
         return;
       }
 
@@ -72,91 +110,37 @@ BTT::tryPin(gva_t gva, void** lva) {
   return found && ret;
 }
 
-hpx_parcel_t *
-BTT::unpin(gva_t gva) {
-  uint64_t key = gva_to_key(gva);
+void btt_unpin(void* obj, gva_t gva) {
+  BTT *btt = static_cast<BTT*>(obj);
   hpx_parcel_t *p = NULL;
-  bool found = update_fn(key, [&](Entry& entry) {
+  uint64_t key = gva_to_key(gva);
+  bool found = btt->update_fn(key, [&](Entry& entry) {
       assert(entry.owner == here->rank);
       assert(entry.count > 0);
       entry.count--;
       // printf("%lu %d --\n", key, entry.count);
-      if (!entry.count && entry.onunpin) {
-        p = entry.onunpin;
+      if (!entry.count && entry.cont) {
+        p = entry.cont;
       }
     });
   assert(found);
-  return p;
-}
 
-void *
-btt_new(size_t size) {
-  return new BTT(size);
-}
-
-void
-btt_delete(void* obj) {
-  BTT *btt = static_cast<BTT*>(obj);
-  delete btt;
-}
-
-void
-btt_insert(void *obj, gva_t gva, uint32_t owner, void *lva, size_t blocks,
-           uint32_t attr) {
-  BTT *btt = static_cast<BTT*>(obj);
-  uint64_t key = gva_to_key(gva);
-  bool inserted = btt->insert(key, Entry(owner, lva, blocks, attr));
-  assert(inserted);
-  (void)inserted;
-}
-
-void
-btt_upsert(void *obj, gva_t gva, uint32_t owner, void *lva, size_t blocks,
-           uint32_t attr) {
-  BTT *btt = static_cast<BTT*>(obj);
-  uint64_t key = gva_to_key(gva);
-  auto updatefn = [&](Entry& entry) {
-    entry = Entry(owner, lva, blocks, attr);
-  };
-  btt->upsert(key, updatefn, Entry(owner, lva, blocks, attr));
-}
-
-void
-btt_remove(void *obj, gva_t gva) {
-  BTT *btt = static_cast<BTT*>(obj);
-  uint64_t key = gva_to_key(gva);
-  bool erased = btt->erase(key);
-  assert(erased);
-  (void)erased;
-}
-
-bool
-btt_try_pin(void* obj, gva_t gva, void** lva) {
-  BTT *btt = static_cast<BTT*>(obj);
-  return btt->tryPin(gva, lva);
-}
-
-void
-btt_unpin(void* obj, gva_t gva) {
-  BTT *btt = static_cast<BTT*>(obj);
-  hpx_parcel_t *p = btt->unpin(gva);
+  // if we found a continuation parcel, launch it
   if (p) {
     parcel_launch(p);
   }
 }
 
-void *
-btt_lookup(const void* obj, gva_t gva) {
+bool btt_get_lva(const void* obj, gva_t gva, void **lva) {
   const BTT *btt = static_cast<const BTT*>(obj);
   Entry entry;
   uint64_t key = gva_to_key(gva);
   bool found = btt->find(key, entry);
-  if (found) {
-    return entry.lva;
+  if (lva) {
+    *lva = found ? entry.lva : NULL;
   }
-  else {
-    return NULL;
-  }
+
+  return found;
 }
 
 bool
@@ -234,10 +218,10 @@ btt_get_all(const void *o, gva_t gva, void **lva, size_t *blocks,
 typedef struct {
   BTT        *btt;
   gva_t       gva;
-} _btt_onunpin_env_t;
+} _btt_cont_env_t;
 
-static void _btt_onunpin_continuation(hpx_parcel_t *p, void *e) {
-  _btt_onunpin_env_t *env = static_cast<_btt_onunpin_env_t*>(e);
+static void _btt_continuation(hpx_parcel_t *p, void *e) {
+  _btt_cont_env_t *env = static_cast<_btt_cont_env_t*>(e);
   BTT *btt = env->btt;
   gva_t gva = env->gva;
   uint64_t key = gva_to_key(gva);
@@ -248,8 +232,8 @@ static void _btt_onunpin_continuation(hpx_parcel_t *p, void *e) {
       // if there are pending pins on this block, we register a parcel
       // that is launched when the reference count goes to 0.
       count = entry.count;
-      assert(!entry.onunpin);
-      entry.onunpin = p;
+      assert(!entry.cont);
+      entry.cont = p;
     });
   assert(found);
   if (!count) {
@@ -260,14 +244,14 @@ static void _btt_onunpin_continuation(hpx_parcel_t *p, void *e) {
 
 int btt_remove_when_count_zero(void *obj, gva_t gva, void **lva) {
   BTT *btt = static_cast<BTT*>(obj);
-  _btt_onunpin_env_t env = {
+  _btt_cont_env_t env = {
     .btt = btt,
     .gva = gva
   };
 
-  scheduler_suspend(_btt_onunpin_continuation, &env);
+  scheduler_suspend(_btt_continuation, &env);
   if (lva) {
-    *lva = btt_lookup(btt, gva);
+    btt_get_lva(btt, gva, lva);
   }
   btt_remove(obj, gva);
   return HPX_SUCCESS;
@@ -275,16 +259,16 @@ int btt_remove_when_count_zero(void *obj, gva_t gva, void **lva) {
 
 int btt_try_move(void *obj, gva_t gva, int to, void **lva, uint32_t *attr) {
   BTT *btt = static_cast<BTT*>(obj);
-  _btt_onunpin_env_t env = {
+  _btt_cont_env_t env = {
     .btt = btt,
     .gva = gva
   };
 
-  scheduler_suspend(_btt_onunpin_continuation, &env);
+  scheduler_suspend(_btt_continuation, &env);
   uint64_t key = gva_to_key(gva);
   Entry entry;
   bool found = btt->update_fn(key, [&](Entry& entry) {
-      entry.onunpin = NULL;
+      entry.cont = NULL;
       entry.owner = to;
 
       if (lva) {

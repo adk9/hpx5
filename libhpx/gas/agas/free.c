@@ -133,7 +133,8 @@ static int _agas_free_async_handler(hpx_addr_t base) {
   dbg_assert(gva.bits.home == here->rank);
 
   // We need to free this after everything has been cleaned up.
-  void   *lva = btt_lookup(gas->btt, gva);
+  void *lva = NULL;
+  btt_get_lva(gas->btt, gva, lva);
   dbg_assert_str(lva, "No btt entry for %"PRIu64" at %d\n", gva.addr, here->rank);
 
   // Cyclic allocations have segments at each rank, so we broadcast the command
