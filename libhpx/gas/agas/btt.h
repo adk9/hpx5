@@ -33,7 +33,6 @@ bool btt_try_pin(void *btt, gva_t gva, void **lva);
 void btt_unpin(void *btt, gva_t gva);
 bool btt_get_lva(const void* obj, gva_t gva, void **lva);
 bool btt_get_owner(const void *btt, gva_t gva, uint32_t *owner);
-void btt_set_owner(const void *btt, gva_t gva, uint32_t owner);
 bool btt_get_attr(const void *btt, gva_t gva, uint32_t *attr);
 void btt_set_attr(void *btt, gva_t gva, uint32_t attr);
 size_t btt_get_blocks(const void *btt, gva_t gva);

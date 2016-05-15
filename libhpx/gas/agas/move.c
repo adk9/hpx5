@@ -30,7 +30,7 @@
 #include "agas.h"
 #include "btt.h"
 
-static int _insert_block_handler(int n, void *args[], size_t sizes[]) {
+static int _upsert_block_handler(int n, void *args[], size_t sizes[]) {
   agas_t *agas = (agas_t*)here->gas;
   hpx_addr_t dst = hpx_thread_current_target();
   gva_t dgva = { .addr = dst };
@@ -53,8 +53,8 @@ static int _insert_block_handler(int n, void *args[], size_t sizes[]) {
   btt_upsert(agas->btt, sgva, here->rank, lva, 1, *attr);
   return HPX_SUCCESS;
 }
-static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED | HPX_VECTORED, _insert_block,
-                     _insert_block_handler, HPX_INT, HPX_POINTER, HPX_POINTER);
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED | HPX_VECTORED, _upsert_block,
+                     _upsert_block_handler, HPX_INT, HPX_POINTER, HPX_POINTER);
 
 /// Invalidate the remote block mapping. This action blocks until it
 /// can safely invalidate the block.
@@ -87,7 +87,7 @@ static int _agas_invalidate_mapping_handler(hpx_addr_t dst, int to) {
   }
 
   size_t bsize = UINT64_C(1) << gva.bits.size;
-  e = hpx_call_cc(dst, _insert_block, block, bsize, &src, sizeof(src), &attr,
+  e = hpx_call_cc(dst, _upsert_block, block, bsize, &src, sizeof(src), &attr,
                   sizeof(attr));
 
   // otherwise only free if the block is not at its home
