@@ -236,10 +236,6 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
   log_dflt("hpx stopped running %"PRIu64"\n", here->epoch);
   va_end(args);
 
-  // We need to flush the network here, because it might have messages that are
-  // required for progress.
-  network_flush(here->net);
-
   // Bump our epoch, and enforce the "collective" nature of run with a boot
   // barrier.
   here->epoch++;
@@ -281,6 +277,10 @@ void hpx_exit(int code) {
       dbg_check(e);
     }
   }
+
+  // We need to flush the network here, because it might have messages that are
+  // required for progress.
+  network_flush(here->net);
 
   // Call our own shutdown through cc, which orders it locally after the effects
   // from the loop above.
