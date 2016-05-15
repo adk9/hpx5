@@ -82,26 +82,26 @@ _funneled_delete(void *network) {
   free(isir);
 }
 
-static int _funneled_coll_init(void *network, coll_t **_c){
-  coll_t* c = *_c;
+static int _funneled_coll_init(void *network, coll_t **_c) {
+  coll_t *c = *_c;
   int num_active = c->group_sz;
 
   log_net("ISIR network collective being initialized."
-		  " Total active ranks : %d \n", num_active);
-  int32_t* ranks = (int32_t*) c->data;
+          "Total active ranks: %d\n", num_active);
+  int32_t *ranks = (int32_t*)c->data;
   
-  if(c->comm_bytes == 0){
-    //we have not yet allocated a communicator
+  if (c->comm_bytes == 0) {
+    // we have not yet allocated a communicator
     int32_t comm_bytes = sizeof(MPI_Comm);
     *_c = realloc(c, sizeof(coll_t) + c->group_bytes + comm_bytes); 
     c = *_c;
     c->comm_bytes = comm_bytes;
   }
 
-  //setup communicator
+  // setup communicator
   char *comm = c->data + c->group_bytes;
 
-  _funneled_t* isir = network;
+  _funneled_t *isir = network;
   isir->vtable.flush(network);
   while (!sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE))
     ;
@@ -111,22 +111,23 @@ static int _funneled_coll_init(void *network, coll_t **_c){
   return LIBHPX_OK;	
 }
 
-static int _funneled_coll_sync(void *network, void *in, size_t input_sz, void* out, coll_t* c){
+static int _funneled_coll_sync(void *network, void *in, size_t input_sz,
+                               void *out, coll_t *c) {
   void *sendbuf = in;
-  int count     = input_sz;
+  int count = input_sz;
   char *comm = c->data + c->group_bytes;
-  _funneled_t* isir = network;
+  _funneled_t *isir = network;
   
-  //flushing network is necessary (sufficient ?) to execute any packets
-  //destined for collective operation
+  // flushing network is necessary (sufficient?) to execute any
+  // packets destined for collective operation
   isir->vtable.flush(network);
 
   while (!sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE))
     ;
-  if(c->type == ALL_REDUCE) {
+  if (c->type == ALL_REDUCE) {
     isir->xport->allreduce(sendbuf, out, count, NULL, &c->op, comm);
   } else {
-    log_dflt("Collective type descriptor : %d is Invalid! \n", c->type);
+    log_dflt("Collective type descriptor: %d is invalid!\n", c->type);
   }
   sync_store(&isir->progress_lock, 1, SYNC_RELEASE);
   return LIBHPX_OK;
