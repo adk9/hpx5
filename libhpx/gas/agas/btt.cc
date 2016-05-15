@@ -15,11 +15,13 @@
 # include "config.h"
 #endif
 
+#include <libhpx/action.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/parcel.h>
 #include <libhpx/scheduler.h>
 #include <cuckoohash_map.hh>
 #include <city_hasher.hh>
+#include "agas.h"
 #include "btt.h"
 
 namespace {
@@ -85,8 +87,25 @@ void btt_remove(void *obj, gva_t gva) {
   (void)erased;
 }
 
-bool btt_try_pin(void* obj, gva_t gva, void** lva) {
+static int _btt_update_owner_handler(hpx_addr_t addr, int owner) {
+  agas_t *agas = (agas_t*)here->gas;
+  BTT *btt = static_cast<BTT*>(agas->btt);
+  gva_t gva = { .addr = addr };
+  uint64_t key = gva_to_key(gva);
+  auto updatefn = [&](Entry& entry) {
+    if (entry.owner != owner) {
+      entry.owner = owner;
+    }
+  };
+  btt->upsert(key, updatefn, Entry(owner, NULL, 1, HPX_GAS_ATTR_NONE));
+  return HPX_SUCCESS;
+}
+static LIBHPX_ACTION(HPX_DEFAULT, 0, _btt_update_owner,
+                     _btt_update_owner_handler, HPX_ADDR, HPX_INT);
+
+bool btt_try_pin(void *obj, gva_t gva, void **lva) {
   BTT *btt = static_cast<BTT*>(obj);
+  int owner = -1;
   bool ret = false;
   uint64_t key = gva_to_key(gva);
   bool found = btt->update_fn(key, [&](Entry& entry) {
@@ -97,6 +116,7 @@ bool btt_try_pin(void* obj, gva_t gva, void** lva) {
 
       // fail if we do not own the block
       if (entry.owner != here->rank) {
+        owner = entry.owner;
         return;
       }
 
@@ -109,6 +129,15 @@ bool btt_try_pin(void* obj, gva_t gva, void** lva) {
         *lva = (char*)(entry.lva) + gva_to_block_offset(gva);
       }
     });
+
+  if (owner >= 0) {
+    hpx_parcel_t *p = scheduler_current_parcel();
+    if (p->src != here->rank) {
+      hpx_call(HPX_THERE(p->src), _btt_update_owner, HPX_NULL,
+               &gva.addr, &owner);
+    }
+  }
+
   return found && ret;
 }
 
