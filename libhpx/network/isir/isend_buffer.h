@@ -30,7 +30,7 @@ typedef struct {
   int        *out;
   struct {
     hpx_parcel_t *parcel;
-    hpx_addr_t   handler;
+    hpx_parcel_t  *ssync;
   } *records;
 } isend_buffer_t;
 
@@ -59,20 +59,22 @@ void isend_buffer_fini(isend_buffer_t *buffer)
 ///
 /// @param       buffer The buffer to initialize.
 /// @param            p The stack of parcels to send.
-/// @param            h The handler for local completion.
+/// @param        ssync The stack of parcel continuations.
 ///
 /// @returns  LIBHPX_OK The message was appended successfully.
 ///        LIBHXP_ERROR There was an error in this operation.
-int isend_buffer_append(isend_buffer_t *buffer, hpx_parcel_t *p, hpx_addr_t h)
+int isend_buffer_append(isend_buffer_t *buffer, hpx_parcel_t *p,
+                        hpx_parcel_t *ssync)
   HPX_NON_NULL(1,2);
 
 /// Progress the sends in the buffer.
 ///
 /// @param       buffer The buffer to progress().
+/// @param[out]   ssync A stack of synchronization parcels.
 ///
 /// @returns            The number of completed requests.
-int isend_buffer_progress(isend_buffer_t *buffer)
-  HPX_NON_NULL(1);
+int isend_buffer_progress(isend_buffer_t *buffer, hpx_parcel_t **ssync)
+  HPX_NON_NULL(1, 2);
 
 /// Flush all outstanding sends.
 ///
@@ -80,9 +82,10 @@ int isend_buffer_progress(isend_buffer_t *buffer)
 /// sends in the parcel queue have completed. It is not thread safe.
 ///
 /// @param       buffer The send buffer to flush().
+/// @param[out]   ssync A stack of synchronization parcels.
 ///
 /// @returns            The number of completed requests during the flush.
-int isend_buffer_flush(isend_buffer_t *buffer)
-  HPX_NON_NULL(1);
+int isend_buffer_flush(isend_buffer_t *buffer, hpx_parcel_t **ssync)
+  HPX_NON_NULL(1, 2);
 
 #endif // LIBHPX_NETWORK_ISIR_ISEND_BUFFER_H

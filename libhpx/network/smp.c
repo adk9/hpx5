@@ -35,7 +35,7 @@ static int _smp_progress(void *network, int id) {
   return 0;
 }
 
-static int _smp_send(void *network, hpx_parcel_t *p) {
+static int _smp_send(void *network, hpx_parcel_t *p, hpx_parcel_t *ssync) {
   hpx_abort();
 }
 

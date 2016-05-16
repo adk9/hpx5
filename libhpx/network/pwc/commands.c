@@ -38,7 +38,12 @@ void handle_lco_set_source(int src, command_t cmd) {
 void handle_delete_parcel(int src, command_t cmd) {
   hpx_parcel_t *p = (hpx_parcel_t *)(uintptr_t)cmd.arg;
   log_net("releasing sent parcel %p\n", (void*)p);
+  hpx_parcel_t *ssync = p->next;
+  p->next = NULL;
   parcel_delete(p);
+  if (ssync) {
+    parcel_launch(ssync);
+  }
 }
 
 void handle_resume_parcel(int src, command_t cmd) {

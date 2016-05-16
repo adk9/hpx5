@@ -236,7 +236,7 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
   log_dflt("hpx stopped running %"PRIu64"\n", here->epoch);
   va_end(args);
 
-  // Bump our epoch, and enforce the "collective" nature of run with a boot
+  // Bump our epoch, and enforce the "collective" nature of run with a
   // barrier.
   here->epoch++;
   boot_barrier(here->boot);
@@ -267,20 +267,32 @@ void hpx_exit(int code) {
 
   uint64_t c = (uint32_t)code;
 
-  // Make sure we flush our local network when we stop, but don't send our own
-  // shutdown here because it can "arrive" locally very quickly, before we've
-  // even come close to sending the rest of the stop commands. This can cause
-  // problems with flushing.
+  // Loop through, sending the shutdown event to every locality. We use the
+  // network_send operation manually here because it allows us to wait for the
+  // `ssync` event (this event means that we're guaranteed that we don't need to
+  // keep progressing locally for the send to be seen remotely).
+  //
+  // Don't perform the local shutdown until we're sure all the remote shutdowns
+  // have gotten out, otherwise we might not progress the network enough.
+  hpx_addr_t sync = hpx_lco_and_new(here->ranks - 1);
   for (int i = 0, e = here->ranks; i < e; ++i) {
     if (i != here->rank) {
-      int e = action_call_lsync(locality_stop, HPX_THERE(i), 0, 0, 1, &c);
-      dbg_check(e);
+      hpx_parcel_t *p = action_new_parcel(locality_stop, // action
+                                          HPX_THERE(i),  // target
+                                          0,             // continuation target
+                                          0,             // continuation action
+                                          1,             // number of args
+                                          &c);           // the exit code
+      hpx_parcel_t *q = action_new_parcel(hpx_lco_set_action, // action
+                                          sync,          // target
+                                          0,             // continuation target
+                                          0,             // continuation action                                          0,
+                                          0);            // number of args
+      dbg_check( network_send(here->net, p, q) );
     }
   }
-
-  // We need to flush the network here, because it might have messages that are
-  // required for progress.
-  network_flush(here->net);
+  dbg_check( hpx_lco_wait(sync) );
+  hpx_lco_delete_sync(sync);
 
   // Call our own shutdown through cc, which orders it locally after the effects
   // from the loop above.

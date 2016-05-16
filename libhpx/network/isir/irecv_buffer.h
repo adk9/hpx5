@@ -61,10 +61,10 @@ void irecv_buffer_fini(irecv_buffer_t *buffer)
 /// safe.
 ///
 /// @param       buffer The buffer to progress.
+/// @param[out]   recvs A stack of received parcels.
 ///
-/// @returns            This will return a parcel chain that consists of all of
-///                     the parcels that were received in this epoch.
-hpx_parcel_t *irecv_buffer_progress(irecv_buffer_t *buffer)
-  HPX_NON_NULL(1);
+/// @returns            The number of received parcels.
+int irecv_buffer_progress(irecv_buffer_t *buffer, hpx_parcel_t **recvs)
+  HPX_NON_NULL(1, 2);
 
 #endif // LIBHPX_NETWORK_ISIR_IRECV_BUFFER_H
