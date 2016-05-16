@@ -87,7 +87,7 @@ void btt_remove(void *obj, gva_t gva) {
   (void)erased;
 }
 
-static int _btt_update_owner_handler(hpx_addr_t addr, int owner) {
+static int _btt_update_owner_handler(hpx_addr_t addr, uint32_t owner) {
   agas_t *agas = (agas_t*)here->gas;
   BTT *btt = static_cast<BTT*>(agas->btt);
   gva_t gva = { .addr = addr };
@@ -101,7 +101,7 @@ static int _btt_update_owner_handler(hpx_addr_t addr, int owner) {
   return HPX_SUCCESS;
 }
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _btt_update_owner,
-                     _btt_update_owner_handler, HPX_ADDR, HPX_INT);
+                     _btt_update_owner_handler, HPX_ADDR, HPX_UINT32);
 
 bool btt_try_pin(void *obj, gva_t gva, void **lva) {
   BTT *btt = static_cast<BTT*>(obj);
