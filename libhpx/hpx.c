@@ -236,7 +236,7 @@ int _hpx_run(hpx_action_t *act, int n, ...) {
   log_dflt("hpx stopped running %"PRIu64"\n", here->epoch);
   va_end(args);
 
-  // Bump our epoch, and enforce the "collective" nature of run with a boot
+  // Bump our epoch, and enforce the "collective" nature of run with a
   // barrier.
   here->epoch++;
   boot_barrier(here->boot);
@@ -270,7 +270,7 @@ void hpx_exit(int code) {
   // Loop through, sending the shutdown event to every locality. We use the
   // network_send operation manually here because it allows us to wait for the
   // `ssync` event (this event means that we're guaranteed that we don't need to
-  // keep progressing locally for the send to be seen remotely.
+  // keep progressing locally for the send to be seen remotely).
   //
   // Don't perform the local shutdown until we're sure all the remote shutdowns
   // have gotten out, otherwise we might not progress the network enough.

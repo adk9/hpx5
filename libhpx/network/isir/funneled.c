@@ -54,7 +54,9 @@ static void
 _send_all(_funneled_t *network) {
   hpx_parcel_t *p = NULL;
   while ((p = sync_two_lock_queue_dequeue(&network->sends))) {
-    isend_buffer_append(&network->isends, p, HPX_NULL);
+    hpx_parcel_t *ssync = p->next;
+    p->next = NULL;
+    isend_buffer_append(&network->isends, p, ssync);
   }
 }
 
@@ -135,6 +137,11 @@ static int _funneled_coll_sync(void *network, void *in, size_t input_sz,
 
 static int
 _funneled_send(void *network, hpx_parcel_t *p, hpx_parcel_t *ssync) {
+  // Use the unused parcel-next pointer to get the ssync continuation parcels
+  // through the concurrent queue, along with the primary parcel.
+  dbg_assert(p->next == NULL);
+  p->next = ssync;
+
   _funneled_t *isir = network;
   sync_two_lock_queue_enqueue(&isir->sends, p);
   return LIBHPX_OK;
@@ -152,7 +159,11 @@ _funneled_flush(void *network) {
   while (!sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE)) {
   }
   _send_all(isir);
-  isend_buffer_flush(&isir->isends);
+  hpx_parcel_t *ssync = NULL;
+  isend_buffer_flush(&isir->isends, &ssync);
+  if (ssync) {
+    sync_two_lock_queue_enqueue(&isir->recvs, ssync);
+  }
   sync_store(&isir->progress_lock, 1, SYNC_RELEASE);
 }
 
@@ -174,27 +185,27 @@ static int
 _funneled_progress(void *network, int id) {
   _funneled_t *isir = network;
   if (sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE)) {
-    hpx_parcel_t *chain = irecv_buffer_progress(&isir->irecvs);
-    int n = 0;
-    if (chain) {
-      ++n;
-      sync_two_lock_queue_enqueue(&isir->recvs, chain);
-    }
-
+    hpx_parcel_t *chain = NULL;
+    int n = irecv_buffer_progress(&isir->irecvs, &chain);
     DEBUG_IF(n) {
       log_net("completed %d recvs\n", n);
     }
+    if (chain) {
+      sync_two_lock_queue_enqueue(&isir->recvs, chain);
+    }
 
-    int m = isend_buffer_progress(&isir->isends);
-
-    DEBUG_IF(m) {
-      log_net("completed %d sends\n", m);
+    chain = NULL;
+    n = isend_buffer_progress(&isir->isends, &chain);
+    DEBUG_IF(n) {
+      log_net("completed %d sends\n", n);
+    }
+    if (chain) {
+      sync_two_lock_queue_enqueue(&isir->recvs, chain);
     }
 
     _send_all(isir);
     sync_store(&isir->progress_lock, 1, SYNC_RELEASE);
     (void)n;
-    (void)m;
   }
   return LIBHPX_OK;
 

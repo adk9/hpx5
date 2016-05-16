@@ -294,16 +294,15 @@ void irecv_buffer_fini(irecv_buffer_t *buffer) {
   dbg_assert(!buffer->requests);
 }
 
-hpx_parcel_t *irecv_buffer_progress(irecv_buffer_t *buffer) {
+int irecv_buffer_progress(irecv_buffer_t *buffer, hpx_parcel_t **recvs) {
   // see if there is an existing message we're not ready to receive
   if (LIBHPX_OK != _probe(buffer)) {
     dbg_error("failed probe\n");
   }
 
   // test the existing irecvs
-  int n = buffer->n;
-  if (!n) {
-    return NULL;
+  if (!buffer->n) {
+    return 0;
   }
 
   int *out = buffer->out;
@@ -311,15 +310,12 @@ hpx_parcel_t *irecv_buffer_progress(irecv_buffer_t *buffer) {
   void *stats = buffer->statuses;
 
   int count;
-  buffer->xport->testsome(n, reqs, &count, out, stats);
-
-  hpx_parcel_t *completed = NULL;
+  buffer->xport->testsome(buffer->n, reqs, &count, out, stats);
   for (int i = 0; i < count; ++i) {
     int j = out[i];
     void *status = _status_at(buffer, i);
     hpx_parcel_t *p = _finish(buffer, j, status);
-    parcel_stack_push(&completed, p);
+    parcel_stack_push(recvs, p);
   }
-
-  return completed;
+  return count;
 }
