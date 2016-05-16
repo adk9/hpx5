@@ -54,16 +54,16 @@ void send_buffer_fini(send_buffer_t *sends);
 ///     will delete the parcel.
 ///
 /// @param        sends The send buffer.
-/// @param        lsync An event to signal when the send completes locally.
 /// @param            p The parcel to send.
+/// @param        ssync An optional local synchronization continuation.
 ///
 /// @returns  LIBHPX_OK The send operation was successful (i.e., it was passed
 ///                       to the network or it was buffered).
 ///       LIBHPX_ENOMEM The send operation could not complete because it needed
 ///                       to be buffered but the system was out of memory.
 ///        LIBHPX_ERROR An unexpected error occurred.
-int send_buffer_send(send_buffer_t *sends, hpx_addr_t lsync,
-                     const hpx_parcel_t *p);
+int send_buffer_send(send_buffer_t *sends, const hpx_parcel_t *p,
+                     const hpx_parcel_t *ssync);
 
 int send_buffer_progress(send_buffer_t *sends);
 

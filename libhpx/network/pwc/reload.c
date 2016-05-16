@@ -123,7 +123,9 @@ _buffer_send(buffer_t *send, pwc_xport_t *xport, xport_op_t *op) {
 }
 
 static int
-_reload_send(void *obj, pwc_xport_t *xport, int rank, const hpx_parcel_t *p) {
+_reload_send(void *obj, pwc_xport_t *xport, int rank, const hpx_parcel_t *p,
+             const hpx_parcel_t *ssync) {
+  dbg_assert(!ssync);
   size_t n = parcel_size(p);
   xport_op_t op = {
     .rank = rank,

@@ -119,7 +119,7 @@ static void _send_n(_coalesced_network_t *network, int n) {
   // 4) Send the fat parcel to each target.
   for (int l = 0, e = HPX_LOCALITIES; l < e; ++l) {
     if (locs[l].fatp) {
-      network_send(network->next, locs[l].fatp);
+      network_send(network->next, locs[l].fatp, NULL);
     }
   }
 
@@ -128,10 +128,11 @@ static void _send_n(_coalesced_network_t *network, int n) {
   free(targets);
 }
 
-static int _coalesced_network_send(void *obj, hpx_parcel_t *p) {
+static int _coalesced_network_send(void *obj, hpx_parcel_t *p,
+                                   hpx_parcel_t *ssync) {
   _coalesced_network_t *network = obj;
   if (!action_is_coalesced(p->action)) {
-    return network_send(network->next, p);
+    return network_send(network->next, p, ssync);
   }
 
   // Coalesce on demand as long as we have enough parcels available.

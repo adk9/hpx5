@@ -89,11 +89,11 @@ static int _funneled_coll_init(void *network, coll_t **_c) {
   log_net("ISIR network collective being initialized."
           "Total active ranks: %d\n", num_active);
   int32_t *ranks = (int32_t*)c->data;
-  
+
   if (c->comm_bytes == 0) {
     // we have not yet allocated a communicator
     int32_t comm_bytes = sizeof(MPI_Comm);
-    *_c = realloc(c, sizeof(coll_t) + c->group_bytes + comm_bytes); 
+    *_c = realloc(c, sizeof(coll_t) + c->group_bytes + comm_bytes);
     c = *_c;
     c->comm_bytes = comm_bytes;
   }
@@ -106,9 +106,9 @@ static int _funneled_coll_init(void *network, coll_t **_c) {
   while (!sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE))
     ;
   isir->xport->create_comm(comm, ranks, num_active, here->ranks);
-  
+
   sync_store(&isir->progress_lock, 1, SYNC_RELEASE);
-  return LIBHPX_OK;	
+  return LIBHPX_OK;
 }
 
 static int _funneled_coll_sync(void *network, void *in, size_t input_sz,
@@ -117,7 +117,7 @@ static int _funneled_coll_sync(void *network, void *in, size_t input_sz,
   int count = input_sz;
   char *comm = c->data + c->group_bytes;
   _funneled_t *isir = network;
-  
+
   // flushing network is necessary (sufficient?) to execute any
   // packets destined for collective operation
   isir->vtable.flush(network);
@@ -134,7 +134,7 @@ static int _funneled_coll_sync(void *network, void *in, size_t input_sz,
 }
 
 static int
-_funneled_send(void *network, hpx_parcel_t *p) {
+_funneled_send(void *network, hpx_parcel_t *p, hpx_parcel_t *ssync) {
   _funneled_t *isir = network;
   sync_two_lock_queue_enqueue(&isir->sends, p);
   return LIBHPX_OK;

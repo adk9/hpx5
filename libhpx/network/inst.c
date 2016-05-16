@@ -43,10 +43,10 @@ static int _inst_progress(void *network, int id) {
   return r;
 }
 
-static int _inst_send(void *network, hpx_parcel_t *p) {
+static int _inst_send(void *network, hpx_parcel_t *p, hpx_parcel_t *ssync) {
   EVENT_NETWORK_SEND();
   _inst_network_t *inst = network;
-  return inst->impl->send(inst->impl, p);
+  return inst->impl->send(inst->impl, p, ssync);
 }
 
 static hpx_parcel_t *_inst_probe(void *network, int nrx) {

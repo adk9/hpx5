@@ -113,15 +113,15 @@ int _pwc_coll_sync(void *network, void *in, size_t in_size, void *out, coll_t *c
   return LIBHPX_OK;
 }
 
-static int _pwc_send(void *network, hpx_parcel_t *p) {
+static int _pwc_send(void *network, hpx_parcel_t *p, hpx_parcel_t *ssync) {
   if (parcel_size(p) >= here->config->pwc_parceleagerlimit) {
-    return pwc_rendezvous_send(network, p);
+    return pwc_rendezvous_send(network, p, ssync);
   }
 
   pwc_network_t *pwc = network;
   int rank = gas_owner_of(here->gas, p->target);
   send_buffer_t *buffer = &pwc->send_buffers[rank];
-  return send_buffer_send(buffer, HPX_NULL, p);
+  return send_buffer_send(buffer, p, ssync);
 }
 
 static void _pwc_flush(void *pwc) {

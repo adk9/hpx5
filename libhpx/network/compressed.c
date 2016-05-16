@@ -66,10 +66,11 @@ static int _decompress_handler(char* buffer, int n) {
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _decompress, _decompress_handler,
                      HPX_POINTER, HPX_INT);
 
-static int _compressed_network_send(void *obj, hpx_parcel_t *p) {
+static int _compressed_network_send(void *obj, hpx_parcel_t *p,
+                                    hpx_parcel_t *ssync) {
   _compressed_network_t *network = obj;
   if (!action_is_compressed(p->action)) {
-    return network_send(network->impl, p);
+    return network_send(network->impl, p, ssync);
   }
 
   // allocate a new enclosing parcel
@@ -96,7 +97,7 @@ static int _compressed_network_send(void *obj, hpx_parcel_t *p) {
     parcel_delete(p);
     cp->size = osize + sizeof(size_t);
   }
-  return network_send(network->impl, cp);
+  return network_send(network->impl, cp, ssync);
 }
 
 static int _compressed_network_progress(void *obj, int id) {
