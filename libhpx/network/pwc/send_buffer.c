@@ -24,29 +24,24 @@
 /// The record type for the pending send circular buffer.
 typedef struct {
   const hpx_parcel_t *p;
-  const hpx_parcel_t *ssync;
 } record_t;
 
 /// Append a record to the parcel's pending send buffer.
 ///
 /// @param        sends The send buffer.
 /// @param            p The parcel to buffer.
-/// @param        ssync The local synchronization continuation.
 ///
 /// @returns  LIBHXP_OK The parcel was buffered successfully.
 ///        LIBHPX_ERROR A pending record could not be allocated.
-static int _append(send_buffer_t *sends, const hpx_parcel_t *p,
-                   const hpx_parcel_t *ssync) {
+static int _append(send_buffer_t *sends, const hpx_parcel_t *p) {
   record_t *r = circular_buffer_append(&sends->pending);
   dbg_assert_str(r, "could not append a send operation to the buffer\n");
   r->p = p;
-  r->ssync = ssync;
   return LIBHPX_OK;
 }
 
-static int _start(send_buffer_t *sends, const hpx_parcel_t *p,
-                  const hpx_parcel_t *ssync) {
-  return parcel_emulator_send(sends->emul, sends->xport, sends->rank, p, ssync);
+static int _start(send_buffer_t *sends, const hpx_parcel_t *p) {
+  return parcel_emulator_send(sends->emul, sends->xport, sends->rank, p);
 }
 
 /// Wrap the eager_buffer_tx() operation in an interface that matches the
@@ -54,7 +49,7 @@ static int _start(send_buffer_t *sends, const hpx_parcel_t *p,
 static int _start_record(void *buffer, void *record) {
   send_buffer_t *sends = buffer;
   record_t *r = record;
-  return _start(sends, r->p, r->ssync);
+  return _start(sends, r->p);
 }
 
 /// Progress a send buffer.
@@ -96,14 +91,13 @@ void send_buffer_fini(send_buffer_t *sends) {
   circular_buffer_fini(&sends->pending);
 }
 
-int send_buffer_send(send_buffer_t *sends, const hpx_parcel_t *p,
-                     const hpx_parcel_t *ssync) {
+int send_buffer_send(send_buffer_t *sends, const hpx_parcel_t *p) {
   int status = LIBHPX_OK;
   sync_tatas_acquire(&sends->lock);
 
   // If we have no pending sends, try and start a request.
   if (circular_buffer_size(&sends->pending) == 0) {
-    status = _start(sends, p, ssync);
+    status = _start(sends, p);
     if (status == LIBHPX_OK) {
       goto unlock;
     }
@@ -116,7 +110,7 @@ int send_buffer_send(send_buffer_t *sends, const hpx_parcel_t *p,
 
   // We need to buffer this parcel, because either we're already buffering
   // parcels, or we need to buffer while the parcel transport refreshes.
-  status = _append(sends, p, ssync);
+  status = _append(sends, p);
   dbg_check(status, "could not append send operation\n");
 
  unlock:

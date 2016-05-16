@@ -114,14 +114,21 @@ int _pwc_coll_sync(void *network, void *in, size_t in_size, void *out, coll_t *c
 }
 
 static int _pwc_send(void *network, hpx_parcel_t *p, hpx_parcel_t *ssync) {
+  // This is a blatant hack to keep track of the ssync parcel using p's next
+  // pointer. It will allow us to both delete p and run ssync once the
+  // underlying network operation is serviced. It works in conjunction with the
+  // handle_delete_parcel command.
+  dbg_assert(p->next == NULL);
+  p->next = ssync;
+
   if (parcel_size(p) >= here->config->pwc_parceleagerlimit) {
-    return pwc_rendezvous_send(network, p, ssync);
+    return pwc_rendezvous_send(network, p);
   }
 
   pwc_network_t *pwc = network;
   int rank = gas_owner_of(here->gas, p->target);
   send_buffer_t *buffer = &pwc->send_buffers[rank];
-  return send_buffer_send(buffer, p, ssync);
+  return send_buffer_send(buffer, p);
 }
 
 static void _pwc_flush(void *pwc) {

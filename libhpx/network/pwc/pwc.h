@@ -88,11 +88,9 @@ int pwc_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out, int reset);
 ///
 /// @param      network The network object pointer.
 /// @param            p The parcel to send.
-/// @param        ssync The local synchronization continuation.
 ///
 /// @returns            The status of the operation.
-int pwc_rendezvous_send(void *network, const hpx_parcel_t *p,
-                        const hpx_parcel_t *ssync);
+int pwc_rendezvous_send(void *network, const hpx_parcel_t *p);
 
 /// The asynchronous memget operation.
 ///

@@ -77,8 +77,7 @@ static int _rendezvous_get_handler(_rendezvous_get_args_t *args, size_t size) {
 static LIBHPX_ACTION(HPX_INTERRUPT, HPX_MARSHALLED, _rendezvous_get,
                      _rendezvous_get_handler, HPX_POINTER, HPX_SIZE_T);
 
-int pwc_rendezvous_send(void *network, const hpx_parcel_t *p,
-                        const hpx_parcel_t *ssync) {
+int pwc_rendezvous_send(void *network, const hpx_parcel_t *p) {
   pwc_network_t *pwc = network;
   size_t n = parcel_size(p);
   _rendezvous_get_args_t args = {

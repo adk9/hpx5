@@ -21,7 +21,7 @@ struct pwc_xport;
 typedef struct parcel_emulator {
   void (*delete)(void *obj);
   int (*send)(void *obj, struct pwc_xport *xport, int rank,
-              const hpx_parcel_t *p, const hpx_parcel_t *ssync);
+              const hpx_parcel_t *p);
   hpx_parcel_t *(*recv)(void *obj, int rank);
 } parcel_emulator_t;
 
@@ -34,10 +34,9 @@ static inline void parcel_emulator_delete(void *obj) {
 }
 
 static inline int parcel_emulator_send(void *obj, struct pwc_xport *xport,
-                                       int rank, const hpx_parcel_t *p,
-                                       const hpx_parcel_t *ssync) {
+                                       int rank, const hpx_parcel_t *p) {
   parcel_emulator_t *emulator = obj;
-  return emulator->send(obj, xport, rank, p, ssync);
+  return emulator->send(obj, xport, rank, p);
 }
 
 static inline hpx_parcel_t *parcel_emulator_recv(void *obj, int rank) {
