@@ -75,9 +75,10 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _demux, _demux_handler,
 static void _send_n(_coalesced_network_t *network, int n) {
   // 0) Allocate temporary storage.
   struct {
-    hpx_parcel_t *fatp;
-    char         *next;
-    int        n_bytes;
+    hpx_parcel_t  *fatp;                        //!< the fat parcel
+    hpx_parcel_t *ssync;                        //!< the continuations
+    char          *next;                        //!< next cursor into fatp
+    int         n_bytes;                        //!< the number of bytes
   } *locs = calloc(HPX_LOCALITIES, sizeof(*locs));
 
   // 1) We'll pull n parcels off the global send queue, and store them
@@ -93,6 +94,10 @@ static void _send_n(_coalesced_network_t *network, int n) {
     uint32_t   l = gas_owner_of(gas, p->target);
     targets[n]   = l;
     locs[l].n_bytes += bytes;
+    // start accumulating ssync continuations here
+    if (p->next) {
+      parcel_stack_push(&locs[l].ssync, p->next);
+    }
     parcel_stack_push(&chain, p);
   }
 
@@ -119,7 +124,7 @@ static void _send_n(_coalesced_network_t *network, int n) {
   // 4) Send the fat parcel to each target.
   for (int l = 0, e = HPX_LOCALITIES; l < e; ++l) {
     if (locs[l].fatp) {
-      network_send(network->next, locs[l].fatp, NULL);
+      network_send(network->next, locs[l].fatp, locs[l].ssync);
     }
   }
 
