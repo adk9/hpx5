@@ -232,7 +232,7 @@ static int _test_range(isend_buffer_t *buffer, uint32_t i, uint32_t n, int o,
     parcel_delete(buffer->records[k].parcel);
 
     hpx_parcel_t *p = NULL;
-    while ((p = parcel_stack_pop(&buffer->records[i].ssync))) {
+    while ((p = parcel_stack_pop(&buffer->records[k].ssync))) {
       parcel_stack_push(ssync, p);
     }
   }
