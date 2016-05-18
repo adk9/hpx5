@@ -16,6 +16,7 @@
 #endif
 
 #include <libhpx/action.h>
+#include <inttypes.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/parcel.h>
 #include <libhpx/scheduler.h>
@@ -109,11 +110,6 @@ bool btt_try_pin(void *obj, gva_t gva, void **lva) {
   bool ret = false;
   uint64_t key = gva_to_key(gva);
   bool found = btt->update_fn(key, [&](Entry& entry) {
-      // fail if there is a pending delete or move on this block
-      if (entry.cont) {
-        return;
-      }
-
       // fail if we do not own the block
       if (entry.owner != here->rank) {
         owner = entry.owner;
@@ -152,13 +148,14 @@ void btt_unpin(void *obj, gva_t gva) {
       // printf("%lu %d --\n", key, entry.count);
       if (!entry.count && entry.cont) {
         p = entry.cont;
+        entry.cont = NULL;
       }
     });
   assert(found);
 
   // if we found a continuation parcel, launch it
   if (p) {
-    parcel_launch(p);
+    scheduler_spawn(p);
   }
 }
 
@@ -244,59 +241,23 @@ int btt_get_all(const void *obj, gva_t gva, void **lva, size_t *blocks,
 typedef struct {
   BTT        *btt;
   gva_t       gva;
+  uint32_t     to;
+  void      **lva;
+  uint32_t  *attr;
+  int32_t  *count;
 } _btt_cont_env_t;
 
 static void _btt_continuation(hpx_parcel_t *p, void *e) {
   _btt_cont_env_t *env = static_cast<_btt_cont_env_t*>(e);
-  BTT *btt = env->btt;
-  gva_t gva = env->gva;
+  BTT       *btt = env->btt;
+  gva_t      gva = env->gva;
+  int         to = env->to;
+  void     **lva = env->lva;
+  uint32_t *attr = env->attr;
+  int32_t *count = env->count;
+  
   uint64_t key = gva_to_key(gva);
-  int32_t count;
   bool found = btt->update_fn(key, [&](Entry& entry) {
-      //assert(entry.owner == here->rank);
-
-      // if there are pending pins on this block, we register a parcel
-      // that is launched when the reference count goes to 0.
-      count = entry.count;
-      assert(!entry.cont);
-      entry.cont = p;
-    });
-  assert(found);
-  if (!count) {
-    parcel_launch(p);
-  }
-  (void)found;
-}
-
-int btt_try_delete(void *obj, gva_t gva, void **lva) {
-  BTT *btt = static_cast<BTT*>(obj);
-  _btt_cont_env_t env = {
-    .btt = btt,
-    .gva = gva
-  };
-
-  scheduler_suspend(_btt_continuation, &env);
-  if (lva) {
-    btt_get_lva(btt, gva, lva);
-  }
-  btt_remove(obj, gva);
-  return HPX_SUCCESS;
-}
-
-int btt_try_move(void *obj, gva_t gva, int to, void **lva, uint32_t *attr) {
-  BTT *btt = static_cast<BTT*>(obj);
-  _btt_cont_env_t env = {
-    .btt = btt,
-    .gva = gva
-  };
-
-  scheduler_suspend(_btt_continuation, &env);
-  uint64_t key = gva_to_key(gva);
-  Entry entry;
-  bool found = btt->update_fn(key, [&](Entry& entry) {
-      entry.cont = NULL;
-      entry.owner = to;
-
       if (lva) {
         *lva = entry.lva;
       }
@@ -304,8 +265,55 @@ int btt_try_move(void *obj, gva_t gva, int to, void **lva, uint32_t *attr) {
       if (attr) {
         *attr = entry.attr;
       }
+
+      *count = entry.count;
+      if (!*count) {
+        entry.owner = to;
+      } else {
+        entry.cont = p;
+      }
     });
   assert(found);
-  return HPX_SUCCESS;
+  if (!*count) {
+    scheduler_spawn(p);
+  }
   (void)found;
+}
+
+int btt_try_delete(void *obj, gva_t gva, void **lva) {
+  BTT *btt = static_cast<BTT*>(obj);
+  int32_t count = 0;
+  _btt_cont_env_t env = {
+    .btt = btt,
+    .gva = gva,
+    .to = here->rank,
+    .lva = lva,
+    .attr = NULL,
+    .count = &count
+  };
+
+  do {
+    scheduler_suspend(_btt_continuation, &env);
+  } while (count != 0);
+  btt_remove(obj, gva);
+  return HPX_SUCCESS;
+}
+
+int btt_try_move(void *obj, gva_t gva, uint32_t to, void **lva,
+                 uint32_t *attr) {
+  BTT *btt = static_cast<BTT*>(obj);
+  int32_t count = 0;
+  _btt_cont_env_t env = {
+    .btt = btt,
+    .gva = gva,
+    .to = to,
+    .lva = lva,
+    .attr = attr,
+    .count = &count
+  };
+
+  do {
+    scheduler_suspend(_btt_continuation, &env);
+  } while (count != 0);
+  return HPX_SUCCESS;
 }

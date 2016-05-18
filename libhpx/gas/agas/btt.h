@@ -47,7 +47,7 @@ int btt_try_delete(void *btt, gva_t gva, void** lva);
 /// This function updates the block metadata to point to its new owner
 /// denoted by @p rank. The function blocks the calling thread until
 /// all "pinned" references to the block reach a count of zero.
-int btt_try_move(void *obj, gva_t gva, int rank, void **lva,
+int btt_try_move(void *obj, gva_t gva, uint32_t rank, void **lva,
                  uint32_t *attr);
 
 #ifdef __cplusplus
