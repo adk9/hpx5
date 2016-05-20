@@ -24,16 +24,18 @@
 
 /// The header needed for our data file format
 typedef struct {
-  const char magic_number[8];
-  const uint32_t order;
-  uint32_t table_offset;
+  const char magic_number[7];
+  unsigned char major;
+  unsigned char minor;
+  uint32_t header_len;
   char header_data[];
 } logtable_header_t;
 
 #define _LOGTABLE_HEADER                                       \
   {                                                            \
-    .magic_number = {'h', 'p', 'x', ' ', 'l', 'o', 'g', '\0'}, \
-    .order = 0xFF00AA55                                        \
+    .magic_number = {'\x93', 'N', 'U', 'M', 'P', 'Y', '\0'},   \
+    .major = 1,                                                \
+    .minor = 0,                                                \
   }
 
 typedef struct _cols_metadata {
@@ -132,13 +134,13 @@ static size_t _write_event_metadata(void* base, int class, int id) {
 }
 
 // Write the metadata for this event to the header of the log file
-// Header is padded out to 8 byte multiple length
+// Header is padded out to 16 byte multiple length
 size_t write_trace_header(void* base, int class, int id) {
   logtable_header_t *header = (logtable_header_t*)base;
   memcpy(header, &LOGTABLE_HEADER, sizeof(LOGTABLE_HEADER));
   size_t metadata_size = _write_event_metadata(header->header_data, class, id);
-  metadata_size += 8 - (metadata_size % 8);
-  header->table_offset = offsetof(logtable_header_t, header_data) +
+  metadata_size += 16 - (metadata_size % 16);
+  header->header_len = offsetof(logtable_header_t, header_data) +
     metadata_size;
-  return header->table_offset;
+  return header->header_len;
 }
