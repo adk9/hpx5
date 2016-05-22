@@ -29,18 +29,6 @@ extern "C" {
 #include <hpx/attributes.h>
 #include <hpx/types.h>
 
-/// Forward declarations.
-/// @{
-struct hpx_parcel;
-/// @}
-
-/// Perform a commutative-associative reduction.
-///
-/// This is similar to an ALLREDUCE. It is statically sized at creation time,
-/// and is used cyclically. There is no non-blocking hpx_lco_get() operation, so
-/// users should wait to call it until they know that they need it.
-/// @{
-
 /// The commutative-associative (monoid) operation type.
 ///
 /// Common operations would be min, max, +, *, etc. The runtime will pass the
@@ -55,6 +43,9 @@ typedef void (*hpx_monoid_op_t)(void *lhs, const void *rhs, size_t bytes);
 /// with the LCO. All of the waiting threads are signaled once the
 /// predicate returns true.
 typedef bool (*hpx_predicate_t)(void *i, size_t bytes);
+
+/// These are the operations associated with the generic LCO class.
+/// @{
 
 /// Delete an LCO.
 ///
@@ -190,7 +181,6 @@ void hpx_lco_set_with_continuation(hpx_addr_t lco, size_t size, const void *valu
                                    hpx_addr_t lsync,
                                    hpx_addr_t raddr, hpx_action_t rop)
   HPX_PUBLIC;
-
 
 /// An action-based interface to the LCO set operation.
 /// The set action is a user-packed action that takes a buffer.
@@ -569,7 +559,7 @@ void hpx_lco_gencount_inc(hpx_addr_t gencnt, hpx_addr_t rsync)
 hpx_status_t hpx_lco_gencount_wait(hpx_addr_t gencnt, unsigned long gen)
   HPX_PUBLIC;
 
-/// Allocate a new reduction LCO.
+/// Allocate a new reduce LCO.
 ///
 /// The reduction is allocated in reduce-mode, i.e., it expects @p participants
 /// to call the hpx_lco_set() operation as the first phase of operation.
@@ -583,7 +573,7 @@ hpx_addr_t hpx_lco_reduce_new(int inputs, size_t size, hpx_action_t id,
                               hpx_action_t op)
   HPX_PUBLIC;
 
-/// Allocate a new all-reduction LCO.
+/// Allocate a new allreduce LCO.
 ///
 /// The reduction is allocated in reduce-mode, i.e., it expects @p participants
 /// to call the hpx_lco_set() operation as the first phase of operation, and @p
@@ -607,7 +597,7 @@ hpx_addr_t hpx_lco_allreduce_new(size_t participants, size_t readers, size_t siz
                                  hpx_action_t id, hpx_action_t op)
   HPX_PUBLIC;
 
-/// Join an all-reduction LCO.
+/// Join an allreduce LCO.
 ///
 /// This version of the join operation allows an arbitrary continuation for the
 /// reduced data. This counts as both a set and a get operation, even if the
@@ -629,7 +619,7 @@ hpx_status_t hpx_lco_allreduce_join(hpx_addr_t allreduce, int id, size_t bytes,
                                     hpx_addr_t at)
   HPX_PUBLIC;
 
-/// Join an all-reduction LCO.
+/// Join an allreduce LCO asynchronously.
 ///
 /// This version of the join operation returns the reduced value asynchronously
 /// to the caller. This counts as both a set and a get operation.
@@ -651,7 +641,7 @@ hpx_status_t hpx_lco_allreduce_join_async(hpx_addr_t allreduce, int id,
                                           void *out, hpx_addr_t done)
   HPX_PUBLIC;
 
-/// Join an all-reduction LCO.
+/// Join an allreduce LCO synchronously.
 ///
 /// This version of the join operation returns the reduced value synchronously
 /// to the caller. This counts as both a set and a get operation.
@@ -695,7 +685,7 @@ hpx_status_t hpx_lco_gather_setid(hpx_addr_t gather, unsigned id,
 hpx_addr_t hpx_lco_gather_new(size_t inputs, size_t outputs, size_t size)
   HPX_PUBLIC;
 
-/// Set an alltoall.
+/// Set an alltoall LCO.
 ///
 /// The alltoall LCO hpx_lco_set operation does not work correctly, because
 /// there is no input variable. Use this setid operation instead of set.
@@ -711,7 +701,7 @@ hpx_status_t hpx_lco_alltoall_setid(hpx_addr_t alltoall, unsigned id,
                                     hpx_addr_t lsync, hpx_addr_t rsync)
   HPX_PUBLIC;
 
-/// Get the ID for alltoall. This is global getid for the user to use.
+/// Get the ID for an alltoall LCO. This is global getid for the user to use.
 ///
 /// @param   alltoall    Global address of the alltoall LCO
 /// @param   id          The ID of our rank
@@ -721,7 +711,7 @@ hpx_status_t hpx_lco_alltoall_getid(hpx_addr_t alltoall, unsigned id, int size,
                                     void *value)
   HPX_PUBLIC;
 
-/// Allocate an alltoall.
+/// Allocate an alltoall LCO.
 ///
 /// This allocates an alltoall LCO with enough space for @p inputs of @p size.
 ///
