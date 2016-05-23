@@ -67,7 +67,7 @@ _HPX_REDUCTION_MAX_DEF(FLOAT, float, -FLT_MAX);
   }                                                       \
   void HPX_##TYPE##_MIN_OP(dtype *i, const dtype *j,      \
                            size_t UNUSED) {               \
-    *i = (*i > *j) ? *i : *j;                             \
+    *i = (*i < *j) ? *i : *j;                             \
   }
 
 _HPX_REDUCTION_MIN_DEF(INT, int, INT_MAX);
