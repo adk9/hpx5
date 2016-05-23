@@ -338,7 +338,7 @@ void hpx_lco_sema_v_sync(hpx_addr_t sema)
 hpx_status_t hpx_lco_sema_p(hpx_addr_t sema)
   HPX_PUBLIC;
 
-/// An and LCO represents an AND gate.
+/// An "and" LCO represents an AND gate.
 /// @{
 
 /// Create an AND gate.
@@ -413,98 +413,6 @@ hpx_addr_t hpx_lco_future_array_at(hpx_addr_t base, int i, int size, int bsize)
 /// @returns The address of the ith lco in the array.
 hpx_addr_t hpx_lco_array_at(hpx_addr_t base, int i, int size)
   HPX_PUBLIC;
-
-
-/// Allocate an array of future LCO local to the calling locality.
-/// @param          n The (total) number of lcos to allocate
-/// @param       size The size of each future's value
-///
-/// @returns the global address of the allocated array lco.
-hpx_addr_t hpx_lco_future_local_array_new(int n, int size)
-  HPX_PUBLIC;
-
-/// Allocate an array of and LCO local to the calling locality.
-/// @param          n The (total) number of lcos to allocate
-/// @param     inputs number of inputs to the and (must be >= 0)
-///
-/// @returns the global address of the allocated array lco.
-hpx_addr_t hpx_lco_and_local_array_new(int n, int inputs)
-  HPX_PUBLIC;
-
-/// Allocate an array of reduce LCO local to the calling locality.
-/// @param          n The (total) number of lcos to allocate
-/// @param     inputs The static number of inputs to the reduction.
-/// @param       size The size of the data being reduced.
-/// @param         id An initialization function for the data, this is
-///                   used to initialize the data in every epoch.
-/// @param         op The commutative-associative operation we're
-///                   performing.
-///
-/// @returns the global address of the allocated array lco.
-hpx_addr_t hpx_lco_reduce_local_array_new(int n, int inputs, size_t size,
-                                          hpx_action_t id,
-                                          hpx_action_t op)
-  HPX_PUBLIC;
-
-
-/// Allocate an array of gather LCO local to the calling locality.
-/// @param          n The (total) number of lcos to allocate
-/// @param     inputs Number of inputs to the gather
-/// @param       size The size of the value for gather LCO
-///
-/// @returns the global address of the allocated array lco.
-hpx_addr_t hpx_lco_gather_local_array_new(int n, size_t inputs, size_t outputs,
-                                          size_t size)
-  HPX_PUBLIC;
-
-/// Allocate an array of allreduce LCO local to the calling locality.
-/// @param            n The (total) number of lcos to allocate
-/// @param participants The static number of participants in the reduction.
-/// @param      readers The static number of the readers of the result of the reduction.
-/// @param         size The size of the data being reduced.
-/// @param           id An initialization function for the data, this is
-///                     used to initialize the data in every epoch.
-/// @param           op The commutative-associative operation we're
-///                     performing.
-///
-/// @returns the global address of the allocated array lco.
-hpx_addr_t hpx_lco_allreduce_local_array_new(int n, size_t participants,
-                                             size_t readers, size_t size,
-                                             hpx_action_t id,
-                                             hpx_action_t op)
-  HPX_PUBLIC;
-
-/// Allocate an array of alltoall LCO local to the calling locality.
-/// @param          n The (total) number of lcos to allocate
-/// @param     inputs Number of inputs to alltoall LCO
-/// @param       size The size of the value that we're gathering
-///
-/// @returns the global address of the allocated array lco.
-hpx_addr_t hpx_lco_alltoall_local_array_new(int n, size_t inputs, size_t size)
-  HPX_PUBLIC;
-
-/// Allocate an array of user LCO local to the calling locality.
-/// @param          n The (total) number of lcos to allocate
-/// @param       size The size of the LCO Buffer
-/// @param         id An initialization function for the data, this is
-///                   used to initialize the data in every epoch.
-/// @param         op The commutative-associative operation we're
-///                   performing.
-/// @param  predicate Predicate to guard the LCO.
-/// @param       init Buffer to initialize the LCO with.
-/// @param  init_size The size of the initializer.
-///
-/// @returns the global address of the allocated array lco.
-hpx_addr_t hpx_lco_user_local_array_new(int n, size_t size,
-                                        hpx_action_t id, hpx_action_t op,
-                                        hpx_action_t predicate, void *init,
-                                        size_t init_size)
-  HPX_PUBLIC;
-
-/// Get the user-defined LCO's user data. This allows to access the buffer
-/// portion of the user-defined LCO regardless the LCO has been set or not.
-/// @param        lco The LCO we're processing.
-void *hpx_lco_user_get_user_data(void *lco) HPX_PUBLIC;
 
 /// Allocate a new generation counter.
 ///
@@ -725,7 +633,11 @@ hpx_addr_t hpx_lco_user_new(size_t size, hpx_action_t id, hpx_action_t op,
                             hpx_action_t predicate, void *init,
                             size_t init_size)
   HPX_PUBLIC;
-/// @}
+
+/// Get the user-defined LCO's user data. This allows to access the buffer
+/// portion of the user-defined LCO regardless the LCO has been set or not.
+/// @param        lco The LCO we're processing.
+void *hpx_lco_user_get_user_data(void *lco) HPX_PUBLIC;
 
 /// Allocate a dataflow LCO.
 ///
@@ -748,6 +660,97 @@ int _hpx_lco_dataflow_add(hpx_addr_t lco, hpx_action_t action,
 #define hpx_lco_dataflow_add(lco, action, out, ...)                   \
   _hpx_lco_dataflow_add(lco, action, out, __HPX_NARGS(__VA_ARGS__) , \
                         ##__VA_ARGS__)
+/// @}
+
+/// Local array operations for LCOs. These allow creation of LCO arrays
+/// local to the calling locality.
+/// @{
+///
+/// Allocate an array of future LCO local to the calling locality.
+/// @param          n The (total) number of lcos to allocate
+/// @param       size The size of each future's value
+///
+/// @returns the global address of the allocated array lco.
+hpx_addr_t hpx_lco_future_local_array_new(int n, int size)
+  HPX_PUBLIC;
+
+/// Allocate an array of and LCO local to the calling locality.
+/// @param          n The (total) number of lcos to allocate
+/// @param     inputs number of inputs to the and (must be >= 0)
+///
+/// @returns the global address of the allocated array lco.
+hpx_addr_t hpx_lco_and_local_array_new(int n, int inputs)
+  HPX_PUBLIC;
+
+/// Allocate an array of reduce LCO local to the calling locality.
+/// @param          n The (total) number of lcos to allocate
+/// @param     inputs The static number of inputs to the reduction.
+/// @param       size The size of the data being reduced.
+/// @param         id An initialization function for the data, this is
+///                   used to initialize the data in every epoch.
+/// @param         op The commutative-associative operation we're
+///                   performing.
+///
+/// @returns the global address of the allocated array lco.
+hpx_addr_t hpx_lco_reduce_local_array_new(int n, int inputs, size_t size,
+                                          hpx_action_t id,
+                                          hpx_action_t op)
+  HPX_PUBLIC;
+
+
+/// Allocate an array of gather LCO local to the calling locality.
+/// @param          n The (total) number of lcos to allocate
+/// @param     inputs Number of inputs to the gather
+/// @param       size The size of the value for gather LCO
+///
+/// @returns the global address of the allocated array lco.
+hpx_addr_t hpx_lco_gather_local_array_new(int n, size_t inputs, size_t outputs,
+                                          size_t size)
+  HPX_PUBLIC;
+
+/// Allocate an array of allreduce LCO local to the calling locality.
+/// @param            n The (total) number of lcos to allocate
+/// @param participants The static number of participants in the reduction.
+/// @param      readers The static number of the readers of the result of the reduction.
+/// @param         size The size of the data being reduced.
+/// @param           id An initialization function for the data, this is
+///                     used to initialize the data in every epoch.
+/// @param           op The commutative-associative operation we're
+///                     performing.
+///
+/// @returns the global address of the allocated array lco.
+hpx_addr_t hpx_lco_allreduce_local_array_new(int n, size_t participants,
+                                             size_t readers, size_t size,
+                                             hpx_action_t id,
+                                             hpx_action_t op)
+  HPX_PUBLIC;
+
+/// Allocate an array of alltoall LCO local to the calling locality.
+/// @param          n The (total) number of lcos to allocate
+/// @param     inputs Number of inputs to alltoall LCO
+/// @param       size The size of the value that we're gathering
+///
+/// @returns the global address of the allocated array lco.
+hpx_addr_t hpx_lco_alltoall_local_array_new(int n, size_t inputs, size_t size)
+  HPX_PUBLIC;
+
+/// Allocate an array of user LCO local to the calling locality.
+/// @param          n The (total) number of lcos to allocate
+/// @param       size The size of the LCO Buffer
+/// @param         id An initialization function for the data, this is
+///                   used to initialize the data in every epoch.
+/// @param         op The commutative-associative operation we're
+///                   performing.
+/// @param  predicate Predicate to guard the LCO.
+/// @param       init Buffer to initialize the LCO with.
+/// @param  init_size The size of the initializer.
+///
+/// @returns the global address of the allocated array lco.
+hpx_addr_t hpx_lco_user_local_array_new(int n, size_t size,
+                                        hpx_action_t id, hpx_action_t op,
+                                        hpx_action_t predicate, void *init,
+                                        size_t init_size)
+  HPX_PUBLIC;
 /// @}
 
 #ifdef __cplusplus
