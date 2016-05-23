@@ -36,14 +36,6 @@ extern "C" {
 typedef void (*hpx_monoid_id_t)(void *i, size_t bytes);
 typedef void (*hpx_monoid_op_t)(void *lhs, const void *rhs, size_t bytes);
 
-/// A predicate that "guards" the LCO.
-///
-/// This has to return true when the value pointed to by the buffer @p
-/// i is fully resolved and can be bound to the buffer associated
-/// with the LCO. All of the waiting threads are signaled once the
-/// predicate returns true.
-typedef bool (*hpx_predicate_t)(void *i, size_t bytes);
-
 /// These are the operations associated with the generic LCO class.
 /// @{
 

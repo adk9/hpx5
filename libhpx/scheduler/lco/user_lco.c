@@ -30,6 +30,14 @@
 #include "cvar.h"
 #include "lco.h"
 
+/// A predicate that "guards" the LCO.
+///
+/// This has to return true when the value pointed to by the buffer @p
+/// i is fully resolved and can be bound to the buffer associated
+/// with the LCO. All of the waiting threads are signaled once the
+/// predicate returns true.
+typedef bool (*_hpx_predicate_t)(void *i, size_t bytes);
+
 typedef void (*_hpx_user_lco_id_t)(void *i, size_t size,
                                    void *init, size_t init_size);
 
@@ -117,7 +125,7 @@ static int _user_lco_set(lco_t *lco, int size, const void *from) {
   op(buffer, from, size);
 
   f = actions[u->predicate].handler;
-  hpx_predicate_t predicate = (hpx_predicate_t)f;
+  _hpx_predicate_t predicate = (_hpx_predicate_t)f;
   if (predicate(buffer, u->size)) {
     lco_set_triggered(&u->lco);
     scheduler_signal_all(&u->cvar);
