@@ -29,13 +29,6 @@ extern "C" {
 #include <hpx/attributes.h>
 #include <hpx/types.h>
 
-/// The commutative-associative (monoid) operation type.
-///
-/// Common operations would be min, max, +, *, etc. The runtime will pass the
-/// number of bytes that the allreduce was allocated with.
-typedef void (*hpx_monoid_id_t)(void *i, size_t bytes);
-typedef void (*hpx_monoid_op_t)(void *lhs, const void *rhs, size_t bytes);
-
 /// These are the operations associated with the generic LCO class.
 /// @{
 
@@ -660,6 +653,36 @@ int _hpx_lco_dataflow_add(hpx_addr_t lco, hpx_action_t action,
 #define hpx_lco_dataflow_add(lco, action, out, ...)                   \
   _hpx_lco_dataflow_add(lco, action, out, __HPX_NARGS(__VA_ARGS__) , \
                         ##__VA_ARGS__)
+/// @}
+
+/// LCO reduction operators.
+/// @{
+///
+/// The commutative-associative (monoid) operation type.
+///
+/// Common operations would be min, max, +, *, etc. The runtime will pass the
+/// number of bytes that the allreduce was allocated with.
+typedef void (*hpx_monoid_id_t)(void *i, size_t bytes);
+typedef void (*hpx_monoid_op_t)(void *lhs, const void *rhs, size_t bytes);
+
+/// Helper macro to declare the monoid operators for an LCO @p
+/// reduction of a given @p TYPE.
+#define _HPX_MONOID_DECL(TYPE,REDUCTION,dtype)                          \
+  void HPX_##TYPE##_##REDUCTION##_ID(dtype *, size_t);                  \
+  void HPX_##TYPE##_##REDUCTION##_OP(dtype *, const dtype *, size_t);
+
+/// Helper macro to declare a LCO @p reduction for a list of types.
+#define _HPX_REDUCTION_DECL(R)              \
+  _HPX_MONOID_DECL(INT,    R, int)          \
+  _HPX_MONOID_DECL(DOUBLE, R, double)       \
+  _HPX_MONOID_DECL(FLOAT,  R, float)
+
+/// In-built LCO reduction operations (+,-,*,max,min) that can be used
+/// with "reduction" LCOs.
+_HPX_REDUCTION_DECL(SUM);
+_HPX_REDUCTION_DECL(PROD);
+_HPX_REDUCTION_DECL(MAX);
+_HPX_REDUCTION_DECL(MIN);
 /// @}
 
 /// Local array operations for LCOs. These allow creation of LCO arrays
