@@ -63,6 +63,14 @@ typedef struct record {
 // b: byte   -- 1 bytes
 // c: char   -- 2 bytes
 
+////based on : http://cs-fundamentals.com/tech-interview/c/c-program-to-check-little-and-big-endian-architecture.php
+//char endian_flag()
+//{
+//    unsigned int x = 1;
+//    char *c = (char*) &x;
+//    return (int)*c == 1 ? '<' : '>';
+//}
+
 #define METADATA_TYPE_NAMED_VALUE  -1
 #define METADATA_TYPE_DATA_TYPES   0
 #define METADATA_TYPE_OFFSETS      1
@@ -71,71 +79,47 @@ typedef struct record {
 #define METADATA_TYPE_MINS         4
 #define METADATA_TYPE_MAXS         5
 
-// The signed types are also used for unsigned; there is not distinct unsigned
-// type for these headers.
-#define METADATA_TYPE_BYTE   'b'
-#define METADATA_TYPE_CHAR   'c'
-#define METADATA_TYPE_INT32  'i'
-#define METADATA_TYPE_INT64  'l'
-#define METADATA_TYPE_INT16  's'
-#define METADATA_TYPE_DOUBLE 'd'
-#define METADATA_TYPE_FLOAT  'f'
+// Type options currently used.  A full list is the keys of numpy.sctypeDict
+#define METADATA_TYPE_BYTE   "b"
+#define METADATA_TYPE_INT16  "i2"
+#define METADATA_TYPE_INT32  "i4"
+#define METADATA_TYPE_INT64  "i8"
+#define METADATA_TYPE_UINT16 "u2"
+#define METADATA_TYPE_UINT32 "u4"
+#define METADATA_TYPE_UINT64 "u8"
+#define METADATA_TYPE_FLOAT  "f4"
+#define METADATA_TYPE_DOUBLE "f8"
 
+//TODO: Verify that type[3] will do null-terminated strings properly
 typedef struct inst_named_value {
-  const char        type;
+  const char        type[3];
   const uint32_t   value;
   const char     name[8];
 } HPX_PACKED inst_named_value_t;
 
 typedef struct inst_event_col_metadata {
-  const char mask;           //!< this should an OR of all the following values:
-  const char data_type;      //!< mask 0x1
-  const unsigned int offset; //!< mask 0x2
-  const uint64_t min;        //!< mask 0x4
-  const uint64_t max;        //!< mask 0x8
-  const char printf_code[8]; //!< mask 0x10 (this value must be nul terminated)
-  const char name[256];      //!< mask 0x20 (this value must be nul terminated)
+  const char data_type[3];
+  const char name[256];
 } inst_event_col_metadata_t;
 
 #define METADATA_WORKER                       \
-  { .mask        = 0x3f,                      \
-    .data_type   = METADATA_TYPE_INT32,       \
-    .offset      = offsetof(record_t, worker),\
-    .min         = 0,                         \
-    .max         = INT_MAX,                   \
-    .printf_code = "d",                       \
+  { .data_type   = METADATA_TYPE_INT32,       \
     .name        = "worker"}
 
 #define METADATA_NS                           \
-  { .mask        = 0x3f,                      \
-    .data_type   = METADATA_TYPE_INT64,       \
-    .offset      = offsetof(record_t, ns),    \
-    .min         = 0,                         \
-    .max         = 1e9-1,                     \
-    .printf_code = "zu",                      \
+  { .data_type   = METADATA_TYPE_INT64,       \
     .name        = "nanoseconds"}
 
-#define METADATA_uint(width, off, _name)            \
-  { .mask        = 0x3f,                            \
-    .data_type   = METADATA_TYPE_INT64,             \
-    .offset      = offsetof(record_t, user)+(off*8),\
-    .min         = 0,                               \
-    .max         = UINT##width##_MAX,               \
-    .printf_code = "zu",                            \
+#define METADATA_int(_name)            \
+  { .data_type   = METADATA_TYPE_INT64,\
     .name        = _name}
 
-#define METADATA_int(off, _name)                    \
-  { .mask        = 0x3f,                            \
-    .data_type   = METADATA_TYPE_INT32,             \
-    .offset      = offsetof(record_t, user)+(off*8),\
-    .min         = 0,                               \
-    .max         = INT_MAX,                         \
-    .printf_code = "d",                             \
-    .name        = _name}
 
-#define METADATA_uint16_t(off, _name) METADATA_uint(16, off, _name)
-#define METADATA_uint32_t(off, _name) METADATA_uint(32, off, _name)
-#define METADATA_uint64_t(off, _name) METADATA_uint(64, off, _name)
+//TODO: WHY are all values packaged as int64?  There are other data types...
+//Maybe rewrite METADATA_int to _intv(_name, s) {.data_type = METADATA_TYPE_INT##s,...
+#define METADATA_uint16_t(_name) METADATA_int(_name)
+#define METADATA_uint32_t(_name) METADATA_int(_name)
+#define METADATA_uint64_t(_name) METADATA_int(_name)
 
 #define METADATA_size_t METADATA_uint64_t
 #define METADATA_hpx_addr_t METADATA_uint64_t
@@ -162,7 +146,7 @@ typedef struct inst_event_metadata {
 
 static const inst_event_metadata_t INST_EVENT_METADATA[] =
 {
-# define _MD(o,t,n) METADATA_##t(o,_HPX_XSTR(n))
+# define _MD(o,t,n) METADATA_##t(_HPX_XSTR(n))
 # define _ARGS0() _ENTRY()
 # define _ARGS2(t0,n0)                                  \
   _ENTRY(_MD(0,t0,n0))

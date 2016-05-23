@@ -96,25 +96,45 @@ _write_event_metadata_named_value(void* base, inst_named_value_t const *nv_md)
   }
 
 METADATA_HANDLER(data_type, METADATA_TYPE_DATA_TYPES, char)
-METADATA_HANDLER(offset, METADATA_TYPE_OFFSETS, int)
-METADATA_HANDLER(min, METADATA_TYPE_MINS, uint64_t)
-METADATA_HANDLER(max, METADATA_TYPE_MAXS, uint64_t)
-METADATA_HANDLER_STR(printf_code, METADATA_TYPE_PRINTF_CODES, 8)
 METADATA_HANDLER_STR(name, METADATA_TYPE_NAMES, 256)
+
+static size_t write_numpy_dict(void* base, const inst_event_metadata_t *event_md) {
+  char *data = (char*) base;                                   \
+  int written = 0;
+  strncat(data, "{'desc': [", 9);
+  written += 9;
+
+  for (int i=0; i< event_md->num_cols; i++) {
+    inst_event_col_metadata_t col = event_md->col_metadata[i];
+    strncat(data, "('", 2);
+    strncat(data, col.name, strlen(col.name));
+    strncat(data, "':'", 3);
+    strncat(data, col.data_type, strlen(col.data_type));
+    strncat(data, "')", 2);
+    written += 2 + strlen(col.name) + 3 + strlen(col.data_type) + 2;
+    if (i < event_md->num_cols-1) {
+      strncat(data, ",", 1);
+      written += 1;
+    }
+  }
+  strncat(data, "]", 1);
+  written += 1;
+
+  strncat(data, ", 'fortran_order': false", 24);
+  written += 24;
+
+  strncat(data, ", 'shape': (          ,)", 24);
+  written +=24;
+   
+  return written;
+}
 
 /// Write the metadata for the event to the header portion of the log
 static size_t _write_event_metadata(void* base, int class, int id) {
   inst_event_metadata_t const *event_md = &INST_EVENT_METADATA[id];
   uintptr_t curr = (uintptr_t)base;
-  // 8 byte aligned data first
-  curr += _write_event_metadata_min((void*)curr, event_md);
-  curr += _write_event_metadata_max((void*)curr, event_md);
-  // 4 byte-aligned
-  curr += _write_event_metadata_offset((void*)curr, event_md);
   // 1 byte-aligned
-  curr += _write_event_metadata_data_type((void*)curr, event_md);
-  curr += _write_event_metadata_printf_code((void*)curr, event_md);
-  curr += _write_event_metadata_name((void*)curr, event_md);
+  curr += write_numpy_dict((void*) curr, event_md);
   // 1 byte-aligned named values
   // record rank
   inst_named_value_t rank_md = {
