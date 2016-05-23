@@ -146,20 +146,20 @@ typedef struct inst_event_metadata {
 
 static const inst_event_metadata_t INST_EVENT_METADATA[] =
 {
-# define _MD(o,t,n) METADATA_##t(_HPX_XSTR(n))
+# define _MD(t,n) METADATA_##t(_HPX_XSTR(n))
 # define _ARGS0() _ENTRY()
 # define _ARGS2(t0,n0)                                  \
-  _ENTRY(_MD(0,t0,n0))
+  _ENTRY(_MD(t0,n0))
 # define _ARGS4(t0,n0,t1,n1)                            \
-  _ENTRY(_MD(0,t0,n0),_MD(1,t1,n1))
+  _ENTRY(_MD(t0,n0),_MD(t1,n1))
 # define _ARGS6(t0,n0,t1,n1,t2,n2)                      \
-  _ENTRY(_MD(0,t0,n0),_MD(1,t1,n1),_MD(2,t2,n2))
+  _ENTRY(_MD(t0,n0),_MD(t1,n1),_MD(t2,n2))
 # define _ARGS8(t0,n0,t1,n1,t2,n2,t3,n3)                \
-  _ENTRY(_MD(0,t0,n0),_MD(1,t1,n1),_MD(2,t2,n2),        \
-         _MD(3,t3,n3))
+  _ENTRY(_MD(t0,n0),_MD(t1,n1),_MD(t2,n2),        \
+         _MD(t3,n3))
 # define _ARGS10(t0,n0,t1,n1,t2,n2,t3,n3,t4,n4)         \
-  _ENTRY(_MD(0,t0,n0),_MD(1,t1,n1),_MD(2,t2,n2),        \
-         _MD(3,t3,n3),_MD(4,t4,n4))
+  _ENTRY(_MD(t0,n0),_MD(t1,n1),_MD(t2,n2),        \
+         _MD(t3,n3),_MD(t4,n4))
 # define _ARGSN(...) _HPX_CAT2(_ARGS, __HPX_NARGS(__VA_ARGS__))(__VA_ARGS__)
 # define LIBHPX_EVENT(class, event, ...) _ARGSN(__VA_ARGS__),
 # include <libhpx/events.def>

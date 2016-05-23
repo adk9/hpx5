@@ -98,8 +98,17 @@ _write_event_metadata_named_value(void* base, inst_named_value_t const *nv_md)
 METADATA_HANDLER(data_type, METADATA_TYPE_DATA_TYPES, char)
 METADATA_HANDLER_STR(name, METADATA_TYPE_NAMES, 256)
 
+//based on : http://cs-fundamentals.com/tech-interview/c/c-program-to-check-little-and-big-endian-architecture.php
+const char* endian_flag()
+{
+    unsigned int x = 1;
+    char *c = (char*) &x;
+    return (int)*c == 1 ? "<" : ">";
+}
+
 static size_t write_numpy_dict(void* base, const inst_event_metadata_t *event_md) {
-  char *data = (char*) base;                                   \
+  char *data = (char*) base;
+  const char* endian = endian_flag();
   int written = 0;
   strncat(data, "{'desc': [", 9);
   written += 9;
@@ -109,6 +118,7 @@ static size_t write_numpy_dict(void* base, const inst_event_metadata_t *event_md
     strncat(data, "('", 2);
     strncat(data, col.name, strlen(col.name));
     strncat(data, "':'", 3);
+    strncat(data, endian, 1);
     strncat(data, col.data_type, strlen(col.data_type));
     strncat(data, "')", 2);
     written += 2 + strlen(col.name) + 3 + strlen(col.data_type) + 2;
@@ -128,6 +138,7 @@ static size_t write_numpy_dict(void* base, const inst_event_metadata_t *event_md
    
   return written;
 }
+
 
 /// Write the metadata for the event to the header portion of the log
 static size_t _write_event_metadata(void* base, int class, int id) {
