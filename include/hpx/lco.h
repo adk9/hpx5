@@ -667,22 +667,22 @@ typedef void (*hpx_monoid_op_t)(void *lhs, const void *rhs, size_t bytes);
 
 /// Helper macro to declare the monoid operators for an LCO @p
 /// reduction of a given @p TYPE.
-#define _HPX_MONOID_DECL(TYPE,REDUCTION,dtype)                          \
-  void HPX_##TYPE##_##REDUCTION##_ID(dtype *, size_t);                  \
-  void HPX_##TYPE##_##REDUCTION##_OP(dtype *, const dtype *, size_t);
+#define _HPX_MONOID_DECL(TYPE,REDUCTION,dtype)                      \
+  void HPX_##TYPE##REDUCTION##ID(dtype *, size_t);                  \
+  void HPX_##TYPE##REDUCTION##OP(dtype *, const dtype *, size_t);
 
 /// Helper macro to declare a LCO @p reduction for a list of types.
-#define _HPX_REDUCTION_DECL(R)              \
-  _HPX_MONOID_DECL(INT,    R, int)          \
-  _HPX_MONOID_DECL(DOUBLE, R, double)       \
-  _HPX_MONOID_DECL(FLOAT,  R, float)
+#define _HPX_REDUCTION_DECL(R)               \
+  _HPX_MONOID_DECL(INT_,    R, int)          \
+  _HPX_MONOID_DECL(DOUBLE_, R, double)       \
+  _HPX_MONOID_DECL(FLOAT_,  R, float)
 
 /// In-built LCO reduction operations (+,-,*,max,min) that can be used
 /// with "reduction" LCOs.
-_HPX_REDUCTION_DECL(SUM);
-_HPX_REDUCTION_DECL(PROD);
-_HPX_REDUCTION_DECL(MAX);
-_HPX_REDUCTION_DECL(MIN);
+_HPX_REDUCTION_DECL(SUM_);
+_HPX_REDUCTION_DECL(PROD_);
+_HPX_REDUCTION_DECL(MAX_);
+_HPX_REDUCTION_DECL(MIN_);
 /// @}
 
 /// Local array operations for LCOs. These allow creation of LCO arrays
