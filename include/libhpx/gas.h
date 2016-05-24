@@ -33,7 +33,7 @@ typedef struct gas {
   libhpx_gas_t type;
   class_string_t string;
 
-  const uint64_t max_block_size;
+  uint64_t max_block_size;
 
   void (*dealloc)(void *gas);
   size_t (*local_size)(void *gas);
