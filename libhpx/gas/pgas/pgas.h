@@ -62,7 +62,7 @@ extern HPX_ACTION_DECL(pgas_free);
 ///
 /// @returns            A global address representing the base of the
 ///                     allocation, or HPX_NULL if there is an error.
-hpx_addr_t pgas_alloc_cyclic_sync(size_t n, uint32_t bsize);
+hpx_addr_t pgas_alloc_cyclic_sync(size_t n, size_t bsize);
 
 /// Synchronous entry point for calloc.
 ///
@@ -71,7 +71,7 @@ hpx_addr_t pgas_alloc_cyclic_sync(size_t n, uint32_t bsize);
 ///
 /// @returns            A global address representing the base of the
 ///                     allocation, or HPX_NULL if there is an error.
-hpx_addr_t pgas_calloc_cyclic_sync(size_t n, uint32_t bsize);
+hpx_addr_t pgas_calloc_cyclic_sync(size_t n, size_t bsize);
 
 /// @}
 

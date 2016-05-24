@@ -74,7 +74,7 @@ static int _verify(_dist_type dist) {
 }
 
 static int _run_test(_alloc_type alloc, _dist_type dist) {
-  hpx_addr_t (*alloc_fn)(size_t, uint32_t, uint32_t);
+  hpx_addr_t (*alloc_fn)(size_t, size_t, uint32_t);
   if (dist == _cyclic && alloc == _alloc) {
     alloc_fn = hpx_gas_alloc_cyclic;
   } else if (dist == _cyclic && alloc == _calloc) {

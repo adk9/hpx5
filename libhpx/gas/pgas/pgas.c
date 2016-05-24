@@ -49,6 +49,9 @@
 ///
 heap_t *global_heap = NULL;
 
+/// The PGAS GPA limits block sizes to 2^32.
+#define _pgas_max_block_size (UINT64_C(1) << GPA_MAX_LG_BSIZE)
+
 static void _pgas_dealloc(void *gas) {
   cyclic_allocator_fini();
   global_allocator_fini();
@@ -82,7 +85,8 @@ uint64_t pgas_max_offset(void) {
 }
 
 static int64_t
-_pgas_sub(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
+_pgas_sub(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs, size_t bsize) {
+  dbg_assert_str(bsize <= _pgas_max_block_size, "block size overflow.\n");
   bool l = _gpa_is_cyclic(lhs);
   bool r = _gpa_is_cyclic(rhs);
   dbg_assert_str(l == r, "cannot compare addresses across allocations.\n");
@@ -92,7 +96,8 @@ _pgas_sub(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
 }
 
 static hpx_addr_t
-_pgas_add(const void *gas, hpx_addr_t gpa, int64_t bytes, uint32_t bsize) {
+_pgas_add(const void *gas, hpx_addr_t gpa, int64_t bytes, size_t bsize) {
+  dbg_assert_str(bsize <= _pgas_max_block_size, "block size overflow.\n");
   bool cyclic = _gpa_is_cyclic(gpa);
   return (cyclic) ? gpa_add_cyclic(gpa, bytes, bsize) : gpa_add(gpa, bytes);
 }
@@ -133,8 +138,10 @@ static void _pgas_unpin(void *gas, hpx_addr_t addr) {
                  "%"PRIu64" is not local to %u\n", addr, here->rank);
 }
 
-static hpx_addr_t _pgas_gas_alloc_cyclic(size_t n, uint32_t bsize,
+static hpx_addr_t _pgas_gas_alloc_cyclic(size_t n, size_t bsize,
                                          uint32_t boundary, uint32_t attr) {
+  dbg_assert_str(bsize <= _pgas_max_block_size, "block size too large.\n");
+
   hpx_addr_t addr;
   if (here->rank == 0) {
     addr = pgas_alloc_cyclic_sync(n, bsize);
@@ -148,8 +155,9 @@ static hpx_addr_t _pgas_gas_alloc_cyclic(size_t n, uint32_t bsize,
   return addr;
 }
 
-static hpx_addr_t _pgas_gas_calloc_cyclic(size_t n, uint32_t bsize,
+static hpx_addr_t _pgas_gas_calloc_cyclic(size_t n, size_t bsize,
                                           uint32_t boundary, uint32_t attr) {
+  dbg_assert_str(bsize <= _pgas_max_block_size, "block size too large.\n");
   hpx_addr_t addr;
   if (here->rank == 0) {
     addr = pgas_calloc_cyclic_sync(n, bsize);
@@ -164,8 +172,10 @@ static hpx_addr_t _pgas_gas_calloc_cyclic(size_t n, uint32_t bsize,
 }
 
 /// Allocate global blocks from the global heap.
-static hpx_addr_t _pgas_gas_alloc_local(size_t n, uint32_t bsize,
+static hpx_addr_t _pgas_gas_alloc_local(size_t n, size_t bsize,
                                         uint32_t boundary, uint32_t attr) {
+  dbg_assert_str(bsize <= _pgas_max_block_size, "block size too large.\n");
+
   size_t bytes = n * bsize;
   void *lva = NULL;
   if (boundary) {
@@ -177,8 +187,10 @@ static hpx_addr_t _pgas_gas_alloc_local(size_t n, uint32_t bsize,
 }
 
 /// Allocate global zero-filled blocks from the global heap.
-static hpx_addr_t _pgas_gas_calloc_local(size_t n, uint32_t bsize,
+static hpx_addr_t _pgas_gas_calloc_local(size_t n, size_t bsize,
                                          uint32_t boundary, uint32_t attr) {
+  dbg_assert_str(bsize <= _pgas_max_block_size, "block size too large.\n");
+
   size_t bytes = n * bsize;
   void *lva = NULL;
   if (boundary) {
@@ -248,6 +260,7 @@ static gas_t _pgas_vtable = {
     .memcpy       = pgas_memcpy,
     .memcpy_sync  = pgas_memcpy_sync,
   },
+  .max_block_size = _pgas_max_block_size,
   .dealloc        = _pgas_dealloc,
   .local_size     = _pgas_local_size,
   .local_base     = _pgas_local_base,

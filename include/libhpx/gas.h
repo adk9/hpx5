@@ -33,14 +33,16 @@ typedef struct gas {
   libhpx_gas_t type;
   class_string_t string;
 
+  const uint64_t max_block_size;
+
   void (*dealloc)(void *gas);
   size_t (*local_size)(void *gas);
   void *(*local_base)(void *gas);
 
   int64_t (*sub)(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs,
-                 uint32_t bsize);
+                 size_t bsize);
   hpx_addr_t (*add)(const void *gas, hpx_addr_t gva, int64_t bytes,
-                    uint32_t bsize);
+                    size_t bsize);
 
   hpx_addr_t (*there)(void *gas, uint32_t i);
   uint32_t (*owner_of)(const void *gas, hpx_addr_t gpa);

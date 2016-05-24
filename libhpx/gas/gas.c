@@ -75,5 +75,9 @@ gas_t *gas_new(config_t *cfg, struct boot *boot) {
     log_gas("GAS %s initialized\n", HPX_GAS_TO_STRING[type]);
   }
 
+  // NB: HPX_GAS_BLOCK_BYTES_MAX is declared const in the interface... this does
+  //     a C-style const cast during initialization to set it up.
+  HPX_GAS_BLOCK_BYTES_MAX = gas->max_block_size;
+
   return gas;
 }

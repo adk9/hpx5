@@ -38,6 +38,9 @@ __thread size_t agas_alloc_bsize;
 HPX_ACTION_DECL(agas_alloc_cyclic);
 HPX_ACTION_DECL(agas_calloc_cyclic);
 
+/// The AGAS use of GPA limits block sizes to 2^32.
+#define _agas_max_block_size (UINT64_C(1) << GPA_MAX_LG_BSIZE)
+
 static void
 _agas_dealloc(void *gas) {
   agas_t *agas = gas;
@@ -62,7 +65,10 @@ _agas_dealloc(void *gas) {
 }
 
 static int64_t
-_agas_sub(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
+_agas_sub(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs, size_t bbsize) {
+  dbg_assert(bbsize <= _agas_max_block_size);
+  uint32_t bsize = bbsize;
+
   gva_t l = { .addr = lhs };
   gva_t r = { .addr = rhs };
 
@@ -85,7 +91,10 @@ _agas_sub(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
 }
 
 static hpx_addr_t
-_agas_add(const void *gas, hpx_addr_t addr, int64_t bytes, uint32_t bsize) {
+_agas_add(const void *gas, hpx_addr_t addr, int64_t bytes, size_t bbsize) {
+  dbg_assert(bbsize <= _agas_max_block_size);
+  uint32_t bsize = bbsize;
+
   gva_t gva = { .addr = addr };
   uint32_t size = ceil_log2_32(bsize);
   if (gva.bits.size != size) {
@@ -195,8 +204,11 @@ static LIBHPX_ACTION(HPX_DEFAULT, 0, _locality_alloc_cyclic,
                      _locality_alloc_cyclic_handler, HPX_UINT64, HPX_UINT32,
                      HPX_UINT64, HPX_POINTER, HPX_UINT32, HPX_INT);
 
-hpx_addr_t _agas_alloc_cyclic_sync(size_t n, uint32_t bsize, uint32_t attr,
+hpx_addr_t _agas_alloc_cyclic_sync(size_t n, size_t bbsize, uint32_t attr,
                                    int zero) {
+  dbg_assert(bbsize <= _agas_max_block_size);
+  uint32_t bsize = bbsize;
+
   agas_t *agas = (agas_t*)here->gas;
   dbg_assert(here->rank == 0);
 
@@ -224,7 +236,7 @@ hpx_addr_t _agas_alloc_cyclic_sync(size_t n, uint32_t bsize, uint32_t attr,
   return gva.addr;
 }
 
-hpx_addr_t agas_alloc_cyclic_sync(size_t n, uint32_t bsize, uint32_t attr) {
+hpx_addr_t agas_alloc_cyclic_sync(size_t n, size_t bsize, uint32_t attr) {
   dbg_assert(here->rank == 0);
   return _agas_alloc_cyclic_sync(n, bsize, attr, 0);
 }
@@ -237,7 +249,10 @@ LIBHPX_ACTION(HPX_DEFAULT, 0, agas_alloc_cyclic, _alloc_cyclic_handler,
               HPX_SIZE_T, HPX_SIZE_T, HPX_UINT32);
 
 static hpx_addr_t
-_agas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary, uint32_t attr) {
+_agas_alloc_cyclic(size_t n, size_t bbsize, uint32_t boundary, uint32_t attr) {
+  dbg_assert(bbsize <= _agas_max_block_size);
+  uint32_t bsize = bbsize;
+
   hpx_addr_t addr;
   if (here->rank == 0) {
     addr = agas_alloc_cyclic_sync(n, bsize, attr);
@@ -251,7 +266,7 @@ _agas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary, uint32_t attr) {
   return addr;
 }
 
-hpx_addr_t agas_calloc_cyclic_sync(size_t n, uint32_t bsize, uint32_t attr) {
+hpx_addr_t agas_calloc_cyclic_sync(size_t n, size_t bsize, uint32_t attr) {
   assert(here->rank == 0);
   return _agas_alloc_cyclic_sync(n, bsize, attr, 1);
 }
@@ -264,8 +279,11 @@ LIBHPX_ACTION(HPX_DEFAULT, 0, agas_calloc_cyclic, _calloc_cyclic_handler,
               HPX_SIZE_T, HPX_SIZE_T, HPX_UINT32);
 
 static hpx_addr_t
-_agas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary,
+_agas_calloc_cyclic(size_t n, size_t bbsize, uint32_t boundary,
                     uint32_t attr) {
+  dbg_assert(bbsize <= _agas_max_block_size);
+  uint32_t bsize = bbsize;
+
   hpx_addr_t addr;
   if (here->rank == 0) {
     addr = agas_calloc_cyclic_sync(n, bsize, attr);
@@ -291,6 +309,7 @@ static gas_t _agas_vtable = {
     .memcpy       = agas_memcpy,
     .memcpy_sync  = agas_memcpy_sync,
   },
+  .max_block_size = _agas_max_block_size,
   .dealloc        = _agas_dealloc,
   .local_size     = NULL,
   .local_base     = NULL,
