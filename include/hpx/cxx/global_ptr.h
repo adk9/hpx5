@@ -138,13 +138,13 @@ class global_ptr {
   ///
   /// @param       addr The hpx_addr_t.
   /// @param          n The number of elements per block.
-  global_ptr(hpx_addr_t addr, uint32_t n) noexcept : _gbl_ptr(addr),
-                                                     _elems_per_blk(n) {
+  global_ptr(hpx_addr_t addr, size_t n) noexcept : _gbl_ptr(addr),
+    _elems_per_blk(n) {
   }
 
   /// A typed global pointer can be constructed from a global_ptr<void>, as long
   /// as the user provides a block size.
-  explicit global_ptr(const global_ptr<void>& gva, uint32_t n) noexcept
+  explicit global_ptr(const global_ptr<void>& gva, size_t n) noexcept
     : _gbl_ptr(gva.get()), _elems_per_blk(n) {
   }
 
@@ -159,7 +159,7 @@ class global_ptr {
   }
 
   /// Return the block size that this smart pointer encapsulates.
-  uint32_t get_block_size() const noexcept {
+  size_t get_block_size() const noexcept {
     return _elems_per_blk;
   }
 

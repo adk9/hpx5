@@ -36,10 +36,10 @@ typedef enum {
 } hpx_gas_dist_type_t;
 
 /// The largest block size supported by the implementation.
-extern HPX_PUBLIC const uint64_t HPX_GAS_BLOCK_BYTES_MAX;
+extern HPX_PUBLIC uint64_t HPX_GAS_BLOCK_BYTES_MAX;
 
 /// User-defined GAS distribution function.
-typedef hpx_addr_t (*hpx_gas_dist_t)(uint32_t i, size_t n, uint32_t bsize);
+typedef hpx_addr_t (*hpx_gas_dist_t)(uint32_t i, size_t n, size_t bsize);
 
 #define HPX_GAS_DIST_LOCAL   (hpx_gas_dist_t)HPX_DIST_TYPE_LOCAL
 #define HPX_GAS_DIST_CYCLIC  (hpx_gas_dist_t)HPX_DIST_TYPE_CYCLIC
@@ -60,7 +60,7 @@ typedef hpx_addr_t (*hpx_gas_dist_t)(uint32_t i, size_t n, uint32_t bsize);
 /// @param         attr The attributes of this global allocation space
 ///
 /// @returns            The global address of the allocated memory.
-hpx_addr_t hpx_gas_alloc(size_t n, uint32_t bsize, uint32_t boundary,
+hpx_addr_t hpx_gas_alloc(size_t n, size_t bsize, uint32_t boundary,
                          hpx_gas_dist_t dist, uint32_t attr)
   HPX_PUBLIC;
 
@@ -72,7 +72,7 @@ hpx_addr_t hpx_gas_alloc(size_t n, uint32_t bsize, uint32_t boundary,
 /// @param         attr The attributes of this global allocation space
 ///
 /// @returns            The global address of the allocated memory.
-hpx_addr_t hpx_gas_calloc(size_t n, uint32_t bsize, uint32_t boundary,
+hpx_addr_t hpx_gas_calloc(size_t n, size_t bsize, uint32_t boundary,
                           hpx_gas_dist_t dist, uint32_t attr)
   HPX_PUBLIC;
 
@@ -98,7 +98,7 @@ hpx_addr_t hpx_gas_calloc(size_t n, uint32_t bsize, uint32_t boundary,
 /// @param     boundary The alignment (2^k).
 ///
 /// @returns            The global address of the allocated memory.
-hpx_addr_t hpx_gas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary)
+hpx_addr_t hpx_gas_alloc_cyclic(size_t n, size_t bsize, uint32_t boundary)
   HPX_PUBLIC;
 
 /// Allocate cyclically distributed global zeroed memory.
@@ -111,7 +111,7 @@ hpx_addr_t hpx_gas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary)
 /// @param     boundary The alignment (2^k).
 ///
 /// @returns            The global address of the allocated memory.
-hpx_addr_t hpx_gas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary)
+hpx_addr_t hpx_gas_calloc_cyclic(size_t n, size_t bsize, uint32_t boundary)
   HPX_PUBLIC;
 
 /// Allocate distributed global memory laid out in a
@@ -129,7 +129,7 @@ hpx_addr_t hpx_gas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary)
 /// @param     boundary The alignment (2^k).
 ///
 /// @returns            The global address of the allocated memory.
-hpx_addr_t hpx_gas_alloc_blocked(size_t n, uint32_t bsize, uint32_t boundary)
+hpx_addr_t hpx_gas_alloc_blocked(size_t n, size_t bsize, uint32_t boundary)
   HPX_PUBLIC;
 
 /// Allocate partitioned, super-block-cyclically distributed global
@@ -143,7 +143,7 @@ hpx_addr_t hpx_gas_alloc_blocked(size_t n, uint32_t bsize, uint32_t boundary)
 /// @param     boundary The alignment (2^k).
 ///
 /// @returns            The global address of the allocated memory.
-hpx_addr_t hpx_gas_calloc_blocked(size_t n, uint32_t bsize, uint32_t boundary)
+hpx_addr_t hpx_gas_calloc_blocked(size_t n, size_t bsize, uint32_t boundary)
   HPX_PUBLIC;
 
 /// Allocate a block of global memory.
@@ -160,14 +160,14 @@ hpx_addr_t hpx_gas_calloc_blocked(size_t n, uint32_t bsize, uint32_t boundary)
 /// @param     boundary The alignment (2^k).
 ///
 /// @returns            The global address of the allocated memory.
-hpx_addr_t hpx_gas_alloc_local(size_t n, uint32_t bsize, uint32_t boundary)
+hpx_addr_t hpx_gas_alloc_local(size_t n, size_t bsize, uint32_t boundary)
   HPX_PUBLIC;
 
-hpx_addr_t hpx_gas_alloc_local_at_sync(size_t n, uint32_t bsize, uint32_t boundary,
+hpx_addr_t hpx_gas_alloc_local_at_sync(size_t n, size_t bsize, uint32_t boundary,
                                        hpx_addr_t loc)
   HPX_PUBLIC;
 
-void hpx_gas_alloc_local_at_async(size_t n, uint32_t bsize, uint32_t boundary,
+void hpx_gas_alloc_local_at_async(size_t n, size_t bsize, uint32_t boundary,
                                   hpx_addr_t loc, hpx_addr_t lco)
   HPX_PUBLIC;
 
@@ -189,14 +189,14 @@ extern HPX_PUBLIC HPX_ACTION_DECL(hpx_gas_alloc_local_at_action);
 /// @param     boundary The alignment (2^k).
 ///
 /// @returns            The global address of the allocated memory.
-hpx_addr_t hpx_gas_calloc_local(size_t n, uint32_t bsize, uint32_t boundary)
+hpx_addr_t hpx_gas_calloc_local(size_t n, size_t bsize, uint32_t boundary)
   HPX_PUBLIC;
 
-hpx_addr_t hpx_gas_calloc_local_at_sync(size_t n, uint32_t bsize,
+hpx_addr_t hpx_gas_calloc_local_at_sync(size_t n, size_t bsize,
                                         uint32_t boundary, hpx_addr_t loc)
   HPX_PUBLIC;
 
-void hpx_gas_calloc_local_at_async(size_t n, uint32_t bsize,
+void hpx_gas_calloc_local_at_async(size_t n, size_t bsize,
                                    uint32_t boundary, hpx_addr_t loc,
                                    hpx_addr_t out)
   HPX_PUBLIC;
@@ -211,7 +211,7 @@ extern HPX_PUBLIC HPX_ACTION_DECL(hpx_gas_calloc_local_at_action);
 /// @param         attr The attributes of this global allocation space
 ///
 /// @returns            The global address of the allocated memory.
-hpx_addr_t hpx_gas_alloc_cyclic_attr(size_t n, uint32_t bsize, uint32_t boundary,
+hpx_addr_t hpx_gas_alloc_cyclic_attr(size_t n, size_t bsize, uint32_t boundary,
                                      uint32_t attr)
   HPX_PUBLIC;
 /// @param            n The number of blocks to allocate.
@@ -220,7 +220,7 @@ hpx_addr_t hpx_gas_alloc_cyclic_attr(size_t n, uint32_t bsize, uint32_t boundary
 /// @param         attr The attributes of this global allocation space
 ///
 /// @returns            The global address of the allocated memory.
-hpx_addr_t hpx_gas_calloc_cyclic_attr(size_t n, uint32_t bsize, uint32_t boundary,
+hpx_addr_t hpx_gas_calloc_cyclic_attr(size_t n, size_t bsize, uint32_t boundary,
                                       uint32_t attr)
   HPX_PUBLIC;
 /// @param            n The number of blocks to allocate.
@@ -229,7 +229,7 @@ hpx_addr_t hpx_gas_calloc_cyclic_attr(size_t n, uint32_t bsize, uint32_t boundar
 /// @param         attr The attributes of this global allocation space
 ///
 /// @returns            The global address of the allocated memory.
-hpx_addr_t hpx_gas_alloc_blocked_attr(size_t n, uint32_t bsize, uint32_t boundary,
+hpx_addr_t hpx_gas_alloc_blocked_attr(size_t n, size_t bsize, uint32_t boundary,
                                       uint32_t attr)
   HPX_PUBLIC;
 /// @param            n The number of blocks to allocate.
@@ -238,7 +238,7 @@ hpx_addr_t hpx_gas_alloc_blocked_attr(size_t n, uint32_t bsize, uint32_t boundar
 /// @param         attr The attributes of this global allocation space
 ///
 /// @returns            The global address of the allocated memory.
-hpx_addr_t hpx_gas_calloc_blocked_attr(size_t n, uint32_t bsize, uint32_t boundary,
+hpx_addr_t hpx_gas_calloc_blocked_attr(size_t n, size_t bsize, uint32_t boundary,
                                        uint32_t attr)
   HPX_PUBLIC;
 /// @param            n The number of blocks to allocate.
@@ -247,7 +247,7 @@ hpx_addr_t hpx_gas_calloc_blocked_attr(size_t n, uint32_t bsize, uint32_t bounda
 /// @param         attr The attributes of this global allocation space
 ///
 /// @returns            The global address of the allocated memory.
-hpx_addr_t hpx_gas_alloc_local_attr(size_t n, uint32_t bsize, uint32_t boundary,
+hpx_addr_t hpx_gas_alloc_local_attr(size_t n, size_t bsize, uint32_t boundary,
                                     uint32_t attr)
   HPX_PUBLIC;
 /// @param            n The number of blocks to allocate.
@@ -256,7 +256,7 @@ hpx_addr_t hpx_gas_alloc_local_attr(size_t n, uint32_t bsize, uint32_t boundary,
 /// @param         attr The attributes of this global allocation space
 ///
 /// @returns            The global address of the allocated memory.
-hpx_addr_t hpx_gas_calloc_local_attr(size_t n, uint32_t bsize, uint32_t boundary,
+hpx_addr_t hpx_gas_calloc_local_attr(size_t n, size_t bsize, uint32_t boundary,
                                      uint32_t attr)
   HPX_PUBLIC;
 

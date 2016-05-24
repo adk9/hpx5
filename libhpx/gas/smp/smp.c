@@ -37,9 +37,12 @@ static void
 _smp_dealloc(void *gas) {
 }
 
+/// The SMP GAS doesn't restrict block sizes.
+#define _smp_max_block_size (UINT64_MAX)
+
 /// Figure out how far apart two addresses are.
 static int64_t
-_smp_sub(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
+_smp_sub(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs, size_t bsize) {
   dbg_assert(lhs != HPX_NULL);
   dbg_assert(rhs != HPX_NULL);
   return (lhs - rhs);
@@ -47,7 +50,7 @@ _smp_sub(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
 
 /// Adjust an address by an offset.
 static hpx_addr_t
-_smp_add(const void *gas, hpx_addr_t gva, int64_t bytes, uint32_t bsize) {
+_smp_add(const void *gas, hpx_addr_t gva, int64_t bytes, size_t bsize) {
   dbg_assert(gva != HPX_NULL);
   return gva + bytes;
 }
@@ -85,7 +88,7 @@ _smp_there(void *gas, uint32_t i) {
 
 /// Allocate a global array.
 static hpx_addr_t
-_smp_gas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary,
+_smp_gas_alloc_cyclic(size_t n, size_t bsize, uint32_t boundary,
                       uint32_t attr) {
   void *p = NULL;
   if (boundary) {
@@ -99,7 +102,7 @@ _smp_gas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary,
 
 /// Allocate a 0-filled global array.
 static hpx_addr_t
-_smp_gas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary,
+_smp_gas_calloc_cyclic(size_t n, size_t bsize, uint32_t boundary,
                        uint32_t attr) {
   size_t bytes = n * bsize;
   void *p = NULL;
@@ -115,7 +118,7 @@ _smp_gas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary,
 
 /// Allocate a bunch of global memory
 static hpx_addr_t
-_smp_gas_alloc_local(size_t n, uint32_t bsize, uint32_t boundary,
+_smp_gas_alloc_local(size_t n, size_t bsize, uint32_t boundary,
                      uint32_t attr) {
   size_t bytes = n * bsize;
   void *p = NULL;
@@ -129,7 +132,7 @@ _smp_gas_alloc_local(size_t n, uint32_t bsize, uint32_t boundary,
 
 /// Allocate a bunch of initialized global memory
 static hpx_addr_t
-_smp_gas_calloc_local(size_t n, uint32_t bsize, uint32_t boundary,
+_smp_gas_calloc_local(size_t n, size_t bsize, uint32_t boundary,
                       uint32_t attr) {
   size_t bytes = n * bsize;
   void *p = NULL;
@@ -274,6 +277,7 @@ static gas_t _smp_vtable = {
     .memcpy       = _smp_memcpy,
     .memcpy_sync  = _smp_memcpy_sync
   },
+  .max_block_size = _smp_max_block_size,
   .dealloc        = _smp_dealloc,
   .local_size     = _smp_local_size,
   .local_base     = _smp_local_base,
