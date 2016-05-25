@@ -107,34 +107,42 @@ const char* endian_flag()
 }
 
 static size_t write_numpy_dict(void* base, const inst_event_metadata_t *event_md) {
+  const char* DICT_START = "{'desc':";
+  const char* PAIR_START = "('";
+  const char* PAIR_BRIDGE = "', '";
+  const char* PAIR_END = "')";
+  const char* ENTRY_SEP = ", ";
+  const char* LIST_START = "[";
+  const char* LIST_END = "]";
+  const char* FORTRAN = ", 'fortran_order': False";
+  const char* SHAPE = ", 'shape': (          ,)";
+  const char* DICT_END = "}\n";
+
   char *data = (char*) base;
   const char* endian = endian_flag();
   int written = 0;
-  strncat(data, "{'desc': [", 9);
-  written += 9;
+  strcat(data, DICT_START);
+  strcat(data, LIST_START);
+  written += strlen(DICT_START) + strlen(LIST_START);
 
   for (int i=0; i< event_md->num_cols; i++) {
     inst_event_col_metadata_t col = event_md->col_metadata[i];
-    strncat(data, "('", 2);
-    strncat(data, col.name, strlen(col.name));
-    strncat(data, "':'", 3);
-    strncat(data, endian, 1);
-    strncat(data, col.data_type, strlen(col.data_type));
-    strncat(data, "')", 2);
-    written += 2 + strlen(col.name) + 3 + strlen(col.data_type) + 2;
+    strcat(data, PAIR_START);
+    strcat(data, col.name);
+    strcat(data, PAIR_BRIDGE);
+    strcat(data, endian);
+    strcat(data, col.data_type);
+    strcat(data, PAIR_END);
+    written += strlen(PAIR_START) + strlen(col.name) + strlen(PAIR_BRIDGE) + strlen(col.data_type) + strlen(PAIR_END);
     if (i < event_md->num_cols-1) {
-      strncat(data, ",", 1);
-      written += 1;
+      strcat(data, ENTRY_SEP);
+      written += strlen(ENTRY_SEP);
     }
   }
-  strncat(data, "]", 1);
-  written += 1;
-
-  strncat(data, ", 'fortran_order': false", 24);
-  written += 24;
-
-  strncat(data, ", 'shape': (          ,)", 24);
-  written +=24;
+  strcat(data, LIST_END);
+  strcat(data, FORTRAN);
+  strcat(data, SHAPE);
+  written += strlen(LIST_END) + strlen(FORTRAN) + strlen(SHAPE);
    
   return written;
 }
