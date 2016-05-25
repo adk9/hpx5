@@ -62,15 +62,6 @@ typedef struct record {
 // f: float  -- 4 bytes
 // b: byte   -- 1 bytes
 // c: char   -- 2 bytes
-
-////based on : http://cs-fundamentals.com/tech-interview/c/c-program-to-check-little-and-big-endian-architecture.php
-//char endian_flag()
-//{
-//    unsigned int x = 1;
-//    char *c = (char*) &x;
-//    return (int)*c == 1 ? '<' : '>';
-//}
-
 #define METADATA_TYPE_NAMED_VALUE  -1
 #define METADATA_TYPE_DATA_TYPES   0
 #define METADATA_TYPE_OFFSETS      1
@@ -155,11 +146,9 @@ static const inst_event_metadata_t INST_EVENT_METADATA[] =
 # define _ARGS6(t0,n0,t1,n1,t2,n2)                      \
   _ENTRY(_MD(t0,n0),_MD(t1,n1),_MD(t2,n2))
 # define _ARGS8(t0,n0,t1,n1,t2,n2,t3,n3)                \
-  _ENTRY(_MD(t0,n0),_MD(t1,n1),_MD(t2,n2),        \
-         _MD(t3,n3))
+  _ENTRY(_MD(t0,n0),_MD(t1,n1),_MD(t2,n2), _MD(t3,n3))
 # define _ARGS10(t0,n0,t1,n1,t2,n2,t3,n3,t4,n4)         \
-  _ENTRY(_MD(t0,n0),_MD(t1,n1),_MD(t2,n2),        \
-         _MD(t3,n3),_MD(t4,n4))
+  _ENTRY(_MD(t0,n0),_MD(t1,n1),_MD(t2,n2), _MD(t3,n3),_MD(t4,n4))
 # define _ARGSN(...) _HPX_CAT2(_ARGS, __HPX_NARGS(__VA_ARGS__))(__VA_ARGS__)
 # define LIBHPX_EVENT(class, event, ...) _ARGSN(__VA_ARGS__),
 # include <libhpx/events.def>
