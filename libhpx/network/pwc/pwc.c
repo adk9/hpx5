@@ -213,6 +213,11 @@ network_pwc_funneled_new(const config_t *cfg, boot_t *boot, gas_t *gas) {
   }
 
   // Validate configuration.
+  if (popcountl(cfg->pwc_parcelbuffersize) != 1) {
+    dbg_error("--hpx-pwc-parcelbuffersize must 2^k (given %zu)\n",
+              cfg->pwc_parcelbuffersize);
+  }
+
   if (cfg->pwc_parceleagerlimit > cfg->pwc_parcelbuffersize) {
     dbg_error(" --hpx-pwc-parceleagerlimit (%zu) must be less than "
               "--hpx-pwc-parcelbuffersize (%zu)\n",

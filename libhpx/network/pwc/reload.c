@@ -65,7 +65,6 @@ static void _buffer_fini(buffer_t *b) {
 
 static void
 _buffer_reload(buffer_t *b, pwc_xport_t *xport) {
-  dbg_assert(1ul << ceil_log2_size_t(b->n) == b->n);
   b->block = parcel_block_new(b->n, b->n, &b->i);
   xport->key_find(xport, b->block, b->n, &b->key);
 }
