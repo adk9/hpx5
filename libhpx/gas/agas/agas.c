@@ -170,9 +170,9 @@ static int
 _locality_alloc_cyclic_handler(uint64_t blocks, uint32_t align, uint64_t offset,
                                void *lva, uint32_t attr, int zero) {
   agas_t *agas = (agas_t*)here->gas;
-  uint32_t bsize = 1u << align;
+  size_t bsize = 1u << align;
   if (here->rank != 0) {
-    uint32_t boundary = (bsize < 8) ? 8 : bsize;
+    size_t boundary = (bsize < 8) ? 8 : bsize;
     lva = NULL;
     int e = posix_memalign(&lva, boundary, blocks * bsize);
     dbg_check(e, "Failed memalign\n");
@@ -215,8 +215,8 @@ hpx_addr_t _agas_alloc_cyclic_sync(size_t n, size_t bbsize, uint32_t attr,
   // Figure out how many blocks per node we need.
   uint64_t blocks = ceil_div_64(n, here->ranks);
   uint32_t  align = ceil_log2_32(bsize);
-  dbg_assert(align < 32);
-  uint32_t padded = 1u << align;
+  dbg_assert(align <= 32);
+  size_t padded = 1u << align;
 
   agas_alloc_bsize = padded;
   // Allocate the blocks as a contiguous, aligned array from cyclic memory.

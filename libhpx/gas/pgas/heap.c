@@ -77,7 +77,7 @@ heap_init(heap_t *heap, size_t size) {
 
   heap->max_block_lg_size = min_int(GPA_MAX_LG_BSIZE, ceil_log2_size_t(heap->nbytes));
   size_t align = (1lu << heap->max_block_lg_size);
-  void *addr = (void*)align;
+  void *addr = (void*)(uintptr_t)align;
   heap->base = system_mmap_huge_pages(NULL, addr, heap->nbytes, align);
   if (!heap->base) {
     log_error("could not allocate %zu bytes for the global heap\n",
@@ -202,8 +202,8 @@ heap_alloc_cyclic(heap_t *heap, size_t n, uint32_t bsize) {
   // Figure out how many blocks per node that we need, and the base alignment.
   uint64_t blocks = ceil_div_64(n, here->ranks);
   uint32_t  align = ceil_log2_32(bsize);
-  dbg_assert(align < 32);
-  uint32_t padded = 1u << align;
+  dbg_assert(align <= 32);
+  uint64_t padded = UINT64_C(1) << align;
 
   // Allocate the blocks as a contiguous, aligned array from cyclic memory.
   void *base = cyclic_memalign(padded, blocks * padded);
