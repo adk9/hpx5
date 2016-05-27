@@ -194,10 +194,13 @@ heap_offset_to_lva(const heap_t *heap, uint64_t offset) {
 
 uint64_t
 heap_alloc_cyclic(heap_t *heap, size_t n, uint32_t bsize) {
-  dbg_assert_str(ceil_log2_32(bsize) <= heap_max_block_lg_size(heap),
-                 "Attempting to allocate block with alignment %"PRIu32
-                 " while the maximum alignment is %"PRIu32".\n",
-                 ceil_log2_32(bsize), heap_max_block_lg_size(heap));
+  // Do a helpful check here.
+  if (ceil_log2_32(bsize) > heap_max_block_lg_size(heap)) {
+    dbg_error("Attempting to allocate block with alignment %"PRIu32
+              " while the maximum alignment is %"PRIu32". You may need to"
+              " increase the size of the heap.\n",
+              ceil_log2_32(bsize), heap_max_block_lg_size(heap));
+  }
 
   // Figure out how many blocks per node that we need, and the base alignment.
   uint64_t blocks = ceil_div_64(n, here->ranks);
