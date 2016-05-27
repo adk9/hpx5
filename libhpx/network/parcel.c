@@ -271,6 +271,7 @@ void parcel_delete(hpx_parcel_t *p) {
     return;
   }
 
+  EVENT_PARCEL_DELETE(p->id, p->action);
   as_free(AS_REGISTERED, p);
 }
 

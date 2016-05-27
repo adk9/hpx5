@@ -72,6 +72,9 @@ LIBHPX_EVENT(PARCEL, RESEND,
              hpx_action_t, action,
              size_t, size,
              hpx_addr_t, target)
+LIBHPX_EVENT(PARCEL, DELETE,
+             uint64_t, id,
+             hpx_action_t, action)
 /// @}
 
 /// Network events
