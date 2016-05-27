@@ -110,7 +110,7 @@ static inline block_t _create_mask(uint32_t offset, uint32_t length) {
 struct bitmap {
   tatas_lock_t      lock;  //!< A single lock to serialize access to the bitmap.
   uint32_t     min_align;
-  uint32_t    base_align;  
+  uint32_t    base_align;
   uint32_t           min;  //!< An index such that there are no free bits < min.
   uint32_t           max;  //!< An index such that there are no free bits >= max.
   uint32_t         nbits;  //!< The number of bits in the bitmap.
@@ -281,8 +281,8 @@ static int32_t _bitmap_unused_blocks(const bitmap_t *map) {
 static int _bitmap_oom(const bitmap_t *map, uint32_t nbits, uint32_t align) {
   int32_t unused = _bitmap_unused_blocks(map);
   dbg_error("Application ran out of global address space.\n"
-            "\t-%u blocks requested with alignment %u\n"
-            "\t-%u blocks available\n", nbits, align, unused);
+            "\t%u blocks requested with alignment %u\n"
+            "\t%u blocks available\n", nbits, align, unused);
   return LIBHPX_ENOMEM;
 }
 
