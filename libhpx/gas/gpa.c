@@ -42,7 +42,7 @@ static hpx_addr_t _triple_to_gpa(int64_t rank, int64_t bid, int64_t phase,
                                  uint32_t bsize) {
   // make sure that the values are actually in the expected range.
   dbg_assert(0 <= rank && rank < UINT16_MAX);
-  dbg_assert(0 <= bid && bid < UINT32_MAX);
+  dbg_assert(0 <= bid);
   dbg_assert(0 <= phase && phase < UINT32_MAX);
 
   // make sure that the phase is not inside the padded region
