@@ -159,7 +159,7 @@ section "Photon Transport Options"
 
 option "hpx-photon-backend" - "set the underlying network API to use"
 typestr="type"
-values="default","verbs","ugni","fi"
+values="default","verbs","ugni","fi","dv"
 enum optional
 
 option "hpx-photon-coll" - "set the underlying network collectives to use"
