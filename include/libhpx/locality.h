@@ -46,31 +46,34 @@ struct tracer;
 
 /// The locality object.
 typedef struct locality {
-  uint32_t             rank;  //!< The dense, 0-based rank of this locality.
-  uint32_t            ranks;  //!< The total number of ranks running the current
-                              //!< job.
-  uint64_t            epoch;  //!< Keep track of the current hpx_run() epoch.
-  struct boot         *boot;  //!< The bootstrap object. This provides rank and 
-                              //!< ranks, as well as some basic, IP-based 
-                              //!< networking functionality.
-  void                 *gas;  //!< The global address space object. This 
-                              //!< provides global memory allocation and 
-                              //!< address space functionality.
-  struct network       *net;  //!< The network layer. This provides an active 
-                              //!< message interface targeting global addresses.
-  struct scheduler   *sched;  //!< The lightweight thread scheduler. This 
-                              //!< provides the infrastructure required to 
-                              //!< create lightweight threads, and to deal with 
-                              //!< inter-thread data and control dependencies 
-                              //!< using LCOs.
-  struct config     *config;  //!< The libhpx configuration object. This stores 
-                              //!< the per-locality configuration parameters 
-                              //!< based on the user-specified runtime 
-                              //!< configuration values and/or the defaults.
-  struct topology *topology;  //!< The topology information.
-  void         *percolation;  //!< An interface for dealing with GPU backends.
-  struct trace      *tracer;  //!< Reference to the tracer object
-  sigset_t             mask;  //!< The default signal mask.
+  uint32_t               rank;  //!< The dense, 0-based rank of this locality.
+  uint32_t              ranks;  //!< The total number of ranks running the
+                                //!< current job.
+  uint64_t              epoch;  //!< Keep track of the current hpx_run() epoch.
+  struct boot           *boot;  //!< The bootstrap object. This provides rank
+                                //!< and ranks, as well as some basic, IP-based 
+                                //!< networking functionality.
+  void                   *gas;  //!< The global address space object. This 
+                                //!< provides global memory allocation and 
+                                //!< address space functionality.
+  struct network         *net;  //!< The network layer. This provides an active 
+                                //!< message interface targeting global 
+                                //!< addresses.
+  struct scheduler     *sched;  //!< The lightweight thread scheduler. This 
+                                //!< provides the infrastructure required to 
+                                //!< create lightweight threads, and to deal 
+                                //!< with inter-thread data and control 
+                                //!< dependencies using LCOs.
+  struct config       *config;  //!< The libhpx configuration object. This 
+                                //!< stores the per-locality configuration 
+                                //!< parameters based on the user-specified 
+                                //!< runtime configuration values and/or the
+                                //!< defaults.
+  struct topology   *topology;  //!< The topology information.
+  void           *percolation;  //!< An interface for dealing with GPU backends.
+  struct trace        *tracer;  //!< Reference to the tracer object
+  pthread_mutex_t *trace_lock;  //!< The lock for switching the tracer on or off
+  sigset_t               mask;  //!< The default signal mask.
 } locality_t;
 
 /// Inter-locality action interface.

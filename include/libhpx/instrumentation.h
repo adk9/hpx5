@@ -36,6 +36,9 @@ extern "C" {
 
 typedef struct trace {
   int type;
+  bool active;
+  void (*phase_begin)(void);
+  void (*phase_end)(void);
   void (*start)(void);
   void (*destroy)(void);
   void (*vappend)(int type, int n, int id, ...);

@@ -60,4 +60,12 @@ void libhpx_print_version(void)
 void libhpx_get_version(int version[3])
   HPX_PUBLIC;
 
-#endif  // LIBHPX_LIBHPX_Hx
+/// Start the instramentation infrastructure
+void libhpx_inst_phase_begin() 
+  HPX_PUBLIC;
+
+/// Stop the instramentation infrastructure
+void libhpx_inst_phase_end() 
+  HPX_PUBLIC;
+
+#endif  // LIBHPX_LIBHPX_H

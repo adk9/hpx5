@@ -133,13 +133,29 @@ static void _start(void) {
 static void _destroy(void) {
 }
 
+static void _phase_begin(void) {
+  pthread_mutex_lock(here->trace_lock);
+  here->tracer->active = true;
+  pthread_mutex_unlock(here->trace_lock);
+}
+
+static void _phase_end(void) {
+  pthread_mutex_lock(here->trace_lock);
+  here->tracer->active = false;
+  pthread_mutex_unlock(here->trace_lock);
+}
+
 trace_t *trace_console_new(const config_t *cfg) {
   trace_t *trace = malloc(sizeof(*trace));
   dbg_assert(trace);
 
-  trace->type    = HPX_TRACE_BACKEND_CONSOLE;
-  trace->start   = _start;
-  trace->destroy = _destroy;
-  trace->vappend = _vappend;
+  trace->type        = HPX_TRACE_BACKEND_CONSOLE;
+  trace->start       = _start;
+  trace->destroy     = _destroy;
+  trace->vappend     = _vappend;
+  trace->phase_begin = _phase_begin;
+  trace->phase_end   = _phase_end;
+  trace->active      = false;
+  pthread_mutex_init(here->trace_lock, NULL);
   return trace;
 }

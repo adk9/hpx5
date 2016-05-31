@@ -66,3 +66,12 @@ trace_t *trace_new(const config_t *cfg) {
   }
   return NULL;
 }
+
+void libhpx_inst_phase_begin() {
+  here->tracer->phase_begin();
+}
+
+void libhpx_inst_phase_end() {
+  here->tracer->phase_end();
+}
+
