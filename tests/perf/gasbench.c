@@ -69,7 +69,7 @@ int _par_alloc(const int tid, void *a) {
 
   start = hpx_time_now();
   for (int i = 0; i < iters; ++i) {
-    addrs[i] = hpx_gas_alloc_local(1, size, 0);
+    addrs[i] = hpx_gas_calloc_local(1, size, 0);
   }
 
   for (int i = 0; i < iters; ++i) {
@@ -77,6 +77,7 @@ int _par_alloc(const int tid, void *a) {
   }
   elapsed = hpx_time_elapsed_us(start);
   printf("%d: callocs-then-frees: %.7f\n", tid, elapsed/iters);
+  free(addrs);
   return HPX_SUCCESS;
 }
 
