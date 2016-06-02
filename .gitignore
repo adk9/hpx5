@@ -175,7 +175,7 @@ tests/unit/gas_move
 tests/unit/gas_coll
 tests/unit/lco_and
 tests/unit/lco_wait
-tests/perf/gas_alloc
+tests/perf/gasbench
 tests/perf/gas_addr_trans
 tests/perf/lco_sema
 tests/perf/lco_and

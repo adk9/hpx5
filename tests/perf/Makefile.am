@@ -5,7 +5,7 @@ AM_CFLAGS                       = $(HPX_APPS_CFLAGS) -Wno-unused
 AM_LDFLAGS                      = $(HPX_APPS_LDFLAGS) -no-install
 LDADD                           = $(HPX_APPS_LDADD)
 
-TESTS = gas_alloc           \
+TESTS = gasbench            \
         gas_addr_trans      \
         lco_sema            \
         lco_future          \
@@ -19,7 +19,7 @@ endif
 
 LOG_COMPILER = $(TESTS_CMD)
 
-gas_alloc_SOURCES               = gas_alloc.c
+gasbench_SOURCES                = gasbench.c
 mem_alloc_SOURCES               = mem_alloc.c
 gas_addr_trans_SOURCES          = gas_addr_trans.c
 lco_and_SOURCES                 = lco_and.c
@@ -30,7 +30,7 @@ collbench_SOURCES               = collbench.c
 parbench_SOURCES                = parbench.c
 thread_switch_SOURCES           = thread_switch.c
 
-gas_alloc_DEPENDENCIES          = $(HPX_APPS_DEPS)
+gasbench_DEPENDENCIES           = $(HPX_APPS_DEPS)
 mem_alloc_DEPENDENCIES          = $(HPX_APPS_DEPS)
 gas_addr_trans_DEPENDENCIES     = $(HPX_APPS_DEPS)
 lco_and_DEPENDENCIES            = $(HPX_APPS_DEPS)
