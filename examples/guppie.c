@@ -190,7 +190,7 @@ static int _mover_action(guppie_config_t *cfg, size_t n) {
 
   hpx_lco_wait(done);
   double move_time = hpx_time_elapsed_ms(start)/1e3;
-  printf("move time: %.7f s (%ld moves)\n", move_time, nmoves);
+  printf("move time: %.7f s (%"PRIu64" moves)\n", move_time, nmoves);
   hpx_lco_delete(done, HPX_NULL);
   return HPX_SUCCESS;
 }
@@ -331,7 +331,7 @@ void _main_action(guppie_config_t *cfg, size_t size)
 
 static void _usage(FILE *stream) {
   fprintf(stream, "Usage: guppie [options] TABSIZE NUPDATES\n"
-          "\t-M <num>, enable AGAS data movement with num (0-100)\% frequency\n"
+          "\t-M <num>, enable AGAS data movement with num percent frequency\n"
           "\t-R, enable automatic AGAS-based rebalancing\n"
           "\t-h, show help\n");
   hpx_print_help();

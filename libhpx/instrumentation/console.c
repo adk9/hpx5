@@ -15,6 +15,9 @@
 # include "config.h"
 #endif
 
+#include <fcntl.h>
+#include <inttypes.h>
+#include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,8 +26,6 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <fcntl.h>
-#include <pwd.h>
 
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
@@ -42,11 +43,11 @@ static void _print_actions(void) {
   }
 }
 
-#define _vprint_console(c,id,fmt,...)           \
-  fprintf(stderr, "%d,%d,%lu,%s,%s" fmt "\n",   \
-    here->rank, self->id,                       \
-    hpx_time_from_start_ns(hpx_time_now()),     \
-    HPX_TRACE_CLASS_TO_STRING[ceil_log2_32(c)], \
+#define _vprint_console(c,id,fmt,...)               \
+  fprintf(stderr, "%d,%d,%"PRIu64",%s,%s" fmt "\n", \
+    here->rank, self->id,                           \
+    hpx_time_from_start_ns(hpx_time_now()),         \
+    HPX_TRACE_CLASS_TO_STRING[ceil_log2_32(c)],     \
     TRACE_EVENT_TO_STRING[id], ##__VA_ARGS__)
 
 static void _vappend(int UNUSED, int n, int id, ...) {
@@ -67,28 +68,29 @@ static void _vappend(int UNUSED, int n, int id, ...) {
       _vprint_console(c, id, "");
       break;
     case 1:
-      _vprint_console(c, id, ",%lu", va_arg(vargs, uint64_t));
+      _vprint_console(c, id, ",%"PRIu64, va_arg(vargs, uint64_t));
       break;
     case 2:
-      _vprint_console(c, id, ",%lu,%lu",
+      _vprint_console(c, id, ",%"PRIu64",%"PRIu64,
                       va_arg(vargs, uint64_t),
                       va_arg(vargs, uint64_t));
       break;
     case 3:
-      _vprint_console(c, id, ",%lu,%lu,%lu",
+      _vprint_console(c, id, ",%"PRIu64",%"PRIu64",%"PRIu64,
                       va_arg(vargs, uint64_t),
                       va_arg(vargs, uint64_t),
                       va_arg(vargs, uint64_t));
       break;
     case 4:
-      _vprint_console(c, id, ",%lu,%lu,%lu,%lu",
+      _vprint_console(c, id, ",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64,
                       va_arg(vargs, uint64_t),
                       va_arg(vargs, uint64_t),
                       va_arg(vargs, uint64_t),
                       va_arg(vargs, uint64_t));
       break;
     case 5:
-      _vprint_console(c, id, ",%lu,%lu,%lu,%lu,%lu",
+      _vprint_console(c, id, ",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64
+                      ",%"PRIu64,
                       va_arg(vargs, uint64_t),
                       va_arg(vargs, uint64_t),
                       va_arg(vargs, uint64_t),
@@ -96,7 +98,8 @@ static void _vappend(int UNUSED, int n, int id, ...) {
                       va_arg(vargs, uint64_t));
       break;
     case 6:
-      _vprint_console(c, id, ",%lu,%lu,%lu,%lu,%lu,%lu",
+      _vprint_console(c, id, ",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64
+                      ",%"PRIu64",%"PRIu64,
                       va_arg(vargs, uint64_t),
                       va_arg(vargs, uint64_t),
                       va_arg(vargs, uint64_t),
@@ -106,7 +109,8 @@ static void _vappend(int UNUSED, int n, int id, ...) {
       break;
     case 7:
     default:
-      _vprint_console(c, id, ",%lu,%lu,%lu,%lu,%lu,%lu,%lu",
+      _vprint_console(c, id, ",%"PRIu64",%"PRIu64",%"PRIu64",%"PRIu64
+                      ",%"PRIu64",%"PRIu64",%"PRIu64,
                       va_arg(vargs, uint64_t),
                       va_arg(vargs, uint64_t),
                       va_arg(vargs, uint64_t),

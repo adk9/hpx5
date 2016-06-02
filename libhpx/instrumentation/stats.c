@@ -15,6 +15,9 @@
 # include "config.h"
 #endif
 
+#include <fcntl.h>
+#include <inttypes.h>
+#include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,8 +26,6 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <fcntl.h>
-#include <pwd.h>
 
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
@@ -66,7 +67,7 @@ static void _destroy(void) {
   for (int i = 0; i < TRACE_NUM_EVENTS; ++i) {
     int c = TRACE_EVENT_TO_CLASS[i];
     if (inst_trace_class(c)) {
-      printf("%d,%s,%lu\n",
+             printf("%d,%s,%"PRIu64"\n",
              here->rank,
              TRACE_EVENT_TO_STRING[i],
              master->stats[i]);
