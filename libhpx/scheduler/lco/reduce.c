@@ -135,11 +135,11 @@ static int _reduce_set(lco_t *lco, int size, const void *from) {
     set = 1;
   }
   else {
-    log_lco("reduce: received input %d\n", r->remaining);
     dbg_assert_str(r->remaining > 0,
                    "reduction: too many threads joined (%d).\n", r->remaining);
   }
 
+  log_lco("reduce: received input %d\n", r->remaining);
   lco_unlock(lco);
   return set;
 }
