@@ -28,57 +28,46 @@ static void _usage(FILE *f, int error) {
   exit(error);
 }
 
-typedef struct _par_alloc_args {
+typedef struct _alloc_args {
   int iters;
   int size;
-} _par_alloc_args_t;
+  hpx_addr_t (*fn)(size_t, size_t, uint32_t);
+} _alloc_args_t;
 
-int _par_alloc(const int tid, void *a) {
-  _par_alloc_args_t *args = (_par_alloc_args_t*)a;
+int _alloc_free(const int tid, void *a) {
+  _alloc_args_t *args = (_alloc_args_t*)a;
   int iters = args->iters;
   size_t size = args->size;
-  hpx_time_t start = hpx_time_now();
   for (int i = 0; i < iters; ++i) {
-    hpx_addr_t addr = hpx_gas_alloc_local(1, size, 0);
+    hpx_addr_t addr = args->fn(1, size, 0);
     hpx_gas_free(addr, HPX_NULL);
   }
-  double elapsed = hpx_time_elapsed_us(start);
-  printf("%d: alloc+free: %.7f\n", tid, elapsed/iters);
+  return HPX_SUCCESS;
+}
 
-  start = hpx_time_now();
-  for (int i = 0; i < iters; ++i) {
-    hpx_addr_t addr = hpx_gas_calloc_local(1, size, 0);
-    hpx_gas_free(addr, HPX_NULL);
-  }
-  elapsed = hpx_time_elapsed_us(start);
-  printf("%d: calloc+free: %.7f\n", tid, elapsed/iters);
-
+int _allocs_then_frees(const int tid, void *a) {
+  _alloc_args_t *args = (_alloc_args_t*)a;
+  int iters = args->iters;
+  size_t size = args->size;
   hpx_addr_t *addrs = malloc(sizeof(*addrs)*iters);
   assert(addrs);
-
-  start = hpx_time_now();
   for (int i = 0; i < iters; ++i) {
-    addrs[i] = hpx_gas_alloc_local(1, size, 0);
+    addrs[i] = args->fn(1, size, 0);
   }
 
   for (int i = 0; i < iters; ++i) {
     hpx_gas_free(addrs[i], HPX_NULL);
   }
-  elapsed = hpx_time_elapsed_us(start);
-  printf("%d: allocs-then-frees: %.7f\n", tid, elapsed/iters);
-
-  start = hpx_time_now();
-  for (int i = 0; i < iters; ++i) {
-    addrs[i] = hpx_gas_calloc_local(1, size, 0);
-  }
-
-  for (int i = 0; i < iters; ++i) {
-    hpx_gas_free(addrs[i], HPX_NULL);
-  }
-  elapsed = hpx_time_elapsed_us(start);
-  printf("%d: callocs-then-frees: %.7f\n", tid, elapsed/iters);
   free(addrs);
   return HPX_SUCCESS;
+}
+
+static void _run(void *f, _alloc_args_t *args, char *fmt) {
+  int iters = args->iters;
+  hpx_time_t start = hpx_time_now();
+  hpx_par_for_sync(f, 0, HPX_THREADS, args);
+  double elapsed = hpx_time_elapsed_us(start);
+  printf("%s: %.7f\n", fmt, elapsed/iters);
 }
 
 static int _main_action(int iters, size_t size) {
@@ -87,8 +76,18 @@ static int _main_action(int iters, size_t size) {
   printf("time resolution: microseconds\n");
   fflush(stdout);
 
-  _par_alloc_args_t args = { .iters = iters, .size = size };
-  hpx_par_for_sync(_par_alloc, 0, HPX_THREADS, &args);
+  _alloc_args_t args = { .iters = iters, .size = size, .fn = NULL };
+  args.fn = hpx_gas_alloc_local;
+  _run(_alloc_free, &args, "alloc+free");
+
+  args.fn = hpx_gas_calloc_local;
+  _run(_alloc_free, &args, "calloc+free");
+
+  args.fn = hpx_gas_alloc_local;
+  _run(_allocs_then_frees, &args, "allocs-then-frees");
+
+  args.fn = hpx_gas_calloc_local;
+  _run(_allocs_then_frees, &args, "callocs-then-frees");
 
   hpx_exit(HPX_SUCCESS);
 }
