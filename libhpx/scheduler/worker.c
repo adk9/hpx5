@@ -230,89 +230,6 @@ static void _vcontinue_parcel(hpx_parcel_t *p, int n, va_list *args) {
   }
 }
 
-/// The entry function for all interrupts.
-///
-/// This is the function that will run when we transfer to an interrupt. It
-/// uses action_execute() to execute the interrupt on the current stack, sends
-/// the parcel continuation if necessary, and then returns. Interrupts are
-/// required not to call hpx_thread_continue(), or hpx_thread_exit(), so all
-/// execution will return here.
-///
-/// @param            p The parcel that describes the interrupt.
-static void _execute_interrupt(hpx_parcel_t *p) {
-  dbg_assert(!p->ustack);
-
-  // Exchange the current thread pointer for the duration of the call. This
-  // allows the application code to access thread data, e.g., the current
-  // target.
-  worker_t *w = self;
-  hpx_parcel_t *q = _swap_current(p, NULL, w);
-  ustack_t *stack = q->ustack;
-
-  // "Borrow" the current thread's stack, so that we can use its lco_depth and
-  // cont fields if necessary.
-  p->ustack = stack;
-
-  short cont = stack->cont;
-  short masked = stack->masked;
-  stack->cont = 0;
-  stack->masked = 0;
-
-  sigset_t mask;
-  if (masked) {
-    dbg_check(pthread_sigmask(SIG_SETMASK, &here->mask, &mask));
-  }
-
-  // Suspend the outer thread, and start the interrupt
-  EVENT_THREAD_SUSPEND(q, w);
-  EVENT_THREAD_RUN(p, w);
-  EVENT_SCHED_END(0, 0);
-  int e = action_exec_parcel(p->action, p);
-  EVENT_SCHED_BEGIN();
-
-  switch (e) {
-   case HPX_SUCCESS:
-    log_sched("completed interrupt %p\n", p);
-    if (!stack->cont) {
-      _vcontinue_parcel(p, 0, NULL);
-    }
-    _swap_current(q, NULL, w);
-    p->ustack = NULL;
-    EVENT_THREAD_END(p, w);
-    EVENT_THREAD_RESUME(q, self);
-    parcel_delete(p);
-    break;
-
-   case HPX_RESEND:
-    log_sched("resending interrupt to %"PRIu64"\n", p->target);
-    EVENT_THREAD_END(p, w);
-    EVENT_PARCEL_RESEND(p->id, p->action, p->size, p->target);
-    EVENT_THREAD_RESUME(q, self);
-    p->ustack = NULL;
-    parcel_launch(p);
-    break;
-
-   case HPX_LCO_ERROR:
-    dbg_error("interrupt returned LCO error %s.\n", hpx_strerror(e));
-
-   case HPX_ERROR:
-   default:
-    dbg_error("interrupt produced unexpected error %s.\n", hpx_strerror(e));
-  }
-
-  // Restore the appropriate interrupt mask, if we need to. If the parent had a
-  // mask, then we restore that, otherwise we restore the default system mask.
-  if (masked) {
-    dbg_check(pthread_sigmask(SIG_SETMASK, &mask, NULL));
-  }
-  else if (stack->masked) {
-    dbg_check(pthread_sigmask(SIG_SETMASK, &here->mask, NULL));
-  }
-
-  stack->masked = masked;
-  stack->cont = cont;
-}
-
 static chase_lev_ws_deque_t *_work(worker_t *this) {
   int id = sync_load(&this->work_id, SYNC_RELAXED);
   return &this->queues[id].work;
@@ -946,14 +863,8 @@ void scheduler_spawn(hpx_parcel_t *p) {
     return;
   }
 
-  // At this point, if we are spawning an interrupt, just run it.
-  if (action_is_interrupt(p->action)) {
-    _execute_interrupt(p);
-    return;
-  }
-
-  // If we are running an interrupt, then we can't work-first since we don't
-  // have our own stack to suspend.
+  // If we are currently running an interrupt, then we can't work-first since we
+  // don't have our own stack to suspend.
   if (action_is_interrupt(current->action)) {
     _push_lifo(p, w);
     return;
