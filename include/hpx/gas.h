@@ -27,26 +27,18 @@ extern "C" {
 ///        space.
 #include <hpx/addr.h>
 
-/// Global address-space layout and distribution.
-typedef enum {
-  HPX_DIST_TYPE_USER = 0,  //!< User-defined distribution.
-  HPX_DIST_TYPE_LOCAL,     //!< Allocation local to calling locality.
-  HPX_DIST_TYPE_CYCLIC,    //!< Cyclic distribution.
-  HPX_DIST_TYPE_BLOCKED,   //!< Blocked sequential distribution.
-} hpx_gas_dist_type_t;
-
 /// The largest block size supported by the implementation.
 extern HPX_PUBLIC uint64_t HPX_GAS_BLOCK_BYTES_MAX;
 
 /// User-defined GAS distribution function.
 typedef hpx_addr_t (*hpx_gas_dist_t)(uint32_t i, size_t n, size_t bsize);
 
-#define HPX_GAS_DIST_LOCAL   (hpx_gas_dist_t)HPX_DIST_TYPE_LOCAL
-#define HPX_GAS_DIST_CYCLIC  (hpx_gas_dist_t)HPX_DIST_TYPE_CYCLIC
-#define HPX_GAS_DIST_BLOCKED (hpx_gas_dist_t)HPX_DIST_TYPE_BLOCKED
+/// GAS distribution types.
+#define HPX_GAS_DIST_LOCAL   (hpx_gas_dist_t)0x1
+#define HPX_GAS_DIST_CYCLIC  (hpx_gas_dist_t)0x2
+#define HPX_GAS_DIST_BLOCKED (hpx_gas_dist_t)0x4
 
-/// Global address-space Attributes
-
+/// GAS Attributes.
 #define HPX_GAS_ATTR_NONE  0x0  //!< Empty attribute.
 #define HPX_GAS_ATTR_RO    0x1  //!< This block is read-only.
 #define HPX_GAS_ATTR_LB    0x2  //!< Consider for automatic load balancing.
@@ -258,6 +250,24 @@ hpx_addr_t hpx_gas_alloc_local_attr(size_t n, size_t bsize, uint32_t boundary,
 /// @returns            The global address of the allocated memory.
 hpx_addr_t hpx_gas_calloc_local_attr(size_t n, size_t bsize, uint32_t boundary,
                                      uint32_t attr)
+  HPX_PUBLIC;
+/// @param            n The number of blocks to allocate.
+/// @param        bsize The number of bytes per block.
+/// @param     boundary The alignment (2^k).
+/// @param         attr The attributes of this global allocation space
+///
+/// @returns            The global address of the allocated memory.
+hpx_addr_t hpx_gas_alloc_user_attr(size_t n, size_t bsize, uint32_t boundary,
+                                   hpx_gas_dist_t dist, uint32_t attr)
+  HPX_PUBLIC;
+/// @param            n The number of blocks to allocate.
+/// @param        bsize The number of bytes per block.
+/// @param     boundary The alignment (2^k).
+/// @param         attr The attributes of this global allocation space
+///
+/// @returns            The global address of the allocated memory.
+hpx_addr_t hpx_gas_calloc_user_attr(size_t n, size_t bsize, uint32_t boundary,
+                                    hpx_gas_dist_t dist, uint32_t attr)
   HPX_PUBLIC;
 
 /// Set an attribute for a global address.

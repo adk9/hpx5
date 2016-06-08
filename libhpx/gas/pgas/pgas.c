@@ -214,6 +214,18 @@ static hpx_addr_t _pgas_gas_calloc_blocked(size_t n, size_t bsize,
   dbg_error("Blocked GAS distributions are not supported.\n");
 }
 
+static
+hpx_addr_t _pgas_gas_alloc_user(size_t n, size_t bsize, uint32_t boundary,
+                                hpx_gas_dist_t dist, uint32_t attr) {
+  dbg_error("User-defined GAS distributions not supported for PGAS.\n");
+}
+
+static
+hpx_addr_t _pgas_gas_calloc_user(size_t n, size_t bsize, uint32_t boundary,
+                                 hpx_gas_dist_t dist, uint32_t attr) {
+  dbg_error("User-defined GAS distributions not supported for PGAS.\n");
+}
+
 /// Free a global address.
 ///
 /// This global address must either be the base of a cyclic allocation, or a
@@ -287,6 +299,8 @@ static gas_t _pgas = {
   .calloc_blocked = _pgas_gas_calloc_blocked,
   .alloc_local    = _pgas_gas_alloc_local,
   .calloc_local   = _pgas_gas_calloc_local,
+  .alloc_user     = _pgas_gas_alloc_user,
+  .calloc_user    = _pgas_gas_calloc_user,
   .free           = _pgas_gas_free,
   .set_attr       = NULL,
   .move           = _pgas_move,
