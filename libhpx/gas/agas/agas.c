@@ -298,6 +298,16 @@ _agas_calloc_cyclic(size_t n, size_t bbsize, uint32_t boundary,
   return addr;
 }
 
+static hpx_addr_t _agas_alloc_blocked(size_t n, size_t bsize,
+                                      uint32_t boundary, uint32_t attr) {
+  dbg_error("Blocked GAS distributions are not supported.\n");
+}
+
+static hpx_addr_t _agas_calloc_blocked(size_t n, size_t bsize,
+                                       uint32_t boundary, uint32_t attr) {
+  dbg_error("Blocked GAS distributions are not supported.\n");
+}
+
 static gas_t _agas = {
   .type           = HPX_GAS_AGAS,
   .string = {
@@ -321,8 +331,8 @@ static gas_t _agas = {
   .unpin          = _agas_unpin,
   .alloc_cyclic   = _agas_alloc_cyclic,
   .calloc_cyclic  = _agas_calloc_cyclic,
-  .alloc_blocked  = NULL,
-  .calloc_blocked = NULL,
+  .alloc_blocked  = _agas_alloc_blocked,
+  .calloc_blocked = _agas_calloc_blocked,
   .alloc_local    = agas_alloc_local,
   .calloc_local   = agas_calloc_local,
   .free           = agas_free,
