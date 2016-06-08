@@ -682,8 +682,7 @@ static void *_run(void *worker) {
     .lco_depth = 0,
     .tls_id = -1,
     .stack_id = -1,
-    .size = 0,
-    .affinity = -1
+    .size = 0
   };
   system.ustack = &stack;
 
@@ -924,12 +923,7 @@ hpx_status_t scheduler_wait(void *lock, cvar_t *condition) {
 static void _resume_parcels(hpx_parcel_t *parcels) {
   hpx_parcel_t *p;
   while ((p = parcel_stack_pop(&parcels))) {
-    ustack_t *stack = p->ustack;
-    if (stack && stack->affinity >= 0) {
-      scheduler_spawn_at(p, stack->affinity);
-    } else {
-      parcel_launch(p);
-    }
+    parcel_launch(p);
   }
 }
 
@@ -1048,38 +1042,6 @@ int hpx_thread_get_tls_id(void) {
 intptr_t hpx_thread_can_alloca(size_t bytes) {
   ustack_t *current = self->current->ustack;
   return (uintptr_t)&current - (uintptr_t)current->stack - bytes;
-}
-
-void hpx_thread_set_affinity(int affinity) {
-  // make sure affinity is in bounds
-  dbg_assert(affinity >= -1);
-  dbg_assert(affinity < here->sched->n_workers);
-
-  worker_t *this = self;
-  dbg_assert(this->current);
-  dbg_assert(this->current->ustack);
-  dbg_assert(this->current != this->system);
-
-  // set the soft affinity
-  hpx_parcel_t  *p = this->current;
-  ustack_t *thread = p->ustack;
-  thread->affinity = affinity;
-
-  // if this is clearing the affinity return
-  if (affinity < 0) {
-    return;
-  }
-
-  // if this is already running on the correct worker return
-  if (affinity == this->id) {
-    return;
-  }
-
-  // move this thread to the proper worker through the mailbox
-  worker_t *w = scheduler_get_worker(this->sched, affinity);
-  EVENT_THREAD_SUSPEND(p, this);
-  _schedule_nb(this, _send_mail, w);
-  EVENT_THREAD_RESUME(p, self);
 }
 
 void scheduler_suspend(void (*f)(hpx_parcel_t *, void*), void *env) {

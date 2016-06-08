@@ -50,7 +50,6 @@ TESTS = allreduce               \
         thread_continue         \
         thread_create           \
         thread_gettlsid         \
-        thread_set_affinity     \
         thread_sigmask          \
         thread_yield
 
@@ -115,6 +114,5 @@ thread_cont_action_DEPENDENCIES     = $(HPX_APPS_DEPS)
 thread_continue_DEPENDENCIES        = $(HPX_APPS_DEPS)
 thread_create_DEPENDENCIES          = $(HPX_APPS_DEPS)
 thread_gettlsid_DEPENDENCIES        = $(HPX_APPS_DEPS)
-thread_set_affinity_DEPENDENCIES    = $(HPX_APPS_DEPS)
 thread_sigmask_DEPENDENCIES         = $(HPX_APPS_DEPS)
 thread_yield_DEPENDENCIES           = $(HPX_APPS_DEPS)

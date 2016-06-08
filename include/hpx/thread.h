@@ -105,33 +105,6 @@ int hpx_thread_get_tls_id(void)
 intptr_t hpx_thread_can_alloca(size_t bytes)
   HPX_PUBLIC;
 
-/// Set a lightweight thread's affinity.
-///
-/// This isn't generally useful for dataflow-style execution, but can be useful
-/// for long running threads where the application programmer has a good idea
-/// about the distribution of work that they want.
-///
-/// This is not a hard guarantee for actual affinity. Various conditions at
-/// runtime actually control where threads execute, including system
-/// load. The scheduler will do its best to return a thread to it's assigned
-/// locality. Using affinity badly can cause excessive thread movement and
-/// should be used carefully.
-///
-/// This may block the calling thread in order to induce a context switch. This
-/// may be called as frequently as necessary---the most recent affinity will
-/// take precedence.
-///
-/// Specifying a @p thread_id of -1 will clear affinity for the current thread.
-///
-/// The runtime may vary the number of system threads dynamically. If a
-/// lightweight thread is bound to a system thread that is disabled it may
-/// induce large performance overheads.
-///
-/// @param    thread_id The scheduler thread id we'd like to set the affinity
-///                     to, must be in the range [-1, hpx_get_num_threads()).
-void hpx_thread_set_affinity(int thread_id)
-  HPX_PUBLIC;
-
 /// Initiate the current thread's continuation.
 ///
 /// This logically terminates the lightweight HPX thread, however it will
