@@ -186,6 +186,7 @@ tests/perf/lco_sema
 tests/perf/lco_and
 tests/perf/lco_future
 tests/perf/collbench
+tests/perf/lbbench
 tests/perf/parbench
 tests/perf/sendrecv
 tests/perf/thread_switch
