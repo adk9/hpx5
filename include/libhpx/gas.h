@@ -36,20 +36,21 @@ typedef struct gas {
   uint64_t max_block_size;
 
   void (*dealloc)(void *gas);
-  size_t (*local_size)(void *gas);
-  void *(*local_base)(void *gas);
+  size_t (*local_size)(const void *gas);
+  void *(*local_base)(const void *gas);
 
   int64_t (*sub)(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs,
                  size_t bsize);
   hpx_addr_t (*add)(const void *gas, hpx_addr_t gva, int64_t bytes,
                     size_t bsize);
 
-  hpx_addr_t (*there)(void *gas, uint32_t i);
-  uint32_t (*owner_of)(const void *gas, hpx_addr_t gpa);
-  bool (*try_pin)(void *gas, hpx_addr_t addr, void **local);
-  void (*unpin)(void *gas, hpx_addr_t addr);
-  void (*free)(void *gas, hpx_addr_t addr, hpx_addr_t rsync);
-  void (*set_attr)(void *gas, hpx_addr_t addr, uint32_t attr);
+  hpx_addr_t (*there)(const void *gas, uint32_t i);
+  uint32_t (*owner_of)(const void *gas, hpx_addr_t gva);
+  int (*affinity_of)(const void *gas, hpx_addr_t gva);
+  bool (*try_pin)(void *gas, hpx_addr_t gva, void **local);
+  void (*unpin)(void *gas, hpx_addr_t gva);
+  void (*free)(void *gas, hpx_addr_t gca, hpx_addr_t rsync);
+  void (*set_attr)(void *gas, hpx_addr_t gva, uint32_t attr);
 
   void (*move)(void *gas, hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco);
 
@@ -67,25 +68,26 @@ gas_t *gas_new(config_t *cfg, struct boot *boot)
 
 inline static void gas_dealloc(void *obj) {
   gas_t *gas = (gas_t*)obj;
-  assert(gas && gas->dealloc);
   gas->dealloc(gas);
 }
 
-inline static uint32_t gas_owner_of(void *obj, hpx_addr_t addr) {
-  gas_t *gas = (gas_t*)obj;
-  assert(gas && gas->owner_of);
-  return gas->owner_of(gas, addr);
+inline static uint32_t gas_owner_of(const void *obj, hpx_addr_t gva) {
+  const gas_t *gas = (const gas_t*)obj;
+  return gas->owner_of(gas, gva);
+}
+
+inline static int gas_affinity_of(const void *obj, hpx_addr_t gva) {
+  const gas_t *gas = (const gas_t*)obj;
+  return gas->affinity_of(gas, gva);
 }
 
 static inline size_t gas_local_size(void *obj) {
   gas_t *gas = (gas_t*)obj;
-  assert(gas && gas->local_size);
   return gas->local_size(gas);
 }
 
 inline static void *gas_local_base(void *obj) {
   gas_t *gas = (gas_t*)obj;
-  assert(gas && gas->local_base);
   return gas->local_base(gas);
 }
 

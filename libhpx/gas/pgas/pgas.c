@@ -34,6 +34,7 @@
 #include "global.h"
 #include "heap.h"
 #include "pgas.h"
+#include "../affinity.h"
 
 /// The PGAS type is a global address space that manages a shared heap.
 ///
@@ -103,7 +104,7 @@ _pgas_add(const void *gas, hpx_addr_t gpa, int64_t bytes, size_t bsize) {
 }
 
 // Compute a global address for a locality.
-static hpx_addr_t _pgas_there(void *gas, uint32_t i) {
+static hpx_addr_t _pgas_there(const void *UNUSED, uint32_t i) {
   hpx_addr_t there = offset_to_gpa(i, UINT64_MAX);
   if (DEBUG) {
     uint64_t offset = gpa_to_offset(there);
@@ -236,11 +237,11 @@ static void _pgas_move(void *gas, hpx_addr_t src, hpx_addr_t dst,
   hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
 }
 
-static size_t _pgas_local_size(void *gas) {
+static size_t _pgas_local_size(const void *UNUSED) {
   return global_heap->nbytes;
 }
 
-static void *_pgas_local_base(void *gas) {
+static void *_pgas_local_base(const void *UNUSED) {
   return global_heap->base;
 }
 
@@ -278,7 +279,8 @@ static gas_t _pgas_vtable = {
   .free           = _pgas_gas_free,
   .set_attr       = NULL,
   .move           = _pgas_move,
-  .owner_of       = _pgas_owner_of
+  .owner_of       = _pgas_owner_of,
+  .affinity_of    = affinity_of
 };
 
 gas_t *gas_pgas_new(const config_t *cfg, boot_t *boot) {
