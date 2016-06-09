@@ -57,7 +57,6 @@ void allreduce_tree_init(allreduce_t *r, size_t bytes, hpx_addr_t parent,
   r->continuation = continuation_new(bytes);
   r->reduce = reduce_new(bytes, id, op);
   r->id = -1;
-  r->initialized = false; 
 }
 
 void allreduce_tree_fini(allreduce_t *r) {

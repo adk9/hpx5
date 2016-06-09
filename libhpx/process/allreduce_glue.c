@@ -20,6 +20,10 @@
 #include <libhpx/instrumentation.h>
 #include <libhpx/locality.h>
 #include "allreduce.h"
+#include "allreduce_tree.h"
+
+/*allreduce_algo_t allred_mode = TREE_FLAT ;*/
+allreduce_algo_t allred_mode = TREE_NARY;
 
 static const size_t BSIZE = sizeof(allreduce_t);
 
@@ -30,19 +34,36 @@ hpx_addr_t hpx_process_collective_allreduce_new(size_t bytes,
   hpx_addr_t root = hpx_gas_alloc_local(1, BSIZE, 0);
   dbg_assert(root);
   hpx_addr_t null = HPX_NULL;
-  dbg_check( hpx_call_sync(root, allreduce_init_async, NULL, 0, &bytes, &null,
-                           &reset, &op) );
 
+  if(allred_mode == TREE_FLAT){
+    dbg_check( hpx_call_sync(root, allreduce_init_async, NULL, 0, &bytes, &null,
+                           &reset, &op) );
+  } else if(allred_mode == TREE_NARY){
+    dbg_check( hpx_call_sync(root, allreduce_tree_init_async, NULL, 0, &bytes, &null,
+                           &reset, &op) );
+  } else{
+    dbg_error("mode : %d NOT supported for allreduce!\n", allred_mode);
+  }
   // allocate an array of local elements for the process
   int n = here->ranks;
   hpx_addr_t base = hpx_gas_alloc_cyclic(n, BSIZE, 0);
   dbg_assert(base);
 
-  // initialize the array to point to the root as their parent (fat tree)
   hpx_addr_t and = hpx_lco_and_new(n);
-  dbg_check( hpx_gas_bcast_with_continuation(allreduce_init_async, base, n,
+  if(allred_mode == TREE_FLAT){
+    // initialize the array to point to the root as their parent (fat tree)
+    dbg_check( hpx_gas_bcast_with_continuation(allreduce_init_async, base, n,
                                              0, BSIZE, hpx_lco_set_action, and,
                                              &bytes, &root, &reset, &op) );
+  } else if(allred_mode == TREE_NARY){
+    dbg_check( hpx_gas_bcast_with_continuation(allreduce_tree_init_async, base, n,
+                                             0, BSIZE, hpx_lco_set_action, and,
+                                             &bytes, &root, &reset, &op) );
+
+  } else{
+    dbg_error("mode : %d NOT supported for allreduce!\n", allred_mode);
+  }
+    
   hpx_lco_wait(and);
   hpx_lco_delete_sync(and);
 
@@ -63,10 +84,21 @@ void hpx_process_collective_allreduce_delete(hpx_addr_t allreduce) {
 
   int n = here->ranks;
   hpx_addr_t and = hpx_lco_and_new(n + 1);
-  dbg_check( hpx_gas_bcast_with_continuation(allreduce_fini_async, allreduce,
+  if(allred_mode == TREE_FLAT){
+    dbg_check( hpx_gas_bcast_with_continuation(allreduce_fini_async, allreduce,
                                              n, 0, BSIZE, hpx_lco_set_action,
                                              and) );
-  dbg_check( hpx_call(root, allreduce_fini_async, and) );
+    dbg_check( hpx_call(root, allreduce_fini_async, and) );
+  } else if (allred_mode == TREE_NARY){
+    dbg_check( hpx_gas_bcast_with_continuation(allreduce_tree_fini_async, allreduce,
+                                             n, 0, BSIZE, hpx_lco_set_action,
+                                             and) );
+    dbg_check( hpx_call(root, allreduce_tree_fini_async, and) );
+	  
+  } else{
+    dbg_error("mode : %d NOT supported for allreduce!\n", allred_mode);
+  }
+
   hpx_lco_wait(and);
   hpx_lco_delete_sync(and);
 
@@ -79,25 +111,41 @@ int32_t hpx_process_collective_allreduce_subscribe(hpx_addr_t allreduce,
                                                    hpx_addr_t c_target) {
   int id;
   hpx_addr_t leaf = hpx_addr_add(allreduce, here->rank * BSIZE, BSIZE);
-  dbg_check( hpx_call_sync(leaf, allreduce_add_async, &id, sizeof(id),
+  if(allred_mode == TREE_FLAT){
+    dbg_check( hpx_call_sync(leaf, allreduce_add_async, &id, sizeof(id),
                            &c_action, &c_target) );
+  } else if(allred_mode == TREE_NARY) {
+    dbg_check( hpx_call_sync(leaf, allreduce_tree_add_async, &id, sizeof(id),
+                           &c_action, &c_target) );
+  } else {
+    dbg_error("mode : %d NOT supported for allreduce!\n", allred_mode);
+  }
+    
   EVENT_COLLECTIVE_SUBSCRIBE(allreduce, c_action, c_target, id, here->rank);
   return id;
 }
 
 int hpx_process_collective_allreduce_subscribe_finalize(hpx_addr_t allreduce) {
-  if (here->config->coll_network) {
-    allreduce_t *r = NULL;
-    hpx_addr_t root = HPX_NULL;
-    hpx_addr_t leaf = hpx_addr_add(allreduce, here->rank * BSIZE, BSIZE);
-    if (!hpx_gas_try_pin(leaf, (void *)&r)) {
-      dbg_error("could not pin local element for an allreduce\n");
-    }
-    root = r->parent;
-
-    dbg_check(hpx_call_sync(root, allreduce_bcast_comm_async, NULL, 0, &allreduce,
-                          sizeof(hpx_addr_t)));
+  allreduce_t *r = NULL;
+  hpx_addr_t root = HPX_NULL;
+  hpx_addr_t leaf = hpx_addr_add(allreduce, here->rank * BSIZE, BSIZE);
+  if (!hpx_gas_try_pin(leaf, (void *)&r)) {
+    dbg_error("could not pin local element for an allreduce\n");
   }
+  root = r->parent;
+
+  if(allred_mode == TREE_FLAT){
+    if (here->config->coll_network) {
+      dbg_check(hpx_call_sync(root, allreduce_bcast_comm_async, NULL, 0, &allreduce,
+                          sizeof(hpx_addr_t)));
+    }
+  } else if(allred_mode == TREE_NARY){
+      int arity = 2;	  
+      dbg_check(hpx_call_sync(root, allreduce_tree_algo_nary_async, NULL, 0, &arity));
+  } else{
+    dbg_error("mode : %d NOT supported for allreduce!\n", allred_mode);
+  } 
+  hpx_gas_unpin(leaf);
   return HPX_SUCCESS;
 }
 
