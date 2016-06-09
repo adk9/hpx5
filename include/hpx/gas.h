@@ -576,6 +576,54 @@ _hpx_gas_bcast_sync(hpx_action_t action, hpx_addr_t base, int n,
 void hpx_gas_rebalance(hpx_addr_t async, hpx_addr_t psync, hpx_addr_t msync)
   HPX_PUBLIC;
 
+/// Set the (soft) affinity of a global address to a worker ID.
+///
+/// Under normal conditions, global addresses have affinity to localities, but
+/// parcels targeting the global addresses have no preference as to which
+/// execution resource within the locality ends up executing the resulting
+/// thread.
+///
+/// This interface allows an application to set a soft affinity preference for
+/// execution for a particular global address, with the expectation that
+/// implementations that support soft affinity will attempt to execute parcels
+/// targeting the global address on the preferred worker. This can assist in
+/// maintaining cache locality for independent-but-related threads, and with
+/// scheduling.
+///
+/// The affinity is not guaranteed and no expectation should be made about
+/// concurrency or locality between disjoint execution on the same targets.
+///
+/// The @p worker id is a dense integer between 0 and hpx_get_num_threads() that
+/// designates the resource. Setting the affinity of a global address that
+/// already has affinity is supported, though this may not impact the execution
+/// of concurrent parcels or threads. Setting the affinity of a global address
+/// that is not currently bound to the locality results in undefined
+/// behavior. Moving a global address that is currently bound to a worker
+/// results in undefined behavior. Implementations are encouraged to provide
+/// debug builds that check for these conditions dynamically.
+///
+/// Future versions of this interface may provide the ability to set the
+/// affinity for a range of addresses, to allow parcel sends to "internal"
+/// addresses rather than simple unique targets.
+///
+/// @param         addr The address to bind.
+/// @param       worker The computation resource id to bind affinity to.
+void hpx_gas_set_affinity(hpx_addr_t addr, int worker);
+
+/// Clear the (soft) affinity for a global address.
+///
+/// This clears the affinity binding for a global address. It is not an error to
+/// clear the affinity for a global address that is not already bound, however
+/// clearing the affinity for a global address that is not mapped to the current
+/// locality results in undefined behavior.
+///
+/// Clearing affinity may have no impact on concurrent parcels or
+/// threads. Clearing affinity is necessary before moving a global address
+/// explicitly or through implicit load balancing.
+///
+/// @param         addr The address to clear.
+void hpx_gas_clear_affinity(hpx_addr_t addr);
+
 /// @}
 
 #ifdef __cplusplus
