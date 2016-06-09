@@ -496,16 +496,23 @@ static void _push_lifo(hpx_parcel_t *p, void *worker) {
 ///
 /// @returns            A parcel from the mailbox if there is one.
 static hpx_parcel_t *_handle_mail(worker_t *this) {
-  hpx_parcel_t *parcels = NULL;
-  hpx_parcel_t *p = NULL;
-  while ((parcels = sync_two_lock_queue_dequeue(&this->inbox))) {
-    while ((p = parcel_stack_pop(&parcels))) {
-      EVENT_SCHED_MAIL(p->id);
-      log_sched("got mail %p\n", p);
-      _push_lifo(p, this);
-    }
+  hpx_parcel_t *parcels = sync_two_lock_queue_dequeue(&this->inbox);
+  if (!parcels) {
+    return NULL;
   }
-  return _pop_lifo(this);
+
+  hpx_parcel_t *prev = parcel_stack_pop(&parcels);
+  do {
+    hpx_parcel_t *next = NULL;
+    while ((next = parcel_stack_pop(&parcels))) {
+      EVENT_SCHED_MAIL(prev->id);
+      log_sched("got mail %p\n", prev);
+      _push_lifo(prev, this);
+      prev = next;
+    }
+  } while ((parcels = sync_two_lock_queue_dequeue(&this->inbox)));
+  dbg_assert(prev);
+  return prev;
 }
 
 /// Handle the network.
@@ -839,6 +846,13 @@ void scheduler_spawn(hpx_parcel_t *p) {
   dbg_assert(w->id >= 0);
   dbg_assert(p);
   dbg_assert(actions[p->action].handler != NULL);
+
+  // If the target has affinity then send the parcel to that worker.
+  int affinity = gas_get_affinity(here->gas, p->target);
+  if (0 <= affinity && affinity != w->id) {
+    scheduler_spawn_at(p, affinity);
+    return;
+  }
 
   // If we're not running then push the parcel and return. This prevents an
   // infinite spawn from inhibiting termination.
