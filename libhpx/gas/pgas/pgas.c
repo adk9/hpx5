@@ -280,7 +280,9 @@ static gas_t _pgas_vtable = {
   .set_attr       = NULL,
   .move           = _pgas_move,
   .owner_of       = _pgas_owner_of,
-  .affinity_of    = affinity_of
+  .set_affinity   = affinity_set,
+  .clear_affinity = affinity_clear,
+  .get_affinity   = affinity_get
 };
 
 gas_t *gas_pgas_new(const config_t *cfg, boot_t *boot) {

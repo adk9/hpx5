@@ -297,7 +297,9 @@ static gas_t _smp_vtable = {
   .set_attr       = NULL,
   .move           = _smp_move,
   .owner_of       = _smp_owner_of,
-  .affinity_of    = affinity_of
+  .set_affinity   = affinity_set,
+  .clear_affinity = affinity_clear,
+  .get_affinity   = affinity_get
 };
 
 gas_t *gas_smp_new(void) {

@@ -46,7 +46,9 @@ typedef struct gas {
 
   hpx_addr_t (*there)(const void *gas, uint32_t i);
   uint32_t (*owner_of)(const void *gas, hpx_addr_t gva);
-  int (*affinity_of)(const void *gas, hpx_addr_t gva);
+  int (*get_affinity)(const void *gas, hpx_addr_t gva);
+  void (*set_affinity)(void *gas, hpx_addr_t gva, int worker);
+  void (*clear_affinity)(void *gas, hpx_addr_t gva);
   bool (*try_pin)(void *gas, hpx_addr_t gva, void **local);
   void (*unpin)(void *gas, hpx_addr_t gva);
   void (*free)(void *gas, hpx_addr_t gca, hpx_addr_t rsync);
@@ -76,9 +78,19 @@ inline static uint32_t gas_owner_of(const void *obj, hpx_addr_t gva) {
   return gas->owner_of(gas, gva);
 }
 
-inline static int gas_affinity_of(const void *obj, hpx_addr_t gva) {
+inline static int gas_get_affinity(const void *obj, hpx_addr_t gva) {
   const gas_t *gas = (const gas_t*)obj;
-  return gas->affinity_of(gas, gva);
+  return gas->get_affinity(gas, gva);
+}
+
+inline static void gas_set_affinity(void *obj, hpx_addr_t gva, int worker) {
+  gas_t *gas = (gas_t*)obj;
+  gas->set_affinity(gas, gva, worker);
+}
+
+inline static void gas_clear_affinity(void *obj, hpx_addr_t gva) {
+  gas_t *gas = (gas_t*)obj;
+  gas->clear_affinity(gas, gva);
 }
 
 static inline size_t gas_local_size(void *obj) {
