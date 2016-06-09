@@ -159,7 +159,7 @@ HPX_CONFIG_VALGRIND([contrib/valgrind])
 HPX_CONFIG_LIBFFI([contrib/$libffi_contrib_dir], [libffi])
 HPX_CONFIG_AGAS
 HPX_CONFIG_METIS([metis], [$have_agas_rebalancing])
-HPX_CONFIG_LIBCUCKOO([contrib/libcuckoo], [$have_agas])
+HPX_CONFIG_LIBCUCKOO([contrib/libcuckoo], [yes])
 HPX_CONFIG_PERCOLATION
 HPX_CONFIG_OPENCL([opencl], [$have_percolation])
 HPX_CONFIG_DOCS
