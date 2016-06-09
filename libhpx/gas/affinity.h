@@ -20,8 +20,9 @@
 extern "C" {
 #endif
 
-/// The default affinity infrastructure uses a stack hashtable.
-int affinity_of(const void *, hpx_addr_t gva);
+void affinity_set(void *, hpx_addr_t gva, int worker);
+void affinity_clear(void *, hpx_addr_t gva);
+int affinity_get(const void *, hpx_addr_t gva);
 
 #ifdef __cplusplus
 }

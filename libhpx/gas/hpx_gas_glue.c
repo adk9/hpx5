@@ -405,3 +405,11 @@ static LIBHPX_ACTION(HPX_INTERRUPT, 0, _set_attr_action,
 void hpx_gas_rebalance(hpx_addr_t async, hpx_addr_t psync, hpx_addr_t msync) {
   rebalancer_start(async, psync, msync);
 }
+
+void hpx_gas_set_affinity(hpx_addr_t gva, int worker) {
+  gas_set_affinity(here->gas, gva, worker);
+}
+
+void hpx_gas_clear_affinity(hpx_addr_t gva) {
+  gas_clear_affinity(here->gas, gva);
+}

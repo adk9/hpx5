@@ -329,7 +329,9 @@ static gas_t _agas_vtable = {
   .set_attr       = _agas_set_attr,
   .move           = agas_move,
   .owner_of       = _agas_owner_of,
-  .affinity_of    = affinity_of
+  .set_affinity   = affinity_set,
+  .clear_affinity = affinity_clear,
+  .get_affinity   = affinity_get
 };
 
 gas_t *gas_agas_new(const config_t *config, boot_t *boot) {

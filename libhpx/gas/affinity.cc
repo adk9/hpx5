@@ -31,7 +31,7 @@ typedef cuckoohash_map<hpx_addr_t, int, CityHasher<hpx_addr_t>> AffinityMap;
 AffinityMap _map;
 }
 
-void hpx_gas_set_affinity(hpx_addr_t gva, int worker) {
+void affinity_set(void *, hpx_addr_t gva, int worker) {
   DEBUG_IF(gas_owner_of(here->gas, gva) != here->rank) {
     dbg_error("Attempt to set affinity of %zu at %d (owned by %d)\n",
               gva, here->rank, gas_owner_of(here->gas, gva));
@@ -46,7 +46,7 @@ void hpx_gas_set_affinity(hpx_addr_t gva, int worker) {
   _map.insert(gva, worker);
 }
 
-void hpx_gas_clear_affinity(hpx_addr_t gva) {
+void affinity_clear(void *, hpx_addr_t gva) {
   DEBUG_IF(gas_owner_of(here->gas, gva) != here->rank) {
     dbg_error("Attempt to clear affinity of %zu at %d (owned by %d)\n",
               gva, here->rank, gas_owner_of(here->gas, gva));
@@ -54,7 +54,7 @@ void hpx_gas_clear_affinity(hpx_addr_t gva) {
   _map.erase(gva);
 }
 
-int affinity_of(const void *, hpx_addr_t gva) {
+int affinity_get(const void *, hpx_addr_t gva) {
   int worker = -1;
   _map.find(gva, worker);
   return worker;
