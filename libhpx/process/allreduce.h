@@ -18,6 +18,13 @@
 #include <libsync/locks.h>
 #include <libhpx/network.h>
 
+typedef enum allreduce_algo{
+  TREE_FLAT = 1001 ,
+  TREE_NARY,
+  TREE_BINOMIAL
+} allreduce_algo_t;
+
+extern allreduce_algo_t allred_mode;
 
 typedef struct continuation continuation_t;
 
