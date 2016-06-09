@@ -30,6 +30,7 @@
 #include "btt.h"
 #include "chunk_table.h"
 #include "gva.h"
+#include "../affinity.h"
 
 static const uint64_t AGAS_THERE_OFFSET = UINT64_C(4398046511103);
 
@@ -113,7 +114,7 @@ _agas_add(const void *gas, hpx_addr_t addr, int64_t bytes, size_t bbsize) {
 }
 
 static hpx_addr_t
-_agas_there(void *gas, uint32_t i) {
+_agas_there(const void *UNUSED, uint32_t i) {
   // We reserve a small range of addresses in the "large" allocation space that
   // will represent locality addresses.
   dbg_assert(i < here->ranks);
@@ -327,7 +328,8 @@ static gas_t _agas_vtable = {
   .free           = agas_free,
   .set_attr       = _agas_set_attr,
   .move           = agas_move,
-  .owner_of       = _agas_owner_of
+  .owner_of       = _agas_owner_of,
+  .affinity_of    = affinity_of
 };
 
 gas_t *gas_agas_new(const config_t *config, boot_t *boot) {
