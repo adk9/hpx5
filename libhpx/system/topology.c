@@ -197,6 +197,12 @@ topology_t *topology_new(const struct config *config) {
   // use, otherwise we try and use hwloc to figure out what the process mask is
   // set to, otherwise we just bail out and use all CPUs.
   int cores = libhpx_getenv_num("ALPS_APP_DEPTH", 0);
+
+  // Check for slurm launcher.
+  if (!cores) {
+    cores = libhpx_getenv_num("SLURM_CPUS_PER_TASK", 0);
+  }
+
   if (cores) {
     hwloc_bitmap_set_range(topo->allowed_cpus, 0, cores - 1);
   }
