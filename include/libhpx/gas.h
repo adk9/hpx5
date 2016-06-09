@@ -65,22 +65,26 @@ typedef struct gas {
 gas_t *gas_new(config_t *cfg, struct boot *boot)
   HPX_MALLOC HPX_NON_NULL(1,2);
 
-inline static void gas_dealloc(gas_t *gas) {
+inline static void gas_dealloc(void *obj) {
+  gas_t *gas = (gas_t*)obj;
   assert(gas && gas->dealloc);
   gas->dealloc(gas);
 }
 
-inline static uint32_t gas_owner_of(gas_t *gas, hpx_addr_t addr) {
+inline static uint32_t gas_owner_of(void *obj, hpx_addr_t addr) {
+  gas_t *gas = (gas_t*)obj;
   assert(gas && gas->owner_of);
   return gas->owner_of(gas, addr);
 }
 
-static inline size_t gas_local_size(gas_t *gas) {
+static inline size_t gas_local_size(void *obj) {
+  gas_t *gas = (gas_t*)obj;
   assert(gas && gas->local_size);
   return gas->local_size(gas);
 }
 
-inline static void *gas_local_base(gas_t *gas) {
+inline static void *gas_local_base(void *obj) {
+  gas_t *gas = (gas_t*)obj;
   assert(gas && gas->local_base);
   return gas->local_base(gas);
 }
