@@ -1,5 +1,5 @@
-SUBDIRS       = lz4
-DIST_SUBDIRS  = libffi hwloc-1.11.0 photon libcuckoo dlmalloc lz4
+SUBDIRS       = lz4 userspace-rcu
+DIST_SUBDIRS  = libffi hwloc-1.11.0 photon libcuckoo dlmalloc lz4 userspace-rcu
 EXTRA_DIST    = jemalloc libffi-mic uthash valgrind
 
 if BUILD_LIBFFI
