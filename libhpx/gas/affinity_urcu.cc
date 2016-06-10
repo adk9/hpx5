@@ -17,6 +17,7 @@
 
 #include <city_hasher.hh>
 #include <mutex>
+#include <vector>
 #include <urcu-qsbr.h>
 #include <urcu/rculfhash.h>
 #include <hpx/hpx.h>
@@ -79,6 +80,17 @@ class AffinityMap {
   }
 
   ~AffinityMap() {
+    std::vector<HashNode*> nodes;
+    removeAll(nodes);
+    synchronize_rcu();
+
+    for (int i = 0, e = nodes.size(); i < e; ++i) {
+      delete nodes[i];
+    }
+
+    if (cds_lfht_destroy(ht, NULL) != 0) {
+      throw std::runtime_error("Failed to destroy the urcu hash table\n");
+    }
   }
 
   void set(Key k, Value v) {
@@ -125,6 +137,18 @@ class AffinityMap {
       }
     }
     return NULL;
+  }
+
+  void removeAll(std::vector<HashNode*>& nodes) {
+    struct cds_lfht_iter it;
+    struct cds_lfht_node *node;
+    std::lock_guard<RCULock> guard();
+    cds_lfht_for_each(ht, &it, node) {
+      if (cds_lfht_del(ht, node) != 0) {
+        throw std::runtime_error("Failed to delete node\n");
+      }
+      nodes.push_back(static_cast<HashNode*>(node));
+    }
   }
 
   struct cds_lfht * const ht;
