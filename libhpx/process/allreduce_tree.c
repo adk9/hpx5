@@ -151,6 +151,14 @@ void allreduce_tree_algo_nary(allreduce_t *r, hpx_addr_t *locals,
 	       	int32_t num_locals, int32_t arity) {
   int i;
   int locality;
+  
+  log_coll("starting allreduce-nary tree algorithm locals : %d  arity : %d \n", num_locals, arity);
+  if(num_locals < arity){
+    log_coll("allreduce nary-tree algorithm doesn't support arity value: %d for %d num of localities..", 
+		    arity, num_locals);
+    log_coll("resetting arity value to : %d \n", num_locals);
+    arity = num_locals;
+  }
   /*we count root network node too*/
   int num_locals_with_root = num_locals + 1;
   hpx_addr_t root_ga = hpx_thread_current_target();
