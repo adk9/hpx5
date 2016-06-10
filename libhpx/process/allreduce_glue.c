@@ -23,6 +23,7 @@
 #include "allreduce_tree.h"
 
 /*allreduce_algo_t allred_mode = TREE_FLAT ;*/
+/*allreduce_algo_t allred_mode = TREE_BINOMIAL;*/
 allreduce_algo_t allred_mode = TREE_NARY;
 
 // arity for allreduce
@@ -42,7 +43,7 @@ hpx_addr_t hpx_process_collective_allreduce_new(size_t bytes,
   if(allred_mode == TREE_FLAT){
     dbg_check( hpx_call_sync(root, allreduce_init_async, NULL, 0, &bytes, &null,
                            &reset, &op) );
-  } else if(allred_mode == TREE_NARY){
+  } else if(allred_mode == TREE_NARY || allred_mode == TREE_BINOMIAL){
     dbg_check( hpx_call_sync(root, allreduce_tree_init_async, NULL, 0, &bytes, &null,
                            &reset, &op) );
   } else{
@@ -59,7 +60,7 @@ hpx_addr_t hpx_process_collective_allreduce_new(size_t bytes,
     dbg_check( hpx_gas_bcast_with_continuation(allreduce_init_async, base, n,
                                              0, BSIZE, hpx_lco_set_action, and,
                                              &bytes, &root, &reset, &op) );
-  } else if(allred_mode == TREE_NARY){
+  } else if(allred_mode == TREE_NARY || allred_mode == TREE_BINOMIAL){
     dbg_check( hpx_gas_bcast_with_continuation(allreduce_tree_init_async, base, n,
                                              0, BSIZE, hpx_lco_set_action, and,
                                              &bytes, &root, &reset, &op) );
@@ -93,7 +94,7 @@ void hpx_process_collective_allreduce_delete(hpx_addr_t allreduce) {
                                              n, 0, BSIZE, hpx_lco_set_action,
                                              and) );
     dbg_check( hpx_call(root, allreduce_fini_async, and) );
-  } else if (allred_mode == TREE_NARY){
+  } else if (allred_mode == TREE_NARY || allred_mode == TREE_BINOMIAL){
     dbg_check( hpx_gas_bcast_with_continuation(allreduce_tree_fini_async, allreduce,
                                              n, 0, BSIZE, hpx_lco_set_action,
                                              and) );
@@ -118,7 +119,7 @@ int32_t hpx_process_collective_allreduce_subscribe(hpx_addr_t allreduce,
   if(allred_mode == TREE_FLAT){
     dbg_check( hpx_call_sync(leaf, allreduce_add_async, &id, sizeof(id),
                            &c_action, &c_target) );
-  } else if(allred_mode == TREE_NARY) {
+  } else if(allred_mode == TREE_NARY || allred_mode == TREE_BINOMIAL) {
     dbg_check( hpx_call_sync(leaf, allreduce_tree_add_async, &id, sizeof(id),
                            &c_action, &c_target) );
   } else {
@@ -145,6 +146,8 @@ int hpx_process_collective_allreduce_subscribe_finalize(hpx_addr_t allreduce) {
     }
   } else if(allred_mode == TREE_NARY){
       dbg_check(hpx_call_sync(root, allreduce_tree_algo_nary_async, NULL, 0, &arity_allred_nary_mode));
+  } else if(allred_mode == TREE_BINOMIAL){
+      dbg_check(hpx_call_sync(root, allreduce_tree_algo_binomial_async, NULL, 0));
   } else{
     dbg_error("mode : %d NOT supported for allreduce!\n", allred_mode);
   } 
