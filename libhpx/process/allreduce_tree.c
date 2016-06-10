@@ -16,6 +16,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include <libhpx/debug.h>
 #include <libhpx/parcel.h>
 #include <libhpx/gas.h>
@@ -196,4 +197,56 @@ void allreduce_tree_algo_nary(allreduce_t *r, hpx_addr_t *locals,
   hpx_lco_delete_sync(and);
   
   /*printf("nary algorithm setup completed\n");*/
+}
+
+#define LOG2 0.69314718055994530941
+// do --> c.1, c.2, c.3
+// executed on root
+void allreduce_tree_algo_binomial(allreduce_t *r, hpx_addr_t *locals, int32_t num_locals) {
+  int i;
+  int locality;
+  
+  log_coll("starting allreduce binomial tree algorithm locals : %d  \n", num_locals);
+  
+  /*we count root network node too*/
+  int num_locals_with_root = num_locals + 1;
+  hpx_addr_t root_ga = hpx_thread_current_target();
+
+  hpx_addr_t group_locals[num_locals_with_root];
+
+  // asign network root for first in group
+  group_locals[0] = root_ga;
+  //assign others in order
+  for (i = 1; i <= num_locals; ++i) {
+    group_locals[i] = locals[i - 1]; 	
+  }
+
+  hpx_addr_t null = HPX_NULL;
+  hpx_addr_t and = hpx_lco_and_new(num_locals_with_root-1);
+
+  int num_rounds = (int)ceil((log(num_locals_with_root) / LOG2)) ;
+
+  for (i = 0; i < num_rounds; ++i) {
+    int pair_factor = pow(2, (i+1));
+    int next_adder = pow(2, i);
+    // map locality index to tree nodes
+    for (locality = 0; locality < num_locals_with_root; ++locality) {
+      //reduce
+      if(locality % pair_factor == 0){
+        int parent = locality;
+	int child = locality + next_adder ;
+        hpx_addr_t parent_ga = group_locals[parent];
+        hpx_addr_t child_ga = group_locals[child];
+
+        //set parent in locality and extend bcast continuation in parent
+        hpx_call(child_ga, allreduce_tree_setup_child_async, and,  &parent_ga) ;
+        log_coll("locality vrank :[%d] ga :[%llu] send --> to : vrank :[%d] ga : [%llu] \n" , child, 
+		      child_ga, parent, parent_ga);
+      }    
+    }
+  }
+  hpx_lco_wait_reset(and);
+  hpx_lco_delete_sync(and);
+  
+  /*printf("binomial algorithm setup completed\n");*/
 }
