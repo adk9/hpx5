@@ -52,8 +52,9 @@ class RCULock {
 };
 
 /// A hash table node, inherits from the RCU hash table node type.
+template <typename Key, typename Value>
 struct Node : public cds_lfht_node {
-  Node(int k, int v) : key(k), value(v) {
+  Node(Key k, Value v) : key(k), value(v) {
     cds_lfht_node_init(this);
   }
 
@@ -61,15 +62,18 @@ struct Node : public cds_lfht_node {
   }
 
   static int Match(struct cds_lfht_node *ht_node, const void *key) {
-    Node *node = static_cast<Node*>(ht_node);
-    return (node->key == *static_cast<const int*>(key));
+    Node<Key, Value> *node = static_cast<Node<Key, Value>*>(ht_node);
+    return (node->key == *static_cast<const Key*>(key));
   }
 
-  int key;
-  int value;
+  Key key;
+  Value value;
 };
 
-class AffinityMap  {
+template <typename Key, typename Value>
+class AffinityMap {
+  typedef Node<Key, Value> HashNode;
+  typedef unsigned long hash_t;
  public:
   AffinityMap() : ht(cds_lfht_new(1, 1, 0, CDS_LFHT_AUTO_RESIZE, NULL)) {
   }
@@ -77,43 +81,45 @@ class AffinityMap  {
   ~AffinityMap() {
   }
 
-  void set(hpx_addr_t gva, int worker) {
-    if (Node *n = insert(Hash(gva), new Node(gva, worker))) {
+  void set(Key k, Value v) {
+    if (HashNode *n = insert(Hash(k), new HashNode(k, v))) {
       synchronize_rcu();
       delete n;
     }
   }
 
-  int get(hpx_addr_t gva) const {
-    return lookup(Hash(gva), gva);
+  int get(Key k) const {
+    return lookup(Hash(k), k);
   }
 
-  void clear(hpx_addr_t gva) {
-    if (Node *n = remove(Hash(gva), gva)) {
+  void clear(Key k) {
+    if (HashNode *n = remove(Hash(k), k)) {
       synchronize_rcu();
       delete n;
     }
   }
 
  private:
-  Node *insert(unsigned long hash, Node *n) {
+  HashNode *insert(hash_t hash, HashNode *node) {
     std::lock_guard<RCULock> guard();
-    return static_cast<Node*>(cds_lfht_add_replace(ht, hash, Node::Match, &n->key, n));
+    Key key = node->key;
+    void *n = cds_lfht_add_replace(ht, hash, HashNode::Match, &key, node);
+    return static_cast<HashNode*>(n);
   }
 
-  int lookup(unsigned long hash, hpx_addr_t gva) const {
+  int lookup(hash_t hash, Key key) const {
     std::lock_guard<RCULock> guard();
     struct cds_lfht_iter it;
-    cds_lfht_lookup(ht, hash, Node::Match, &gva, &it);
-    Node *n = static_cast<Node*>(cds_lfht_iter_get_node(&it));
+    cds_lfht_lookup(ht, hash, HashNode::Match, &key, &it);
+    HashNode *n = static_cast<HashNode*>(cds_lfht_iter_get_node(&it));
     return (n) ? n->value : -1;
   }
 
-  Node *remove(int hash, hpx_addr_t gva) {
+  HashNode *remove(hash_t hash, Key key) {
     std::lock_guard<RCULock> guard();
     struct cds_lfht_iter it;
-    cds_lfht_lookup(ht, hash, Node::Match, NULL, &it);
-    if (Node *n = static_cast<Node*>(cds_lfht_iter_get_node(&it))) {
+    cds_lfht_lookup(ht, hash, HashNode::Match, &key, &it);
+    if (HashNode *n = static_cast<HashNode*>(cds_lfht_iter_get_node(&it))) {
       if (cds_lfht_del(ht, n) == 0) {
         return n;
       }
@@ -124,11 +130,11 @@ class AffinityMap  {
   struct cds_lfht * const ht;
 };
 
-AffinityMap *map = NULL;
+AffinityMap<hpx_addr_t, int> *map = NULL;
 }
 
 void affinity_init(void *UNUSED) {
-  map = new AffinityMap();
+  map = new AffinityMap<hpx_addr_t, int>();
 }
 
 void affinity_fini(void *UNUSED) {
