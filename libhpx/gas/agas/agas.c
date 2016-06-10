@@ -45,6 +45,7 @@ HPX_ACTION_DECL(agas_calloc_cyclic);
 static void
 _agas_dealloc(void *gas) {
   agas_t *agas = gas;
+  affinity_fini(NULL);
   if (agas->chunk_table) {
     chunk_table_delete(agas->chunk_table);
   }
@@ -367,6 +368,7 @@ gas_t *gas_agas_new(const config_t *config, boot_t *boot) {
 
   gva_t there = { .addr = _agas_there(agas, here->rank) };
   btt_insert(agas->btt, there, here->rank, here, 1, HPX_GAS_ATTR_NONE);
+  affinity_init(NULL);
   return &agas->vtable;
 }
 
