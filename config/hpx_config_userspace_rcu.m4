@@ -56,7 +56,8 @@ AC_DEFUN([_PKG_URCU], [
    [_HAVE_URCU
     LIBHPX_CPPFLAGS="$LIBHPX_CPPFLAGS $URCU_CFLAGS"
     LIBHPX_LIBS="$LIBHPX_LIBS $URCU_LIBS"
-    HPX_PC_PRIVATE_PKGS="$HPX_PC_PRIVATE_PKGS $pkgs"])
+    HPX_PC_PRIVATE_PKGS="$HPX_PC_PRIVATE_PKGS $pkgs"],
+   [have_userspace_rcu=no])
 ])
 
 # handle the with_userspace_rcu option
