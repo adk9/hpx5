@@ -77,6 +77,18 @@ static int _allreduce_tree_algo_nary_handler(allreduce_t *r, int arity){
 HPX_ACTION(HPX_DEFAULT, HPX_PINNED, allreduce_tree_algo_nary_async,
            _allreduce_tree_algo_nary_handler,  HPX_POINTER, HPX_INT);
 
+static int _allreduce_tree_algo_binomial_handler(allreduce_t *r){ 
+  //assert this is the root	
+  dbg_assert(!r->parent);
+    
+  int32_t num_locals    = r->ctx->group_sz;
+  hpx_addr_t* locals = (hpx_addr_t*) (r->ctx->data); 
+  allreduce_tree_algo_binomial(r, locals, num_locals);
+  return HPX_SUCCESS;
+}
+
+HPX_ACTION(HPX_DEFAULT, HPX_PINNED, allreduce_tree_algo_binomial_async,
+           _allreduce_tree_algo_binomial_handler,  HPX_POINTER);
 
 static int _allreduce_tree_setup_parent_handler(allreduce_t *r, hpx_action_t op, hpx_addr_t child) {
   int32_t i ;	
