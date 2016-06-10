@@ -25,6 +25,10 @@
 /*allreduce_algo_t allred_mode = TREE_FLAT ;*/
 allreduce_algo_t allred_mode = TREE_NARY;
 
+// arity for allreduce
+// TODO : change to a config option later
+int arity_allred_nary_mode = 2;
+
 static const size_t BSIZE = sizeof(allreduce_t);
 
 hpx_addr_t hpx_process_collective_allreduce_new(size_t bytes,
@@ -140,8 +144,7 @@ int hpx_process_collective_allreduce_subscribe_finalize(hpx_addr_t allreduce) {
                           sizeof(hpx_addr_t)));
     }
   } else if(allred_mode == TREE_NARY){
-      int arity = 2;	  
-      dbg_check(hpx_call_sync(root, allreduce_tree_algo_nary_async, NULL, 0, &arity));
+      dbg_check(hpx_call_sync(root, allreduce_tree_algo_nary_async, NULL, 0, &arity_allred_nary_mode));
   } else{
     dbg_error("mode : %d NOT supported for allreduce!\n", allred_mode);
   } 

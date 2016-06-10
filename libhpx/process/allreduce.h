@@ -25,6 +25,7 @@ typedef enum allreduce_algo{
 } allreduce_algo_t;
 
 extern allreduce_algo_t allred_mode;
+extern int arity_allred_nary_mode;
 
 typedef struct continuation continuation_t;
 
