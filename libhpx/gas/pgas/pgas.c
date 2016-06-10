@@ -54,6 +54,7 @@ heap_t *global_heap = NULL;
 #define _pgas_max_block_size (UINT64_C(1) << GPA_MAX_LG_BSIZE)
 
 static void _pgas_dealloc(void *gas) {
+  affinity_fini(NULL);
   cyclic_allocator_fini();
   global_allocator_fini();
   if (global_heap) {
@@ -306,5 +307,6 @@ gas_t *gas_pgas_new(const config_t *cfg, boot_t *boot) {
 
   global_allocator_init(here->rank);
   cyclic_allocator_init(here->rank);
+  affinity_init(NULL);
   return &_pgas_vtable;
 }

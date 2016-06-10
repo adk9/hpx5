@@ -20,6 +20,8 @@
 extern "C" {
 #endif
 
+void affinity_init(void *);
+void affinity_fini(void *);
 void affinity_set(void *, hpx_addr_t gva, int worker);
 void affinity_clear(void *, hpx_addr_t gva);
 int affinity_get(const void *, hpx_addr_t gva);

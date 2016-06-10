@@ -36,6 +36,7 @@
 /// with it.
 static void
 _smp_dealloc(void *gas) {
+  affinity_fini(NULL);
 }
 
 /// The SMP GAS doesn't restrict block sizes.
@@ -303,5 +304,6 @@ static gas_t _smp_vtable = {
 };
 
 gas_t *gas_smp_new(void) {
+  affinity_init(NULL);
   return &_smp_vtable;
 }

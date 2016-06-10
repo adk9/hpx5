@@ -13,7 +13,7 @@ libgas_la_SOURCES  = hpx_gas_glue.c \
                      gpa.c \
                      smp/smp.c \
                      bcast.c \
-                     affinity.cc
+                     affinity_urcu.cc
 libgas_la_LIBADD   = 
 
 
