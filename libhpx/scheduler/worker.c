@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <urcu-qsbr.h>
 
 #include <hpx/builtins.h>
 #include <libhpx/action.h>
@@ -169,6 +170,7 @@ static void _checkpoint(hpx_parcel_t *to, void *sp, void *env) {
   hpx_parcel_t *prev = _swap_current(to, sp, self);
   _checkpoint_env_t *c = env;
   c->f(prev, c->env);
+  rcu_quiescent_state();
 }
 
 /// Local wrapper for the thread transfer call.
@@ -416,6 +418,7 @@ static hpx_parcel_t *_handle_steal(worker_t *this) {
 /// @param      UNUSED1 The previous parcel.
 /// @param      UNUSED2 The continuation environment.
 static void _null(hpx_parcel_t *UNUSED1, void *UNUSED2) {
+  rcu_quiescent_state();
 }
 
 /// A checkpoint continuation that unlocks a lock.
@@ -614,6 +617,7 @@ static void _schedule(worker_t *this) {
     else if ((p = _handle_steal(this))) {
     }
     else {
+      rcu_quiescent_state();
       continue;
     }
     _transfer(p, _null, 0, this);
@@ -662,6 +666,9 @@ static void *_run(void *worker) {
   as_join(AS_REGISTERED);
   as_join(AS_GLOBAL);
   as_join(AS_CYCLIC);
+
+  // Make ourself visible to urcu.
+  rcu_register_thread();
 
 #ifdef HAVE_APEX
   // let APEX know there is a new thread
@@ -712,6 +719,9 @@ static void *_run(void *worker) {
   // let APEX know the thread is exiting
   apex_exit_thread();
 #endif
+
+  // leave the urcu domain
+  rcu_unregister_thread();
 
   // leave the global address space
   as_leave();
