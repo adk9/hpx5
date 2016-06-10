@@ -113,7 +113,7 @@ int32_t allreduce_tree_setup_parent(allreduce_t *r, hpx_action_t op, hpx_addr_t 
   i = continuation_add(&r->continuation, op, child);
   reduce_add(r->reduce);
   
-  printf("[setup parent bcast] in rank :[%d] ga :[%llu] to child:[%llu] \n" , hpx_get_my_rank(), 
+  log_coll("[setup parent bcast] in rank :[%d] ga :[%llu] to child:[%llu] \n" , hpx_get_my_rank(), 
 		  hpx_thread_current_target(), child);
   // release the lock
   hpx_lco_sema_v_sync(r->lock);
@@ -130,7 +130,7 @@ void allreduce_tree_setup_child(allreduce_t *r, hpx_addr_t parent) {
   // extend the local reduction in parent 
   if (r->parent) {
     hpx_addr_t allreduce = hpx_thread_current_target();
-    printf("[setup child link] in rank :[%d] ga :[%llu] to parent :[%llu] \n" , hpx_get_my_rank(), allreduce, parent);
+    log_coll("[setup child link] in rank :[%d] ga :[%llu] to parent :[%llu] \n" , hpx_get_my_rank(), allreduce, parent);
     
     dbg_check( hpx_call_sync(r->parent, allreduce_tree_setup_parent_async, &r->id,
                              sizeof(int32_t), &allreduce_bcast_async, &allreduce) );
@@ -176,18 +176,16 @@ void allreduce_tree_algo_nary(allreduce_t *r, hpx_addr_t *locals,
 
       //set parent in locality and extend bcast continuation in parent
       hpx_call(group_locals[locality], allreduce_tree_setup_child_async, and,  &parent_ga) ;
-      printf("locality vrank :[%d] ga :[%llu] send --> to : vrank :[%d] ga : [%llu] \n" , locality, 
+      log_coll("locality vrank :[%d] ga :[%llu] send --> to : vrank :[%d] ga : [%llu] \n" , locality, 
 		      group_locals[locality], parent, parent_ga);
     } else {
       //set parent in root locality 
       hpx_call(root_ga, allreduce_tree_setup_child_async, and,  &null) ;
-      printf("locality vrank :[%d] ga :[%llu] is parent\n" , locality, root_ga);
+      log_coll("locality vrank :[%d] ga :[%llu] is parent\n" , locality, root_ga);
     }
   }
   hpx_lco_wait_reset(and);
   hpx_lco_delete_sync(and);
   
-  printf("nary algorithm is completed\n");
-  fflush(stdout);
-  //
+  /*printf("nary algorithm setup completed\n");*/
 }

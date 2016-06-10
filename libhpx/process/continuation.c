@@ -106,6 +106,9 @@ void continuation_trigger(continuation_t *c, const void *value) {
 
       hpx_parcel_t *p = parcel_clone(c->parcels[i]);
       hpx_parcel_set_data(p, value, c->bytes);
+      //log broadcast path
+      log_coll("[===broadcast] from rank :[%d] ga :[%llu] to --> ga : [%llu]\n" , hpx_get_my_rank(), 
+		  hpx_thread_current_target(), p->target);
       parcel_launch(p);
     }
   }

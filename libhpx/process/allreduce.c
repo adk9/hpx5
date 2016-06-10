@@ -113,6 +113,9 @@ void allreduce_reduce(allreduce_t *r, const void *val) {
     return;
   }
 
+  log_coll("[===reduction done] in rank :[%d] ga :[%llu] to --> \n" , hpx_get_my_rank(), 
+		  hpx_thread_current_target(), r->parent);
+
   if (here->config->coll_network && r->parent) {
     // for sw based direct collective join
     // create parcel and prepare for coll call
