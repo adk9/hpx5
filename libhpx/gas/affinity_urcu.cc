@@ -17,7 +17,6 @@
 
 #include <city_hasher.hh>
 #include <mutex>
-#include <stack>
 #include <urcu-qsbr.h>
 #include <urcu/rculfhash.h>
 #include <hpx/hpx.h>
