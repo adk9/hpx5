@@ -62,9 +62,10 @@ struct Node : public cds_lfht_node {
   ~Node() {
   }
 
-  static int Match(struct cds_lfht_node *ht_node, const void *key) {
-    Node<Key, Value> *node = static_cast<Node<Key, Value>*>(ht_node);
-    return (node->key == *static_cast<const Key*>(key));
+  static int Match(struct cds_lfht_node *node, const void *key) {
+    const Node<Key, Value>& n = *static_cast<const Node<Key, Value>*>(node);
+    const Key& k = *static_cast<const Key*>(key);
+    return (n.key == k);
   }
 
   Key key;
