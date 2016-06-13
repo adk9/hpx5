@@ -222,6 +222,20 @@ static const char* const HPX_WAITON_TO_STRING[] = {
   "SIGTRAP"
 };
 
+//! Configuration options for GAS affinity implementations
+typedef enum {
+  HPX_GAS_AFFINITY_NONE = 0,
+  HPX_GAS_AFFINITY_URCU,
+  HPX_GAS_AFFINITY_CUCKOO,
+  HPX_GAS_AFFINITY_MAX
+} libhpx_gas_affinity_t;
+
+static const char * const HPX_GAS_AFFINITY_TO_STRING[] = {
+  "NONE",
+  "URCU",
+  "INVALID_ID"
+};
+
 /// The HPX configuration type.
 ///
 /// This configuration is used to control some of the runtime

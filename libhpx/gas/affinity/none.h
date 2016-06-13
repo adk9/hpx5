@@ -1,4 +1,4 @@
-// =============================================================================
+// ==================================================================-*- C++ -*-
 //  High Performance ParalleX Library (libhpx)
 //
 //  Copyright (c) 2013-2016, Trustees of Indiana University,
@@ -11,21 +11,23 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
-#ifndef LIBHPX_GAS_AFFINITY_H
-#define LIBHPX_GAS_AFFINITY_H
+#ifndef LIBHPX_GAS_AFFINITY_NONE_H
+#define LIBHPX_GAS_AFFINITY_NONE_H
 
-#include <hpx/hpx.h>
+#include <libhpx/gas.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace libhpx {
+namespace gas {
+class None : public Affinity {
+ public:
+  None();
+  virtual ~None();
 
-void affinity_set(void *, hpx_addr_t gva, int worker);
-void affinity_clear(void *, hpx_addr_t gva);
-int affinity_get(const void *, hpx_addr_t gva);
-
-#ifdef __cplusplus
+  void set(hpx_addr_t gva, int worker);
+  void clear(hpx_addr_t gva);
+  int get(hpx_addr_t gva) const;
+};
 }
-#endif
+}
 
-#endif // LIBHPX_GAS_AFFINITY_H
+#endif // LIBHPX_GAS_AFFINITY_NONE_H

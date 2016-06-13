@@ -11,12 +11,34 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
-#ifndef LIBHPX_GAS_SMP_SMP_H
-#define LIBHPX_GAS_SMP_SMP_H
-
-struct gas;
-struct config;
-
-struct gas *gas_smp_new(const struct config *config);
-
+#ifdef HAVE_CONFIG_H
+# include "config.h"
 #endif
+
+#include "none.h"
+
+using libhpx::gas::None;
+
+None::None()
+{
+}
+
+None::~None()
+{
+}
+
+void
+None::set(hpx_addr_t gva, int worker)
+{
+}
+
+void
+None::clear(hpx_addr_t gva)
+{
+}
+
+int
+None::get(hpx_addr_t gva) const
+{
+  return -1;
+}

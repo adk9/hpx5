@@ -30,7 +30,6 @@
 #include "btt.h"
 #include "chunk_table.h"
 #include "gva.h"
-#include "../affinity.h"
 
 static const uint64_t AGAS_THERE_OFFSET = UINT64_C(4398046511103);
 
@@ -45,6 +44,7 @@ HPX_ACTION_DECL(agas_calloc_cyclic);
 static void
 _agas_dealloc(void *gas) {
   agas_t *agas = gas;
+  affinity_delete(agas->vtable.affinity);
   if (agas->chunk_table) {
     chunk_table_delete(agas->chunk_table);
   }
@@ -298,7 +298,7 @@ _agas_calloc_cyclic(size_t n, size_t bbsize, uint32_t boundary,
   return addr;
 }
 
-static gas_t _agas_vtable = {
+static gas_t _agas = {
   .type           = HPX_GAS_AGAS,
   .string = {
     .memget       = agas_memget,
@@ -329,9 +329,7 @@ static gas_t _agas_vtable = {
   .set_attr       = _agas_set_attr,
   .move           = agas_move,
   .owner_of       = _agas_owner_of,
-  .set_affinity   = affinity_set,
-  .clear_affinity = affinity_clear,
-  .get_affinity   = affinity_get
+  .affinity       = NULL
 };
 
 gas_t *gas_agas_new(const config_t *config, boot_t *boot) {
@@ -339,7 +337,7 @@ gas_t *gas_agas_new(const config_t *config, boot_t *boot) {
   dbg_assert(agas);
 
   agas_alloc_bsize = 0;
-  agas->vtable = _agas_vtable;
+  agas->vtable = _agas;
   agas->chunk_table = chunk_table_new(0);
   agas->btt = btt_new(0);
 
@@ -367,6 +365,7 @@ gas_t *gas_agas_new(const config_t *config, boot_t *boot) {
 
   gva_t there = { .addr = _agas_there(agas, here->rank) };
   btt_insert(agas->btt, there, here->rank, here, 1, HPX_GAS_ATTR_NONE);
+  agas->vtable.affinity = affinity_new(config);
   return &agas->vtable;
 }
 

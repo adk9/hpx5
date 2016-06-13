@@ -34,7 +34,6 @@
 #include "global.h"
 #include "heap.h"
 #include "pgas.h"
-#include "../affinity.h"
 
 /// The PGAS type is a global address space that manages a shared heap.
 ///
@@ -54,6 +53,8 @@ heap_t *global_heap = NULL;
 #define _pgas_max_block_size (UINT64_C(1) << GPA_MAX_LG_BSIZE)
 
 static void _pgas_dealloc(void *gas) {
+  gas_t *pgas = gas;
+  affinity_delete(pgas->affinity);
   cyclic_allocator_fini();
   global_allocator_fini();
   if (global_heap) {
@@ -249,7 +250,7 @@ static uint32_t _pgas_owner_of(const void *pgas, hpx_addr_t addr) {
   return gpa_to_rank(addr);
 }
 
-static gas_t _pgas_vtable = {
+static gas_t _pgas = {
   .type           = HPX_GAS_PGAS,
   .string = {
     .memget       = pgas_memget,
@@ -280,16 +281,14 @@ static gas_t _pgas_vtable = {
   .set_attr       = NULL,
   .move           = _pgas_move,
   .owner_of       = _pgas_owner_of,
-  .set_affinity   = affinity_set,
-  .clear_affinity = affinity_clear,
-  .get_affinity   = affinity_get
+  .affinity       = NULL
 };
 
 gas_t *gas_pgas_new(const config_t *cfg, boot_t *boot) {
   size_t heap_size = cfg->heapsize;
 
   if (global_heap) {
-    return &_pgas_vtable;
+    return &_pgas;
   }
 
   global_heap = malloc(sizeof(*global_heap));
@@ -306,5 +305,6 @@ gas_t *gas_pgas_new(const config_t *cfg, boot_t *boot) {
 
   global_allocator_init(here->rank);
   cyclic_allocator_init(here->rank);
-  return &_pgas_vtable;
+  _pgas.affinity = affinity_new(cfg);
+  return &_pgas;
 }

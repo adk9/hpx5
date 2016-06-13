@@ -22,6 +22,10 @@ if BUILD_LIBCUCKOO
 SUBDIRS      += libcuckoo
 endif
 
+if BUILD_USERSPACE_RCU
+SUBDIRS      += userspace-rcu
+endif
+
 if HAVE_DLMALLOC
 SUBDIRS      += dlmalloc
 endif
