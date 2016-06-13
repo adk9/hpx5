@@ -145,6 +145,7 @@ AS_IF([test "x$enable_parallel_config" != xno],
 # The substituted variables are straightforward. The LIBHPX_ prefixed variables
 # are variables required to build an link libhpx itself. The HPX_PC variables
 # are replaced in the hpx.pc file to allow external tools to link with libhpx.
+HPX_CONFIG_USERSPACE_RCU([contrib/userspace-rcu])
 HPX_CONFIG_HPXPP
 HPX_CONFIG_PHOTON([contrib/photon], [photon])
 HPX_CONFIG_MPI([ompi])
@@ -159,7 +160,8 @@ HPX_CONFIG_VALGRIND([contrib/valgrind])
 HPX_CONFIG_LIBFFI([contrib/$libffi_contrib_dir], [libffi])
 HPX_CONFIG_AGAS
 HPX_CONFIG_METIS([metis], [$have_agas_rebalancing])
-HPX_CONFIG_LIBCUCKOO([contrib/libcuckoo], [$have_agas])
+HPX_CONFIG_CITYHASH([contrib/libcuckoo])
+HPX_CONFIG_LIBCUCKOO([contrib/libcuckoo], [yes])
 HPX_CONFIG_PERCOLATION
 HPX_CONFIG_OPENCL([opencl], [$have_percolation])
 HPX_CONFIG_DOCS

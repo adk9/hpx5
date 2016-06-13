@@ -91,6 +91,7 @@ contrib/libffi-mic/fficonfig.py
 contrib/jemalloc/
 contrib/photon/
 contrib/libcuckoo/
+contrib/userspace-rcu/
 
 # /libapex/
 /libapex/Makefile

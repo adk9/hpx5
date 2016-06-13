@@ -15,19 +15,30 @@
 # include "config.h"
 #endif
 
-#include <hpx/hpx.h>
-#include "tests.h"
+#include "none.h"
 
-static int _test_thread_set_affinity_handler(void) {
-  printf("running on %d\n", HPX_THREAD_ID);
-  int to = (HPX_THREAD_ID + 1) % HPX_THREADS;
-  hpx_thread_set_affinity(to);
-  printf("running on %d\n", HPX_THREAD_ID);
-  return HPX_SUCCESS;
+using libhpx::gas::None;
+
+None::None()
+{
 }
-static HPX_ACTION(HPX_DEFAULT, 0, _test_thread_set_affinity,
-                  _test_thread_set_affinity_handler);
 
-TEST_MAIN({
-    ADD_TEST(_test_thread_set_affinity, 0);
-  });
+None::~None()
+{
+}
+
+void
+None::set(hpx_addr_t gva, int worker)
+{
+}
+
+void
+None::clear(hpx_addr_t gva)
+{
+}
+
+int
+None::get(hpx_addr_t gva) const
+{
+  return -1;
+}

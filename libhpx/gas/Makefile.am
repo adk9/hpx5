@@ -1,4 +1,4 @@
-SUBDIRS =
+SUBDIRS = affinity
 
 # LT Utility libraries
 noinst_LTLIBRARIES = libgas.la
@@ -13,8 +13,7 @@ libgas_la_SOURCES  = hpx_gas_glue.c \
                      gpa.c \
                      smp/smp.c \
                      bcast.c
-libgas_la_LIBADD   = 
-
+libgas_la_LIBADD   = affinity/libaffinity.la
 
 if HAVE_NETWORK
 SUBDIRS           += pgas

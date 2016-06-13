@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <urcu-qsbr.h>
 
 #include <hpx/builtins.h>
 #include <libhpx/action.h>
@@ -169,6 +170,7 @@ static void _checkpoint(hpx_parcel_t *to, void *sp, void *env) {
   hpx_parcel_t *prev = _swap_current(to, sp, self);
   _checkpoint_env_t *c = env;
   c->f(prev, c->env);
+  rcu_quiescent_state();
 }
 
 /// Local wrapper for the thread transfer call.
@@ -416,6 +418,7 @@ static hpx_parcel_t *_handle_steal(worker_t *this) {
 /// @param      UNUSED1 The previous parcel.
 /// @param      UNUSED2 The continuation environment.
 static void _null(hpx_parcel_t *UNUSED1, void *UNUSED2) {
+  rcu_quiescent_state();
 }
 
 /// A checkpoint continuation that unlocks a lock.
@@ -496,16 +499,23 @@ static void _push_lifo(hpx_parcel_t *p, void *worker) {
 ///
 /// @returns            A parcel from the mailbox if there is one.
 static hpx_parcel_t *_handle_mail(worker_t *this) {
-  hpx_parcel_t *parcels = NULL;
-  hpx_parcel_t *p = NULL;
-  while ((parcels = sync_two_lock_queue_dequeue(&this->inbox))) {
-    while ((p = parcel_stack_pop(&parcels))) {
-      EVENT_SCHED_MAIL(p->id);
-      log_sched("got mail %p\n", p);
-      _push_lifo(p, this);
-    }
+  hpx_parcel_t *parcels = sync_two_lock_queue_dequeue(&this->inbox);
+  if (!parcels) {
+    return NULL;
   }
-  return _pop_lifo(this);
+
+  hpx_parcel_t *prev = parcel_stack_pop(&parcels);
+  do {
+    hpx_parcel_t *next = NULL;
+    while ((next = parcel_stack_pop(&parcels))) {
+      EVENT_SCHED_MAIL(prev->id);
+      log_sched("got mail %p\n", prev);
+      _push_lifo(prev, this);
+      prev = next;
+    }
+  } while ((parcels = sync_two_lock_queue_dequeue(&this->inbox)));
+  dbg_assert(prev);
+  return prev;
 }
 
 /// Handle the network.
@@ -607,6 +617,7 @@ static void _schedule(worker_t *this) {
     else if ((p = _handle_steal(this))) {
     }
     else {
+      rcu_quiescent_state();
       continue;
     }
     _transfer(p, _null, 0, this);
@@ -656,6 +667,9 @@ static void *_run(void *worker) {
   as_join(AS_GLOBAL);
   as_join(AS_CYCLIC);
 
+  // Make ourself visible to urcu.
+  rcu_register_thread();
+
 #ifdef HAVE_APEX
   // let APEX know there is a new thread
   apex_register_thread("HPX WORKER THREAD");
@@ -682,8 +696,7 @@ static void *_run(void *worker) {
     .lco_depth = 0,
     .tls_id = -1,
     .stack_id = -1,
-    .size = 0,
-    .affinity = -1
+    .size = 0
   };
   system.ustack = &stack;
 
@@ -706,6 +719,9 @@ static void *_run(void *worker) {
   // let APEX know the thread is exiting
   apex_exit_thread();
 #endif
+
+  // leave the urcu domain
+  rcu_unregister_thread();
 
   // leave the global address space
   as_leave();
@@ -841,6 +857,13 @@ void scheduler_spawn(hpx_parcel_t *p) {
   dbg_assert(p);
   dbg_assert(actions[p->action].handler != NULL);
 
+  // If the target has affinity then send the parcel to that worker.
+  int affinity = gas_get_affinity(here->gas, p->target);
+  if (0 <= affinity && affinity != w->id) {
+    scheduler_spawn_at(p, affinity);
+    return;
+  }
+
   // If we're not running then push the parcel and return. This prevents an
   // infinite spawn from inhibiting termination.
   if (!_is_running(w)) {
@@ -924,12 +947,7 @@ hpx_status_t scheduler_wait(void *lock, cvar_t *condition) {
 static void _resume_parcels(hpx_parcel_t *parcels) {
   hpx_parcel_t *p;
   while ((p = parcel_stack_pop(&parcels))) {
-    ustack_t *stack = p->ustack;
-    if (stack && stack->affinity >= 0) {
-      scheduler_spawn_at(p, stack->affinity);
-    } else {
-      parcel_launch(p);
-    }
+    parcel_launch(p);
   }
 }
 
@@ -1048,38 +1066,6 @@ int hpx_thread_get_tls_id(void) {
 intptr_t hpx_thread_can_alloca(size_t bytes) {
   ustack_t *current = self->current->ustack;
   return (uintptr_t)&current - (uintptr_t)current->stack - bytes;
-}
-
-void hpx_thread_set_affinity(int affinity) {
-  // make sure affinity is in bounds
-  dbg_assert(affinity >= -1);
-  dbg_assert(affinity < here->sched->n_workers);
-
-  worker_t *this = self;
-  dbg_assert(this->current);
-  dbg_assert(this->current->ustack);
-  dbg_assert(this->current != this->system);
-
-  // set the soft affinity
-  hpx_parcel_t  *p = this->current;
-  ustack_t *thread = p->ustack;
-  thread->affinity = affinity;
-
-  // if this is clearing the affinity return
-  if (affinity < 0) {
-    return;
-  }
-
-  // if this is already running on the correct worker return
-  if (affinity == this->id) {
-    return;
-  }
-
-  // move this thread to the proper worker through the mailbox
-  worker_t *w = scheduler_get_worker(this->sched, affinity);
-  EVENT_THREAD_SUSPEND(p, this);
-  _schedule_nb(this, _send_mail, w);
-  EVENT_THREAD_RESUME(p, self);
 }
 
 void scheduler_suspend(void (*f)(hpx_parcel_t *, void*), void *env) {

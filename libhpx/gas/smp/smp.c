@@ -35,6 +35,8 @@
 /// with it.
 static void
 _smp_dealloc(void *gas) {
+  gas_t *smp = gas;
+  affinity_delete(smp->affinity);
 }
 
 /// The SMP GAS doesn't restrict block sizes.
@@ -79,7 +81,7 @@ _smp_unpin(void *gas, hpx_addr_t addr) {
 
 /// Compute the locality address.
 static hpx_addr_t
-_smp_there(void *gas, uint32_t i) {
+_smp_there(const void *gas, uint32_t i) {
   dbg_assert_str(i == 0, "Rank %d does not exist in the SMP GAS\n", i);
 
   // We use the address of the global "here" locality to represent HPX_HERE.
@@ -252,12 +254,12 @@ _smp_move(void *gas, hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {
 
 /// Return the size of the global heap stored locally.
 static size_t
-_smp_local_size(void *gas) {
+_smp_local_size(const void *gas) {
   dbg_error("SMP execution should not call this function\n");
 }
 
 static void *
-_smp_local_base(void *gas) {
+_smp_local_base(const void *gas) {
   dbg_error("SMP execution should not call this function\n");
 }
 
@@ -265,7 +267,7 @@ static uint32_t _smp_owner_of(const void *gas, hpx_addr_t addr) {
   return here->rank;
 }
 
-static gas_t _smp_vtable = {
+static gas_t _smp = {
   .type           = HPX_GAS_SMP,
   .string = {
     .memget       = _smp_memget,
@@ -295,9 +297,11 @@ static gas_t _smp_vtable = {
   .free           = _smp_gas_free,
   .set_attr       = NULL,
   .move           = _smp_move,
-  .owner_of       = _smp_owner_of
+  .owner_of       = _smp_owner_of,
+  .affinity       = NULL
 };
 
-gas_t *gas_smp_new(void) {
-  return &_smp_vtable;
+gas_t *gas_smp_new(const config_t *config) {
+  _smp.affinity = affinity_new(config);
+  return &_smp;
 }

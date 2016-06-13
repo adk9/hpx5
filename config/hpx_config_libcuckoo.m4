@@ -13,6 +13,9 @@
 #   LIBHPX_LIBADD
 #   HPX_PC_PRIVATE_LIBS
 # ------------------------------------------------------------------------------
+AC_DEFUN([HPX_CONFIG_CITYHASH], [
+])
+
 AC_DEFUN([HPX_CONFIG_LIBCUCKOO], [
  contrib=$1
  required=$2

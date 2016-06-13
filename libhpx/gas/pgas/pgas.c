@@ -53,6 +53,8 @@ heap_t *global_heap = NULL;
 #define _pgas_max_block_size (UINT64_C(1) << GPA_MAX_LG_BSIZE)
 
 static void _pgas_dealloc(void *gas) {
+  gas_t *pgas = gas;
+  affinity_delete(pgas->affinity);
   cyclic_allocator_fini();
   global_allocator_fini();
   if (global_heap) {
@@ -103,7 +105,7 @@ _pgas_add(const void *gas, hpx_addr_t gpa, int64_t bytes, size_t bsize) {
 }
 
 // Compute a global address for a locality.
-static hpx_addr_t _pgas_there(void *gas, uint32_t i) {
+static hpx_addr_t _pgas_there(const void *UNUSED, uint32_t i) {
   hpx_addr_t there = offset_to_gpa(i, UINT64_MAX);
   if (DEBUG) {
     uint64_t offset = gpa_to_offset(there);
@@ -236,11 +238,11 @@ static void _pgas_move(void *gas, hpx_addr_t src, hpx_addr_t dst,
   hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
 }
 
-static size_t _pgas_local_size(void *gas) {
+static size_t _pgas_local_size(const void *UNUSED) {
   return global_heap->nbytes;
 }
 
-static void *_pgas_local_base(void *gas) {
+static void *_pgas_local_base(const void *UNUSED) {
   return global_heap->base;
 }
 
@@ -248,7 +250,7 @@ static uint32_t _pgas_owner_of(const void *pgas, hpx_addr_t addr) {
   return gpa_to_rank(addr);
 }
 
-static gas_t _pgas_vtable = {
+static gas_t _pgas = {
   .type           = HPX_GAS_PGAS,
   .string = {
     .memget       = pgas_memget,
@@ -278,14 +280,15 @@ static gas_t _pgas_vtable = {
   .free           = _pgas_gas_free,
   .set_attr       = NULL,
   .move           = _pgas_move,
-  .owner_of       = _pgas_owner_of
+  .owner_of       = _pgas_owner_of,
+  .affinity       = NULL
 };
 
 gas_t *gas_pgas_new(const config_t *cfg, boot_t *boot) {
   size_t heap_size = cfg->heapsize;
 
   if (global_heap) {
-    return &_pgas_vtable;
+    return &_pgas;
   }
 
   global_heap = malloc(sizeof(*global_heap));
@@ -302,5 +305,6 @@ gas_t *gas_pgas_new(const config_t *cfg, boot_t *boot) {
 
   global_allocator_init(here->rank);
   cyclic_allocator_init(here->rank);
-  return &_pgas_vtable;
+  _pgas.affinity = affinity_new(cfg);
+  return &_pgas;
 }
