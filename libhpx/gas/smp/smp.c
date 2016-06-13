@@ -28,7 +28,6 @@
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
 #include <libhpx/system.h>
-#include "../affinity.h"
 
 /// Delete the gas instance.
 ///
@@ -302,7 +301,7 @@ static gas_t _smp = {
   .affinity       = NULL
 };
 
-gas_t *gas_smp_new(void *config) {
+gas_t *gas_smp_new(const config_t *config) {
   _smp.affinity = affinity_new(config);
   return &_smp;
 }

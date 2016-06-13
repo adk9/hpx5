@@ -35,7 +35,7 @@ class Affinity {
 extern "C" {
 #endif
 
-void* affinity_new(config_t *config);
+void* affinity_new(const config_t *config);
 void affinity_delete(void *obj);
 void affinity_set(void *obj, hpx_addr_t gva, int worker);
 void affinity_clear(void *obj, hpx_addr_t gva);

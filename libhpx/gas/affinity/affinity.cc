@@ -28,7 +28,7 @@ using libhpx::gas::URCUMap;
 Affinity::~Affinity() {
 }
 
-void* affinity_new(config_t *config) {
+void* affinity_new(const config_t *config) {
   switch (config->gas_affinity) {
    default:
    case (HPX_GAS_AFFINITY_NONE): return new None;
