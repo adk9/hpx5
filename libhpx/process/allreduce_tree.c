@@ -228,12 +228,12 @@ void allreduce_tree_algo_binomial(allreduce_t *r, hpx_addr_t *locals, int32_t nu
 
   for (i = 0; i < num_rounds; ++i) {
     int pair_factor = pow(2, (i+1));
-    int next_adder = pow(2, i);
+    int offset = pow(2, i);
     // map locality index to tree nodes
     for (locality = 0; locality < num_locals_with_root; ++locality) {
       //reduce
-      if( (locality % pair_factor != 0) && (locality % next_adder == 0) ){
-        int parent = locality - next_adder ;
+      if( (locality % pair_factor != 0) && (locality % offset == 0) ){
+        int parent = locality - offset ;
 	int child = locality ;
         hpx_addr_t parent_ga = group_locals[parent];
         hpx_addr_t child_ga = group_locals[child];
