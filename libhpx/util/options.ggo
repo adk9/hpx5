@@ -69,6 +69,13 @@ option "hpx-sched-stackcachelimit" - "bound on the number of stacks to cache"
 typestr="stacks"
 int optional
 
+section "GAS Options"
+
+option "hpx-gas-affinity" - "GAS affinity implementation"
+typestr="type"
+values="none","urcu"
+enum optional 
+
 section "Log options"
 
 option "hpx-log-at" - "filter by locality, -1 for all (default none)"
