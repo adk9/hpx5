@@ -17,6 +17,7 @@
 #include <unistd.h>
 #include <hpx/hpx.h>
 
+static __thread hpx_addr_t *addrs = HPX_NULL;
 
 static void _usage(FILE *f, int error) {
   fprintf(f, "Usage: gasbench -i iters -s size\n"
@@ -45,20 +46,26 @@ int _alloc_free(const int tid, void *a) {
   return HPX_SUCCESS;
 }
 
-int _allocs_then_frees(const int tid, void *a) {
+int _allocs(const int tid, void *a) {
   _alloc_args_t *args = (_alloc_args_t*)a;
   int iters = args->iters;
   size_t size = args->size;
-  hpx_addr_t *addrs = malloc(sizeof(*addrs)*iters);
+  addrs = malloc(sizeof(*addrs)*iters);
   assert(addrs);
   for (int i = 0; i < iters; ++i) {
     addrs[i] = args->fn(1, size, 0);
   }
+  return HPX_SUCCESS;
+}
 
-  for (int i = 0; i < iters; ++i) {
+int _frees(const int tid, void *a) {
+  _alloc_args_t *args = (_alloc_args_t*)a;
+  assert(addrs);
+  for (int i = 0; i < args->iters; ++i) {
     hpx_gas_free(addrs[i], HPX_NULL);
   }
   free(addrs);
+  addrs = NULL;
   return HPX_SUCCESS;
 }
 
@@ -79,15 +86,13 @@ static int _main_action(int iters, size_t size) {
   _alloc_args_t args = { .iters = iters, .size = size, .fn = NULL };
   args.fn = hpx_gas_alloc_local;
   _run(_alloc_free, &args, "alloc+free");
+  _run(_allocs, &args, "alloc");
+  _run(_frees, &args, "free");
 
   args.fn = hpx_gas_calloc_local;
   _run(_alloc_free, &args, "calloc+free");
-
-  args.fn = hpx_gas_alloc_local;
-  _run(_allocs_then_frees, &args, "allocs-then-frees");
-
-  args.fn = hpx_gas_calloc_local;
-  _run(_allocs_then_frees, &args, "callocs-then-frees");
+  _run(_allocs, &args, "calloc");
+  _run(_frees, &args, "free");
 
   hpx_exit(HPX_SUCCESS);
 }
