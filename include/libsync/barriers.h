@@ -23,10 +23,10 @@ extern "C" {
 /// ----------------------------------------------------------------------------
 /// The barrier class.
 ///
-/// A barrier has two member functions, delete() and join().
+/// A barrier has two member functions, dealloc() and join().
 /// ----------------------------------------------------------------------------
 typedef struct barrier {
-  void (*delete)(struct barrier*);
+  void (*dealloc)(struct barrier*);
   int (*join)(struct barrier*, int i);
 } barrier_t;
 
@@ -34,7 +34,7 @@ typedef struct barrier {
 /// Forward to the barrier's specific delete function.
 /// ----------------------------------------------------------------------------
 static inline void sync_barrier_delete(barrier_t *barrier) {
-  barrier->delete(barrier);
+  barrier->dealloc(barrier);
 }
 
 /// ----------------------------------------------------------------------------

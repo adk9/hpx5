@@ -78,12 +78,12 @@ barrier_t *sr_barrier_new(int n) {
   sr_barrier_t *barrier = malloc(sizeof(sr_barrier_t) + n * sizeof(int));
   assert(barrier);
 
-  barrier->vtable.delete = _sr_barrier_delete;
-  barrier->vtable.join   = _sr_barrier_join;
-  barrier->count         = 0;
-  barrier->sense         = 1;
-  barrier->rounds        = 0;
-  barrier->threads       = n;
+  barrier->vtable.dealloc = _sr_barrier_delete;
+  barrier->vtable.join    = _sr_barrier_join;
+  barrier->count          = 0;
+  barrier->sense          = 1;
+  barrier->rounds         = 0;
+  barrier->threads        = n;
 
   for (int i = 0; i < n; ++i) {
     barrier->senses[i]   = 1;
