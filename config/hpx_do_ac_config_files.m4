@@ -18,6 +18,7 @@ AC_DEFUN([HPX_DO_AC_CONFIG_FILES], [
    libhpx/boot/Makefile
    libhpx/actions/Makefile
    libhpx/gas/Makefile
+   libhpx/gas/affinity/Makefile
    libhpx/gas/pgas/Makefile
    libhpx/gas/agas/Makefile
    libhpx/memory/Makefile

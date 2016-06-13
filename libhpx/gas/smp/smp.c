@@ -36,7 +36,8 @@
 /// with it.
 static void
 _smp_dealloc(void *gas) {
-  affinity_fini(NULL);
+  gas_t *smp = gas;
+  affinity_delete(smp->affinity);
 }
 
 /// The SMP GAS doesn't restrict block sizes.
@@ -267,7 +268,7 @@ static uint32_t _smp_owner_of(const void *gas, hpx_addr_t addr) {
   return here->rank;
 }
 
-static gas_t _smp_vtable = {
+static gas_t _smp = {
   .type           = HPX_GAS_SMP,
   .string = {
     .memget       = _smp_memget,
@@ -298,12 +299,10 @@ static gas_t _smp_vtable = {
   .set_attr       = NULL,
   .move           = _smp_move,
   .owner_of       = _smp_owner_of,
-  .set_affinity   = affinity_set,
-  .clear_affinity = affinity_clear,
-  .get_affinity   = affinity_get
+  .affinity       = NULL
 };
 
-gas_t *gas_smp_new(void) {
-  affinity_init(NULL);
-  return &_smp_vtable;
+gas_t *gas_smp_new(void *config) {
+  _smp.affinity = affinity_new(config);
+  return &_smp;
 }

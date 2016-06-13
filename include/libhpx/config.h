@@ -226,6 +226,7 @@ static const char* const HPX_WAITON_TO_STRING[] = {
 typedef enum {
   HPX_GAS_AFFINITY_NONE = 0,
   HPX_GAS_AFFINITY_URCU,
+  HPX_GAS_AFFINITY_CUCKOO,
   HPX_GAS_AFFINITY_MAX
 } libhpx_gas_affinity_t;
 
