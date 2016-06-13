@@ -16,9 +16,9 @@
 #endif
 
 #include <city_hasher.hh>
-#include <mutex>
 #include <urcu-qsbr.h>
 #include <urcu/rculfhash.h>
+#include <stdexcept>
 #include <vector>
 #include "urcu_map.h"
 
@@ -31,26 +31,21 @@ namespace {
 template <size_t N = sizeof(unsigned long)>
 unsigned long Hash(hpx_addr_t gva);
 
-template <>
+template <> HPX_USED
 unsigned long Hash<8>(hpx_addr_t gva) {
   return CityHash64(reinterpret_cast<const char* const>(&gva), sizeof(gva));
 }
 
-template <>
+template <> HPX_USED
 unsigned long Hash<4>(hpx_addr_t gva) {
   return CityHash32(reinterpret_cast<const char* const>(&gva), sizeof(gva));
 }
 /// @}
 
-/// Simple RCU read lock for use in the lock guard RAII paradigm.
-struct RCULock {
-  static void lock() {
-    rcu_read_lock();
-  }
-
-  static void unlock() {
-    rcu_read_unlock();
-  }
+/// Simple RCU lock guard
+struct RCULockGuard {
+  RCULockGuard() { rcu_read_lock(); }
+  ~RCULockGuard() { rcu_read_unlock(); }
 };
 }
 
@@ -120,7 +115,7 @@ URCUMap::clear(hpx_addr_t k)
 URCUMap::Node*
 URCUMap::insert(hash_t hash, URCUMap::Node *node)
 {
-  std::lock_guard<RCULock> guard();
+  RCULockGuard _;
   hpx_addr_t key = node->key;
   void *n = cds_lfht_add_replace(ht, hash, Node::Match, &key, node);
   return static_cast<Node*>(n);
@@ -129,7 +124,7 @@ URCUMap::insert(hash_t hash, URCUMap::Node *node)
 URCUMap::Node*
 URCUMap::remove(hash_t hash, hpx_addr_t key)
 {
-  std::lock_guard<RCULock> guard();
+  RCULockGuard _;
   struct cds_lfht_iter it;
   cds_lfht_lookup(ht, hash, Node::Match, &key, &it);
   if (Node *n = static_cast<Node*>(cds_lfht_iter_get_node(&it))) {
@@ -145,7 +140,7 @@ URCUMap::removeAll(std::vector<URCUMap::Node*>& nodes)
 {
   struct cds_lfht_iter it;
   struct cds_lfht_node *node;
-  std::lock_guard<RCULock> guard();
+  RCULockGuard _;
   cds_lfht_for_each(ht, &it, node) {
     if (cds_lfht_del(ht, node) != 0) {
       throw std::runtime_error("Failed to delete node\n");
@@ -157,7 +152,7 @@ URCUMap::removeAll(std::vector<URCUMap::Node*>& nodes)
 int
 URCUMap::lookup(hash_t hash, hpx_addr_t key) const
 {
-  std::lock_guard<RCULock> guard();
+  RCULockGuard _;
   struct cds_lfht_iter it;
   cds_lfht_lookup(ht, hash, Node::Match, &key, &it);
   Node *n = static_cast<Node*>(cds_lfht_iter_get_node(&it));
