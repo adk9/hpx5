@@ -44,6 +44,7 @@ enum enum_hpx_transport { hpx_transport__NULL = -1, hpx_transport_arg_default = 
 enum enum_hpx_network { hpx_network__NULL = -1, hpx_network_arg_default = 0, hpx_network_arg_smp, hpx_network_arg_pwc, hpx_network_arg_isir };
 enum enum_hpx_thread_affinity { hpx_thread_affinity__NULL = -1, hpx_thread_affinity_arg_default = 0, hpx_thread_affinity_arg_hwthread, hpx_thread_affinity_arg_core, hpx_thread_affinity_arg_numa, hpx_thread_affinity_arg_none };
 enum enum_hpx_sched_policy { hpx_sched_policy__NULL = -1, hpx_sched_policy_arg_default = 0, hpx_sched_policy_arg_random, hpx_sched_policy_arg_hier };
+enum enum_hpx_gas_affinity { hpx_gas_affinity__NULL = -1, hpx_gas_affinity_arg_none = 0, hpx_gas_affinity_arg_urcu };
 enum enum_hpx_log_level { hpx_log_level__NULL = -1, hpx_log_level_arg_default = 0, hpx_log_level_arg_boot, hpx_log_level_arg_sched, hpx_log_level_arg_gas, hpx_log_level_arg_lco, hpx_log_level_arg_net, hpx_log_level_arg_trans, hpx_log_level_arg_parcel, hpx_log_level_arg_action, hpx_log_level_arg_config, hpx_log_level_arg_memory, hpx_log_level_arg_coll, hpx_log_level_arg_all };
 enum enum_hpx_dbg_waitonsig { hpx_dbg_waitonsig__NULL = -1, hpx_dbg_waitonsig_arg_segv = 0, hpx_dbg_waitonsig_arg_abrt, hpx_dbg_waitonsig_arg_fpe, hpx_dbg_waitonsig_arg_ill, hpx_dbg_waitonsig_arg_bus, hpx_dbg_waitonsig_arg_iot, hpx_dbg_waitonsig_arg_sys, hpx_dbg_waitonsig_arg_trap, hpx_dbg_waitonsig_arg_all };
 enum enum_hpx_trace_backend { hpx_trace_backend__NULL = -1, hpx_trace_backend_arg_default = 0, hpx_trace_backend_arg_file, hpx_trace_backend_arg_console, hpx_trace_backend_arg_stats };
@@ -94,6 +95,9 @@ struct hpx_options_t
   int hpx_sched_stackcachelimit_arg;	/**< @brief bound on the number of stacks to cache.  */
   char * hpx_sched_stackcachelimit_orig;	/**< @brief bound on the number of stacks to cache original value given at command line.  */
   const char *hpx_sched_stackcachelimit_help; /**< @brief bound on the number of stacks to cache help description.  */
+  enum enum_hpx_gas_affinity hpx_gas_affinity_arg;	/**< @brief GAS affinity implementation.  */
+  char * hpx_gas_affinity_orig;	/**< @brief GAS affinity implementation original value given at command line.  */
+  const char *hpx_gas_affinity_help; /**< @brief GAS affinity implementation help description.  */
   int* hpx_log_at_arg;	/**< @brief filter by locality, -1 for all (default none).  */
   char ** hpx_log_at_orig;	/**< @brief filter by locality, -1 for all (default none) original value given at command line.  */
   unsigned int hpx_log_at_min; /**< @brief filter by locality, -1 for all (default none)'s minimum occurreces */
@@ -232,6 +236,7 @@ struct hpx_options_t
   unsigned int hpx_sched_policy_given ;	/**< @brief Whether hpx-sched-policy was given.  */
   unsigned int hpx_sched_wfthreshold_given ;	/**< @brief Whether hpx-sched-wfthreshold was given.  */
   unsigned int hpx_sched_stackcachelimit_given ;	/**< @brief Whether hpx-sched-stackcachelimit was given.  */
+  unsigned int hpx_gas_affinity_given ;	/**< @brief Whether hpx-gas-affinity was given.  */
   unsigned int hpx_log_at_given ;	/**< @brief Whether hpx-log-at was given.  */
   unsigned int hpx_log_level_given ;	/**< @brief Whether hpx-log-level was given.  */
   unsigned int hpx_dbg_waitat_given ;	/**< @brief Whether hpx-dbg-waitat was given.  */
@@ -464,6 +469,7 @@ extern const char *hpx_option_parser_hpx_transport_values[];  /**< @brief Possib
 extern const char *hpx_option_parser_hpx_network_values[];  /**< @brief Possible values for hpx-network. */
 extern const char *hpx_option_parser_hpx_thread_affinity_values[];  /**< @brief Possible values for hpx-thread-affinity. */
 extern const char *hpx_option_parser_hpx_sched_policy_values[];  /**< @brief Possible values for hpx-sched-policy. */
+extern const char *hpx_option_parser_hpx_gas_affinity_values[];  /**< @brief Possible values for hpx-gas-affinity. */
 extern const char *hpx_option_parser_hpx_log_level_values[];  /**< @brief Possible values for hpx-log-level. */
 extern const char *hpx_option_parser_hpx_dbg_waitonsig_values[];  /**< @brief Possible values for hpx-dbg-waitonsig. */
 extern const char *hpx_option_parser_hpx_trace_backend_values[];  /**< @brief Possible values for hpx-trace-backend. */
