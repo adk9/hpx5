@@ -49,7 +49,7 @@ gas_t *gas_new(config_t *cfg, struct boot *boot) {
 
   switch (type) {
    case HPX_GAS_SMP:
-    gas = gas_smp_new();
+    gas = gas_smp_new(cfg);
     break;
 
    case HPX_GAS_AGAS:

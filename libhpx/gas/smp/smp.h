@@ -16,6 +16,6 @@
 
 struct gas;
 
-struct gas *gas_smp_new(void);
+struct gas *gas_smp_new(void *config);
 
 #endif

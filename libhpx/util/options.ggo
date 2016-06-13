@@ -73,7 +73,7 @@ section "GAS Options"
 
 option "hpx-gas-affinity" - "GAS affinity implementation"
 typestr="type"
-values="none","urcu"
+values="none","urcu","cuckoo"
 enum optional 
 
 section "Log options"

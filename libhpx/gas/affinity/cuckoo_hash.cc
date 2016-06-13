@@ -24,14 +24,22 @@ extern "C" {
 #include <libhpx/locality.h>
 #include <libhpx/scheduler.h>
 }
-#include "affinity.h"
+#include "cuckoo_hash.h"
 
-namespace {
-typedef cuckoohash_map<hpx_addr_t, int, CityHasher<hpx_addr_t>> AffinityMap;
-AffinityMap _map;
+using libhpx::gas::Affinity;
+using libhpx::gas::CuckooHash;
+
+CuckooHash::CuckooHash() : map_()
+{
 }
 
-void affinity_set(void *, hpx_addr_t gva, int worker) {
+CuckooHash::~CuckooHash()
+{
+}
+
+void
+CuckooHash::set(hpx_addr_t gva, int worker)
+{
   DEBUG_IF(gas_owner_of(here->gas, gva) != here->rank) {
     dbg_error("Attempt to set affinity of %zu at %d (owned by %d)\n",
               gva, here->rank, gas_owner_of(here->gas, gva));
@@ -43,19 +51,23 @@ void affinity_set(void *, hpx_addr_t gva, int worker) {
   // @todo: Should we be pinning gva? The interface doesn't require it, but it
   //        could prevent usage errors in AGAS? On the other hand, it could
   //        result in debugging issues with pin reference counting.
-  _map.insert(gva, worker);
+  map_.insert(gva, worker);
 }
 
-void affinity_clear(void *, hpx_addr_t gva) {
+void
+CuckooHash::clear(hpx_addr_t gva)
+{
   DEBUG_IF(gas_owner_of(here->gas, gva) != here->rank) {
     dbg_error("Attempt to clear affinity of %zu at %d (owned by %d)\n",
               gva, here->rank, gas_owner_of(here->gas, gva));
   }
-  _map.erase(gva);
+  map_.erase(gva);
 }
 
-int affinity_get(const void *, hpx_addr_t gva) {
+int
+CuckooHash::get(hpx_addr_t gva) const
+{
   int worker = -1;
-  _map.find(gva, worker);
+  map_.find(gva, worker);
   return worker;
 }

@@ -44,7 +44,7 @@ enum enum_hpx_transport { hpx_transport__NULL = -1, hpx_transport_arg_default = 
 enum enum_hpx_network { hpx_network__NULL = -1, hpx_network_arg_default = 0, hpx_network_arg_smp, hpx_network_arg_pwc, hpx_network_arg_isir };
 enum enum_hpx_thread_affinity { hpx_thread_affinity__NULL = -1, hpx_thread_affinity_arg_default = 0, hpx_thread_affinity_arg_hwthread, hpx_thread_affinity_arg_core, hpx_thread_affinity_arg_numa, hpx_thread_affinity_arg_none };
 enum enum_hpx_sched_policy { hpx_sched_policy__NULL = -1, hpx_sched_policy_arg_default = 0, hpx_sched_policy_arg_random, hpx_sched_policy_arg_hier };
-enum enum_hpx_gas_affinity { hpx_gas_affinity__NULL = -1, hpx_gas_affinity_arg_none = 0, hpx_gas_affinity_arg_urcu };
+enum enum_hpx_gas_affinity { hpx_gas_affinity__NULL = -1, hpx_gas_affinity_arg_none = 0, hpx_gas_affinity_arg_urcu, hpx_gas_affinity_arg_cuckoo };
 enum enum_hpx_log_level { hpx_log_level__NULL = -1, hpx_log_level_arg_default = 0, hpx_log_level_arg_boot, hpx_log_level_arg_sched, hpx_log_level_arg_gas, hpx_log_level_arg_lco, hpx_log_level_arg_net, hpx_log_level_arg_trans, hpx_log_level_arg_parcel, hpx_log_level_arg_action, hpx_log_level_arg_config, hpx_log_level_arg_memory, hpx_log_level_arg_coll, hpx_log_level_arg_all };
 enum enum_hpx_dbg_waitonsig { hpx_dbg_waitonsig__NULL = -1, hpx_dbg_waitonsig_arg_segv = 0, hpx_dbg_waitonsig_arg_abrt, hpx_dbg_waitonsig_arg_fpe, hpx_dbg_waitonsig_arg_ill, hpx_dbg_waitonsig_arg_bus, hpx_dbg_waitonsig_arg_iot, hpx_dbg_waitonsig_arg_sys, hpx_dbg_waitonsig_arg_trap, hpx_dbg_waitonsig_arg_all };
 enum enum_hpx_trace_backend { hpx_trace_backend__NULL = -1, hpx_trace_backend_arg_default = 0, hpx_trace_backend_arg_file, hpx_trace_backend_arg_console, hpx_trace_backend_arg_stats };

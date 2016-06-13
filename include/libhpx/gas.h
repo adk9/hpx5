@@ -20,8 +20,26 @@
 #include <libhpx/system.h>
 
 #ifdef __cplusplus
+namespace libhpx {
+namespace gas {
+class Affinity {
+ public:
+  virtual ~Affinity();
+
+  virtual void set(hpx_addr_t gva, int worker) = 0;
+  virtual void clear(hpx_addr_t gva) = 0;
+  virtual int get(hpx_addr_t gva) const = 0;
+};
+}
+}
 extern "C" {
 #endif
+
+void* affinity_new(config_t *config);
+void affinity_delete(void *obj);
+void affinity_set(void *obj, hpx_addr_t gva, int worker);
+void affinity_clear(void *obj, hpx_addr_t gva);
+int affinity_get(const void *obj, hpx_addr_t gva);
 
 /// Forward declarations.
 /// @{
@@ -32,7 +50,6 @@ struct boot;
 typedef struct gas {
   libhpx_gas_t type;
   class_string_t string;
-
   uint64_t max_block_size;
 
   void (*dealloc)(void *gas);
@@ -46,9 +63,6 @@ typedef struct gas {
 
   hpx_addr_t (*there)(const void *gas, uint32_t i);
   uint32_t (*owner_of)(const void *gas, hpx_addr_t gva);
-  int (*get_affinity)(const void *gas, hpx_addr_t gva);
-  void (*set_affinity)(void *gas, hpx_addr_t gva, int worker);
-  void (*clear_affinity)(void *gas, hpx_addr_t gva);
   bool (*try_pin)(void *gas, hpx_addr_t gva, void **local);
   void (*unpin)(void *gas, hpx_addr_t gva);
   void (*free)(void *gas, hpx_addr_t gca, hpx_addr_t rsync);
@@ -63,6 +77,8 @@ typedef struct gas {
   __typeof(hpx_gas_calloc_cyclic_attr) *calloc_cyclic;
   __typeof(hpx_gas_alloc_blocked_attr) *alloc_blocked;
   __typeof(hpx_gas_calloc_blocked_attr) *calloc_blocked;
+
+  void *affinity;
 } gas_t;
 
 gas_t *gas_new(config_t *cfg, struct boot *boot)
@@ -80,17 +96,29 @@ inline static uint32_t gas_owner_of(const void *obj, hpx_addr_t gva) {
 
 inline static int gas_get_affinity(const void *obj, hpx_addr_t gva) {
   const gas_t *gas = (const gas_t*)obj;
-  return gas->get_affinity(gas, gva);
+#ifdef __cplusplus
+  return static_cast<const libhpx::gas::Affinity*>(gas->affinity)->get(gva);
+#else
+  return affinity_get(gas->affinity, gva);
+#endif
 }
 
 inline static void gas_set_affinity(void *obj, hpx_addr_t gva, int worker) {
   gas_t *gas = (gas_t*)obj;
-  gas->set_affinity(gas, gva, worker);
+#ifdef __cplusplus
+  static_cast<libhpx::gas::Affinity*>(gas->affinity)->set(gva, worker);
+#else
+  affinity_set(gas->affinity, gva, worker);
+#endif
 }
 
 inline static void gas_clear_affinity(void *obj, hpx_addr_t gva) {
   gas_t *gas = (gas_t*)obj;
-  gas->clear_affinity(gas, gva);
+#ifdef __cplusplus
+  static_cast<libhpx::gas::Affinity*>(gas->affinity)->clear(gva);
+#else
+  affinity_clear(gas->affinity, gva);
+#endif
 }
 
 static inline size_t gas_local_size(void *obj) {
