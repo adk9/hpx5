@@ -15,6 +15,7 @@
 # include "config.h"
 #endif
 
+#include <cinttypes>
 #include <cuckoohash_map.hh>
 #include <city_hasher.hh>
 #include <hpx/hpx.h>
@@ -41,11 +42,12 @@ void
 CuckooHash::set(hpx_addr_t gva, int worker)
 {
   DEBUG_IF(gas_owner_of(here->gas, gva) != here->rank) {
-    dbg_error("Attempt to set affinity of %zu at %d (owned by %d)\n",
+    dbg_error("Attempt to set affinity of %" PRIu64 " at %d (owned by %d)\n",
               gva, here->rank, gas_owner_of(here->gas, gva));
   }
   DEBUG_IF(worker < 0 || here->sched->n_workers <= worker) {
-    dbg_error("Attempt to set affinity of %zu to %d is outside range [0, %d)\n",
+    dbg_error("Attempt to set affinity of %" PRIu64
+              " to %d is outside range [0, %d)\n",
               gva, worker, here->sched->n_workers);
   }
   // @todo: Should we be pinning gva? The interface doesn't require it, but it
@@ -58,7 +60,7 @@ void
 CuckooHash::clear(hpx_addr_t gva)
 {
   DEBUG_IF(gas_owner_of(here->gas, gva) != here->rank) {
-    dbg_error("Attempt to clear affinity of %zu at %d (owned by %d)\n",
+    dbg_error("Attempt to clear affinity of %" PRIu64 " at %d (owned by %d)\n",
               gva, here->rank, gas_owner_of(here->gas, gva));
   }
   map_.erase(gva);

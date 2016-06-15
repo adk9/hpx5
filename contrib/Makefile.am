@@ -22,7 +22,7 @@ if BUILD_LIBCUCKOO
 SUBDIRS      += libcuckoo
 endif
 
-if BUILD_USERSPACE_RCU
+if BUILD_URCU
 SUBDIRS      += userspace-rcu
 endif
 

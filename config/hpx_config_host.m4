@@ -36,6 +36,9 @@ AC_DEFUN([_HPX_DO_LINUX], [
  pagesize=`getconf PAGESIZE`
  jemalloc_default=yes
 
+ # Linux platforms support ucru
+ want_urcu=yes
+
  AC_DEFINE([_POSIX_C_SOURCE], [200809L], [Define the POSIX version])
  LIBHPX_LIBS="$LIBHPX_LIBS -lrt"
  HPX_PC_CFLAGS="$HPX_PC_CFLAGS -D_POSIX_C_SOURCE=200809L"
@@ -46,6 +49,9 @@ AC_DEFUN([_HPX_DO_DARWIN], [
  l1d_linesize=`sysctl -n hw.cachelinesize`
  pagesize=`getconf PAGESIZE`
  jemalloc_default=no
+
+ # Darwin doesn't currently support urcu
+ want_urcu=no
 ])
 
 AC_DEFUN([HPX_CONFIG_HOST], [
