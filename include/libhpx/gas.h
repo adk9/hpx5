@@ -77,6 +77,8 @@ typedef struct gas {
   __typeof(hpx_gas_calloc_cyclic_attr) *calloc_cyclic;
   __typeof(hpx_gas_alloc_blocked_attr) *alloc_blocked;
   __typeof(hpx_gas_calloc_blocked_attr) *calloc_blocked;
+  __typeof(hpx_gas_alloc_user_attr) *alloc_user;
+  __typeof(hpx_gas_calloc_user_attr) *calloc_user;
 
   void *affinity;
 } gas_t;

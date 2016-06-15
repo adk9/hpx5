@@ -156,6 +156,7 @@ _agas_owner_of(const void *gas, hpx_addr_t addr) {
     INST_IF(!found) {
       EVENT_GAS_MISS(addr, owner);
     }
+    (void)found;
   }
   dbg_assert(owner < here->ranks);
   return owner;
@@ -311,11 +312,13 @@ static hpx_addr_t _agas_calloc_blocked(size_t n, size_t bsize,
 static
 hpx_addr_t _agas_alloc_user(size_t n, size_t bsize, uint32_t boundary,
                             hpx_gas_dist_t dist, uint32_t attr) {
+  return HPX_NULL;
 }
 
 static
 hpx_addr_t _agas_calloc_user(size_t n, size_t bsize, uint32_t boundary,
                              hpx_gas_dist_t dist, uint32_t attr) {
+  return HPX_NULL;
 }
 
 static gas_t _agas = {

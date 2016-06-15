@@ -68,12 +68,12 @@ void hpx_gas_unpin(const hpx_addr_t addr) {
 
 hpx_addr_t hpx_gas_alloc(size_t n, size_t bsize, uint32_t boundary,
                          hpx_gas_dist_t dist, uint32_t attr) {
-  switch (dist) {
-   case (HPX_DIST_TYPE_LOCAL):
+  switch ((uintptr_t)dist) {
+   case (HPX_GAS_DIST_LOCAL):
     return hpx_gas_alloc_local_attr(n, bsize, boundary, attr);
-   case (HPX_DIST_TYPE_CYCLIC):
+   case (HPX_GAS_DIST_CYCLIC):
     return hpx_gas_alloc_cyclic_attr(n, bsize, boundary, attr);
-   case (HPX_DIST_TYPE_BLOCKED):
+   case (HPX_GAS_DIST_BLOCKED):
     return hpx_gas_alloc_blocked_attr(n, bsize, boundary, attr);
    default:
     return hpx_gas_alloc_user_attr(n, bsize, boundary, dist, attr);
@@ -82,12 +82,12 @@ hpx_addr_t hpx_gas_alloc(size_t n, size_t bsize, uint32_t boundary,
 
 hpx_addr_t hpx_gas_calloc(size_t n, size_t bsize, uint32_t boundary,
                           hpx_gas_dist_t dist, uint32_t attr) {
-  switch (dist) {
-   case (HPX_DIST_TYPE_LOCAL):
+  switch ((uintptr_t)dist) {
+   case (HPX_GAS_DIST_LOCAL):
     return hpx_gas_calloc_local_attr(n, bsize, boundary, attr);
-   case (HPX_DIST_TYPE_CYCLIC):
+   case (HPX_GAS_DIST_CYCLIC):
     return hpx_gas_calloc_cyclic_attr(n, bsize, boundary, attr);
-   case (HPX_DIST_TYPE_BLOCKED):
+   case (HPX_GAS_DIST_BLOCKED):
     return hpx_gas_calloc_blocked_attr(n, bsize, boundary, attr);
    default:
     return hpx_gas_calloc_user_attr(n, bsize, boundary, dist, attr);

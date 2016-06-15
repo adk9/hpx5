@@ -34,9 +34,9 @@ extern HPX_PUBLIC uint64_t HPX_GAS_BLOCK_BYTES_MAX;
 typedef hpx_addr_t (*hpx_gas_dist_t)(uint32_t i, size_t n, size_t bsize);
 
 /// GAS distribution types.
-#define HPX_GAS_DIST_LOCAL   (hpx_gas_dist_t)0x1
-#define HPX_GAS_DIST_CYCLIC  (hpx_gas_dist_t)0x2
-#define HPX_GAS_DIST_BLOCKED (hpx_gas_dist_t)0x4
+#define HPX_GAS_DIST_LOCAL   (uintptr_t)0x1
+#define HPX_GAS_DIST_CYCLIC  (uintptr_t)0x2
+#define HPX_GAS_DIST_BLOCKED (uintptr_t)0x4
 
 /// GAS Attributes.
 #define HPX_GAS_ATTR_NONE  0x0  //!< Empty attribute.
