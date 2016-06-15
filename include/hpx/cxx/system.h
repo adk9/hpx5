@@ -20,7 +20,9 @@
 namespace hpx {
 namespace system {
 template <typename A, typename... Params>
-void broadcast(A action, Params... params) {
+inline void
+broadcast(A action, Params... params)
+{
   hpx_pid_t pid = hpx_thread_current_pid();
   size_t n = sizeof...(Params);
   if (int e = _hpx_process_broadcast_rsync(pid, action, n, params...)) {
@@ -29,7 +31,9 @@ void broadcast(A action, Params... params) {
 }
 
 template <typename A, typename T, typename... Params>
-void broadcast(A act, const global_ptr<T>& rsync, Params... params) {
+inline void
+broadcast(A act, const global_ptr<T>& rsync, Params... params)
+{
   hpx_pid_t pid = hpx_thread_current_pid();
   size_t n = sizeof...(Params);
   hpx_addr_t raddr = rsync.ptr();
@@ -39,8 +43,10 @@ void broadcast(A act, const global_ptr<T>& rsync, Params... params) {
 }
 
 template <typename A, typename T, typename U, typename... Params>
-void broadcast(A act, const global_ptr<T>& lsync, const global_ptr<U>& rsync,
-               Params... params) {
+inline void
+broadcast(A act, const global_ptr<T>& lsync, const global_ptr<U>& rsync,
+          Params... params)
+{
   hpx_pid_t pid = hpx_thread_current_pid();
   size_t n = sizeof...(Params);
   hpx_addr_t laddr = lsync.ptr();

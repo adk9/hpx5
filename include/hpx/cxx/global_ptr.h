@@ -257,96 +257,132 @@ class global_ptr {
 ///
 /// @{
 template <typename T, typename U>
-bool operator==(const global_ptr<T>& lhs, const global_ptr<U> &rhs) noexcept {
+inline bool
+operator==(const global_ptr<T>& lhs, const global_ptr<U> &rhs) noexcept
+{
   return ((lhs - rhs) == 0);
 }
 
 template <typename T, typename U>
-bool operator!=(const global_ptr<T>& lhs, const global_ptr<U> &rhs) noexcept {
+inline bool
+operator!=(const global_ptr<T>& lhs, const global_ptr<U> &rhs) noexcept
+{
   return !(lhs == rhs);
 }
 
 template <typename T, typename U>
-bool operator<(const global_ptr<T>& lhs, const global_ptr<U> &rhs) noexcept {
+inline bool
+operator<(const global_ptr<T>& lhs, const global_ptr<U> &rhs) noexcept
+{
   assert(lhs.get_block_size() == rhs.get_block_size());
   return ((lhs - rhs) < 0);
 }
 
 template <typename T, typename U>
-bool operator>(const global_ptr<T>& lhs, const global_ptr<U> &rhs) noexcept {
+inline bool
+operator>(const global_ptr<T>& lhs, const global_ptr<U> &rhs) noexcept
+{
   assert(lhs.get_block_size() == rhs.get_block_size());
   return ((lhs - rhs) > 0);
 }
 
 template <typename T, typename U>
-bool operator<=(const global_ptr<T>& lhs, const global_ptr<U> &rhs) noexcept {
+inline bool
+operator<=(const global_ptr<T>& lhs, const global_ptr<U> &rhs) noexcept
+{
   assert(lhs.get_block_size() == rhs.get_block_size());
   return ((lhs - rhs) <= 0);
 }
 
 template <typename T, typename U>
-bool operator>=(const global_ptr<T>& lhs, const global_ptr<U> &rhs) noexcept {
+inline bool
+operator>=(const global_ptr<T>& lhs, const global_ptr<U> &rhs) noexcept
+{
   assert(lhs.get_block_size() == rhs.get_block_size());
   return ((lhs - rhs) >= 0);
 }
 
 template <typename T>
-bool operator==(const global_ptr<T>& lhs, std::nullptr_t) noexcept {
+inline bool
+operator==(const global_ptr<T>& lhs, std::nullptr_t) noexcept
+{
   return (lhs.get() == HPX_NULL);
 }
 
 template <typename T>
-bool operator==(std::nullptr_t, const global_ptr<T>& rhs) noexcept {
+inline bool
+operator==(std::nullptr_t, const global_ptr<T>& rhs) noexcept
+{
   return (HPX_NULL == rhs.get());
 }
 
 template <typename T>
-bool operator!=(const global_ptr<T>& lhs, std::nullptr_t) noexcept {
+inline bool
+operator!=(const global_ptr<T>& lhs, std::nullptr_t) noexcept
+{
   return (lhs.get() != HPX_NULL);
 }
 
 template <typename T>
-bool operator!=(std::nullptr_t, const global_ptr<T>& rhs) noexcept {
+inline bool
+operator!=(std::nullptr_t, const global_ptr<T>& rhs) noexcept
+{
   return (rhs.get() != HPX_NULL);
 }
 
 template <typename T>
-bool operator<(const global_ptr<T>& lhs, std::nullptr_t) noexcept {
+inline bool
+operator<(const global_ptr<T>& lhs, std::nullptr_t) noexcept
+{
   return std::less<T*>(lhs.get(), nullptr);
 }
 
 template <typename T>
-bool operator<(std::nullptr_t, const global_ptr<T>& rhs) noexcept {
+inline bool
+operator<(std::nullptr_t, const global_ptr<T>& rhs) noexcept
+{
   return std::less<T*>(nullptr, rhs.get());
 }
 
 template <typename T>
-bool operator>(const global_ptr<T>& lhs, std::nullptr_t) noexcept {
+inline bool
+operator>(const global_ptr<T>& lhs, std::nullptr_t) noexcept
+{
   return nullptr < lhs;
 }
 
 template <typename T>
-bool operator>(std::nullptr_t, const global_ptr<T>& rhs) noexcept {
+inline bool
+operator>(std::nullptr_t, const global_ptr<T>& rhs) noexcept
+{
   return rhs < nullptr;
 }
 
 template <typename T>
-bool operator<=(const global_ptr<T>& lhs, std::nullptr_t) noexcept {
+inline bool
+operator<=(const global_ptr<T>& lhs, std::nullptr_t) noexcept
+{
   return !(nullptr < lhs);
 }
 
 template <typename T>
-bool operator<=(std::nullptr_t, const global_ptr<T>& rhs) noexcept {
+inline bool
+operator<=(std::nullptr_t, const global_ptr<T>& rhs) noexcept
+{
   return !(rhs < nullptr);
 }
 
 template <typename T>
-bool operator>=(const global_ptr<T>& lhs, std::nullptr_t) noexcept {
+inline bool
+operator>=(const global_ptr<T>& lhs, std::nullptr_t) noexcept
+{
   return !(lhs < nullptr);
 }
 
 template <typename T>
-bool operator>=(std::nullptr_t, const global_ptr<T>& rhs) noexcept {
+inline bool
+operator>=(std::nullptr_t, const global_ptr<T>& rhs) noexcept
+{
   return !(nullptr < rhs);
 }
 
@@ -436,22 +472,30 @@ class pin_guard {
 }; // template pin_guard
 
 template <typename T>
-pin_guard<T> scoped_pin(const global_ptr<T> gva) noexcept(false) {
+inline pin_guard<T>
+scoped_pin(const global_ptr<T> gva) noexcept(false)
+{
   return pin_guard<T>(gva);
 }
 
 template <typename T>
-pin_guard<T> scoped_pin(const global_ptr<T> gva, bool& local) noexcept {
+inline pin_guard<T>
+scoped_pin(const global_ptr<T> gva, bool& local) noexcept
+{
   return pin_guard<T>(gva, local);
 }
 
 template <typename T>
-pin_guard<T> scoped_pin(hpx_addr_t gva, T*& lva) noexcept {
+inline pin_guard<T>
+scoped_pin(hpx_addr_t gva, T*& lva) noexcept
+{
   return pin_guard<T>(gva, lva);
 }
 
 template <typename T>
-pin_guard<T> scoped_pin(hpx_addr_t gva) noexcept {
+inline pin_guard<T>
+scoped_pin(hpx_addr_t gva) noexcept
+{
   return pin_guard<T>(gva);
 }
 

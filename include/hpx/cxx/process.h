@@ -22,7 +22,9 @@ namespace hpx {
 namespace process {
 /// Synchronous broadcast to all of the localities within a process.
 template <typename A, typename... Params>
-void broadcast(A action, Params... params) {
+inline void
+broadcast(A action, Params... params)
+{
   const size_t n = sizeof...(Params);
   const hpx_pid_t pid = hpx_thread_current_pid();
   if (int e = _hpx_process_broadcast_rsync(pid, action, n, params...)) {

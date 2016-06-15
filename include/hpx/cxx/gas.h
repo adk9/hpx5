@@ -22,8 +22,10 @@
 namespace hpx {
 namespace gas {
 template <typename T, typename A, typename... Params>
-void broadcast(A act, const global_ptr<T>& base, int blocks, size_t offset,
-               Params... ps) {
+inline void
+broadcast(A act, const global_ptr<T>& base, int blocks, size_t offset,
+          Params... ps)
+{
   size_t n = sizeof...(Params);
   hpx_addr_t gva = base.get();
   size_t bsize = base.bsize();
@@ -33,9 +35,10 @@ void broadcast(A act, const global_ptr<T>& base, int blocks, size_t offset,
 } // template broadcast
 
 template <typename T, typename A, typename U, typename... Params>
-void broadcast(A act, const global_ptr<T>& base, int blocks, size_t offset,
-               const global_ptr<U>& rsync, Params... ps) {
-
+inline void
+broadcast(A act, const global_ptr<T>& base, int blocks, size_t offset,
+          const global_ptr<U>& rsync, Params... ps)
+{
   static_assert(lco::is_lco<U>::value, "rsync must be an LCO");
 
   size_t n = sizeof...(Params);

@@ -21,15 +21,19 @@
 
 namespace hpx {
 
-void parallel_for(hpx_for_action_t f, int min, int max, void *env) {
+inline void
+parallel_for(hpx_for_action_t f, int min, int max, void *env)
+{
   if (int e = hpx_par_for_sync(f, min, max, env)) {
     throw Error(e);
   }
 }
 
 template <typename T>
-void parallel_for(hpx_for_action_t f, int min, int max, void *env,
-                  const global_ptr<T>& sync) {
+inline void
+parallel_for(hpx_for_action_t f, int min, int max, void *env,
+             const global_ptr<T>& sync)
+{
   static_assert(lco::is_lco<T>::value, "LCO type required");
   if (int e = hpx_par_for(f, min, max, env, sync.get())) {
     throw Error(e);
@@ -37,8 +41,9 @@ void parallel_for(hpx_for_action_t f, int min, int max, void *env,
 }
 
 template <template <typename> class LCO>
-void parallel_for(hpx_for_action_t f, int min, int max, void *env,
-                  std::nullptr_t) {
+inline void
+parallel_for(hpx_for_action_t f, int min, int max, void *env, std::nullptr_t)
+{
   if (int e = hpx_par_for(f, min, max, env, HPX_NULL)) {
     throw Error(e);
   }

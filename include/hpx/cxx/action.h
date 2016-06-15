@@ -121,11 +121,10 @@ struct Checked_Map_Reduce {
 
 template <typename T> struct _convert_arg_type;
 
-#define DEF_CONVERT_TYPE(cpptype, hpxtype)                                     \
-  template <> struct _convert_arg_type<cpptype> {                              \
-    constexpr static auto type = hpxtype;                                      \
-  };                                                                           \
-  constexpr decltype(hpxtype) _convert_arg_type<cpptype>::type;
+#define DEF_CONVERT_TYPE(cpptype, hpxtype)                              \
+  template <> struct _convert_arg_type<cpptype> {                       \
+    constexpr static auto type = hpxtype;                               \
+  };
 
 DEF_CONVERT_TYPE(char, HPX_CHAR)
 DEF_CONVERT_TYPE(short, HPX_SHORT)
@@ -668,7 +667,7 @@ public:
 
 // helper methods to create action object
 template <typename R, typename T1, typename T2, typename... ContTs>
-Action<HPX_DEFAULT, HPX_MARSHALLED, R(T1 *, T2), ContTs...>
+inline Action<HPX_DEFAULT, HPX_MARSHALLED, R(T1 *, T2), ContTs...>
 make_action(R (&f)(T1 *, T2)) {
   //   static_assert(std::is_unsigned<T2>::value, "The second argument of a "
   //                                              "marshalled action should be
@@ -677,11 +676,11 @@ make_action(R (&f)(T1 *, T2)) {
   return Action<HPX_DEFAULT, HPX_MARSHALLED, R(T1 *, T2), ContTs...>(f);
 }
 template <hpx_action_type_t T, uint32_t ATTR, typename F, typename... ContTs>
-Action<T, ATTR, F, ContTs...> make_action(F &f) {
+inline Action<T, ATTR, F, ContTs...> make_action(F &f) {
   return Action<T, ATTR, F, ContTs...>(f);
 }
 template <typename F, typename... ContTs>
-Action<HPX_DEFAULT, HPX_ATTR_NONE, F, ContTs...> make_action(F &f) {
+inline Action<HPX_DEFAULT, HPX_ATTR_NONE, F, ContTs...> make_action(F &f) {
   return Action<HPX_DEFAULT, HPX_ATTR_NONE, F, ContTs...>(f);
 }
 }

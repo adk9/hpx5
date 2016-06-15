@@ -39,7 +39,9 @@ namespace gas {
 /// @param         from The global pointer we're copying from.
 /// @param            n The number of bytes to copy
 template <typename T>
-void memget(void* to, global_ptr<T>&& from, size_t n) {
+inline void
+memget(void* to, global_ptr<T>&& from, size_t n)
+{
   if (int e = hpx_gas_memget_sync(to, from.get(), n)) {
     throw e;
   }
@@ -57,8 +59,9 @@ void memget(void* to, global_ptr<T>&& from, size_t n) {
 /// @param            n The number of bytes to copy
 /// @param        lsync An LCO to test for local completion
 template <typename T, typename U>
-void memget(void* to, global_ptr<T>&& from, size_t n,
-            const global_ptr<U>& lsync) {
+inline void
+memget(void* to, global_ptr<T>&& from, size_t n, const global_ptr<U>& lsync)
+{
   static_assert(lco::is_lco<U>::value, "lsync must be an LCO");
   if (int e = hpx_gas_memget(to, from.get(), n, lsync.get())) {
     throw e;
@@ -86,7 +89,9 @@ void memget(void* to, global_ptr<T>&& from, size_t n,
 /// @param         from The local address we're putting from.
 /// @param            n The number of bytes to put.
 template <typename T>
-void memput(global_ptr<T>&& to, const void *from, size_t n) {
+inline void
+memput(global_ptr<T>&& to, const void *from, size_t n)
+{
   if (int e = hpx_gas_memput_rsync(to.get(), from, n)) {
     throw e;
   }
@@ -102,8 +107,10 @@ void memput(global_ptr<T>&& to, const void *from, size_t n) {
 /// @param            n The number of bytes to put.
 /// @param        rsync An LCO that will be set when the put is complete.
 template <typename T, typename U>
-void memput(global_ptr<T>&& to, const void *from, size_t n,
-            const global_ptr<U>& rsync) {
+inline void
+memput(global_ptr<T>&& to, const void *from, size_t n,
+       const global_ptr<U>& rsync)
+{
   static_assert(lco::is_lco<U>::value, "rsync must be an LCO");
   if (int e = hpx_gas_memput_lsync(to.get(), from, n, rsync.get())) {
     throw e;
@@ -121,9 +128,10 @@ void memput(global_ptr<T>&& to, const void *from, size_t n,
 /// @param        lsync An LCO that will be set when @p from can be modified.
 /// @param        rsync An LCO that will be set when the put is complete.
 template <typename T, typename U, typename V>
-void memput(global_ptr<T>&& to, const void *from, size_t n,
-            const global_ptr<U>& lsync,
-            const global_ptr<V>& rsync) {
+inline void
+memput(global_ptr<T>&& to, const void *from, size_t n,
+       const global_ptr<U>& lsync, const global_ptr<V>& rsync)
+{
   static_assert(lco::is_lco<U>::value, "lsync must be an LCO");
   static_assert(lco::is_lco<V>::value, "rsync must be an LCO");
   if (int e = hpx_gas_memput(to.get(), from, n, lsync.get(), rsync.get())) {
@@ -142,8 +150,10 @@ void memput(global_ptr<T>&& to, const void *from, size_t n,
 /// @param        lsync An LCO that will be set when @p from can be modified.
 /// @param        rsync An LCO that will be set when the put is complete.
 template <typename T, typename U>
-void memput(global_ptr<T>&& to, const void *from, size_t n, std::nullptr_t,
-            const global_ptr<U>& rsync) {
+inline void
+memput(global_ptr<T>&& to, const void *from, size_t n, std::nullptr_t,
+       const global_ptr<U>& rsync)
+{
   static_assert(lco::is_lco<U>::value, "rsync must be an LCO");
   if (int e = hpx_gas_memput(to.get(), from, n, HPX_NULL, rsync.get())) {
     throw e;
