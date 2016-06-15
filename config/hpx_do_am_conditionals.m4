@@ -23,7 +23,7 @@ AC_DEFUN([HPX_DO_AM_CONDITIONALS], [
  AM_CONDITIONAL([BUILD_LIBFFI], [test "x$build_libffi" == xyes])   
  AM_CONDITIONAL([BUILD_LIBCUCKOO], [test "x$build_libcuckoo" == xyes])
  AM_CONDITIONAL([BUILD_URCU], [test "x$build_urcu" == xyes])
-
+ 
  AM_CONDITIONAL([HAVE_CMPXCHG16B], [test "x$have_cmpxchg16b" == xyes])
  AM_CONDITIONAL([HAVE_PHOTON], [test "x$have_photon" == xyes])
  AM_CONDITIONAL([HAVE_MPI], [test "x$have_mpi" == xyes])
@@ -43,7 +43,8 @@ AC_DEFUN([HPX_DO_AM_CONDITIONALS], [
  AM_CONDITIONAL([HAVE_PERCOLATION], [test "x$have_percolation" == xyes])
  AM_CONDITIONAL([HAVE_OPENCL], [test "x$have_opencl" == xyes])
  AM_CONDITIONAL([HAVE_HPXPP], [test "x$have_hpxpp" == xyes])
- 
+ AM_CONDITIONAL([HAVE_URCU], [test "x$have_urcu" == xyes])
+  
  AM_CONDITIONAL([ENABLE_DOCS], [test "x$enable_docs" == xyes])
  AM_CONDITIONAL([ENABLE_TESTS], [test "x$enable_tests" == xyes])
  AM_CONDITIONAL([ENABLE_LENGTHY_TESTS], [test "x$enable_lengthy_tests" == xyes])
