@@ -17,18 +17,14 @@ AC_DEFUN([_HAVE_URCU], [
  have_urcu=yes
 ])
 
-AC_DEFUN([_BUILD_URCU], [
- _HAVE_URCU
- build_urcu=yes
-])
-
 AC_DEFUN([_CONTRIB_URCU], [
  contrib=$1
  pkgs=$2
  
  HPX_MERGE_STATIC_SHARED([URCU_CARGS])
  ACX_CONFIGURE_DIR([$contrib], [$contrib], ["$URCU_CARGS"])
- _BUILD_URCU
+ _HAVE_URCU
+ build_urcu=yes
  
  # add the la dependency and include path for our libhpx build
  LIBHPX_LIBADD="$LIBHPX_LIBADD \$(top_builddir)/$contrib/liburcu-qsbr.la \$(top_builddir)/$contrib/liburcu-cds.la"
@@ -60,29 +56,6 @@ AC_DEFUN([_PKG_URCU], [
    [have_urcu=no])
 ])
 
-# handle the with_urcu option if $want_urcu
-AC_DEFUN([_WITH_URCU], [
- contrib=$1
- pkgs=$2
-
- AS_IF([test "x$with_urcu" == xno], [AC_MSG_ERROR([URCU required])])
- 
- AS_CASE($with_urcu,
-   # just go ahead and build the contrib
-   [contrib], [_CONTRIB_URCU($contrib, $pkgs)],
-   
-   # system means that we look for a library in the system path, or a
-   # default-named pkg-config package
-   [system|yes], [_LIB_URCU
-              AS_IF([test "x$have_urcu" != xyes], [_PKG_URCU($pkgs)])
-              AS_IF([test "x$have_urcu" != xyes], [_CONTRIB_URCU($contrib, $pkgs)])],
-
-   # any other string is interpreted as a custom pkg-config package
-   [_PKG_URCU($with_urcu)])
-
- AS_IF([test "x$have_urcu" != xyes], [AC_MSG_ERROR([Failed to find URCU])])
-])
-
 AC_DEFUN([HPX_CONFIG_URCU], [
  contrib=$1
  want_urcu=$2
@@ -91,8 +64,23 @@ AC_DEFUN([HPX_CONFIG_URCU], [
  AC_ARG_WITH(urcu,
    [AS_HELP_STRING([--with-urcu{=contrib,system,PKG}],
                    [How we find liburcu* @<:@default=system@:>@])],
-   [], [with_urcu=system])
+   [], [with_urcu=yes])
 
- # if we want urcu then handle the with option, otherwise do nothing.
- AS_IF([test "x$want_urcu" == xyes], [_WITH_URCU($contrib, $pkgs)])
+ AS_IF([test "x$with_urcu" == xno], [AC_MSG_ERROR([URCU required])])
+ 
+ AS_CASE($with_urcu,
+   # system means that we look for a library in the system path, or a
+   # default-named pkg-config package
+   [system|yes], [_LIB_URCU
+                  AS_IF([test "x$have_urcu" != xyes], [_PKG_URCU($pkgs)])],
+
+   # avoid using anything from the system
+   [contrib], [],
+   
+   # any other string is interpreted as a custom pkg-config package
+   [_PKG_URCU($with_urcu)])
+
+ # if we don't have urcu but we want it then build it from contrib
+ AS_IF([test "x$have_urcu" != xyes -a "x$want_urcu" == xyes],
+   [_CONTRIB_URCU($contrib, $pkgs)])
 ])
