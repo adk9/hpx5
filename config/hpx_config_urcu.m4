@@ -41,8 +41,8 @@ AC_DEFUN([_CONTRIB_URCU], [
 # Check to see if userspace rcu is "just available" on the system.
 AC_DEFUN([_LIB_URCU], [
  AC_CHECK_HEADER([urcu-qsbr.h], [
-   AC_CHECK_LIB([liburcu-qsbr], [rcu_register_thread], [
-     AC_CHECK_LIB([liburcu-cds], [cds_lfht_new],
+   AC_CHECK_LIB([urcu-qsbr], [rcu_register_thread], [
+     AC_CHECK_LIB([urcu-cds], [cds_lfht_new],
       [_HAVE_URCU
        LIBHPX_LIBS="$LIBHPX_LIBS -lurcu-qsbr -lurcu-cds"
        HPX_PC_PUBLIC_LIBS="$HPX_PC_PUBLIC_LIBS -lurcu-qsbr -lurcu-cds"])])])
