@@ -17,7 +17,7 @@
 #include <unistd.h>
 #include <hpx/hpx.h>
 
-static __thread hpx_addr_t *addrs = HPX_NULL;
+static __thread hpx_addr_t *addrs = NULL;
 
 static void _usage(FILE *f, int error) {
   fprintf(f, "Usage: gasbench -i iters -s size\n"
