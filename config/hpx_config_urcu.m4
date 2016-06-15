@@ -62,35 +62,37 @@ AC_DEFUN([_PKG_URCU], [
 
 # handle the with_urcu option if $want_urcu
 AC_DEFUN([_WITH_URCU], [
- pkgs=$1 
+ contrib=$1
+ pkgs=$2
 
- AS_IF([test "with_urcu" == xyes], [with_urcu=system])
- AS_IF([test "with_urcu" == xno], [with_urcu=contrib])
+ AS_IF([test "x$with_urcu" == xno], [AC_MSG_ERROR([URCU required])])
  
  AS_CASE($with_urcu,
    # just go ahead and build the contrib
-   [contrib], [],
+   [contrib], [_CONTRIB_URCU($contrib, $pkgs)],
    
    # system means that we look for a library in the system path, or a
    # default-named pkg-config package
-   [system], [_LIB_URCU
-              AS_IF([test "x$have_urcu" != xyes], [_PKG_URCU($pkgs)])],
+   [system|yes], [_LIB_URCU
+              AS_IF([test "x$have_urcu" != xyes], [_PKG_URCU($pkgs)])
+              AS_IF([test "x$have_urcu" != xyes], [_CONTRIB_URCU($contrib, $pkgs)])],
 
    # any other string is interpreted as a custom pkg-config package
    [_PKG_URCU($with_urcu)])
 
- AS_IF([test "x$have_urcu" != xyes], [_CONTRIB_URCU($contrib, $pkgs)])
+ AS_IF([test "x$have_urcu" != xyes], [AC_MSG_ERROR([Failed to find URCU])])
 ])
 
 AC_DEFUN([HPX_CONFIG_URCU], [
  contrib=$1
+ want_urcu=$2
  pkgs="liburcu-qsbr liburcu-cds"
  
  AC_ARG_WITH(urcu,
-   [AS_HELP_STRING([--with-userspace-rcu{=contrib,system,PKG}],
+   [AS_HELP_STRING([--with-urcu{=contrib,system,PKG}],
                    [How we find liburcu* @<:@default=system@:>@])],
    [], [with_urcu=system])
 
  # if we want urcu then handle the with option, otherwise do nothing.
- AS_IF([test "x$want_urcu" == xyes], [_WITH_URCU($pkgs)])
+ AS_IF([test "x$want_urcu" == xyes], [_WITH_URCU($contrib, $pkgs)])
 ])
