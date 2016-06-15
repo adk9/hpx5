@@ -23,7 +23,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <urcu-qsbr.h>
+#ifdef HAVE_URCU
+# include <urcu-qsbr.h>
+#endif
 
 #include <hpx/builtins.h>
 #include <libhpx/action.h>
@@ -170,7 +172,12 @@ static void _checkpoint(hpx_parcel_t *to, void *sp, void *env) {
   hpx_parcel_t *prev = _swap_current(to, sp, self);
   _checkpoint_env_t *c = env;
   c->f(prev, c->env);
+
+#ifdef HAVE_URCU
+  // do this in the checkpoint continuation to minimize time holding LCO locks
+  // (released in c->f if necessary)
   rcu_quiescent_state();
+#endif
 }
 
 /// Local wrapper for the thread transfer call.
@@ -418,7 +425,6 @@ static hpx_parcel_t *_handle_steal(worker_t *this) {
 /// @param      UNUSED1 The previous parcel.
 /// @param      UNUSED2 The continuation environment.
 static void _null(hpx_parcel_t *UNUSED1, void *UNUSED2) {
-  rcu_quiescent_state();
 }
 
 /// A checkpoint continuation that unlocks a lock.
@@ -607,20 +613,25 @@ static void _schedule(worker_t *this) {
   while (_is_running(this)) {
     hpx_parcel_t *p;
     if ((p = _handle_mail(this))) {
+      _transfer(p, _null, 0, this);
     }
     else if ((p = _pop_lifo(this))) {
+      _transfer(p, _null, 0, this);
     }
     else if ((p = _handle_epoch(this))) {
+      _transfer(p, _null, 0, this);
     }
     else if ((p = _handle_network(this))) {
+      _transfer(p, _null, 0, this);
     }
     else if ((p = _handle_steal(this))) {
+      _transfer(p, _null, 0, this);
     }
     else {
+#ifdef HAVE_URCU
       rcu_quiescent_state();
-      continue;
+#endif
     }
-    _transfer(p, _null, 0, this);
   }
 }
 
@@ -667,8 +678,10 @@ static void *_run(void *worker) {
   as_join(AS_GLOBAL);
   as_join(AS_CYCLIC);
 
+#ifdef HAVE_URCU
   // Make ourself visible to urcu.
   rcu_register_thread();
+#endif
 
 #ifdef HAVE_APEX
   // let APEX know there is a new thread
@@ -720,8 +733,10 @@ static void *_run(void *worker) {
   apex_exit_thread();
 #endif
 
+#ifdef HAVE_URCU
   // leave the urcu domain
   rcu_unregister_thread();
+#endif
 
   // leave the global address space
   as_leave();

@@ -1,5 +1,5 @@
 # -*- autoconf -*---------------------------------------------------------------
-# HPX_CONFIG_USERSPACE_RCU([pkg-config])
+# HPX_CONFIG_URCU([pkg-config])
 # ------------------------------------------------------------------------------
 #
 # Appends
@@ -13,13 +13,13 @@
 
 AC_DEFUN([_HAVE_URCU], [
  AC_DEFINE([URCU_INLINE_SMALL_FUNCTIONS], [1], [Optimize URCU as far as license allows])
- AC_DEFINE([HAVE_USERSPACE_RCU], [1], [We have the urcu libraries])
- have_userspace_rcu=yes
+ AC_DEFINE([HAVE_URCU], [1], [We have the urcu libraries])
+ have_urcu=yes
 ])
 
 AC_DEFUN([_BUILD_URCU], [
  _HAVE_URCU
- build_userspace_rcu=yes
+ build_urcu=yes
 ])
 
 AC_DEFUN([_CONTRIB_URCU], [
@@ -57,39 +57,40 @@ AC_DEFUN([_PKG_URCU], [
     LIBHPX_CPPFLAGS="$LIBHPX_CPPFLAGS $URCU_CFLAGS"
     LIBHPX_LIBS="$LIBHPX_LIBS $URCU_LIBS"
     HPX_PC_PRIVATE_PKGS="$HPX_PC_PRIVATE_PKGS $pkgs"],
-   [have_userspace_rcu=no])
+   [have_urcu=no])
 ])
 
-# handle the with_userspace_rcu option
+# handle the with_urcu option if $want_urcu
 AC_DEFUN([_WITH_URCU], [
  pkgs=$1 
 
- AS_IF([test "with_userspace_rcu" == xyes], [with_userspace_rcu=system])
- AS_IF([test "with_userspace_rcu" == xno], [with_userspace_rcu=contrib])
+ AS_IF([test "with_urcu" == xyes], [with_urcu=system])
+ AS_IF([test "with_urcu" == xno], [with_urcu=contrib])
  
- AS_CASE($with_userspace_rcu,
+ AS_CASE($with_urcu,
    # just go ahead and build the contrib
    [contrib], [],
    
    # system means that we look for a library in the system path, or a
    # default-named pkg-config package
    [system], [_LIB_URCU
-              AS_IF([test "x$have_userspace_rcu" != xyes], [_PKG_URCU($pkgs)])],
+              AS_IF([test "x$have_urcu" != xyes], [_PKG_URCU($pkgs)])],
 
    # any other string is interpreted as a custom pkg-config package
-   [_PKG_URCU($with_userspace_rcu)])
+   [_PKG_URCU($with_urcu)])
+
+ AS_IF([test "x$have_urcu" != xyes], [_CONTRIB_URCU($contrib, $pkgs)])
 ])
 
-AC_DEFUN([HPX_CONFIG_USERSPACE_RCU], [
+AC_DEFUN([HPX_CONFIG_URCU], [
  contrib=$1
  pkgs="liburcu-qsbr liburcu-cds"
  
- AC_ARG_WITH(userspace_rcu,
+ AC_ARG_WITH(urcu,
    [AS_HELP_STRING([--with-userspace-rcu{=contrib,system,PKG}],
                    [How we find liburcu* @<:@default=system@:>@])],
-   [], [with_userspace_rcu=system])
+   [], [with_urcu=system])
 
- _WITH_URCU($pkgs)
-
- AS_IF([test "x$have_userspace_rcu" != xyes], [_CONTRIB_URCU($contrib, $pkgs)])
+ # if we want urcu then handle the with option, otherwise do nothing.
+ AS_IF([test "x$want_urcu" == xyes], [_WITH_URCU($pkgs)])
 ])

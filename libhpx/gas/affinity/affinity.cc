@@ -15,25 +15,35 @@
 # include "config.h"
 #endif
 
+extern "C" {
+#include <libhpx/debug.h>
+}
 #include <libhpx/gas.h>
 #include "none.h"
-#include "urcu_map.h"
 #include "cuckoo_hash.h"
 
-using libhpx::gas::Affinity;
-using libhpx::gas::CuckooHash;
-using libhpx::gas::None;
-using libhpx::gas::URCUMap;
+#ifdef HAVE_URCU
+# include "urcu_map.h"
+#endif
+
+using namespace libhpx::gas;
 
 Affinity::~Affinity() {
 }
 
 void* affinity_new(const config_t *config) {
   switch (config->gas_affinity) {
-   default:
+   default: return new None;
    case (HPX_GAS_AFFINITY_NONE): return new None;
-   case (HPX_GAS_AFFINITY_URCU): return new URCUMap;
    case (HPX_GAS_AFFINITY_CUCKOO): return new CuckooHash;
+   case (HPX_GAS_AFFINITY_URCU):
+#ifdef HAVE_URCU
+    return new URCUMap;
+#else
+    log_error("URCU not supported on the current platform, "
+              "using --hpx-gas-affinity=none\n");
+    return new None;
+#endif
   }
 }
 

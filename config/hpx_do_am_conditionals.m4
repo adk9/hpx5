@@ -22,7 +22,7 @@ AC_DEFUN([HPX_DO_AM_CONDITIONALS], [
  AM_CONDITIONAL([BUILD_HWLOC], [test "x$build_hwloc" == xyes])
  AM_CONDITIONAL([BUILD_LIBFFI], [test "x$build_libffi" == xyes])   
  AM_CONDITIONAL([BUILD_LIBCUCKOO], [test "x$build_libcuckoo" == xyes])
- AM_CONDITIONAL([BUILD_USERSPACE_RCU], [test "x$build_userspace_rcu" == xyes])
+ AM_CONDITIONAL([BUILD_URCU], [test "x$build_urcu" == xyes])
 
  AM_CONDITIONAL([HAVE_CMPXCHG16B], [test "x$have_cmpxchg16b" == xyes])
  AM_CONDITIONAL([HAVE_PHOTON], [test "x$have_photon" == xyes])
