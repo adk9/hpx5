@@ -34,9 +34,6 @@ AC_DEFUN([_HAVE_LIBFFI], [
 AC_DEFUN([_HPX_CONTRIB_LIBFFI], [
  contrib=$1
 
- # We know our contrib ffi has complex support.
- have_libffi_complex=yes
- 
  # Configure the contributed libffi package. We install the pkg-config .pc file
  # for libffi and expose it as a public dependency of HPX, because libffi
  # symbols will appear directly in the application bindary and must be linked
