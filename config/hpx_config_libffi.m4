@@ -22,6 +22,11 @@
 #   HAVE_LIBFFI
 # ------------------------------------------------------------------------------
 AC_DEFUN([_HAVE_LIBFFI], [
+ force_complex=$1
+ AC_CHECK_LIB([ffi], [ffi_type_complex_float], [have_libffi_complex=yes])
+ AS_IF([test "x$have_libffi_complex" == xyes -o "x$force_complex" == xyes], [
+   AC_DEFINE([HAVE_LIBFFI_COMPLEX], [1], [We have support for libffi complex numbers])
+ ])
  AC_DEFINE([HAVE_LIBFFI], [1], [We have libffi])
  have_libffi=yes
 ])
@@ -29,6 +34,8 @@ AC_DEFUN([_HAVE_LIBFFI], [
 AC_DEFUN([_HPX_CONTRIB_LIBFFI], [
  contrib=$1
 
+ # We know our contrib ffi has complex support.
+ have_libffi_complex=yes
  
  # Configure the contributed libffi package. We install the pkg-config .pc file
  # for libffi and expose it as a public dependency of HPX, because libffi
@@ -36,8 +43,11 @@ AC_DEFUN([_HPX_CONTRIB_LIBFFI], [
  # directly to libffi, not transitively through libhpx.
  HPX_MERGE_STATIC_SHARED([LIBFFI_CARGS])
  ACX_CONFIGURE_DIR([$contrib], [$contrib], ["$LIBFFI_CARGS"])
- _HAVE_LIBFFI
 
+ # We know that our contrib ffi will build with complex support, so make sure
+ # that the test in HAVE_LIBFFI sets the declare correctly.
+ _HAVE_LIBFFI([yes])
+ 
  # add the la dependency to libhpx and make sure it can find ffi.h
  LIBHPX_LIBADD="$LIBHPX_LIBADD \$(top_builddir)/$contrib/libffi.la"
  LIBHPX_CPPFLAGS="$LIBHPX_CPPFLAGS -I\$(top_builddir)/$contrib/include"

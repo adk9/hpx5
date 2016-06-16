@@ -33,7 +33,7 @@ AC_LANG([C])
 
 # Standard preliminary autotools stuff.
 AC_CONFIG_SRCDIR([include/config.h.in])
-AC_CONFIG_HEADERS([include/config.h])
+AC_CONFIG_HEADERS([include/config.h include/hpx/types.h])
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
 

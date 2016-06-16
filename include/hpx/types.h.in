@@ -72,9 +72,15 @@ typedef ffi_type* hpx_type_t;
 #define HPX_DOUBLE             &ffi_type_double
 #define HPX_POINTER            &ffi_type_pointer
 #define HPX_LONGDOUBLE         &ffi_type_longdouble
-#define HPX_COMPLEX_FLOAT      &ffi_type_complex_float
-#define HPX_COMPLEX_DOUBLE     &ffi_type_complex_double
-#define HPX_COMPLEX_LONGDOUBLE &ffi_type_complex_longdouble
+
+/* We have support for libffi complex numbers */
+#undef HAVE_LIBFFI_COMPLEX
+
+#ifdef HAVE_LIBFFI_COMPLEX
+# define HPX_COMPLEX_FLOAT      &ffi_type_complex_float
+# define HPX_COMPLEX_DOUBLE     &ffi_type_complex_double
+# define HPX_COMPLEX_LONGDOUBLE &ffi_type_complex_longdouble
+#endif
 
 #ifdef __LP64__
 #define HPX_SIZE_T             HPX_UINT64
