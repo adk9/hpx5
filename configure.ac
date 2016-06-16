@@ -33,7 +33,7 @@ AC_LANG([C])
 
 # Standard preliminary autotools stuff.
 AC_CONFIG_SRCDIR([include/config.h.in])
-AC_CONFIG_HEADERS([include/config.h])
+AC_CONFIG_HEADERS([include/config.h include/hpx/types.h])
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
 
@@ -50,7 +50,7 @@ AM_PROG_AS
 AX_CFI_DIRECTIVES
 
 # Initialize automake and libtool
-AM_INIT_AUTOMAKE([1.11 dist-bzip2 subdir-objects foreign tar-ustar -Wall
+AM_INIT_AUTOMAKE([1.11 nostdinc dist-bzip2 subdir-objects foreign tar-ustar -Wall
                   -Werror parallel-tests color-tests])
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
@@ -77,6 +77,11 @@ LT_INIT([disable-shared])
 # HPX_PC_REQUIRES_PKGS: packages required to link to installed libhpx.so
 # HPX_PC_PRIVATE_LIBS: -L and -l flags required to link to installed libhpx.a
 # HPX_PC_PRIVATE_PKGS: packages required to link to installed libhpx.a
+
+# Start by adding some standard includes, the current source directory and the
+# configured config.h directory.
+LIBHPX_CPPFLAGS="-I\$(srcdir) -I\$(top_builddir)/include"
+HPX_APPS_CPPFLAGS="-I\$(srcdir) -I\$(top_builddir)/include"
 
 HPX_CONFIG_COMPILER
 HPX_CONFIG_HOST
