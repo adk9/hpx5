@@ -608,7 +608,8 @@ void hpx_gas_rebalance(hpx_addr_t async, hpx_addr_t psync, hpx_addr_t msync)
 ///
 /// @param         addr The address to bind.
 /// @param       worker The computation resource id to bind affinity to.
-void hpx_gas_set_affinity(hpx_addr_t addr, int worker);
+void hpx_gas_set_affinity(hpx_addr_t addr, int worker)
+  HPX_PUBLIC;
 
 /// Clear the (soft) affinity for a global address.
 ///
@@ -622,7 +623,8 @@ void hpx_gas_set_affinity(hpx_addr_t addr, int worker);
 /// explicitly or through implicit load balancing.
 ///
 /// @param         addr The address to clear.
-void hpx_gas_clear_affinity(hpx_addr_t addr);
+void hpx_gas_clear_affinity(hpx_addr_t addr)
+  HPX_PUBLIC;
 
 /// @}
 
