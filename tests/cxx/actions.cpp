@@ -33,14 +33,20 @@ using namespace std;
 // }
 // static HPX_ACTION(HPX_TASK, 0, _my_task, _my_task_handler);
 
-static int _my_action_handler(void) {
+namespace {
+int _check_pointer_handler(int *) {
+  return HPX_SUCCESS;
+}
+auto _check_pointer = hpx::make_action(_check_pointer_handler);
+
+int _my_action_handler(void) {
   printf("Hi, I am an action!\n");
 //   hpx_call_cc(HPX_HERE, _my_task, NULL, NULL);
   return HPX_SUCCESS;
 }
 auto mah = hpx::make_action(_my_action_handler);
 
-static int _my_typed_handler(int i, float f, char c) {
+int _my_typed_handler(int i, float f, char c) {
   printf("Hi, I am a typed action with args: %d %f %c!\n", i, f, c);
   int r;
   mah.call_sync(HPX_HERE, r);
@@ -58,7 +64,7 @@ auto h_act = hpx::make_action(hello);
 hpx_status_t test1(int arg) {
   int r;
   h_act.call_sync(HPX_HERE, r, arg);
-  
+
   return HPX_SUCCESS;
 }
 
@@ -73,6 +79,7 @@ int main_act(int arg) {
   hpx::exit(HPX_SUCCESS);
 }
 auto ma = hpx::make_action(main_act);
+}
 
 int main(int argc, char* argv[]) {
 
@@ -84,7 +91,8 @@ int main(int argc, char* argv[]) {
   int a = hpx_get_my_rank() + 1;
 
   ma.run(a);
-  
+  _check_pointer.run(&a);
+
   hpx::finalize();
   return 0;
 }
