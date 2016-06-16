@@ -14,6 +14,6 @@ if HAVE_CMPXCHG16B
   libsync_la_SOURCES += ms_queue.c
 endif
 
-libsync_la_CPPFLAGS = -I$(top_srcdir)/include
+libsync_la_CPPFLAGS = -I$(top_srcdir)/include  $(HPX_APPS_CPPFLAGS)
 libsync_la_CFLAGS   = $(HPX_APPS_CFLAGS)
 libsync_la_LIBADD   = arch/libarch.la
