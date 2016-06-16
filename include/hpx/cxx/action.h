@@ -112,40 +112,34 @@ struct Checked_Map_Reduce {
                                    std::false_type>::type;
 };
 
-/// HPX basic datatypes
-/// HPX_CHAR, HPX_UCHAR, HPX_SCHAR, HPX_SHORT, HPX_USHORT, HPX_SSHORT, HPX_INT,
-/// HPX_UINT, HPX_SINT, HPX_LONG, HPX_ULONG, HPX_SLONG, HPX_VOID, HPX_UINT8,
-/// HPX_SINT8, HPX_UINT16, HPX_SINT16, HPX_UINT32, HPX_SINT32, HPX_UINT64,
-/// HPX_SINT64, HPX_FLOAT, HPX_DOUBLE, HPX_POINTER, HPX_LONGDOUBLE,
-/// HPX_COMPLEX_FLOAT, HPX_COMPLEX_DOUBLE, HPX_COMPLEX_LONGDOUBLE
+namespace conversions {
+template <typename T>
+struct type2type;
 
-template <typename T> struct _convert_arg_type;
-
-#define DEF_CONVERT_TYPE(cpptype, hpxtype)                              \
-  template <> struct _convert_arg_type<cpptype> {                       \
-    constexpr static auto type = hpxtype;                               \
+/// Template specialization for integral types.
+#define HPX_PLUS_PLUS_TYPE_MAP(ctype, hpxtype)  \
+  template <>                                   \
+  struct type2type<ctype>                       \
+  {                                             \
+    constexpr static auto type = hpxtype;       \
   };
+#include <hpx/cxx/types.def>
+#undef HPX_PLUS_PLUS_TYPE_MAP
 
-DEF_CONVERT_TYPE(char, HPX_CHAR)
-DEF_CONVERT_TYPE(short, HPX_SHORT)
-DEF_CONVERT_TYPE(int, HPX_INT)
-DEF_CONVERT_TYPE(float, HPX_FLOAT)
-DEF_CONVERT_TYPE(double, HPX_DOUBLE)
-DEF_CONVERT_TYPE(std::size_t, HPX_SIZE_T)
-
-// global ptr conversion
-template <typename T> struct _convert_arg_type<hpx::global_ptr<T>> {
+// Partial specialization for global pointers
+template <typename T>
+struct type2type<hpx::global_ptr<T>>
+{
   constexpr static auto type = HPX_ADDR;
 };
-template <typename T>
-constexpr decltype(HPX_ADDR) _convert_arg_type<hpx::global_ptr<T>>::type;
 
-// pointer convesion
-template <typename T> struct _convert_arg_type<T *> {
+// Partial specialization for local pointers
+template <typename T>
+struct type2type<T*>
+{
   constexpr static auto type = HPX_POINTER;
 };
-template <typename T>
-constexpr decltype(HPX_POINTER) _convert_arg_type<T *>::type;
+}
 
 template <hpx_action_type_t Type, uint32_t Attr, typename Alist>
 struct typecheck_action_args;
@@ -215,7 +209,7 @@ private:
   int _register_helper(R (&f)(Args...)) {
     return hpx_register_action(TYPE, ATTR, __FILE__ ":" _HPX_XSTR(_id), &(_id),
                                sizeof...(Args) + 1, f,
-                               hpx::detail::_convert_arg_type<Args>::type...);
+                               hpx::detail::conversions::type2type<Args>::type...);
   }
 
   /// This overloaded function converts actual call arguments to pointers
