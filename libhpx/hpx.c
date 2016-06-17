@@ -226,22 +226,41 @@ int hpx_init(int *argc, char ***argv) {
   return status;
 }
 
-/// Called to run HPX.
-int _hpx_run(hpx_action_t *act, int n, ...) {
-  va_list args;
-  va_start(args, n);
-  hpx_parcel_t *p = action_new_parcel_va(*act, HPX_HERE, 0, 0, n, &args);
+static int
+_run(int spmd, hpx_parcel_t *p) {
   log_dflt("hpx started running %"PRIu64"\n", here->epoch);
-  int status = scheduler_start(here->sched, p, 0);
+  int status = scheduler_start(here->sched, p, spmd);
   log_dflt("hpx stopped running %"PRIu64"\n", here->epoch);
-  va_end(args);
 
   // Bump our epoch, and enforce the "collective" nature of run with a
-  // barrier.
+  // barrier. The barrier is necessary in both diffusing and SPMD processes to
+  // prevent epochs from existing concurrently.
   here->epoch++;
   boot_barrier(here->boot);
-
   return status;
+}
+
+/// Called to run HPX.
+int
+_hpx_run(hpx_action_t *act, int n, ...)
+{
+  va_list args;
+  va_start(args, n);
+  int status = _run(0, action_new_parcel_va(*act, HPX_HERE, 0, 0, n, &args));
+  va_end(args);
+  return status;
+}
+
+int
+_hpx_run_spmd(hpx_action_t *act, int n, ...)
+{
+  va_list args;
+  va_start(args, n);
+  hpx_parcel_t *p = action_new_parcel_va(*act, HPX_HERE, HPX_HERE,
+                                         locality_stop, n, &args);
+  int status = _run(1, p);
+  va_end(args);
+ return status;
 }
 
 int hpx_get_my_rank(void) {
