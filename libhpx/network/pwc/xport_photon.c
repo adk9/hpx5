@@ -45,6 +45,22 @@ typedef struct {
   PAD_TO_CACHELINE(sizeof(pwc_xport_t));
 } photon_pwc_xport_t;
 
+
+/// A barrier for photon that binds to the local bootstrap network.
+static int
+_boot_barrier(void)
+{
+  return here->boot->barrier(here->boot);
+}
+
+/// An allgather for photon that binds to the local bootstrap network.
+static int
+_boot_allgather(void *obj, const void *restrict src, void *restrict dest, int n)
+{
+  return here->boot->allgather(here->boot, src, dest, n);
+}
+
+
 static void
 _init_photon_config(const config_t *cfg, boot_t *boot,
                     struct photon_config_t *pcfg) {
@@ -78,8 +94,8 @@ _init_photon_config(const config_t *cfg, boot_t *boot,
   pcfg->cap.small_msg_size      = -1;  // default 4096 - not used for PWC
   pcfg->ibv.use_ud              =  0;  // don't enable this unless we're doing HW GAS
   pcfg->ibv.ud_gid_prefix       = "ff0e::ffff:0000:0000";
-  pcfg->exch.allgather      = (__typeof__(pcfg->exch.allgather))boot->allgather;
-  pcfg->exch.barrier        = (__typeof__(pcfg->exch.barrier))boot->barrier;
+  pcfg->exch.allgather      = (__typeof__(pcfg->exch.allgather))_boot_allgather;
+  pcfg->exch.barrier        = (__typeof__(pcfg->exch.barrier))_boot_barrier;
   pcfg->backend             = cfg->photon_backend;
   pcfg->coll                = cfg->photon_coll;
 }

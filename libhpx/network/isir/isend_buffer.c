@@ -50,7 +50,7 @@ static int _payload_size_to_tag(isend_buffer_t *isends, uint32_t payload) {
   uint32_t parcel_size = payload + sizeof(hpx_parcel_t);
   int tag = ceil_div_32(parcel_size, HPX_CACHELINE_SIZE);
   if (DEBUG) {
-    isends->xport->check_tag(tag);
+    isends->xport->check_tag(isends->xport, tag);
   }
   return tag;
 }
@@ -176,7 +176,7 @@ static int _start(isend_buffer_t *isends, int i) {
   int n = payload_size_to_isir_bytes(p->size);
   int tag = _payload_size_to_tag(isends, p->size);
   void *r = _request_at(isends, i);
-  return isends->xport->isend(to, from, n, tag, r);
+  return isends->xport->isend(isends->xport, to, from, n, tag, r);
 }
 
 /// Start as many isend operations as we can.

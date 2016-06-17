@@ -96,7 +96,7 @@ static int _start(irecv_buffer_t *irecvs, int i) {
   void  *request = _request_at(irecvs, i);
   int n = payload_size_to_isir_bytes(payload);
   void *b = isir_network_offset(p);
-  int e = irecvs->xport->irecv(b, n, tag, request);
+  int e = irecvs->xport->irecv(irecvs->xport, b, n, tag, request);
   if (LIBHPX_OK != e) {
     parcel_delete(p);
     return e;
@@ -224,7 +224,7 @@ static int _append(irecv_buffer_t *irecvs, int tag) {
 ///        LIBHPX_ERROR We encountered an MPI error during the Iprobe.
 static int _probe(irecv_buffer_t *irecvs) {
   int tag;
-  int e = irecvs->xport->iprobe(&tag);
+  int e = irecvs->xport->iprobe(irecvs->xport, &tag);
   if (LIBHPX_OK != e || tag < 0) {
     return e;
   }
