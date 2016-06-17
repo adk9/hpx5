@@ -100,6 +100,9 @@ int scheduler_start(scheduler_t *this, hpx_parcel_t *p, int spmd)
   if (spmd || here->rank == 0) {
     scheduler_spawn_at(p, 0);
   }
+  else {
+    parcel_delete(p);
+  }
 
   // switch the state and then start all the workers
   this->code = HPX_SUCCESS;
