@@ -24,18 +24,22 @@ typedef struct isir_xport {
   libhpx_transport_t type;
   void   (*delete)(void *xport);
 
-  void   (*check_tag)(int tag);
+  void   (*check_tag)(const void *xport, int tag);
   size_t (*sizeof_request)(void);
   size_t (*sizeof_status)(void);
   void   (*clear)(void *request);
   int    (*cancel)(void *request, int *cancelled);
   int    (*wait)(void *request, void *status);
-  int    (*isend)(int to, const void *from, unsigned n, int tag, void *request);
-  int    (*irecv)(void *to, size_t n, int tag, void *request);
-  int    (*iprobe)(int *tag);
+  int    (*isend)(const void *xport, int to, const void *from, unsigned n,
+                  int tag, void *request);
+  int    (*irecv)(const void *xport, void *to, size_t n, int tag,
+                  void *request);
+  int    (*iprobe)(const void *xport, int *tag);
   void   (*finish)(void *request, int *src, int *bytes);
-  void   (*create_comm)(void *comm, void* active_ranks, int num_active, int total);
-  void   (*allreduce)(void *sendbuf, void* out, int count, void* datatype, void* op, void* comm);
+  void   (*create_comm)(const void *xport, void *comm, void* active_ranks,
+                        int num_active, int total);
+  void   (*allreduce)(void *sendbuf, void* out, int count, void* datatype,
+                      void* op, void* comm);
   void   (*testsome)(int n, void *requests, int *cnt, int *out, void *statuses);
   void   (*pin)(const void *base, size_t bytes, void *key);
   void   (*unpin)(const void *base, size_t bytes);

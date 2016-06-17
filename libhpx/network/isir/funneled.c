@@ -107,7 +107,7 @@ static int _funneled_coll_init(void *network, coll_t **_c) {
   isir->vtable.flush(network);
   while (!sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE))
     ;
-  isir->xport->create_comm(comm, ranks, num_active, here->ranks);
+  isir->xport->create_comm(isir, comm, ranks, num_active, here->ranks);
 
   sync_store(&isir->progress_lock, 1, SYNC_RELEASE);
   return LIBHPX_OK;
