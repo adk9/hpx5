@@ -22,27 +22,27 @@ using namespace std;
 
 // static int _my_interrupt_handler(void) {
 //   printf("Hi, I am an interrupt!\n");
-//   return HPX_SUCCESS;
+//   return hpx::SUCCESS;
 // }
 // static HPX_ACTION(HPX_INTERRUPT, 0, _my_interrupt, _my_interrupt_handler);
 //
 // static int _my_task_handler(void) {
 //   printf("Hi, I am a task!\n");
 //   hpx_call_cc(HPX_HERE, _my_interrupt, NULL, NULL);
-//   return HPX_SUCCESS;
+//   return hpx::SUCCESS;
 // }
 // static HPX_ACTION(HPX_TASK, 0, _my_task, _my_task_handler);
 
 namespace {
 int _check_pointer_handler(int *) {
-  return HPX_SUCCESS;
+  hpx::exit(hpx::SUCCESS);
 }
 auto _check_pointer = hpx::make_action(_check_pointer_handler);
 
 int _my_action_handler(void) {
   printf("Hi, I am an action!\n");
 //   hpx_call_cc(HPX_HERE, _my_task, NULL, NULL);
-  return HPX_SUCCESS;
+  return hpx::SUCCESS;
 }
 auto mah = hpx::make_action(_my_action_handler);
 
@@ -51,13 +51,13 @@ int _my_typed_handler(int i, float f, char c) {
   int r;
   mah.call_sync(HPX_HERE, r);
   //   hpx_call_cc(HPX_HERE, _my_action_handler_action_struct::id, NULL, NULL);
-  return HPX_SUCCESS;
+  return hpx::SUCCESS;
 }
 auto mth = hpx::make_action(_my_typed_handler);
 
 int hello(int a) {
   std::cout << "Rank#" << hpx_get_my_rank() << " received " << a << "." << std::endl;
-  return HPX_SUCCESS;
+  return hpx::SUCCESS;
 }
 auto h_act = hpx::make_action(hello);
 
@@ -65,7 +65,7 @@ hpx_status_t test1(int arg) {
   int r;
   h_act.call_sync(HPX_HERE, r, arg);
 
-  return HPX_SUCCESS;
+  return hpx::SUCCESS;
 }
 
 int main_act(int arg) {
@@ -76,7 +76,7 @@ int main_act(int arg) {
   int r, i = 1; float f = 3.0; char c = 'b';
   mth.call_sync(HPX_HERE, r, i, f, c);
 
-  hpx::exit(HPX_SUCCESS);
+  hpx::exit(hpx::SUCCESS);
 }
 auto ma = hpx::make_action(main_act);
 }
