@@ -155,13 +155,9 @@ struct typecheck_action_args<Type, HPX_MARSHALLED, tlist<T1, T2>> {
                       typename std::is_unsigned<decayed_t2>::type>;
   using type = typename Reduce_Right<And, std::false_type, cond1>::type;
 };
-/// for actions that are not marshalled, arguments cannot be pointers
-/// and must be one of the hpx supported types
-template <hpx_action_type_t Type, typename... Ts>
-struct typecheck_action_args<Type, HPX_ATTR_NONE, tlist<Ts...>> {
-  using type = typename Reduce_Right<And, std::true_type,
-                                     tlist<Not<std::is_pointer<Ts>>...>>::type;
-};
+/// no checks on the types of formal arguments of the action function
+template <hpx_action_type_t Type, typename Alist>
+struct typecheck_action_args<Type, HPX_ATTR_NONE, Alist> : std::true_type {};
 template <hpx_action_type_t Type, typename Alist>
 struct typecheck_action_args<Type, HPX_PINNED, Alist>
     : typecheck_action_args<Type, HPX_ATTR_NONE, Alist> {};
