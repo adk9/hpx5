@@ -38,6 +38,7 @@
 #include <libhpx/memory.h>
 #include <libhpx/network.h>
 #include <libhpx/percolation.h>
+#include <libhpx/process.h>
 #include <libhpx/scheduler.h>
 #include <libhpx/system.h>
 #include <libhpx/time.h>
@@ -93,6 +94,8 @@ static void _cleanup(locality_t *l) {
     topology_delete(l->topology);
     l->topology = NULL;
   }
+
+  spmd_fini();
 
   action_table_finalize();
 
@@ -168,6 +171,9 @@ int hpx_init(int *argc, char ***argv) {
     }
   }
 
+  // initialize the spmd process functionality
+  spmd_init();
+
   // topology discovery and initialization
   here->topology = topology_new(here->config);
   if (!here->topology) {
@@ -227,14 +233,11 @@ int hpx_init(int *argc, char ***argv) {
 }
 
 static int
-_run(int spmd, hpx_parcel_t *p) {
+_run(int spmd, hpx_parcel_t *p)
+{
   log_dflt("hpx started running %"PRIu64"\n", here->epoch);
   int status = scheduler_start(here->sched, p, spmd);
   log_dflt("hpx stopped running %"PRIu64"\n", here->epoch);
-
-  // Bump our epoch, and enforce the "collective" nature of run with a
-  // barrier. The barrier is necessary in both diffusing and SPMD processes to
-  // prevent epochs from existing concurrently.
   here->epoch++;
   boot_barrier(here->boot);
   return status;
@@ -256,11 +259,11 @@ _hpx_run_spmd(hpx_action_t *act, int n, ...)
 {
   va_list args;
   va_start(args, n);
-  hpx_parcel_t *p = action_new_parcel_va(*act, HPX_HERE, HPX_HERE,
-                                         locality_stop, n, &args);
+  hpx_parcel_t *p = action_new_parcel_va(*act, HPX_HERE, HPX_THERE(0),
+                                         spmd_epoch_terminate, n, &args);
   int status = _run(1, p);
   va_end(args);
- return status;
+  return status;
 }
 
 int hpx_get_my_rank(void) {
