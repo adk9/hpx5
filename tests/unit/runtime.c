@@ -64,10 +64,10 @@ int main(int argc, char *argv[argc]) {
     printf("%i hpx_run returned %d.\n", i+1, success);
   }
 
-  // for (int i = 0; i < RUNS; ++i) {
-  //   int success = hpx_run_spmd(&_spmd, &i);
-  //   printf("%i hpx_run_spmd returned %d.\n", i+1, success);
-  // }
+  for (int i = 0; i < RUNS; ++i) {
+    int success = hpx_run_spmd(&_spmd, &i);
+    printf("%i hpx_run_spmd returned %d.\n", i+1, success);
+  }
 
   hpx_finalize();
   printf("hpx_finalize completed %d.\n", 1);
