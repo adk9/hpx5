@@ -82,6 +82,14 @@ call(hpx_addr_t target, hpx_action_t action, Params... params)
     throw Error(e);
   }
 }
+
+template <typename ... Params>
+inline int
+thread_continue(Params ... params)
+{
+  const auto n = sizeof...(params);
+  return _hpx_thread_continue(n, &params...);
+}
 } // namespace c
 } // namespace hpx
 
