@@ -234,38 +234,22 @@ hpx_addr_t agas_alloc_cyclic_sync(size_t n, size_t bbsize, uint32_t attr,
   // and return the address
   return gva.addr;
 }
-
-static int _alloc_cyclic_handler(size_t n, size_t bsize, uint32_t attr) {
-  hpx_addr_t addr = agas_alloc_cyclic_sync(n, bsize, attr, 0);
-  return HPX_THREAD_CONTINUE(addr);
-}
-LIBHPX_ACTION(HPX_DEFAULT, 0, agas_alloc_cyclic, _alloc_cyclic_handler,
-              HPX_SIZE_T, HPX_SIZE_T, HPX_UINT32);
+LIBHPX_ACTION(HPX_DEFAULT, 0, agas_alloc_cyclic, agas_alloc_cyclic_sync,
+              HPX_SIZE_T, HPX_SIZE_T, HPX_UINT32, HPX_INT);
 
 static hpx_addr_t
 _agas_alloc_cyclic(size_t n, size_t bbsize, uint32_t boundary, uint32_t attr) {
   dbg_assert(bbsize <= _agas_max_block_size);
   uint32_t bsize = bbsize;
 
+  int zero = 0;
   hpx_addr_t addr;
-  if (here->rank == 0) {
-    addr = agas_alloc_cyclic_sync(n, bsize, attr, 0);
-  }
-  else {
-    int e = hpx_call_sync(HPX_THERE(0), agas_alloc_cyclic, &addr, sizeof(addr),
-                          &n, &bsize, &attr);
-    dbg_check(e, "Failed to call agas_alloc_cyclic_handler.\n");
-  }
+  int e = hpx_call_sync(HPX_THERE(0), agas_alloc_cyclic, &addr, sizeof(addr),
+                        &n, &bsize, &attr, &zero);
+  dbg_check(e, "Failed to call agas_alloc_cyclic.\n");
   dbg_assert_str(addr != HPX_NULL, "HPX_NULL is not a valid allocation\n");
   return addr;
 }
-
-static int _calloc_cyclic_handler(size_t n, size_t bsize, uint32_t attr) {
-  hpx_addr_t addr = agas_alloc_cyclic_sync(n, bsize, attr, 1);
-  return HPX_THREAD_CONTINUE(addr);
-}
-LIBHPX_ACTION(HPX_DEFAULT, 0, agas_calloc_cyclic, _calloc_cyclic_handler,
-              HPX_SIZE_T, HPX_SIZE_T, HPX_UINT32);
 
 static hpx_addr_t
 _agas_calloc_cyclic(size_t n, size_t bbsize, uint32_t boundary,
@@ -273,15 +257,11 @@ _agas_calloc_cyclic(size_t n, size_t bbsize, uint32_t boundary,
   dbg_assert(bbsize <= _agas_max_block_size);
   uint32_t bsize = bbsize;
 
+  int zero = 1;
   hpx_addr_t addr;
-  if (here->rank == 0) {
-    addr = agas_alloc_cyclic_sync(n, bsize, attr, 1);
-  }
-  else {
-    int e = hpx_call_sync(HPX_THERE(0), agas_calloc_cyclic, &addr, sizeof(addr),
-                          &n, &bsize, &attr);
-    dbg_check(e, "Failed to call agas_calloc_cyclic_handler.\n");
-  }
+  int e = hpx_call_sync(HPX_THERE(0), agas_alloc_cyclic, &addr, sizeof(addr),
+                        &n, &bsize, &attr, &zero);
+  dbg_check(e, "Failed to call agas_calloc_cyclic.\n");
   dbg_assert_str(addr != HPX_NULL, "HPX_NULL is not a valid allocation\n");
   return addr;
 }
