@@ -76,12 +76,13 @@ static int _run_test(_dist_type dist, void *fn) {
   if (dist == _user) {
     hpx_gas_dist_t distfn = (hpx_gas_dist_t)fn;
     data = hpx_gas_alloc(blocks, blocksize, 0,
-                                    distfn, HPX_GAS_ATTR_NONE);
+                         distfn, HPX_GAS_ATTR_NONE);
     dist = _cyclic;
   } else {
     hpx_addr_t (*alloc_fn)(size_t, size_t, uint32_t) = fn;
     data = alloc_fn(blocks, blocksize, 0);
   }
+  assert(data != HPX_NULL);
 
   hpx_addr_t sum_lco = hpx_lco_reduce_new(blocks, sizeof(int), _init, _add);
 
