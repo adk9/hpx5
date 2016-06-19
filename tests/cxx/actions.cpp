@@ -79,6 +79,12 @@ int main_act(int arg) {
   hpx::exit(hpx::SUCCESS);
 }
 auto ma = hpx::make_action(main_act);
+
+int spmd_handler(int, int *)
+{
+  hpx::c::thread_continue(0);
+}
+auto spmd = hpx::make_action(spmd_handler);
 }
 
 int main(int argc, char* argv[]) {
@@ -92,6 +98,7 @@ int main(int argc, char* argv[]) {
 
   ma.run(a);
   _check_pointer.run(&a);
+  spmd.run_spmd(a, &a);
 
   hpx::finalize();
   return 0;

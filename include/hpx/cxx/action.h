@@ -649,6 +649,19 @@ public:
     return _hpx_run(&_id, sizeof...(Args), _convert_arg(args)...);
   }
 
+  template <typename... Args> int run_spmd(Args &&... args) {
+    using L1 = typename hpx::detail::tlist<Args...>;
+    using L2 = typename hpx::detail::function_traits<F>::arg_types;
+    static_assert(
+                  hpx::detail::typecheck_action_args<TYPE, ATTR, L1>::type::value,
+                  "argument typecheck failed");
+    static_assert(
+                  hpx::detail::Checked_Map_Reduce<std::is_convertible, hpx::detail::And,
+                  std::true_type, L1, L2>::type::value,
+                  "action and argument types do not match");
+    return _hpx_run_spmd(&_id, sizeof...(Args), _convert_arg(args)...);
+  }
+
   template <typename R, typename... Args> int _register(R (&f)(Args...)) {
     return _register_helper(f);
   }
