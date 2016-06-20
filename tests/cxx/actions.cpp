@@ -82,7 +82,7 @@ auto ma = hpx::make_action(main_act);
 
 int spmd_handler(int, int *)
 {
-  hpx::c::thread_continue(0);
+  return hpx::c::thread_continue(0);
 }
 auto spmd = hpx::make_action(spmd_handler);
 }
