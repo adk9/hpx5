@@ -113,30 +113,21 @@ struct Checked_Map_Reduce {
 };
 
 namespace conversions {
-template <typename T>
-struct type2type;
+template <typename T> struct type2type;
 
 /// Template specialization for integral types.
-#define HPX_PLUS_PLUS_TYPE_MAP(ctype, hpxtype)  \
-  template <>                                   \
-  struct type2type<ctype>                       \
-  {                                             \
-    constexpr static auto type = hpxtype;       \
-  };
+#define HPX_PLUS_PLUS_TYPE_MAP(ctype, hpxtype)                                 \
+  template <> struct type2type<ctype> { constexpr static auto type = hpxtype; };
 #include <hpx/cxx/types.def>
 #undef HPX_PLUS_PLUS_TYPE_MAP
 
 // Partial specialization for global pointers
-template <typename T>
-struct type2type<hpx::global_ptr<T>>
-{
+template <typename T> struct type2type<hpx::global_ptr<T>> {
   constexpr static auto type = HPX_ADDR;
 };
 
 // Partial specialization for local pointers
-template <typename T>
-struct type2type<T*>
-{
+template <typename T> struct type2type<T *> {
   constexpr static auto type = HPX_POINTER;
 };
 }
@@ -203,9 +194,9 @@ private:
 
   template <typename R, typename... Args>
   int _register_helper(R (&f)(Args...)) {
-    return hpx_register_action(TYPE, ATTR, __FILE__ ":" _HPX_XSTR(_id), &(_id),
-                               sizeof...(Args) + 1, f,
-                               hpx::detail::conversions::type2type<Args>::type...);
+    return hpx_register_action(
+        TYPE, ATTR, __FILE__ ":" _HPX_XSTR(_id), &(_id), sizeof...(Args) + 1, f,
+        hpx::detail::conversions::type2type<Args>::type...);
   }
 
   /// This overloaded function converts actual call arguments to pointers
@@ -657,12 +648,10 @@ public:
 
 // helper methods to create action object
 template <typename R, typename T1, typename T2, typename... ContTs>
-inline Action<HPX_DEFAULT, HPX_MARSHALLED, R(T1 *, T2), ContTs...>
+inline typename std::enable_if<
+    std::is_integral<T2>::value,
+    Action<HPX_DEFAULT, HPX_MARSHALLED, R(T1 *, T2), ContTs...>>::type
 make_action(R (&f)(T1 *, T2)) {
-  //   static_assert(std::is_unsigned<T2>::value, "The second argument of a "
-  //                                              "marshalled action should be
-  //                                              an "
-  //                                              "unsigned integer type.");
   return Action<HPX_DEFAULT, HPX_MARSHALLED, R(T1 *, T2), ContTs...>(f);
 }
 template <hpx_action_type_t T, uint32_t ATTR, typename F, typename... ContTs>
