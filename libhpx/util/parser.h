@@ -49,6 +49,7 @@ enum enum_hpx_log_level { hpx_log_level__NULL = -1, hpx_log_level_arg_default = 
 enum enum_hpx_dbg_waitonsig { hpx_dbg_waitonsig__NULL = -1, hpx_dbg_waitonsig_arg_segv = 0, hpx_dbg_waitonsig_arg_abrt, hpx_dbg_waitonsig_arg_fpe, hpx_dbg_waitonsig_arg_ill, hpx_dbg_waitonsig_arg_bus, hpx_dbg_waitonsig_arg_iot, hpx_dbg_waitonsig_arg_sys, hpx_dbg_waitonsig_arg_trap, hpx_dbg_waitonsig_arg_all };
 enum enum_hpx_trace_backend { hpx_trace_backend__NULL = -1, hpx_trace_backend_arg_default = 0, hpx_trace_backend_arg_file, hpx_trace_backend_arg_console, hpx_trace_backend_arg_stats };
 enum enum_hpx_trace_classes { hpx_trace_classes__NULL = -1, hpx_trace_classes_arg_parcel = 0, hpx_trace_classes_arg_network, hpx_trace_classes_arg_sched, hpx_trace_classes_arg_lco, hpx_trace_classes_arg_process, hpx_trace_classes_arg_memory, hpx_trace_classes_arg_trace, hpx_trace_classes_arg_gas, hpx_trace_classes_arg_collective, hpx_trace_classes_arg_all };
+enum enum_hpx_photon_comporder { hpx_photon_comporder__NULL = -1, hpx_photon_comporder_arg_default = 0, hpx_photon_comporder_arg_none, hpx_photon_comporder_arg_strict };
 enum enum_hpx_photon_backend { hpx_photon_backend__NULL = -1, hpx_photon_backend_arg_default = 0, hpx_photon_backend_arg_verbs, hpx_photon_backend_arg_ugni, hpx_photon_backend_arg_fi };
 enum enum_hpx_photon_coll { hpx_photon_coll__NULL = -1, hpx_photon_coll_arg_default = 0, hpx_photon_coll_arg_pwc, hpx_photon_coll_arg_nbc };
 
@@ -160,6 +161,9 @@ struct hpx_options_t
   const char *hpx_pwc_parceleagerlimit_help; /**< @brief set the largest eager parcel size (header inclusive) help description.  */
   int hpx_coll_network_flag;	/**< @brief set collective implementation to network based version (override parcel collectives) (default=off).  */
   const char *hpx_coll_network_help; /**< @brief set collective implementation to network based version (override parcel collectives) help description.  */
+  enum enum_hpx_photon_comporder hpx_photon_comporder_arg;	/**< @brief request completion ordering mode.  */
+  char * hpx_photon_comporder_orig;	/**< @brief request completion ordering mode original value given at command line.  */
+  const char *hpx_photon_comporder_help; /**< @brief request completion ordering mode help description.  */
   enum enum_hpx_photon_backend hpx_photon_backend_arg;	/**< @brief set the underlying network API to use.  */
   char * hpx_photon_backend_orig;	/**< @brief set the underlying network API to use original value given at command line.  */
   const char *hpx_photon_backend_help; /**< @brief set the underlying network API to use help description.  */
@@ -255,6 +259,7 @@ struct hpx_options_t
   unsigned int hpx_pwc_parcelbuffersize_given ;	/**< @brief Whether hpx-pwc-parcelbuffersize was given.  */
   unsigned int hpx_pwc_parceleagerlimit_given ;	/**< @brief Whether hpx-pwc-parceleagerlimit was given.  */
   unsigned int hpx_coll_network_given ;	/**< @brief Whether hpx-coll-network was given.  */
+  unsigned int hpx_photon_comporder_given ;	/**< @brief Whether hpx-photon-comporder was given.  */
   unsigned int hpx_photon_backend_given ;	/**< @brief Whether hpx-photon-backend was given.  */
   unsigned int hpx_photon_coll_given ;	/**< @brief Whether hpx-photon-coll was given.  */
   unsigned int hpx_photon_ibdev_given ;	/**< @brief Whether hpx-photon-ibdev was given.  */
@@ -474,6 +479,7 @@ extern const char *hpx_option_parser_hpx_log_level_values[];  /**< @brief Possib
 extern const char *hpx_option_parser_hpx_dbg_waitonsig_values[];  /**< @brief Possible values for hpx-dbg-waitonsig. */
 extern const char *hpx_option_parser_hpx_trace_backend_values[];  /**< @brief Possible values for hpx-trace-backend. */
 extern const char *hpx_option_parser_hpx_trace_classes_values[];  /**< @brief Possible values for hpx-trace-classes. */
+extern const char *hpx_option_parser_hpx_photon_comporder_values[];  /**< @brief Possible values for hpx-photon-comporder. */
 extern const char *hpx_option_parser_hpx_photon_backend_values[];  /**< @brief Possible values for hpx-photon-backend. */
 extern const char *hpx_option_parser_hpx_photon_coll_values[];  /**< @brief Possible values for hpx-photon-coll. */
 

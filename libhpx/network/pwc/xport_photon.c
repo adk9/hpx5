@@ -98,6 +98,7 @@ _init_photon_config(const config_t *cfg, boot_t *boot,
   pcfg->exch.barrier        = (__typeof__(pcfg->exch.barrier))_boot_barrier;
   pcfg->backend             = cfg->photon_backend;
   pcfg->coll                = cfg->photon_coll;
+  pcfg->attr.comp_order     = cfg->photon_comporder;
 }
 
 static void
