@@ -24,16 +24,16 @@
 
 /// The header needed for our data file format
 typedef struct {
-  const char magic_number[7];
+  const char magic_number[6];
   unsigned char major;
   unsigned char minor;
-  uint32_t header_len;
+  uint16_t header_len;
   char header_data[];
 } logtable_header_t;
 
 #define _LOGTABLE_HEADER                                       \
   {                                                            \
-    .magic_number = {'\x93', 'N', 'U', 'M', 'P', 'Y', '\0'},   \
+    .magic_number = {'H', 'P', 'X', 'N', 'P', 'Y'},   \
     .major = 1,                                                \
     .minor = 0,                                                \
   }
@@ -46,58 +46,6 @@ typedef struct _cols_metadata {
 
 static logtable_header_t LOGTABLE_HEADER = _LOGTABLE_HEADER;
 
-static size_t
-_write_event_metadata_named_value(void* base, inst_named_value_t const *nv_md)
-{
-  // nv_md = [type, value, label] (e.g. [METADATA_TYPE_INT32, 4, "rank"]
-  // metadata = [type, length, nv_md] where
-  //   type = METADATA_TYPE_NAMED_VALUE and 
-  //   length = sizeof(metadata) + sizeof(nv_md)
-  _cols_metadata_t *md = (_cols_metadata_t*)base;
-  md->kind = METADATA_TYPE_NAMED_VALUE;
-  md->length = sizeof(inst_named_value_t);
-  memcpy(md->metadata, nv_md, md->length);
-  return sizeof(*md) + md->length;
-}
-
-#define METADATA_HANDLER(name, md_kind, ctype)                          \
-  static size_t _write_event_metadata_ ## name(void* base,              \
-    inst_event_metadata_t const *event_md) {                            \
-    if (event_md->num_cols == 0) {                                      \
-      return 0;                                                         \
-    }                                                                   \
-    _cols_metadata_t *md = (_cols_metadata_t*)base;                     \
-    md->kind = (md_kind);                                               \
-    md->length = event_md->num_cols * sizeof(ctype);                    \
-    ctype *data = (ctype*)md->metadata;                                 \
-    for (int i = 0; i < event_md->num_cols; i++) {                      \
-      data[i] = event_md->col_metadata[i].name;                         \
-    }                                                                   \
-    return sizeof(*md) + md->length;                                    \
-  }
-
-#define METADATA_HANDLER_STR(name, md_kind, _length)                    \
-  static size_t _write_event_metadata_ ## name(void* base,              \
-    inst_event_metadata_t const *event_md) {                            \
-    if (event_md->num_cols == 0) {                                      \
-      return 0;                                                         \
-    }                                                                   \
-    _cols_metadata_t *md = (_cols_metadata_t*)base;                     \
-    md->kind = (md_kind);                                               \
-    int md_data_size = event_md->num_cols * ((_length) + 1) + 1;        \
-    char *data = (char*)md->metadata;                                   \
-    strncpy(data, event_md->col_metadata[0].name, (_length));           \
-    for (int i = 1; i < event_md->num_cols; i++) {                      \
-      strncat(data, "|", 1);                                            \
-      strncat(data, event_md->col_metadata[i].name, (_length));         \
-    }                                                                   \
-    md->length = md_data_size;                                          \
-    return sizeof(*md) + md_data_size;                                  \
-  }
-
-METADATA_HANDLER(data_type, METADATA_TYPE_DATA_TYPES, char)
-METADATA_HANDLER_STR(name, METADATA_TYPE_NAMES, 256)
-
 //based on : http://cs-fundamentals.com/tech-interview/c/c-program-to-check-little-and-big-endian-architecture.php
 const char* endian_flag()
 {
@@ -106,44 +54,52 @@ const char* endian_flag()
     return (int)*c == 1 ? "<" : ">";
 }
 
-static size_t write_numpy_dict(void* base, const inst_event_metadata_t *event_md) {
-  const char* DICT_START = "{'desc':";
-  const char* PAIR_START = "('";
-  const char* PAIR_BRIDGE = "', '";
-  const char* PAIR_END = "')";
-  const char* ENTRY_SEP = ", ";
-  const char* LIST_START = "[";
-  const char* LIST_END = "]";
-  const char* FORTRAN = ", 'fortran_order': False";
-  const char* SHAPE = ", 'shape': (          ,)";
-  const char* DICT_END = "}\n";
+
+static int cat(char *dst, const char *src) {
+  //Just like strcat BUT returns number of bytes copied instead of dst.
+  strcat(dst, src);
+  return strlen(src);
+}
+
+static size_t write_header_dict(void* base, const inst_event_metadata_t *event_md, inst_named_value_t* named_values, int num_named_values) {
+  const char* endian = endian_flag();
 
   char *data = (char*) base;
-  const char* endian = endian_flag();
   int written = 0;
-  strcat(data, DICT_START);
-  strcat(data, LIST_START);
-  written += strlen(DICT_START) + strlen(LIST_START);
+  written += cat(data, "{'descr':");
+  written += cat(data, "[");
 
   for (int i=0; i< event_md->num_cols; i++) {
     inst_event_col_metadata_t col = event_md->col_metadata[i];
-    strcat(data, PAIR_START);
-    strcat(data, col.name);
-    strcat(data, PAIR_BRIDGE);
-    strcat(data, endian);
-    strcat(data, col.data_type);
-    strcat(data, PAIR_END);
-    written += strlen(PAIR_START) + strlen(col.name) + strlen(PAIR_BRIDGE) + strlen(col.data_type) + strlen(PAIR_END);
+    written += cat(data, "('");
+    written += cat(data, col.name);
+    written += cat(data, "', '");
+    written += cat(data, endian);
+    written += cat(data, col.data_type);
+    written += cat(data, "')");
     if (i < event_md->num_cols-1) {
-      strcat(data, ENTRY_SEP);
-      written += strlen(ENTRY_SEP);
+      written += cat(data, ", ");
     }
   }
-  strcat(data, LIST_END);
-  strcat(data, FORTRAN);
-  strcat(data, SHAPE);
-  written += strlen(LIST_END) + strlen(FORTRAN) + strlen(SHAPE);
-   
+  written += cat(data, "], ");
+  written += cat(data, "'fortran_order': False");
+
+  written += cat(data, ", 'consts': {");
+  for (int i=0; i<num_named_values; i++) {
+    inst_named_value_t val = named_values[i];
+    char val_str[16];
+    sprintf(val_str, "%d", val.value);
+
+    written += cat(data, "'");
+    written += cat(data, val.name);
+    written += cat(data, "': ");
+    written += cat(data, val_str);
+    if (i < num_named_values-1) {
+      written += cat(data, ", ");
+    }
+  }
+  written += cat(data, "}}\n");
+
   return written;
 }
 
@@ -152,24 +108,14 @@ static size_t write_numpy_dict(void* base, const inst_event_metadata_t *event_md
 static size_t _write_event_metadata(void* base, int class, int id) {
   inst_event_metadata_t const *event_md = &INST_EVENT_METADATA[id];
   uintptr_t curr = (uintptr_t)base;
-  // 1 byte-aligned
-  curr += write_numpy_dict((void*) curr, event_md);
-  // 1 byte-aligned named values
-  // record rank
-  inst_named_value_t rank_md = {
-    .type = METADATA_TYPE_INT32,
-    .value = hpx_get_my_rank(),
-    .name = "rank"
-  };
-  curr += _write_event_metadata_named_value((void*)curr, &rank_md);
-  // event class
-  inst_named_value_t class_md = {.type = METADATA_TYPE_INT32, .value = class,
-                                .name = "class"};
-  curr += _write_event_metadata_named_value((void*)curr, &class_md);
-  inst_named_value_t id_md = {.type = METADATA_TYPE_INT32,
-                              .value = id, .name = "id"};
-  curr += _write_event_metadata_named_value((void*)curr, &id_md);
-  return curr - (uintptr_t)base;
+
+  // Constants for the header
+  inst_named_value_t rank_md = {.value = hpx_get_my_rank(), .name = "rank" };
+  inst_named_value_t class_md = {.value = class, .name = "class"};
+  inst_named_value_t id_md = {.value = id, .name = "id"};
+  inst_named_value_t named_values[] = {rank_md, class_md, id_md};
+  
+  return write_header_dict((void*) curr, event_md, named_values, 3);
 }
 
 // Write the metadata for this event to the header of the log file
@@ -179,7 +125,7 @@ size_t write_trace_header(void* base, int class, int id) {
   memcpy(header, &LOGTABLE_HEADER, sizeof(LOGTABLE_HEADER));
   size_t metadata_size = _write_event_metadata(header->header_data, class, id);
   metadata_size += 16 - (metadata_size % 16);
-  header->header_len = offsetof(logtable_header_t, header_data) +
-    metadata_size;
-  return header->header_len;
+  header->header_len = metadata_size;
+  int header_len = offsetof(logtable_header_t, header_data) + metadata_size;
+  return header_len;
 }
