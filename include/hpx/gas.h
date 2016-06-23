@@ -319,6 +319,41 @@ bool hpx_gas_try_pin(hpx_addr_t addr, void **local)
 /// @param         addr The address of global memory to unpin.
 void hpx_gas_unpin(hpx_addr_t addr) HPX_PUBLIC;
 
+/// Register a local buffer for use in the memget/memput functions.
+///
+/// Any memory can be used for memget/memput, however registered memory access
+/// is potentially more efficient. This interface allows application users to
+/// register local memory, and is provided for legacy compatibility. New
+/// applications should prefer memory allocated with the registered memory
+/// interface.
+///
+/// @note This interface is synchronous---the buffer may be used immediately
+///       following the call.
+/// @note This interface is only available after hpx_init(), but can be called
+///       outside of an HPX epoch.
+/// @note Lightweight stack and pinned global addresses are implicitly
+///       registered and should not be explicitly passed to this routine.
+/// @note The registered buffer must not overlap with other registrations.
+///
+/// @param       buffer The start of the buffer to register.
+/// @param        bytes The length of the buffer to register.
+///
+/// @returns            HPX_SUCCESS or an error code.
+int hpx_register_memory(const void *buffer, size_t bytes)
+  HPX_PUBLIC;
+
+/// Deregister a previously registered local buffer.
+///
+/// The @p buffer must have been previously registered with
+/// hpx_register_memory(), and @p bytes must also match the registration call.
+///
+/// @param       buffer The start of the buffer that was registered.
+/// @param        bytes The length of the buffer that was registered.
+///
+/// @returns            HPX_SUCCESS or an error code.
+int hpx_deregister_memory(const void *buffer, size_t bytes)
+  HPX_PUBLIC;
+
 /// Allocate local memory for use in the memget/memput functions.
 ///
 /// Any memory can be used in these functions, however only thread stacks and
