@@ -61,7 +61,7 @@ static int cat(char *dst, const char *src) {
   return strlen(src);
 }
 
-static const char* itoa(const char *buffer, int val) {
+static const char* itoa(char *buffer, int val) {
   //puts a base-10 string representation of the val
   //into the buffer, and returns the buffer
   sprintf(buffer, "%d", val);
