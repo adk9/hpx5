@@ -33,7 +33,7 @@ typedef struct {
 
 #define _LOGTABLE_HEADER                                       \
   {                                                            \
-    .magic_number = {'H', 'P', 'X', 'N', 'P', 'Y'},   \
+    .magic_number = {'H', 'P', 'X', 'n', 'p', 'y'},   \
     .major = 1,                                                \
     .minor = 0,                                                \
   }
@@ -88,8 +88,7 @@ static size_t write_header_dict(void* base, const inst_event_metadata_t *event_m
       written += cat(data, itoa(val_str, pad_fields++));
       written += cat(data, "--");
       written += cat(data, "', '");
-      written += cat(data, endian);
-      written += cat(data, "i"); 
+      written += cat(data, "a"); 
       written += cat(data, itoa(val_str, col.offset - expected_offset));
       written += cat(data, "'), ");
       expected_offset += col.offset - expected_offset;
@@ -115,8 +114,11 @@ static size_t write_header_dict(void* base, const inst_event_metadata_t *event_m
     inst_named_value_t val = named_values[i];
     written += cat(data, "'");
     written += cat(data, val.name);
-    written += cat(data, "': ");
+    written += cat(data, "': (");
     written += cat(data, itoa(val_str, val.value));
+    written += cat(data, ", '");
+    written += cat(data, val.type);
+    written += cat(data, "')");
     if (i < num_named_values-1) {
       written += cat(data, ", ");
     }
@@ -133,9 +135,15 @@ static size_t _write_event_metadata(void* base, int class, int id) {
   uintptr_t curr = (uintptr_t)base;
 
   // Constants for the header
-  inst_named_value_t rank_md = {.value = hpx_get_my_rank(), .name = "rank" };
-  inst_named_value_t class_md = {.value = class, .name = "class"};
-  inst_named_value_t id_md = {.value = id, .name = "id"};
+  inst_named_value_t rank_md = {.value = hpx_get_my_rank(), 
+                                .type = "i4", 
+                                .name = "rank" };
+  inst_named_value_t class_md = {.value = class, 
+                                 .type = "i4", 
+                                 .name = "class"};
+  inst_named_value_t id_md = {.value = id, 
+                              .type = "i4", 
+                              .name = "id"};
   inst_named_value_t named_values[] = {rank_md, class_md, id_md};
   
   return write_header_dict((void*) curr, event_md, named_values, 3);

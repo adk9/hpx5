@@ -43,7 +43,8 @@ typedef struct inst_type_info {
 #define METADATA_TYPE_DOUBLE {.code="f8", .width=8}
 
 typedef struct inst_named_value {
-  const uint32_t   value;
+  const uint32_t value;
+  const char     type[3];   //A numpy type code
   const char     name[8];
 } HPX_PACKED inst_named_value_t;
 
