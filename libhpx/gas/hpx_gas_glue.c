@@ -23,6 +23,7 @@
 #include <libhpx/gas.h>
 #include <libhpx/gpa.h>
 #include <libhpx/locality.h>
+#include <libhpx/network.h>
 #include <libhpx/rebalancer.h>
 #include <libhpx/worker.h>
 
@@ -412,4 +413,20 @@ void hpx_gas_set_affinity(hpx_addr_t gva, int worker) {
 
 void hpx_gas_clear_affinity(hpx_addr_t gva) {
   gas_clear_affinity(here->gas, gva);
+}
+
+int
+hpx_register_memory(const void *buffer, size_t bytes)
+{
+  dbg_assert(here && here->net);
+  network_register_dma(here->net, buffer, bytes, NULL);
+  return HPX_SUCCESS;
+}
+
+int
+hpx_deregister_memory(const void *buffer, size_t bytes)
+{
+  dbg_assert(here && here->net);
+  network_release_dma(here->net, buffer, bytes);
+  return HPX_SUCCESS;
 }
