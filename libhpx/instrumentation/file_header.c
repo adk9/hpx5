@@ -61,21 +61,13 @@ static int cat(char *dst, const char *src) {
   return strlen(src);
 }
 
-static const char* itoa(char *buffer, int val) {
-  //puts a base-10 string representation of the val
-  //into the buffer, and returns the buffer
-  sprintf(buffer, "%d", val);
-  return buffer;
-}
-
 static size_t write_header_dict(void* base, const inst_event_metadata_t *event_md, inst_named_value_t* named_values, int num_named_values) {
   const char* endian = endian_flag();
-  char val_str[16];
+  char part_buffer[100];
 
   char *data = (char*) base;
   int written = 0;
-  written += cat(data, "{'descr':");
-  written += cat(data, "[");
+  written += cat(data, "{'descr': [");
 
   int pad_fields = 0;
   int expected_offset = 0;
@@ -83,23 +75,13 @@ static size_t write_header_dict(void* base, const inst_event_metadata_t *event_m
     inst_event_col_metadata_t col = event_md->col_metadata[i];
     if (strlen(col.name) == 0) {break;}
     if (expected_offset != col.offset) {
-      written += cat(data, "('");
-      written += cat(data, "--pad");
-      written += cat(data, itoa(val_str, pad_fields++));
-      written += cat(data, "--");
-      written += cat(data, "', '");
-      written += cat(data, "a"); 
-      written += cat(data, itoa(val_str, col.offset - expected_offset));
-      written += cat(data, "'), ");
+      sprintf(part_buffer, "('--pad%d--', 'a%d'), ", pad_fields++, col.offset-expected_offset);
+      written += cat(data, part_buffer);
       expected_offset += col.offset - expected_offset;
     }
 
-    written += cat(data, "('");
-    written += cat(data, col.name);
-    written += cat(data, "', '");
-    written += cat(data, endian);
-    written += cat(data, col.data_type.code);
-    written += cat(data, "')");
+    sprintf(part_buffer, "('%s', '%s%s')", col.name, endian, col.data_type.code);
+    written += cat(data, part_buffer);
 
     if (i < event_md->num_cols-1) {
       written += cat(data, ", ");
@@ -112,13 +94,8 @@ static size_t write_header_dict(void* base, const inst_event_metadata_t *event_m
   written += cat(data, ", 'consts': {");
   for (int i=0; i<num_named_values; i++) {
     inst_named_value_t val = named_values[i];
-    written += cat(data, "'");
-    written += cat(data, val.name);
-    written += cat(data, "': (");
-    written += cat(data, itoa(val_str, val.value));
-    written += cat(data, ", '");
-    written += cat(data, val.type);
-    written += cat(data, "')");
+    sprintf(part_buffer, "'%s': (%d, '%s')", val.name, val.value, val.type);
+    written += cat(data, part_buffer);
     if (i < num_named_values-1) {
       written += cat(data, ", ");
     }
