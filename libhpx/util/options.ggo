@@ -164,6 +164,11 @@ flag off
 
 section "Photon Transport Options"
 
+option "hpx-photon-comporder" - "request completion ordering mode"
+typestr="type"
+values="default","none","strict"
+enum optional
+
 option "hpx-photon-backend" - "set the underlying network API to use"
 typestr="type"
 values="default","verbs","ugni","fi"
