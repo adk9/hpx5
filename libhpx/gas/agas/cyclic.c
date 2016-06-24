@@ -90,7 +90,7 @@ _agas_alloc_cyclic_handler(size_t n, size_t bbsize, uint32_t attr, int zero) {
   int e = hpx_bcast_rsync(_locality_alloc_cyclic, &blocks, &align, &offset,
                           &lva, &attr, &zero);
   dbg_check(e, "failed to insert btt entries.\n");
-  return gva.addr;
+  return HPX_THREAD_CONTINUE(gva.addr);
 }
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _agas_alloc_cyclic,
                      _agas_alloc_cyclic_handler, HPX_SIZE_T, HPX_SIZE_T,
