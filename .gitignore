@@ -75,6 +75,7 @@
 /include/Makefile
 /include/Makefile.in
 /include/hpx/Makefile
+/include/hpx/types.h
 /include/libhpx/Makefile
 /include/libhpx/event_stubs.h
 /include/libsync/Makefile
