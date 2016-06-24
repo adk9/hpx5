@@ -143,6 +143,14 @@ set(const global_ptr<T>& lco)
 
 template <typename T>
 inline void
+set(const global_ptr<T>& lco, std::nullptr_t)
+{
+  static_assert(is_lco<T>::value, "LCO type required");
+  hpx_lco_set(lco.get(), 0, NULL, HPX_NULL, HPX_NULL);
+}
+
+template <typename T>
+inline void
 dealloc(const global_ptr<T>& lco)
 {
   static_assert(is_lco<T>::value, "LCO type required");
