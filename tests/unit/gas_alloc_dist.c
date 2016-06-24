@@ -11,6 +11,7 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
+#include <libhpx/libhpx.h>
 #include <hpx/hpx.h>
 #include "tests.h"
 
@@ -134,6 +135,10 @@ hpx_addr_t _cyclic_dist(uint32_t i, size_t n, size_t bsize) {
 }
 
 static int gas_alloc_user_handler(void) {
+  const libhpx_config_t *cfg = libhpx_get_config();
+  if (cfg->gas != HPX_GAS_AGAS) {
+    return HPX_SUCCESS;
+  }
   return _run_test(_user, _cyclic_dist);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, gas_alloc_user, gas_alloc_user_handler);
