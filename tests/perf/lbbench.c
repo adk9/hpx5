@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <inttypes.h>
+#include "libhpx/libhpx.h"
 #include "hpx/hpx.h"
 
 /// This is a microbenchmark to determine the effectiveness of
@@ -135,6 +136,13 @@ int main(int argc, char *argv[]) {
   int e = hpx_init(&argc, &argv);
   if (e) {
     fprintf(stderr, "HPX: failed to initialize.\n");
+    return e;
+  }
+
+  const libhpx_config_t *cfg = libhpx_get_config();
+  if (cfg->gas != HPX_GAS_AGAS) {
+    fprintf(stderr, "error: re-run with --hpx-gas=agas.\n");
+    hpx_finalize();
     return e;
   }
 
