@@ -10,6 +10,7 @@ TESTS = gasbench            \
         lco_sema            \
         lco_future          \
         collbench           \
+        lbbench             \
         parbench            \
         thread_switch
 
@@ -27,6 +28,7 @@ lco_sema_SOURCES                = lco_sema.c
 lco_future_SOURCES              = lco_future.c
 sendrecv_SOURCES                = sendrecv.c
 collbench_SOURCES               = collbench.c
+lbbench_SOURCES                 = lbbench.c
 parbench_SOURCES                = parbench.c
 thread_switch_SOURCES           = thread_switch.c
 
@@ -38,5 +40,6 @@ lco_sema_DEPENDENCIES           = $(HPX_APPS_DEPS)
 lco_future_DEPENDENCIES         = $(HPX_APPS_DEPS)
 sendrecv_DEPENDENCIES           = $(HPX_APPS_DEPS)
 collbench_DEPENDENCIES          = $(HPX_APPS_DEPS)
+lbbench_DEPENDENCIES            = $(HPX_APPS_DEPS)
 parbench_DEPENDENCIES           = $(HPX_APPS_DEPS)
 thread_switch_DEPENDENCIES      = $(HPX_APPS_DEPS)

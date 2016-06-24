@@ -35,9 +35,6 @@ static const uint64_t AGAS_THERE_OFFSET = UINT64_C(4398046511103);
 
 __thread size_t agas_alloc_bsize;
 
-HPX_ACTION_DECL(agas_alloc_cyclic);
-HPX_ACTION_DECL(agas_calloc_cyclic);
-
 /// The AGAS use of GPA limits block sizes to 2^32.
 #define _agas_max_block_size (UINT64_C(1) << GPA_MAX_LG_BSIZE)
 
@@ -156,6 +153,7 @@ _agas_owner_of(const void *gas, hpx_addr_t addr) {
     INST_IF(!found) {
       EVENT_GAS_MISS(addr, owner);
     }
+    (void)found;
   }
   dbg_assert(owner < here->ranks);
   return owner;
@@ -167,135 +165,14 @@ void _agas_set_attr(void *gas, hpx_addr_t addr, uint32_t attr) {
   btt_set_attr(agas->btt, gva, attr);
 }
 
-static int
-_locality_alloc_cyclic_handler(uint64_t blocks, uint32_t align, uint64_t offset,
-                               void *lva, uint32_t attr, int zero) {
-  agas_t *agas = (agas_t*)here->gas;
-  size_t bsize = 1u << align;
-  if (here->rank != 0) {
-    size_t boundary = (bsize < 8) ? 8 : bsize;
-    lva = NULL;
-    int e = posix_memalign(&lva, boundary, blocks * bsize);
-    dbg_check(e, "Failed memalign\n");
-    (void)e;
-  }
-
-  if (zero) {
-    lva = memset(lva, 0, blocks * bsize);
-  }
-
-  // and insert entries into our block translation table
-  gva_t gva = {
-    .bits = {
-      .offset = offset,
-      .cyclic = 1,
-      .size = align,
-      .home = here->rank
-    }
-  };
-
-  for (int i = 0; i < blocks; i++) {
-    btt_insert(agas->btt, gva, here->rank, lva, blocks, attr);
-    lva += bsize;
-    gva.bits.offset += bsize;
-  }
-  return HPX_SUCCESS;
-}
-static LIBHPX_ACTION(HPX_DEFAULT, 0, _locality_alloc_cyclic,
-                     _locality_alloc_cyclic_handler, HPX_UINT64, HPX_UINT32,
-                     HPX_UINT64, HPX_POINTER, HPX_UINT32, HPX_INT);
-
-hpx_addr_t _agas_alloc_cyclic_sync(size_t n, size_t bbsize, uint32_t attr,
-                                   int zero) {
-  dbg_assert(bbsize <= _agas_max_block_size);
-  uint32_t bsize = bbsize;
-
-  agas_t *agas = (agas_t*)here->gas;
-  dbg_assert(here->rank == 0);
-
-  // Figure out how many blocks per node we need.
-  uint64_t blocks = ceil_div_64(n, here->ranks);
-  uint32_t  align = ceil_log2_32(bsize);
-  dbg_assert(align <= 32);
-  size_t padded = 1u << align;
-
-  agas_alloc_bsize = padded;
-  // Allocate the blocks as a contiguous, aligned array from cyclic memory.
-  void *lva = cyclic_memalign(padded, blocks * padded);
-  if (!lva) {
-    dbg_error("failed cyclic allocation\n");
-  }
-
-  gva_t gva = agas_lva_to_gva(agas, lva, padded);
-  gva.bits.cyclic = 1;
-  uint64_t offset = gva.bits.offset;
-  int e = hpx_bcast_rsync(_locality_alloc_cyclic, &blocks, &align, &offset,
-                          &lva, &attr, &zero);
-  dbg_check(e, "failed to insert btt entries.\n");
-
-  // and return the address
-  return gva.addr;
+static hpx_addr_t _agas_alloc_blocked(size_t n, size_t bsize,
+                                      uint32_t boundary, uint32_t attr) {
+  dbg_error("Blocked GAS distributions are not supported.\n");
 }
 
-hpx_addr_t agas_alloc_cyclic_sync(size_t n, size_t bsize, uint32_t attr) {
-  dbg_assert(here->rank == 0);
-  return _agas_alloc_cyclic_sync(n, bsize, attr, 0);
-}
-
-static int _alloc_cyclic_handler(size_t n, size_t bsize, uint32_t attr) {
-  hpx_addr_t addr = agas_alloc_cyclic_sync(n, bsize, attr);
-  return HPX_THREAD_CONTINUE(addr);
-}
-LIBHPX_ACTION(HPX_DEFAULT, 0, agas_alloc_cyclic, _alloc_cyclic_handler,
-              HPX_SIZE_T, HPX_SIZE_T, HPX_UINT32);
-
-static hpx_addr_t
-_agas_alloc_cyclic(size_t n, size_t bbsize, uint32_t boundary, uint32_t attr) {
-  dbg_assert(bbsize <= _agas_max_block_size);
-  uint32_t bsize = bbsize;
-
-  hpx_addr_t addr;
-  if (here->rank == 0) {
-    addr = agas_alloc_cyclic_sync(n, bsize, attr);
-  }
-  else {
-    int e = hpx_call_sync(HPX_THERE(0), agas_alloc_cyclic, &addr, sizeof(addr),
-                          &n, &bsize, &attr);
-    dbg_check(e, "Failed to call agas_alloc_cyclic_handler.\n");
-  }
-  dbg_assert_str(addr != HPX_NULL, "HPX_NULL is not a valid allocation\n");
-  return addr;
-}
-
-hpx_addr_t agas_calloc_cyclic_sync(size_t n, size_t bsize, uint32_t attr) {
-  assert(here->rank == 0);
-  return _agas_alloc_cyclic_sync(n, bsize, attr, 1);
-}
-
-static int _calloc_cyclic_handler(size_t n, size_t bsize, uint32_t attr) {
-  hpx_addr_t addr = agas_calloc_cyclic_sync(n, bsize, attr);
-  return HPX_THREAD_CONTINUE(addr);
-}
-LIBHPX_ACTION(HPX_DEFAULT, 0, agas_calloc_cyclic, _calloc_cyclic_handler,
-              HPX_SIZE_T, HPX_SIZE_T, HPX_UINT32);
-
-static hpx_addr_t
-_agas_calloc_cyclic(size_t n, size_t bbsize, uint32_t boundary,
-                    uint32_t attr) {
-  dbg_assert(bbsize <= _agas_max_block_size);
-  uint32_t bsize = bbsize;
-
-  hpx_addr_t addr;
-  if (here->rank == 0) {
-    addr = agas_calloc_cyclic_sync(n, bsize, attr);
-  }
-  else {
-    int e = hpx_call_sync(HPX_THERE(0), agas_calloc_cyclic, &addr, sizeof(addr),
-                          &n, &bsize, &attr);
-    dbg_check(e, "Failed to call agas_calloc_cyclic_handler.\n");
-  }
-  dbg_assert_str(addr != HPX_NULL, "HPX_NULL is not a valid allocation\n");
-  return addr;
+static hpx_addr_t _agas_calloc_blocked(size_t n, size_t bsize,
+                                       uint32_t boundary, uint32_t attr) {
+  dbg_error("Blocked GAS distributions are not supported.\n");
 }
 
 static gas_t _agas = {
@@ -319,10 +196,12 @@ static gas_t _agas = {
   .there          = _agas_there,
   .try_pin        = _agas_try_pin,
   .unpin          = _agas_unpin,
-  .alloc_cyclic   = _agas_alloc_cyclic,
-  .calloc_cyclic  = _agas_calloc_cyclic,
-  .alloc_blocked  = NULL,
-  .calloc_blocked = NULL,
+  .alloc_cyclic   = agas_alloc_cyclic,
+  .calloc_cyclic  = agas_calloc_cyclic,
+  .alloc_blocked  = _agas_alloc_blocked,
+  .calloc_blocked = _agas_calloc_blocked,
+  .alloc_user     = agas_alloc_user,
+  .calloc_user    = agas_calloc_user,
   .alloc_local    = agas_alloc_local,
   .calloc_local   = agas_calloc_local,
   .free           = agas_free,

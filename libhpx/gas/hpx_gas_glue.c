@@ -31,58 +31,6 @@ uint64_t HPX_GAS_BLOCK_BYTES_MAX;
 
 hpx_addr_t HPX_HERE = 0;
 
-#define GAS_DIST_TYPE_MASK  (0x7)
-
-hpx_gas_dist_type_t gas_get_dist_type(hpx_gas_dist_t dist) {
-  return ((uintptr_t)dist & GAS_DIST_TYPE_MASK);
-}
-
-static hpx_addr_t _gas_alloc_user(size_t n, size_t bsize, uint32_t boundary,
-                                  hpx_gas_dist_t d) {
-  dbg_assert(gas_get_dist_type(d) == HPX_DIST_TYPE_USER);
-  dbg_error("User-defined GAS distributions are not supported.\n");
-}
-
-static hpx_addr_t _gas_calloc_user(size_t n, size_t bsize, uint32_t boundary,
-                                   hpx_gas_dist_t d) {
-  dbg_assert(gas_get_dist_type(d) == HPX_DIST_TYPE_USER);
-  dbg_error("User-defined GAS distributions are not supported.\n");
-}
-
-hpx_addr_t hpx_gas_alloc(size_t n, size_t bsize, uint32_t boundary,
-                         hpx_gas_dist_t dist, uint32_t attr) {
-  dbg_assert(dist);
-  int type = (int)gas_get_dist_type(dist);
-  switch (type) {
-   case (HPX_DIST_TYPE_LOCAL):
-    return hpx_gas_calloc_local(n, bsize, boundary);
-   case (HPX_DIST_TYPE_CYCLIC):
-    return hpx_gas_alloc_cyclic(n, bsize, boundary);
-   case (HPX_DIST_TYPE_BLOCKED):
-    return hpx_gas_alloc_blocked(n, bsize, boundary);
-   case (HPX_DIST_TYPE_USER):
-    return _gas_alloc_user(n, bsize, boundary, dist);
-   default: dbg_error("Unknown gas distribution type %d.\n", type);
-  }
-}
-
-hpx_addr_t hpx_gas_calloc(size_t n, size_t bsize, uint32_t boundary,
-                          hpx_gas_dist_t dist, uint32_t attr) {
-  dbg_assert(dist);
-  int type = (int)gas_get_dist_type(dist);
-  switch (type) {
-   case (HPX_DIST_TYPE_LOCAL):
-    return hpx_gas_calloc_local(n, bsize, boundary);
-   case (HPX_DIST_TYPE_CYCLIC):
-    return hpx_gas_calloc_cyclic(n, bsize, boundary);
-   case (HPX_DIST_TYPE_BLOCKED):
-    return hpx_gas_calloc_blocked(n, bsize, boundary);
-   case (HPX_DIST_TYPE_USER):
-    return _gas_calloc_user(n, bsize, boundary, dist);
-   default: dbg_error("Unknown gas distribution type %d.\n", type);
-  }
-}
-
 hpx_addr_t HPX_THERE(uint32_t i) {
   dbg_assert(here && here->gas);
   gas_t *gas = here->gas;
@@ -116,6 +64,34 @@ void hpx_gas_unpin(const hpx_addr_t addr) {
   gas_t *gas = here->gas;
   dbg_assert(gas->unpin);
   gas->unpin(here->gas, addr);
+}
+
+hpx_addr_t hpx_gas_alloc(size_t n, size_t bsize, uint32_t boundary,
+                         hpx_gas_dist_t dist, uint32_t attr) {
+  switch ((uintptr_t)dist) {
+    case ((uintptr_t)HPX_GAS_DIST_LOCAL):
+    return hpx_gas_alloc_local_attr(n, bsize, boundary, attr);
+    case ((uintptr_t)HPX_GAS_DIST_CYCLIC):
+    return hpx_gas_alloc_cyclic_attr(n, bsize, boundary, attr);
+    case ((uintptr_t)HPX_GAS_DIST_BLOCKED):
+    return hpx_gas_alloc_blocked_attr(n, bsize, boundary, attr);
+   default:
+    return hpx_gas_alloc_user_attr(n, bsize, boundary, dist, attr);
+  }
+}
+
+hpx_addr_t hpx_gas_calloc(size_t n, size_t bsize, uint32_t boundary,
+                          hpx_gas_dist_t dist, uint32_t attr) {
+  switch ((uintptr_t)dist) {
+   case ((uintptr_t)HPX_GAS_DIST_LOCAL):
+    return hpx_gas_calloc_local_attr(n, bsize, boundary, attr);
+   case ((uintptr_t)HPX_GAS_DIST_CYCLIC):
+    return hpx_gas_calloc_cyclic_attr(n, bsize, boundary, attr);
+   case ((uintptr_t)HPX_GAS_DIST_BLOCKED):
+    return hpx_gas_calloc_blocked_attr(n, bsize, boundary, attr);
+   default:
+    return hpx_gas_calloc_user_attr(n, bsize, boundary, dist, attr);
+  }
 }
 
 hpx_addr_t hpx_gas_alloc_cyclic_attr(size_t n, size_t bsize, uint32_t boundary,
@@ -164,6 +140,22 @@ hpx_addr_t hpx_gas_calloc_blocked_attr(size_t n, size_t bsize,
 
 hpx_addr_t hpx_gas_calloc_blocked(size_t n, size_t bsize, uint32_t boundary) {
   return hpx_gas_calloc_blocked_attr(n, bsize, boundary, HPX_GAS_ATTR_NONE);
+}
+
+hpx_addr_t hpx_gas_alloc_user_attr(size_t n, size_t bsize, uint32_t boundary,
+                                   hpx_gas_dist_t dist, uint32_t attr) {
+  dbg_assert(here && here->gas);
+  gas_t *gas = here->gas;
+  dbg_assert(gas->alloc_user);
+  return gas->alloc_user(n, bsize, boundary, dist, attr);
+}
+
+hpx_addr_t hpx_gas_calloc_user_attr(size_t n, size_t bsize, uint32_t boundary,
+                                    hpx_gas_dist_t dist, uint32_t attr) {
+  dbg_assert(here && here->gas);
+  gas_t *gas = here->gas;
+  dbg_assert(gas->calloc_user);
+  return gas->calloc_user(n, bsize, boundary, dist, attr);
 }
 
 static hpx_addr_t _gas_local_search(size_t n, size_t bsize, uint32_t boundary,

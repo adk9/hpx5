@@ -11,19 +11,16 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
+#include <libhpx/libhpx.h>
 #include <hpx/hpx.h>
 #include "tests.h"
 
 static const int blocksize = 4 * sizeof(int);
 
 typedef enum {
-  _alloc = 0,
-  _calloc
-} _alloc_type;
-
-typedef enum {
   _cyclic = 0,
-  _blocked
+  _blocked,
+  _user
 } _dist_type;
 
 static int _block_rank_handler(hpx_addr_t base) {
@@ -73,25 +70,23 @@ static int _verify(_dist_type dist) {
   return 0;
 }
 
-static int _run_test(_alloc_type alloc, _dist_type dist) {
-  hpx_addr_t (*alloc_fn)(size_t, size_t, uint32_t);
-  if (dist == _cyclic && alloc == _alloc) {
-    alloc_fn = hpx_gas_alloc_cyclic;
-  } else if (dist == _cyclic && alloc == _calloc) {
-    alloc_fn = hpx_gas_calloc_cyclic;
-  } else if (dist == _blocked && alloc == _alloc) {
-    alloc_fn = hpx_gas_alloc_blocked;
-  } else if (dist == _blocked && alloc == _calloc) {
-    alloc_fn = hpx_gas_calloc_blocked;
-  } else {
-    printf("unknown dist or alloc type.\n");
-    return HPX_ERROR;
-  }
-
+static int _run_test(_dist_type dist, void *fn) {
   int e = HPX_SUCCESS;
   int blocks = 2*HPX_LOCALITIES;
+  hpx_addr_t data;
+  if (dist == _user) {
+    hpx_gas_dist_t distfn = (hpx_gas_dist_t)fn;
+    data = hpx_gas_alloc(blocks, blocksize, 0,
+                         distfn, HPX_GAS_ATTR_NONE);
+    dist = _cyclic;
+  } else {
+    hpx_addr_t (*alloc_fn)(size_t, size_t, uint32_t) = fn;
+    data = alloc_fn(blocks, blocksize, 0);
+  }
+  assert(data != HPX_NULL);
+
   hpx_addr_t sum_lco = hpx_lco_reduce_new(blocks, sizeof(int), _init, _add);
-  hpx_addr_t data = alloc_fn(blocks, blocksize, 0);
+
   hpx_gas_bcast_with_continuation(_block_rank, data, blocks, 0, blocksize,
                                   hpx_lco_set_action, sum_lco, &data);
   int sum;
@@ -112,32 +107,46 @@ static int _run_test(_alloc_type alloc, _dist_type dist) {
 }
 
 static int gas_alloc_cyclic_handler(void) {
-  return _run_test(_alloc, _cyclic);
+  return _run_test(_cyclic, hpx_gas_alloc_cyclic);
 }
-static HPX_ACTION(HPX_DEFAULT, 0, gas_alloc_cyclic,
-                  gas_alloc_cyclic_handler);
+static HPX_ACTION(HPX_DEFAULT, 0, gas_alloc_cyclic, gas_alloc_cyclic_handler);
 
 static int gas_calloc_cyclic_handler(void) {
-  return _run_test(_calloc, _cyclic);
+  return _run_test(_cyclic, hpx_gas_calloc_cyclic);
 }
-static HPX_ACTION(HPX_DEFAULT, 0, gas_calloc_cyclic,
-                  gas_calloc_cyclic_handler);
+static HPX_ACTION(HPX_DEFAULT, 0, gas_calloc_cyclic, gas_calloc_cyclic_handler);
 
 static int gas_alloc_blocked_handler(void) {
-  return _run_test(_alloc, _blocked);
+  return _run_test(_blocked, hpx_gas_alloc_blocked);
 }
-static HPX_ACTION(HPX_DEFAULT, 0, gas_alloc_blocked,
-                  gas_alloc_blocked_handler);
+static HPX_ACTION(HPX_DEFAULT, 0, gas_alloc_blocked, gas_alloc_blocked_handler);
 
 static int gas_calloc_blocked_handler(void) {
-  return _run_test(_calloc, _blocked);
+  return _run_test(_blocked, hpx_gas_calloc_blocked);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, gas_calloc_blocked,
                   gas_calloc_blocked_handler);
 
+
+/// Test to check GAS allocation for user-defined (cyclic) data
+/// distribution
+hpx_addr_t _cyclic_dist(uint32_t i, size_t n, size_t bsize) {
+  return HPX_THERE(i % HPX_LOCALITIES);
+}
+
+static int gas_alloc_user_handler(void) {
+  const libhpx_config_t *cfg = libhpx_get_config();
+  if (cfg->gas != HPX_GAS_AGAS) {
+    return HPX_SUCCESS;
+  }
+  return _run_test(_user, _cyclic_dist);
+}
+static HPX_ACTION(HPX_DEFAULT, 0, gas_alloc_user, gas_alloc_user_handler);
+
 TEST_MAIN({
     ADD_TEST(gas_alloc_cyclic, 0);
     ADD_TEST(gas_calloc_cyclic, 0);
+    ADD_TEST(gas_alloc_user, 0);
     // ADD_TEST(gas_alloc_blocked, 0);
     // ADD_TEST(gas_calloc_blocked, 0);
 });

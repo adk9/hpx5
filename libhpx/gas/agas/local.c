@@ -32,7 +32,7 @@ agas_alloc_local(size_t n, size_t bsize, uint32_t boundary, uint32_t attr) {
   // use the local allocator to get some memory that is part of the global
   // address space
   uint32_t align = ceil_log2_size_t(bsize);
-  dbg_assert(align < 32);
+  dbg_assert(align <= 32);
   uint32_t padded = UINT32_C(1) << align;
   uint32_t aligned = max_u32(boundary, padded);
 
@@ -56,7 +56,7 @@ hpx_addr_t
 agas_calloc_local(size_t n, size_t bsize, uint32_t boundary, uint32_t attr) {
   agas_t *agas = (agas_t*)here->gas;
   uint32_t align = ceil_log2_size_t(bsize);
-  dbg_assert(align < 32);
+  dbg_assert(align <= 32);
   uint32_t padded = UINT32_C(1) << align;
   uint32_t aligned = max_u32(boundary, padded);
 
