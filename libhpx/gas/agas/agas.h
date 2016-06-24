@@ -68,6 +68,12 @@ hpx_addr_t agas_alloc_cyclic(size_t n, size_t bbsize, uint32_t boundary,
 hpx_addr_t agas_calloc_cyclic(size_t n, size_t bbsize, uint32_t boundary,
                               uint32_t attr);
 
+/// User-defined allocation operations.
+hpx_addr_t agas_alloc_user(size_t n, size_t bbsize, uint32_t boundary,
+                           hpx_gas_dist_t dist, uint32_t attr);
+hpx_addr_t agas_calloc_user(size_t n, size_t bbsize, uint32_t boundary,
+                            hpx_gas_dist_t dist, uint32_t attr);
+
 /// String operations.
 int agas_memput(void *gas, hpx_addr_t to, const void *from, size_t n,
                 hpx_addr_t lsync, hpx_addr_t rsync);

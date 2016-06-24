@@ -175,18 +175,6 @@ static hpx_addr_t _agas_calloc_blocked(size_t n, size_t bsize,
   dbg_error("Blocked GAS distributions are not supported.\n");
 }
 
-static
-hpx_addr_t _agas_alloc_user(size_t n, size_t bsize, uint32_t boundary,
-                            hpx_gas_dist_t dist, uint32_t attr) {
-  return HPX_NULL;
-}
-
-static
-hpx_addr_t _agas_calloc_user(size_t n, size_t bsize, uint32_t boundary,
-                             hpx_gas_dist_t dist, uint32_t attr) {
-  return HPX_NULL;
-}
-
 static gas_t _agas = {
   .type           = HPX_GAS_AGAS,
   .string = {
@@ -212,8 +200,8 @@ static gas_t _agas = {
   .calloc_cyclic  = agas_calloc_cyclic,
   .alloc_blocked  = _agas_alloc_blocked,
   .calloc_blocked = _agas_calloc_blocked,
-  .alloc_user     = _agas_alloc_user,
-  .calloc_user    = _agas_calloc_user,
+  .alloc_user     = agas_alloc_user,
+  .calloc_user    = agas_calloc_user,
   .alloc_local    = agas_alloc_local,
   .calloc_local   = agas_calloc_local,
   .free           = agas_free,
