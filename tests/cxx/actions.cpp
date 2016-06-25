@@ -34,10 +34,15 @@ using namespace std;
 // static HPX_ACTION(HPX_TASK, 0, _my_task, _my_task_handler);
 
 namespace {
-int _check_pointer_handler(int *) {
+int _check_pointer1_handler(int *) {
   hpx::exit(hpx::SUCCESS);
 }
-auto _check_pointer = hpx::make_action(_check_pointer_handler);
+auto _check_pointer1 = hpx::make_action(_check_pointer1_handler);
+
+int _check_pointer2_handler(int *, int **) {
+  hpx::exit(hpx::SUCCESS);
+}
+auto _check_pointer2 = hpx::make_action(_check_pointer2_handler);
 
 int _my_action_handler(void) {
   printf("Hi, I am an action!\n");
@@ -95,11 +100,12 @@ int main(int argc, char* argv[]) {
     return e;
   }
   int a = hpx_get_my_rank() + 1;
-
+  int *b = &a;
   ma.run(a);
-  _check_pointer.run(&a);
   spmd.run_spmd(a, &a);
-
+  _check_pointer1.run(&a);
+  _check_pointer2.run(&a, &b);
+  
   hpx::finalize();
   return 0;
 }

@@ -669,22 +669,39 @@ public:
 }; // template class Action
 
 // helper methods to create action object
-template <typename R, typename T1, typename T2, typename... ContTs>
-inline Action<HPX_DEFAULT, HPX_MARSHALLED, R(T1 *, T2), ContTs...>
-make_action(R (&f)(T1 *, T2)) {
-  //   static_assert(std::is_unsigned<T2>::value, "The second argument of a "
-  //                                              "marshalled action should be
-  //                                              an "
-  //                                              "unsigned integer type.");
-  return Action<HPX_DEFAULT, HPX_MARSHALLED, R(T1 *, T2), ContTs...>(f);
-}
 template <hpx_action_type_t T, uint32_t ATTR, typename F, typename... ContTs>
 inline Action<T, ATTR, F, ContTs...> make_action(F &f) {
   return Action<T, ATTR, F, ContTs...>(f);
 }
+// HPX_DEFAULT type of action with HPX_ATTR_NONE is created by default
 template <typename F, typename... ContTs>
 inline Action<HPX_DEFAULT, HPX_ATTR_NONE, F, ContTs...> make_action(F &f) {
   return Action<HPX_DEFAULT, HPX_ATTR_NONE, F, ContTs...>(f);
+}
+template <hpx_action_type_t ATYPE, typename R, typename T1, typename T2, typename... ContTs>
+inline Action<ATYPE, HPX_MARSHALLED, R(T1*, T2), ContTs...> make_marshalled_action(R(&f)(T1*, T2)) {
+  static_assert(std::is_integral<T2>::value, "Second argument to a marshalled action must be of integral type.");
+  return Action<ATYPE, HPX_MARSHALLED, R(T1*, T2), ContTs...>(f);
+}
+template <hpx_action_type_t ATYPE, typename F, typename... ContTs>
+inline Action<ATYPE, HPX_PINNED, F, ContTs...> make_pinned_action(F &f) {
+  return Action<ATYPE, HPX_PINNED, F, ContTs...>(f);
+}
+template <hpx_action_type_t ATYPE, typename F, typename... ContTs>
+inline Action<ATYPE, HPX_INTERNAL, F, ContTs...> make_internal_action(F &f) {
+  return Action<ATYPE, HPX_INTERNAL, F, ContTs...>(f);
+}
+template <hpx_action_type_t ATYPE, typename F, typename... ContTs>
+inline Action<ATYPE, HPX_VECTORED, F, ContTs...> make_vectored_action(F &f) {
+  return Action<ATYPE, HPX_VECTORED, F, ContTs...>(f);
+}
+template <hpx_action_type_t ATYPE, typename F, typename... ContTs>
+inline Action<ATYPE, HPX_COALESCED, F, ContTs...> make_coalesced_action(F &f) {
+  return Action<ATYPE, HPX_COALESCED, F, ContTs...>(f);
+}
+template <hpx_action_type_t ATYPE, typename F, typename... ContTs>
+inline Action<ATYPE, HPX_COMPRESSED, F, ContTs...> make_compressed_action(F &f) {
+  return Action<ATYPE, HPX_COMPRESSED, F, ContTs...>(f);
 }
 }
 
