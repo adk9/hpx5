@@ -105,7 +105,6 @@ int main(int argc, char* argv[]) {
   spmd.run_spmd(a, &a);
   _check_pointer1.run(&a);
   _check_pointer2.run(&a, &b);
-  
   hpx::finalize();
   return 0;
 }
