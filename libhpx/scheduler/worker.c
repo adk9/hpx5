@@ -340,13 +340,15 @@ static LIBHPX_ACTION(HPX_INTERRUPT, 0, _push_half, _push_half_handler, HPX_INT);
 /// 4. if failed, try to steal half randomly from across the numa domain.
 /// 5. if failed, go idle.
 ///
-static hpx_parcel_t *_steal_hier(worker_t *this) {
-
+static hpx_parcel_t *_steal_hier(worker_t *this)
+{
   // disable hierarchical stealing if the worker threads are not
   // bound, or if the system is not hierarchical.
-  libhpx_thread_affinity_t policy = here->config->thread_affinity;
-  if (unlikely(policy == HPX_THREAD_AFFINITY_NONE ||
-               here->topology->numa_to_cpus == NULL)) {
+  if (here->config->thread_affinity == HPX_THREAD_AFFINITY_NONE) {
+    return _steal_random_all(this);
+  }
+
+  if (here->topology->numa_to_cpus == NULL) {
     return _steal_random_all(this);
   }
 

@@ -31,7 +31,11 @@ static int _get_resources_by_affinity(topology_t *topology,
                                       libhpx_thread_affinity_t policy) {
   int n = 0;
   switch (policy) {
+   default:
+     log_error("unknown thread affinity policy\n");
    case HPX_THREAD_AFFINITY_DEFAULT:
+   case HPX_THREAD_AFFINITY_NONE:
+     return 0;
    case HPX_THREAD_AFFINITY_NUMA:
      n = topology->nnodes;
      break;
@@ -41,11 +45,6 @@ static int _get_resources_by_affinity(topology_t *topology,
    case HPX_THREAD_AFFINITY_HWTHREAD:
      n = topology->ncpus;
      break;
-   case HPX_THREAD_AFFINITY_NONE:
-     return 0;
-   default:
-     log_error("unknown thread affinity policy\n");
-     return 0;
   }
   return n;
 }

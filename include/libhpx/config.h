@@ -97,7 +97,7 @@ static const char* const HPX_BOOT_TO_STRING[] = {
 
 //! Configuration options for the thread affinity policies.
 typedef enum {
-  HPX_THREAD_AFFINITY_DEFAULT = 0,  //!< The default is to bind to NUMA node.
+  HPX_THREAD_AFFINITY_DEFAULT = 0,  //!< Default is NONE.
   HPX_THREAD_AFFINITY_HWTHREAD,     //!< Bind to hyper-thread/slot.
   HPX_THREAD_AFFINITY_CORE,         //!< Bind to the core.
   HPX_THREAD_AFFINITY_NUMA,         //!< Bind to the numa node of the PE.
