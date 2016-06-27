@@ -98,12 +98,10 @@ static LIBHPX_ACTION(HPX_DEFAULT, 0, _agas_alloc_cyclic,
 
 hpx_addr_t agas_alloc_cyclic(size_t n, size_t bbsize, uint32_t boundary,
                              uint32_t attr) {
-  uint32_t bsize = bbsize;
-
   int zero = 0;
   hpx_addr_t addr;
   int e = hpx_call_sync(HPX_THERE(0), _agas_alloc_cyclic, &addr, sizeof(addr),
-                        &n, &bsize, &attr, &zero);
+                        &n, &bbsize, &attr, &zero);
   dbg_check(e, "Failed to call agas_alloc_cyclic.\n");
   dbg_assert_str(addr != HPX_NULL, "HPX_NULL is not a valid allocation\n");
   return addr;
@@ -111,12 +109,10 @@ hpx_addr_t agas_alloc_cyclic(size_t n, size_t bbsize, uint32_t boundary,
 
 hpx_addr_t agas_calloc_cyclic(size_t n, size_t bbsize, uint32_t boundary,
                               uint32_t attr) {
-  uint32_t bsize = bbsize;
-
   int zero = 1;
   hpx_addr_t addr;
   int e = hpx_call_sync(HPX_THERE(0), _agas_alloc_cyclic, &addr, sizeof(addr),
-                        &n, &bsize, &attr, &zero);
+                        &n, &bbsize, &attr, &zero);
   dbg_check(e, "Failed to call agas_calloc_cyclic.\n");
   dbg_assert_str(addr != HPX_NULL, "HPX_NULL is not a valid allocation\n");
   return addr;
