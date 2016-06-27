@@ -60,6 +60,10 @@ void libhpx_print_version(void)
 void libhpx_get_version(int version[3])
   HPX_PUBLIC;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /// Start the instramentation infrastructure
 void libhpx_inst_phase_begin() 
   HPX_PUBLIC;
@@ -68,4 +72,7 @@ void libhpx_inst_phase_begin()
 void libhpx_inst_phase_end() 
   HPX_PUBLIC;
 
+#ifdef __cplusplus
+}
+#endif
 #endif  // LIBHPX_LIBHPX_H

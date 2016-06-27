@@ -72,7 +72,7 @@ typedef struct locality {
   struct topology   *topology;  //!< The topology information.
   void           *percolation;  //!< An interface for dealing with GPU backends.
   struct trace        *tracer;  //!< Reference to the tracer object
-  pthread_mutex_t *trace_lock;  //!< The lock for switching the tracer on or off
+  pthread_mutex_t  trace_lock;  //!< The lock for switching the tracer on or off
   sigset_t               mask;  //!< The default signal mask.
 } locality_t;
 

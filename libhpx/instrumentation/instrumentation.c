@@ -49,11 +49,6 @@ trace_t *trace_new(const config_t *cfg) {
     return NULL;
   }
 
-  // If we don't have anything to record, then don't to anything.
-  if (!cfg->trace_classes) {
-    return NULL;
-  }
-
   libhpx_trace_backend_t type = cfg->trace_backend;
   if (type == HPX_TRACE_BACKEND_DEFAULT || type == HPX_TRACE_BACKEND_FILE) {
     return trace_file_new(cfg);
@@ -68,10 +63,14 @@ trace_t *trace_new(const config_t *cfg) {
 }
 
 void libhpx_inst_phase_begin() {
-  here->tracer->phase_begin();
+  if (here->tracer != NULL) {
+    here->tracer->phase_begin();
+  }
 }
 
 void libhpx_inst_phase_end() {
-  here->tracer->phase_end();
+  if (here->tracer != NULL) {
+    here->tracer->phase_end();
+  }
 }
 
