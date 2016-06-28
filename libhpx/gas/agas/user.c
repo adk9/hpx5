@@ -26,16 +26,17 @@
 #include "btt.h"
 #include "gva.h"
 
-static int _insert_btt_handler(hpx_addr_t addr, int rank) {
+static int _insert_btt_handler(hpx_addr_t addr, int rank, size_t n,
+                               uint32_t attr) {
   agas_t *agas = (agas_t*)here->gas;
   gva_t gva = { .addr = addr };
   if (rank != here->rank) {
-    btt_upsert(agas->btt, gva, rank, NULL, 0, HPX_GAS_ATTR_NONE);
+    btt_upsert(agas->btt, gva, rank, NULL, n, attr);
   }
   return HPX_SUCCESS;
 }
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _insert_btt, _insert_btt_handler,
-                     HPX_ADDR, HPX_INT);
+                     HPX_ADDR, HPX_INT, HPX_SIZE_T, HPX_UINT32);
 
 static int
 _alloc_user_handler(void *UNUSED, hpx_addr_t addr, size_t n, size_t padded,
@@ -55,7 +56,7 @@ _alloc_user_handler(void *UNUSED, hpx_addr_t addr, size_t n, size_t padded,
   btt_upsert(agas->btt, gva, here->rank, lva, n, attr);
 
   hpx_addr_t src = hpx_thread_current_cont_target();
-  return hpx_call_cc(src, _insert_btt, &addr, &here->rank);
+  return hpx_call_cc(src, _insert_btt, &addr, &here->rank, &n, &attr);
 }
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _alloc_user, _alloc_user_handler,
                      HPX_POINTER, HPX_ADDR, HPX_SIZE_T, HPX_SIZE_T, HPX_UINT32,
