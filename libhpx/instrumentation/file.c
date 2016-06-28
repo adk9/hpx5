@@ -282,16 +282,15 @@ static void _create_logtable(worker_t *w, int class, int id, size_t size) {
 ///
 /// @param       UNUSED Unused argument.
 /// @param            n The number of features to log.
+/// @param           id The event id.
 /// @param         args The features to log.
 static void _vappend(int UNUSED, int n, int id, ...) {
-  if (!self || !self->logs || self->logs[id].fd <= 0 || !here->tracer->active) {
-    return;
-  }
-
   va_list vargs;
   va_start(vargs, id);
 
+  dbg_assert(self->logs);
   logtable_t *log = &self->logs[id];
+  dbg_assert(log);
   uint64_t time = hpx_time_from_start_ns(hpx_time_now());
   char *next = log->next + log->record_bytes;
   if (next - log->buffer > log->max_size) {
@@ -367,7 +366,7 @@ trace_t *trace_file_new(const config_t *cfg) {
   if (!_log_path) {
     return NULL;
   }
-  
+
   trace_t *trace = malloc(sizeof(*trace));
   dbg_assert(trace);
 
@@ -375,7 +374,7 @@ trace_t *trace_file_new(const config_t *cfg) {
   trace->start       = _start;
   trace->destroy     = _destroy;
   trace->vappend     = _vappend;
-  trace->active      = false;
+  sync_store(&trace->active, false, SYNC_RELAXED);
 
   return trace;
 }

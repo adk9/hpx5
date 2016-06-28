@@ -58,7 +58,7 @@ void trace_start(void *obj) {
     t->start();
   }
 }
-  
+
 /// Delete a trace object.
 ///
 /// @param      obj The trace object to delete.
@@ -70,23 +70,33 @@ trace_destroy(void *obj) {
   }
 }
 
+static inline bool inst_trace_class(int type) {
+  return config_trace_classes_isset(here->config, type);
+}
+
+/// Utility to consolidate a check to see if a trace event is currently being
+/// traced.
+///
+/// @param           id The trace event ID.
+///
+/// @returns            true if the event should be appended, false otherwise
+int inst_check_vappend(int id, ...);
+
 /// Record an event to the log
 ///
 /// @param        type Type this event is part of (see hpx_inst_class_type_t)
 /// @param            n The number of user arguments to log, < 5.
 /// @param           id The event id (see hpx_inst_event_type_t)
 #ifdef ENABLE_INSTRUMENTATION
-# define trace_append(type, ...)                                 \
-  if (here->tracer) {                                            \
-    here->tracer->vappend(type, __HPX_NARGS(__VA_ARGS__) - 1,    \
-                          __VA_ARGS__); }
+# define trace_append(type, ...) do {                           \
+    if (inst_check_vappend(__VA_ARGS__)) {                      \
+      here->tracer->vappend(type, __HPX_NARGS(__VA_ARGS__) - 1, \
+          __VA_ARGS__);                                         \
+    }                                                           \
+  } while (0)
 #else
 # define trace_append(type, id, ...)
 #endif
-
-static inline bool inst_trace_class(int type) {
-  return config_trace_classes_isset(here->config, type);
-}
 
 #ifdef __cplusplus
 }

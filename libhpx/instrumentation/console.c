@@ -51,17 +51,9 @@ static void _print_actions(void) {
     TRACE_EVENT_TO_STRING[id], ##__VA_ARGS__)
 
 static void _vappend(int UNUSED, int n, int id, ...) {
-  if (!self) {
-    return;
-  }
-
-  int c = TRACE_EVENT_TO_CLASS[id];
-  if (!inst_trace_class(c)) {
-    return;
-  }
-
   va_list vargs;
   va_start(vargs, id);
+  int c = TRACE_EVENT_TO_CLASS[id];
 
   switch (n) {
     case 0:
@@ -141,6 +133,6 @@ trace_t *trace_console_new(const config_t *cfg) {
   trace->start       = _start;
   trace->destroy     = _destroy;
   trace->vappend     = _vappend;
-  trace->active      = false;
+  sync_store(&trace->active, false, SYNC_RELAXED);
   return trace;
 }

@@ -34,14 +34,7 @@
 #include "metadata.h"
 
 static void _vappend(int UNUSED, int n, int id, ...) {
-  if (!self) {
-    return;
-  }
-
-  int c = TRACE_EVENT_TO_CLASS[id];
-  if (inst_trace_class(c)) {
-    self->stats[id]++;
-  }
+  self->stats[id]++;
 }
 
 static void _start(void) {
@@ -84,6 +77,6 @@ trace_t *trace_stats_new(const config_t *cfg) {
   trace->start       = _start;
   trace->destroy     = _destroy;
   trace->vappend     = _vappend;
-  trace->active      = false;
+  sync_store(&trace->active, false, SYNC_RELAXED);
   return trace;
 }

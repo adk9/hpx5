@@ -64,19 +64,41 @@ trace_t *trace_new(const config_t *cfg) {
 
 void libhpx_inst_phase_begin() {
   if (here->tracer != NULL) {
-    sync_store(&here->tracer->active, true, SYNC_RELEASE);
+    sync_store(&here->tracer->active, true, SYNC_RELAXED);
   }
 }
 
 void libhpx_inst_phase_end() {
   if (here->tracer != NULL) {
-    sync_store(&here->tracer->active, false, SYNC_RELEASE);
+    sync_store(&here->tracer->active, false, SYNC_RELAXED);
   }
 }
 
 bool libhpx_inst_tracer_active() {
-  if (here->tracer != NULL) {
-    return sync_load(&here->tracer->active, SYNC_ACQUIRE);
+  dbg_assert(here && here->tracer);
+  return sync_load(&here->tracer->active, SYNC_RELAXED);
+}
+
+int inst_check_vappend(int id, ...) {;
+  if (!here) {
+    return 0;
   }
-  return false;
+
+  if (!here->tracer) {
+    return 0;
+  }
+
+  if (!self) {
+    return 0;
+  }
+
+  if (!libhpx_inst_tracer_active()) {
+    return 0;
+  }
+
+  if (!inst_trace_class(TRACE_EVENT_TO_CLASS[id])) {
+    return 0;
+  }
+
+  return 1;
 }
