@@ -137,9 +137,6 @@ int hpx_init(int *argc, char ***argv) {
     dbg_wait();
   }
 
-  // initialize the tracing backend
-  here->tracer = trace_new(here->config);
-
   // bootstrap
   here->boot = boot_new(here->config->boot);
   if (!here->boot) {
@@ -163,6 +160,10 @@ int hpx_init(int *argc, char ***argv) {
       dbg_wait();
     }
   }
+
+  // Initialize the tracing backend---have to wait until after bootstrap is
+  // initialized because it checks to see if this rank is tracing.
+  here->tracer = trace_new(here->config);
 
   // see if we're supposed to output the configuration, only do this at rank 0
   if (config_log_level_isset(here->config, HPX_LOG_CONFIG)) {
