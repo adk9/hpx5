@@ -165,14 +165,20 @@ void _agas_set_attr(void *gas, hpx_addr_t addr, uint32_t attr) {
   btt_set_attr(agas->btt, gva, attr);
 }
 
+hpx_addr_t _blocked_dist(uint32_t i, size_t n, size_t bsize) {
+  // int blocks_per_locality = (n + (HPX_LOCALITES-1)) / HPX_LOCALITIES;
+  int blocks_per_locality = n / HPX_LOCALITIES;
+  return HPX_THERE((i/blocks_per_locality) % HPX_LOCALITIES);
+}
+
 static hpx_addr_t _agas_alloc_blocked(size_t n, size_t bsize,
                                       uint32_t boundary, uint32_t attr) {
-  dbg_error("Blocked GAS distributions are not supported.\n");
+  return agas_alloc_user(n, bsize, boundary, _blocked_dist, attr);
 }
 
 static hpx_addr_t _agas_calloc_blocked(size_t n, size_t bsize,
                                        uint32_t boundary, uint32_t attr) {
-  dbg_error("Blocked GAS distributions are not supported.\n");
+  return agas_calloc_user(n, bsize, boundary, _blocked_dist, attr);
 }
 
 static gas_t _agas = {
