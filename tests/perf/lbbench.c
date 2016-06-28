@@ -116,7 +116,6 @@ static int _main_action(int iters, int work, int nelem) {
   int e = _kernel(cyclic, bsize, iters, work, nelem);
   assert(e == HPX_SUCCESS);
 
-  printf("%p %d\n", &_random_dist, (int)((uintptr_t)_random_dist & 0x7));
   // create a global randomly distributed array
   hpx_addr_t random = hpx_gas_calloc(HPX_LOCALITIES, bsize, 0,
                                      _random_dist, HPX_GAS_ATTR_LB);
