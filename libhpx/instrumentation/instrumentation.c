@@ -64,13 +64,19 @@ trace_t *trace_new(const config_t *cfg) {
 
 void libhpx_inst_phase_begin() {
   if (here->tracer != NULL) {
-    here->tracer->phase_begin();
+    here->tracer->active = true;
   }
 }
 
 void libhpx_inst_phase_end() {
   if (here->tracer != NULL) {
-    here->tracer->phase_end();
+    here->tracer->active = false;
   }
 }
 
+bool libhpx_inst_tracer_active() {
+  if (here->tracer != NULL) {
+    return here->tracer->active;
+  }
+  return false;
+}
