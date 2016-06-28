@@ -133,6 +133,9 @@ option "hpx-trace-buffersize" - "size of trace buffers (file backend)"
 typestr="bytes"
 long optional
 
+option "hpx-trace-off" - "disable tracing at startup"
+flag off
+
 section "ISIR Network Options"
 
 option "hpx-isir-testwindow" - "number of ISIR requests to test in progress loop"

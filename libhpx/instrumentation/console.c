@@ -133,6 +133,6 @@ trace_t *trace_console_new(const config_t *cfg) {
   trace->start       = _start;
   trace->destroy     = _destroy;
   trace->vappend     = _vappend;
-  sync_store(&trace->active, false, SYNC_RELAXED);
+  sync_store(&trace->active, !cfg->trace_off, SYNC_RELAXED);
   return trace;
 }

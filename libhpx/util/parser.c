@@ -67,6 +67,7 @@ const char *hpx_options_t_help[] = {
   "      --hpx-trace-classes=class filter by class  (possible values=\"parcel\",\n                                  \"network\", \"sched\", \"lco\", \"process\",\n                                  \"memory\", \"trace\", \"gas\",\n                                  \"collective\", \"all\")",
   "      --hpx-trace-dir=dir       output directory (file backend)",
   "      --hpx-trace-buffersize=bytes\n                                size of trace buffers (file backend)",
+  "      --hpx-trace-off           disable tracing at startup  (default=off)",
   "\nISIR Network Options:",
   "      --hpx-isir-testwindow=requests\n                                number of ISIR requests to test in progress\n                                  loop",
   "      --hpx-isir-sendlimit=requests\n                                ISIR network send limit",
@@ -195,6 +196,7 @@ void clear_given (struct hpx_options_t *args_info)
   args_info->hpx_trace_classes_given = 0 ;
   args_info->hpx_trace_dir_given = 0 ;
   args_info->hpx_trace_buffersize_given = 0 ;
+  args_info->hpx_trace_off_given = 0 ;
   args_info->hpx_isir_testwindow_given = 0 ;
   args_info->hpx_isir_sendlimit_given = 0 ;
   args_info->hpx_isir_recvlimit_given = 0 ;
@@ -272,6 +274,7 @@ void clear_args (struct hpx_options_t *args_info)
   args_info->hpx_trace_dir_arg = NULL;
   args_info->hpx_trace_dir_orig = NULL;
   args_info->hpx_trace_buffersize_orig = NULL;
+  args_info->hpx_trace_off_flag = 0;
   args_info->hpx_isir_testwindow_orig = NULL;
   args_info->hpx_isir_sendlimit_orig = NULL;
   args_info->hpx_isir_recvlimit_orig = NULL;
@@ -354,34 +357,35 @@ void init_args_info(struct hpx_options_t *args_info)
   args_info->hpx_trace_classes_max = 0;
   args_info->hpx_trace_dir_help = hpx_options_t_help[32] ;
   args_info->hpx_trace_buffersize_help = hpx_options_t_help[33] ;
-  args_info->hpx_isir_testwindow_help = hpx_options_t_help[35] ;
-  args_info->hpx_isir_sendlimit_help = hpx_options_t_help[36] ;
-  args_info->hpx_isir_recvlimit_help = hpx_options_t_help[37] ;
-  args_info->hpx_pwc_parcelbuffersize_help = hpx_options_t_help[39] ;
-  args_info->hpx_pwc_parceleagerlimit_help = hpx_options_t_help[40] ;
-  args_info->hpx_coll_network_help = hpx_options_t_help[42] ;
-  args_info->hpx_photon_comporder_help = hpx_options_t_help[44] ;
-  args_info->hpx_photon_backend_help = hpx_options_t_help[45] ;
-  args_info->hpx_photon_coll_help = hpx_options_t_help[46] ;
-  args_info->hpx_photon_ibdev_help = hpx_options_t_help[47] ;
-  args_info->hpx_photon_ethdev_help = hpx_options_t_help[48] ;
-  args_info->hpx_photon_ibport_help = hpx_options_t_help[49] ;
-  args_info->hpx_photon_usecma_help = hpx_options_t_help[50] ;
-  args_info->hpx_photon_ibsrq_help = hpx_options_t_help[51] ;
-  args_info->hpx_photon_btethresh_help = hpx_options_t_help[52] ;
-  args_info->hpx_photon_fiprov_help = hpx_options_t_help[53] ;
-  args_info->hpx_photon_fidev_help = hpx_options_t_help[54] ;
-  args_info->hpx_photon_ledgersize_help = hpx_options_t_help[55] ;
-  args_info->hpx_photon_pwcbufsize_help = hpx_options_t_help[56] ;
-  args_info->hpx_photon_eagerbufsize_help = hpx_options_t_help[57] ;
-  args_info->hpx_photon_smallpwcsize_help = hpx_options_t_help[58] ;
-  args_info->hpx_photon_maxrd_help = hpx_options_t_help[59] ;
-  args_info->hpx_photon_defaultrd_help = hpx_options_t_help[60] ;
-  args_info->hpx_photon_numcq_help = hpx_options_t_help[61] ;
-  args_info->hpx_photon_usercq_help = hpx_options_t_help[62] ;
-  args_info->hpx_opt_smp_help = hpx_options_t_help[64] ;
-  args_info->hpx_parcel_compression_help = hpx_options_t_help[65] ;
-  args_info->hpx_coalescing_buffersize_help = hpx_options_t_help[66] ;
+  args_info->hpx_trace_off_help = hpx_options_t_help[34] ;
+  args_info->hpx_isir_testwindow_help = hpx_options_t_help[36] ;
+  args_info->hpx_isir_sendlimit_help = hpx_options_t_help[37] ;
+  args_info->hpx_isir_recvlimit_help = hpx_options_t_help[38] ;
+  args_info->hpx_pwc_parcelbuffersize_help = hpx_options_t_help[40] ;
+  args_info->hpx_pwc_parceleagerlimit_help = hpx_options_t_help[41] ;
+  args_info->hpx_coll_network_help = hpx_options_t_help[43] ;
+  args_info->hpx_photon_comporder_help = hpx_options_t_help[45] ;
+  args_info->hpx_photon_backend_help = hpx_options_t_help[46] ;
+  args_info->hpx_photon_coll_help = hpx_options_t_help[47] ;
+  args_info->hpx_photon_ibdev_help = hpx_options_t_help[48] ;
+  args_info->hpx_photon_ethdev_help = hpx_options_t_help[49] ;
+  args_info->hpx_photon_ibport_help = hpx_options_t_help[50] ;
+  args_info->hpx_photon_usecma_help = hpx_options_t_help[51] ;
+  args_info->hpx_photon_ibsrq_help = hpx_options_t_help[52] ;
+  args_info->hpx_photon_btethresh_help = hpx_options_t_help[53] ;
+  args_info->hpx_photon_fiprov_help = hpx_options_t_help[54] ;
+  args_info->hpx_photon_fidev_help = hpx_options_t_help[55] ;
+  args_info->hpx_photon_ledgersize_help = hpx_options_t_help[56] ;
+  args_info->hpx_photon_pwcbufsize_help = hpx_options_t_help[57] ;
+  args_info->hpx_photon_eagerbufsize_help = hpx_options_t_help[58] ;
+  args_info->hpx_photon_smallpwcsize_help = hpx_options_t_help[59] ;
+  args_info->hpx_photon_maxrd_help = hpx_options_t_help[60] ;
+  args_info->hpx_photon_defaultrd_help = hpx_options_t_help[61] ;
+  args_info->hpx_photon_numcq_help = hpx_options_t_help[62] ;
+  args_info->hpx_photon_usercq_help = hpx_options_t_help[63] ;
+  args_info->hpx_opt_smp_help = hpx_options_t_help[65] ;
+  args_info->hpx_parcel_compression_help = hpx_options_t_help[66] ;
+  args_info->hpx_coalescing_buffersize_help = hpx_options_t_help[67] ;
   
 }
 
@@ -697,6 +701,8 @@ hpx_option_parser_dump(FILE *outfile, struct hpx_options_t *args_info)
     write_into_file(outfile, "hpx-trace-dir", args_info->hpx_trace_dir_orig, 0);
   if (args_info->hpx_trace_buffersize_given)
     write_into_file(outfile, "hpx-trace-buffersize", args_info->hpx_trace_buffersize_orig, 0);
+  if (args_info->hpx_trace_off_given)
+    write_into_file(outfile, "hpx-trace-off", 0, 0 );
   if (args_info->hpx_isir_testwindow_given)
     write_into_file(outfile, "hpx-isir-testwindow", args_info->hpx_isir_testwindow_orig, 0);
   if (args_info->hpx_isir_sendlimit_given)
@@ -1976,6 +1982,7 @@ hpx_option_parser_internal (
         { "hpx-trace-classes",	1, NULL, 0 },
         { "hpx-trace-dir",	1, NULL, 0 },
         { "hpx-trace-buffersize",	1, NULL, 0 },
+        { "hpx-trace-off",	0, NULL, 0 },
         { "hpx-isir-testwindow",	1, NULL, 0 },
         { "hpx-isir-sendlimit",	1, NULL, 0 },
         { "hpx-isir-recvlimit",	1, NULL, 0 },
@@ -2371,6 +2378,18 @@ hpx_option_parser_internal (
                 &(local_args_info.hpx_trace_buffersize_given), optarg, 0, 0, ARG_LONG,
                 check_ambiguity, override, 0, 0,
                 "hpx-trace-buffersize", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* disable tracing at startup.  */
+          else if (strcmp (long_options[option_index].name, "hpx-trace-off") == 0)
+          {
+          
+          
+            if (update_arg((void *)&(args_info->hpx_trace_off_flag), 0, &(args_info->hpx_trace_off_given),
+                &(local_args_info.hpx_trace_off_given), optarg, 0, 0, ARG_FLAG,
+                check_ambiguity, override, 1, 0, "hpx-trace-off", '-',
                 additional_error))
               goto failure;
           

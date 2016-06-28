@@ -144,6 +144,8 @@ struct hpx_options_t
   long hpx_trace_buffersize_arg;	/**< @brief size of trace buffers (file backend).  */
   char * hpx_trace_buffersize_orig;	/**< @brief size of trace buffers (file backend) original value given at command line.  */
   const char *hpx_trace_buffersize_help; /**< @brief size of trace buffers (file backend) help description.  */
+  int hpx_trace_off_flag;	/**< @brief disable tracing at startup (default=off).  */
+  const char *hpx_trace_off_help; /**< @brief disable tracing at startup help description.  */
   long hpx_isir_testwindow_arg;	/**< @brief number of ISIR requests to test in progress loop.  */
   char * hpx_isir_testwindow_orig;	/**< @brief number of ISIR requests to test in progress loop original value given at command line.  */
   const char *hpx_isir_testwindow_help; /**< @brief number of ISIR requests to test in progress loop help description.  */
@@ -253,6 +255,7 @@ struct hpx_options_t
   unsigned int hpx_trace_classes_given ;	/**< @brief Whether hpx-trace-classes was given.  */
   unsigned int hpx_trace_dir_given ;	/**< @brief Whether hpx-trace-dir was given.  */
   unsigned int hpx_trace_buffersize_given ;	/**< @brief Whether hpx-trace-buffersize was given.  */
+  unsigned int hpx_trace_off_given ;	/**< @brief Whether hpx-trace-off was given.  */
   unsigned int hpx_isir_testwindow_given ;	/**< @brief Whether hpx-isir-testwindow was given.  */
   unsigned int hpx_isir_sendlimit_given ;	/**< @brief Whether hpx-isir-sendlimit was given.  */
   unsigned int hpx_isir_recvlimit_given ;	/**< @brief Whether hpx-isir-recvlimit was given.  */
