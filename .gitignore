@@ -85,7 +85,7 @@
 contrib/Makefile
 contrib/dlmalloc/Makefile
 contrib/lz4/Makefile
-contrib/hwloc-1.11.0/
+contrib/hwloc/
 contrib/libffi/
 contrib/libffi-mic/
 contrib/libffi-mic/doc/libffi.info

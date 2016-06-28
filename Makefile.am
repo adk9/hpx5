@@ -7,7 +7,7 @@ EXTRA_DIST = \
         LICENSE INSTALL AUTHORS
 
 AUTOMAKE_OPTIONS = foreign
-ACLOCAL_AMFLAGS = -I config -I contrib/hwloc-1.11.0/config
+ACLOCAL_AMFLAGS = -I config -I contrib/hwloc/config
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = hpx.pc
