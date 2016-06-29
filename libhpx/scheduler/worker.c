@@ -720,6 +720,10 @@ static void *_run(void *worker) {
   this->current = NULL;
 
 #ifdef HAVE_APEX
+  // finish whatever the last thing we were doing was
+  if (this->profiler) {
+    apex_stop(this->profiler);
+  }
   // let APEX know the thread is exiting
   apex_exit_thread();
 #endif

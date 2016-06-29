@@ -54,10 +54,6 @@
 static void _cleanup(locality_t *l) {
   as_leave();
 
-#ifdef HAVE_APEX
-  apex_finalize();
-#endif
-
   if (l->tracer) {
     trace_destroy(l->tracer);
     l->tracer = NULL;
@@ -67,6 +63,10 @@ static void _cleanup(locality_t *l) {
     scheduler_delete(l->sched);
     l->sched = NULL;
   }
+
+#ifdef HAVE_APEX
+  apex_finalize();
+#endif
 
   if (l->net) {
     network_delete(l->net);
@@ -211,18 +211,18 @@ int hpx_init(int *argc, char ***argv) {
     goto unwind1;
   }
 
+#ifdef HAVE_APEX
+  // initialize APEX, give this main thread a name
+  apex_init("HPX WORKER THREAD");
+  apex_set_node_id(here->rank);
+#endif
+
   // thread scheduler
   here->sched = scheduler_new(here->config);
   if (!here->sched) {
     status = log_error("failed to create scheduler.\n");
     goto unwind1;
   }
-
-#ifdef HAVE_APEX
-  // initialize APEX, give this main thread a name
-  apex_init("HPX WORKER THREAD");
-  apex_set_node_id(here->rank);
-#endif
 
   action_registration_finalize();
   trace_start(here->tracer);
