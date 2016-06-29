@@ -158,7 +158,12 @@ HPX_CONFIG_PMI([cray-pmi])
 HPX_CONFIG_JEMALLOC([contrib/jemalloc], ["jemalloc >= 4.0"]) 
 HPX_CONFIG_TBBMALLOC
 HPX_CONFIG_DLMALLOC([contrib/dlmalloc])
+
+HPX_CONFIG_HWLOC_PRE_SETUP_CORE
+HWLOC_SETUP_CORE([contrib/hwloc])
+HPX_CONFIG_HWLOC_POST_SETUP_CORE
 HPX_CONFIG_HWLOC([contrib/hwloc], [hwloc])
+
 HPX_CONFIG_HUGETLBFS([hugetlbfs])
 HPX_CONFIG_UTHASH([contrib/uthash])
 HPX_CONFIG_VALGRIND([contrib/valgrind])

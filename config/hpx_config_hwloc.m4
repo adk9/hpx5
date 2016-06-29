@@ -26,11 +26,14 @@ AC_DEFUN([_HAVE_HWLOC], [
  have_hwloc=yes
 ])
 
-AC_DEFUN([_HPX_CONTRIB_HWLOC], [
- contrib=$1
-
+AC_DEFUN([_BUILD_HWLOC], [
+  build_hwloc=yes
  _HAVE_HWLOC
+])
 
+AC_DEFUN([_EMBEDDED], [
+ _BUILD_HWLOC
+ 
  # attach the convenience library, cflags, and cppflags to build libhpx.la
  LIBHPX_CFLAGS="$LIBHPX_CFLAGS $HWLOC_EMBEDDED_CFLAGS"
  LIBHPX_CPPFLAGS="$LIBHPX_CPPFLAGS $HWLOC_EMBEDDED_CPPFLAGS"
@@ -47,9 +50,13 @@ AC_DEFUN([_HPX_CONTRIB_HWLOC], [
  # Export hwloc lib dependencies to external clients, internal apps get these
  # through the libtool .la infrastructure.
  HPX_PC_PRIVATE_LIBS="$HPX_PC_PRIVATE_LIBS $HWLOC_EMBEDDED_LIBS"
+ 
+ # fix HWLOC so that it can build itself in a nostdinc automake environment
+ HWLOC_CPPFLAGS="$HWLOC_EMBEDDED_CPPFLAGS -I\$(srcdir) -I\$(builddir)"
+ AC_SUBST(HWLOC_CPPFLAGS)
 ])
 
-AC_DEFUN([_HPX_LIB_HWLOC], [
+AC_DEFUN([_LIB_HWLOC], [
  # check to see if there is a system-installed version of hwloc
  AC_CHECK_HEADER([hwloc.h],
    [AC_CHECK_LIB([hwloc], [hwloc_topology_init],
@@ -58,7 +65,7 @@ AC_DEFUN([_HPX_LIB_HWLOC], [
       HPX_PC_PRIVATE_LIBS="$HPX_PC_PRIVATE_LIBS -lhwloc"])])
 ])
 
-AC_DEFUN([_HPX_PKG_HWLOC], [
+AC_DEFUN([_PKG_HWLOC], [
  pkg=$1
  
  # use pkg-config to find an hwloc module
@@ -71,25 +78,8 @@ AC_DEFUN([_HPX_PKG_HWLOC], [
 ])
 
 AC_DEFUN([HPX_CONFIG_HWLOC], [
- contrib=$1
+ path=$1
  pkg=$2
-
- # Disable features that are not required for our embedded build
- enable_libxml2=no
- enable_libnuma=no
- enable_opencl=no
- enable_cuda=no
- enable_nvml=no
- enable_gl=no
- HWLOC_SETUP_CORE([$contrib], [_HAVE_HWLOC],
-   [AC_MSG_WARN([could not configure hwloc])],
-   [1])
- unset enable_libxml2
- unset enable_libnuma
- unset enable_opencl
- unset enable_cuda
- unset enable_nvml
- unset enable_gl
 
  # allow the user to override how we find hwloc
  AC_ARG_WITH(hwloc,
@@ -102,24 +92,41 @@ AC_DEFUN([HPX_CONFIG_HWLOC], [
 
    # system indicates that we should look for a system-installed hwloc, first
    # in the current path and then as a default-named pkg-config package
-   [system], [_HPX_LIB_HWLOC
-              AS_IF([test "x$have_hwloc" != xyes], [_HPX_PKG_HWLOC($pkg)])],
+   [system], [_LIB_HWLOC
+              AS_IF([test "x$have_hwloc" != xyes], [_PKG_HWLOC($pkg)])],
 
    # yes indicates that we should first look for a hwloc in our path, then
    # look for a default-named pkg-config package, and then finally resort to the 
    # contribed version of hwloc
-   [yes], [_HPX_LIB_HWLOC
-           AS_IF([test "x$have_hwloc" != xyes], [_HPX_PKG_HWLOC($pkg)])
-           AS_IF([test "x$have_hwloc" != xyes], [build_hwloc=yes])],
+   [yes], [_LIB_HWLOC
+           AS_IF([test "x$have_hwloc" != xyes], [_PKG_HWLOC($pkg)])],
 
    # any other string is interpreted as a custom pkg-config package name to use
-   [_HPX_PKG_HWLOC($with_hwloc)])
+   [_PKG_HWLOC($with_hwloc)])
 
- # If we want the contribed HWLOC then configure and build it. We do this
+ # If we want the embedded HWLOC then configure and build it. We do this
  # with the test (rather than in the case above) because we can't have the
  # HWLOC_SETUP_CORE macro appear more than once---even conditionally.
- AS_IF([test "x$build_hwloc" == xyes], [_HPX_CONTRIB_HWLOC($contrib)])
+ AS_IF([test "x$build_hwloc" == xyes], [_EMBEDDED($path)])
 
  AS_IF([test "x$have_hwloc" != xyes],
    [AC_MSG_ERROR([Failed to find hwloc for --with-hwloc=$with_hwloc])])
+])
+
+AC_DEFUN([HPX_CONFIG_HWLOC_PRE_SETUP_CORE], [
+ enable_libxml2=no
+ enable_libnuma=no
+ enable_opencl=no
+ enable_cuda=no
+ enable_nvml=no
+ enable_gl=no
+])
+
+AC_DEFUN([HPX_CONFIG_HWLOC_POST_SETUP_CORE], [
+ unset enable_libxml2
+ unset enable_libnuma
+ unset enable_opencl
+ unset enable_cuda
+ unset enable_nvml
+ unset enable_gl
 ])
