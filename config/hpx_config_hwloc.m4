@@ -78,7 +78,6 @@ AC_DEFUN([_PKG_HWLOC], [
 ])
 
 AC_DEFUN([HPX_CONFIG_HWLOC], [
- path=$1
  pkg=$2
 
  # allow the user to override how we find hwloc
@@ -88,7 +87,8 @@ AC_DEFUN([HPX_CONFIG_HWLOC], [
    [], [with_hwloc=yes])
 
  AS_CASE($with_hwloc,
-   [contrib], [build_hwloc=yes],
+   # don't need anything special here, we'll just build embedded
+   [contrib], [],
 
    # system indicates that we should look for a system-installed hwloc, first
    # in the current path and then as a default-named pkg-config package
@@ -104,13 +104,8 @@ AC_DEFUN([HPX_CONFIG_HWLOC], [
    # any other string is interpreted as a custom pkg-config package name to use
    [_PKG_HWLOC($with_hwloc)])
 
- # If we want the embedded HWLOC then configure and build it. We do this
- # with the test (rather than in the case above) because we can't have the
- # HWLOC_SETUP_CORE macro appear more than once---even conditionally.
- AS_IF([test "x$build_hwloc" == xyes], [_EMBEDDED($path)])
-
- AS_IF([test "x$have_hwloc" != xyes],
-   [AC_MSG_ERROR([Failed to find hwloc for --with-hwloc=$with_hwloc])])
+ # If we haven't yet gotten an hwloc library, then use the embedded one.
+ AS_IF([test "x$have_hwloc" != xyes], [_EMBEDDED])
 ])
 
 AC_DEFUN([HPX_CONFIG_HWLOC_PRE_SETUP_CORE], [

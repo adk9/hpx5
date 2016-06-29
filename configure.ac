@@ -162,7 +162,7 @@ HPX_CONFIG_DLMALLOC([contrib/dlmalloc])
 HPX_CONFIG_HWLOC_PRE_SETUP_CORE
 HWLOC_SETUP_CORE([contrib/hwloc])
 HPX_CONFIG_HWLOC_POST_SETUP_CORE
-HPX_CONFIG_HWLOC([contrib/hwloc], [hwloc])
+HPX_CONFIG_HWLOC([hwloc])
 
 HPX_CONFIG_HUGETLBFS([hugetlbfs])
 HPX_CONFIG_UTHASH([contrib/uthash])
