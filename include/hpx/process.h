@@ -30,13 +30,13 @@ typedef hpx_addr_t hpx_pid_t;
 
 /// HPX Process creation.
 ///
-/// This function calls the specified @p action with the @p args and @
-/// len in a new process context. Processes in HPX are part of a
-/// termination group and can be waited on through the @p termination
-/// LCO. The returned @p process object uniquely represents a process
-/// and permits operations to be executed on the process.
+/// Processes in HPX are part of a termination group and can be waited on
+/// through the @p termination LCO. The returned process object uniquely
+/// represents a process and permits operations to be executed on the process.
 ///
 /// NB: a process spawn is always local to the calling locality.
+///
+/// @param termination an lco to wait on
 hpx_addr_t hpx_process_new(hpx_addr_t termination) HPX_PUBLIC;
 
 

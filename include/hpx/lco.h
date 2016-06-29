@@ -334,6 +334,7 @@ hpx_status_t hpx_lco_sema_p(hpx_addr_t sema)
 /// An "and" LCO represents an AND gate.
 /// @{
 
+///
 /// Create an AND gate.
 ///
 /// @param inputs the number of inputs to the and (must be >= 0)

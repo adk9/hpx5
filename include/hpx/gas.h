@@ -33,12 +33,12 @@ extern HPX_PUBLIC uint64_t HPX_GAS_BLOCK_BYTES_MAX;
 /// User-defined GAS distribution function.
 typedef hpx_addr_t (*hpx_gas_dist_t)(uint32_t i, size_t n, size_t bsize);
 
-/// GAS distribution types.
-#define HPX_GAS_DIST_LOCAL   (hpx_gas_dist_t)0x1
-#define HPX_GAS_DIST_CYCLIC  (hpx_gas_dist_t)0x2
-#define HPX_GAS_DIST_BLOCKED (hpx_gas_dist_t)0x4
+// GAS distribution types.
+#define HPX_GAS_DIST_LOCAL   (hpx_gas_dist_t)0x1  //!< Local distribution type
+#define HPX_GAS_DIST_CYCLIC  (hpx_gas_dist_t)0x2  //!< Cyclic distribution type
+#define HPX_GAS_DIST_BLOCKED (hpx_gas_dist_t)0x4  //!< Blocked distribution type
 
-/// GAS Attributes.
+// GAS Attributes.
 #define HPX_GAS_ATTR_NONE  0x0  //!< Empty attribute.
 #define HPX_GAS_ATTR_RO    0x1  //!< This block is read-only.
 #define HPX_GAS_ATTR_LB    0x2  //!< Consider for automatic load balancing.
@@ -254,6 +254,7 @@ hpx_addr_t hpx_gas_calloc_local_attr(size_t n, size_t bsize, uint32_t boundary,
 /// @param            n The number of blocks to allocate.
 /// @param        bsize The number of bytes per block.
 /// @param     boundary The alignment (2^k).
+/// @param         dist The gas distribution type.
 /// @param         attr The attributes of this global allocation space
 ///
 /// @returns            The global address of the allocated memory.
@@ -263,6 +264,7 @@ hpx_addr_t hpx_gas_alloc_user_attr(size_t n, size_t bsize, uint32_t boundary,
 /// @param            n The number of blocks to allocate.
 /// @param        bsize The number of bytes per block.
 /// @param     boundary The alignment (2^k).
+/// @param         dist The gas distribution type.
 /// @param         attr The attributes of this global allocation space
 ///
 /// @returns            The global address of the allocated memory.
@@ -616,8 +618,6 @@ _hpx_gas_bcast_sync(hpx_action_t action, hpx_addr_t base, int n,
 /// are recorded, and when the "rebalance" operation is invoked,
 /// blocks are moved automatically to come up with a better
 /// distribution.
-///
-/// @param       sync  Notification of completion.
 void hpx_gas_rebalance(hpx_addr_t async, hpx_addr_t psync, hpx_addr_t msync)
   HPX_PUBLIC;
 

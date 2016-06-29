@@ -37,7 +37,7 @@ extern hpx_addr_t HPX_HERE HPX_PUBLIC;
 /// An address representing some other locality, that is suitable for use as a
 /// parcel target.
 ///
-/// @param         i A locality.
+/// @param         i A locality number.
 ///
 /// @returns An address representing that locality.
 hpx_addr_t HPX_THERE(uint32_t i) HPX_PUBLIC;
