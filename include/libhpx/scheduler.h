@@ -67,14 +67,15 @@ enum {
 /// table, though all of the functionality that is required to make this work is
 /// not implemented.
 struct scheduler {
-  pthread_mutex_t     lock;                     //!< lock for running condition
-  pthread_cond_t   stopped;                     //!< the running condition
-  volatile int       state;                     //!< the run state
-  volatile int next_tls_id;                     //!< lightweight thread ids
-  int            n_workers;                     //!< total number of workers
-  int             n_target;                     //!< target number of workers
-  volatile int    n_active;                     //!< active number of workers
-  volatile int        code;                     //!< the exit code
+  pthread_mutex_t     lock;                  //!< lock for running condition
+  pthread_cond_t   stopped;                  //!< the running condition
+  volatile int       state;                  //!< the run state
+  volatile int next_tls_id;                  //!< lightweight thread ids
+  long             ns_wait;                  //!< nanoseconds to wait in start()
+  int            n_workers;                  //!< total number of workers
+  int             n_target;                  //!< target number of workers
+  volatile int    n_active;                  //!< active number of workers
+  volatile int        code;                  //!< the exit code
   PAD_TO_CACHELINE(sizeof(pthread_mutex_t) +
                    sizeof(pthread_cond_t) +
                    sizeof(int) * 6);            //!< padding to align workers
@@ -228,6 +229,15 @@ void scheduler_signal_error(struct cvar *cvar, hpx_status_t code)
 
 /// Get the parcel bound to the current executing thread.
 hpx_parcel_t *scheduler_current_parcel(void);
+
+/// Set the number of target threads in the scheduler.
+///
+/// This will go in and actively tell threads to start or stop, however it does
+/// not _wait_ for them to start or stop.
+///
+/// @param    scheduler A pointer to the scheduler object.
+/// @param            n The new target number of threads.
+void scheduler_set_target_threads(void * const scheduler, int n);
 
 #ifdef __cplusplus
 }

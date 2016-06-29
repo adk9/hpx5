@@ -16,6 +16,7 @@
 #endif
 
 #include <stdlib.h>
+#include <sys/time.h>
 #include <hpx/builtins.h>
 #include <libhpx/action.h>
 #include <libhpx/config.h>
@@ -29,7 +30,9 @@
 #include <libhpx/scheduler.h>
 #include "thread.h"
 
-scheduler_t *scheduler_new(const config_t *cfg) {
+scheduler_t *
+scheduler_new(const config_t *cfg)
+{
   thread_set_stack_size(cfg->stacksize);
 
   const int workers = cfg->threads;
@@ -49,6 +52,7 @@ scheduler_t *scheduler_new(const config_t *cfg) {
   pthread_cond_init(&this->stopped, NULL);
   sync_store(&this->state, SCHED_STOP, SYNC_RELEASE);
   sync_store(&this->next_tls_id, 0, SYNC_RELEASE);
+  this->ns_wait = 100000000;
   this->n_workers = workers;
   this->n_target = workers;
   sync_store(&this->n_active, workers, SYNC_RELEASE);
@@ -71,7 +75,9 @@ scheduler_t *scheduler_new(const config_t *cfg) {
   return this;
 }
 
-void scheduler_delete(scheduler_t *this) {
+void
+scheduler_delete(scheduler_t *this)
+{
   // shutdown and join all of the worker threads
   for (int i = 0, e = this->n_workers; i < e; ++i) {
     worker_shutdown(&this->workers[i]);
@@ -87,7 +93,9 @@ void scheduler_delete(scheduler_t *this) {
   as_leave();
 }
 
-worker_t *scheduler_get_worker(scheduler_t *this, int id) {
+worker_t *
+scheduler_get_worker(scheduler_t *this, int id)
+{
   assert(id >= 0);
   assert(id < this->n_workers);
   worker_t *w = &this->workers[id];
@@ -95,7 +103,34 @@ worker_t *scheduler_get_worker(scheduler_t *this, int id) {
   return w;
 }
 
-int scheduler_start(scheduler_t *this, hpx_parcel_t *p, int spmd)
+static void
+_wait(void * const scheduler)
+{
+  scheduler_t * const cthis = scheduler;
+#ifdef HAVE_APEX
+  int prev = cthis->n_target;
+  int n = min_int(apex_get_thread_cap(), cthis->n_workers);
+  log_sched("apex adjusting from %d to %d workers\n", prev, n);
+  cthis->n_target = n;
+  void (*op)(worker_t*) = (n < prev) ? worker_stop : worker_start;
+  for (int i = max_int(prev, n), e = min_int(prev, n); i >= e; --i) {
+    op(&cthis->workers[i]);
+  }
+
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  struct timespec ts = {
+    .tv_sec = tv.tv_sec + 0,
+    .tv_nsec = cthis->ns_wait                   // todo: be adaptive here
+  };
+  pthread_cond_timedwait(&cthis->stopped, &cthis->lock, &ts);
+#else
+  pthread_cond_wait(&cthis->stopped, &cthis->lock);
+#endif
+}
+
+int
+scheduler_start(scheduler_t *this, hpx_parcel_t *p, int spmd)
 {
   if (spmd || here->rank == 0) {
     scheduler_spawn_at(p, 0);
@@ -114,7 +149,7 @@ int scheduler_start(scheduler_t *this, hpx_parcel_t *p, int spmd)
   // wait for someone to stop the scheduler
   pthread_mutex_lock(&this->lock);
   while (this->state == SCHED_RUN) {
-    pthread_cond_wait(&this->stopped, &this->lock);
+    _wait(this);
   }
   pthread_mutex_unlock(&this->lock);
 
