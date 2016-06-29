@@ -28,23 +28,6 @@ AC_DEFUN([_HAVE_HWLOC], [
 
 AC_DEFUN([_HPX_CONTRIB_HWLOC], [
  contrib=$1
- 
- # Disable features that are not required for our embedded build
- enable_libxml2=no
- enable_libnuma=no
- enable_opencl=no
- enable_cuda=no
- enable_nvml=no
- enable_gl=no
- HWLOC_SETUP_CORE([$contrib], [_HAVE_HWLOC],
-   [AC_MSG_WARN([could not configure hwloc])],
-   [1])
- unset enable_libxml2
- unset enable_libnuma
- unset enable_opencl
- unset enable_cuda
- unset enable_nvml
- unset enable_gl
 
  _HAVE_HWLOC
 
@@ -90,7 +73,24 @@ AC_DEFUN([_HPX_PKG_HWLOC], [
 AC_DEFUN([HPX_CONFIG_HWLOC], [
  contrib=$1
  pkg=$2
- 
+
+ # Disable features that are not required for our embedded build
+ enable_libxml2=no
+ enable_libnuma=no
+ enable_opencl=no
+ enable_cuda=no
+ enable_nvml=no
+ enable_gl=no
+ HWLOC_SETUP_CORE([$contrib], [_HAVE_HWLOC],
+   [AC_MSG_WARN([could not configure hwloc])],
+   [1])
+ unset enable_libxml2
+ unset enable_libnuma
+ unset enable_opencl
+ unset enable_cuda
+ unset enable_nvml
+ unset enable_gl
+
  # allow the user to override how we find hwloc
  AC_ARG_WITH(hwloc,
    [AS_HELP_STRING([--with-hwloc{=system,PKG,contrib}],
