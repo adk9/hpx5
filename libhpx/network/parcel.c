@@ -210,6 +210,9 @@ hpx_parcel_t *parcel_alloc(size_t payload) {
 
   hpx_parcel_t *p = as_memalign(AS_REGISTERED, HPX_CACHELINE_SIZE, size);
   dbg_assert_str(p, "parcel: failed to allocate %zu registered bytes.\n", size);
+#ifdef ENABLE_INSTRUMENTATION
+  *(uint64_t*)&p->padding = UINT64_C(0);        // initialize read-only padding
+#endif
   return p;
 }
 
