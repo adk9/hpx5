@@ -66,9 +66,10 @@ AC_DEFUN([HPX_CONFIG_URCU], [
                    [How we find liburcu* @<:@default=system@:>@])],
    [], [with_urcu=yes])
 
- AS_IF([test "x$with_urcu" == xno], [AC_MSG_ERROR([URCU required])])
- 
  AS_CASE($with_urcu,
+   # don't need urcu
+   [no], [],
+   
    # system means that we look for a library in the system path, or a
    # default-named pkg-config package
    [system|yes], [_LIB_URCU
@@ -81,6 +82,6 @@ AC_DEFUN([HPX_CONFIG_URCU], [
    [_PKG_URCU($with_urcu)])
 
  # if we don't have urcu but we want it then build it from contrib
- AS_IF([test "x$have_urcu" != xyes -a "x$want_urcu" == xyes],
+ AS_IF([test "x$with_urcu" != xno -a "x$have_urcu" != xyes -a "x$want_urcu" == xyes],
    [_CONTRIB_URCU($contrib, $pkgs)])
 ])
