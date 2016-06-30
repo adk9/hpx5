@@ -5,18 +5,34 @@ DIR=$(mktemp -d "${TMPDIR:-/tmp}"/hpx.XXXXXXX)
 CONTRIB=contrib
 
 # set the array of tarball deps here
-contrib_tars=("photon-1.1.tar.bz2" "libcuckoo-1.0.tar.gz"
-              "jemalloc-4.2.0.tar.bz2" "libffi-e9de7e3.tar.gz"
-              "userspace-rcu-0.9.2-hpx.tar.bz2"
-              "hwloc-1.11.3.tar.gz")
+contrib_tars=(
+    "photon-1.1.tar.bz2"
+    "libcuckoo-1.0.tar.gz"
+    "jemalloc-4.2.1.tar.bz2"
+    "libffi-e9de7e3.tar.gz"
+    "userspace-rcu-0.9.2-hpx.tar.bz2"
+    "hwloc-1.11.3.tar.gz"
+)
+
 # set matching md5sums for each tarball
-contrib_md5=("fee1826b072c211776442d0b1da80ccb" "ee2bed68983b0f60eaad2f6dcd04fe7f"
-             "e6b5d5a1ea93a04207528d274efdd144"
-             "c3f381d8fd2fd611b472fb4971c4f546"
-             "2abe358b18384e3a09ef3036b5886895"
-             "c1d36a9de6028eac1d18ea4782ef958f")
+contrib_md5=(
+    "fee1826b072c211776442d0b1da80ccb" # photon
+    "ee2bed68983b0f60eaad2f6dcd04fe7f" # libcukoo
+    "666c2f4194b583e162d9e5a112167846" # jemalloc
+    "c3f381d8fd2fd611b472fb4971c4f546" # libffi
+    "2abe358b18384e3a09ef3036b5886895" # liburcu
+    "c1d36a9de6028eac1d18ea4782ef958f" # hwloc
+)
+
 # and matching target contrib directories
-contrib_dirs=("photon" "libcuckoo" "jemalloc" "libffi" "userspace-rcu" "hwloc")
+contrib_dirs=(
+    "photon"
+    "libcuckoo"
+    "jemalloc"
+    "libffi"
+    "userspace-rcu"
+    "hwloc"
+)
 
 # set the command to fetch the tarballs
 CMD="wget --quiet  -O"
