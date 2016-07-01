@@ -69,8 +69,8 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _alloc_user, _alloc_user_handler,
                      HPX_POINTER, HPX_INT);
 
 static hpx_addr_t
-_agas_alloc_user(size_t n, uint32_t bsize, hpx_gas_dist_t dist,
-                 uint32_t attr, int zero) {
+_agas_alloc_user(size_t n, uint32_t bsize, hpx_gas_dist_t dist, uint32_t attr,
+                 int zero) {
   agas_t *agas = (agas_t*)here->gas;
   dbg_assert(bsize <= agas->vtable.max_block_size);
 
@@ -90,7 +90,7 @@ _agas_alloc_user(size_t n, uint32_t bsize, hpx_gas_dist_t dist,
   hpx_addr_t base = gva.addr;
   hpx_addr_t done = hpx_lco_and_new(n);
   for (int i = 0; i < n; ++i) {
-    hpx_addr_t where = dist(i, n, bsize);
+    hpx_addr_t where = (i == 0) ? HPX_HERE : dist(i, n, bsize);
     hpx_call(where, _alloc_user, done, &gva, &n, &padded, &attr, &lva, &zero);
     lva += padded;
     gva.bits.offset += padded;
