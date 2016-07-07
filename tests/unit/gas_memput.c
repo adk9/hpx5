@@ -48,7 +48,7 @@ HPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, verify, verify_handler,
 
 /// Initialize the global data for a rank.
 int init_handler(hpx_addr_t data) {
-  size_t n = ELEMENTS * sizeof(uint64_t);
+  uint64_t n = ELEMENTS * sizeof(uint64_t);
   int rank = HPX_LOCALITY_ID;
   int peer = (rank + 1) % HPX_LOCALITIES;
 
