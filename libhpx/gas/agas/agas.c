@@ -232,15 +232,16 @@ gas_t *gas_agas_new(const config_t *config, boot_t *boot) {
   // get the chunk size from jemalloc
   agas->chunk_size = as_bytes_per_chunk();
 
-  size_t heap_size = 1lu << GVA_OFFSET_BITS;
-  size_t nchunks = ceil_div_size_t(heap_size, agas->chunk_size);
+  uint64_t heap_size = UINT64_C(1) << GVA_OFFSET_BITS;
+  uint32_t nchunks = ceil_div_64(heap_size, agas->chunk_size);
+  dbg_assert(nchunks > 0);
   uint32_t min_align = ceil_log2_64(agas->chunk_size);
   uint32_t base_align = ceil_log2_64(heap_size);
   agas->bitmap = bitmap_new(nchunks, min_align, base_align);
   agas_global_allocator_init(agas);
 
   if (here->rank == 0) {
-    size_t nchunks = ceil_div_size_t(here->ranks * heap_size, agas->chunk_size);
+    uint32_t nchunks = ceil_div_64(here->ranks * heap_size, agas->chunk_size);
     uint32_t min_align = ceil_log2_64(agas->chunk_size);
     uint32_t base_align = ceil_log2_64(heap_size);
     agas->cyclic_bitmap = bitmap_new(nchunks, min_align, base_align);
@@ -263,7 +264,7 @@ agas_chunk_alloc(agas_t *agas, void *bitmap, void *addr, size_t n, size_t align)
   uint32_t log2_align = ceil_log2_size_t(max_size_t(align, agas_alloc_bsize));
   uint32_t bit;
   int e = bitmap_reserve(bitmap, nbits, log2_align, &bit);
-  dbg_check(e, "Could not reserve gva for %lu bytes\n", n);
+  dbg_check(e, "Could not reserve gva for %zu bytes\n", n);
   uint64_t offset = bit * agas->chunk_size;
 
   // 2) get backing memory

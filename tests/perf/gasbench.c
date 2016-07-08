@@ -78,7 +78,7 @@ static void _run(void *f, _alloc_args_t *args, char *fmt) {
 }
 
 static int _main_action(int iters, size_t size) {
-  printf("gasbench(iters=%d, size=%lu, threads=%d)\n",
+  printf("gasbench(iters=%d, size=%zu, threads=%d)\n",
          iters, size, HPX_THREADS);
   printf("time resolution: microseconds\n");
   fflush(stdout);
