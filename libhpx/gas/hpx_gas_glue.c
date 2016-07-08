@@ -38,7 +38,7 @@ hpx_addr_t HPX_THERE(uint32_t i) {
   return gas->there(here->gas, i);
 }
 
-hpx_addr_t hpx_addr_add(hpx_addr_t addr, int64_t bytes, size_t bsize) {
+hpx_addr_t hpx_addr_add(hpx_addr_t addr, ptrdiff_t bytes, size_t bsize) {
   dbg_assert(here && here->gas);
   gas_t *gas = here->gas;
   dbg_assert(gas->add);
