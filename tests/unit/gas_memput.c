@@ -69,7 +69,7 @@ int init_handler(hpx_addr_t data) {
 static HPX_ACTION(HPX_DEFAULT, 0, init, init_handler, HPX_ADDR);
 
 int init_globals_handler(void) {
-  uint64_t n = ELEMENTS * sizeof(uint64_t);
+  size_t n = ELEMENTS * sizeof(uint64_t);
   hpx_addr_t data = hpx_gas_alloc_cyclic(HPX_LOCALITIES, n, 0);
   CHECK( hpx_bcast_rsync(init, &data) );
   return HPX_SUCCESS;
@@ -234,7 +234,7 @@ HPX_ACTION(HPX_DEFAULT, 0, memput_static, memput_static_handler);
 /// Testing memput from a registered buffer.
 int memput_registered_handler(void) {
   printf("Testing gas memput from a registered location\n");
-  uint64_t n = ELEMENTS * sizeof(uint64_t);
+  size_t n = ELEMENTS * sizeof(uint64_t);
   uint64_t *buffer = hpx_malloc_registered(n);
   prepare(buffer);
   test_all(buffer, n);
@@ -246,7 +246,7 @@ HPX_ACTION(HPX_DEFAULT, 0, memput_registered, memput_registered_handler);
 /// Testing memput from a malloced location.
 int memput_malloc_handler(void) {
   printf("Testing gas memput from a malloced location\n");
-  uint64_t n = ELEMENTS * sizeof(uint64_t);
+  size_t n = ELEMENTS * sizeof(uint64_t);
   uint64_t *buffer = malloc(n);
   prepare(buffer);
   test_all(buffer, n);

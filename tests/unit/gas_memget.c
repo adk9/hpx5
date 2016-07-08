@@ -47,7 +47,7 @@ HPX_ACTION(HPX_INTERRUPT, 0, future_at, future_at_handler);
 
 /// Initialize the global data for a rank.
 int init_handler(hpx_addr_t d) {
-  uint64_t n = ELEMENTS * sizeof(uint64_t);
+  size_t n = ELEMENTS * sizeof(uint64_t);
   int rank = HPX_LOCALITY_ID;
   int peer = (rank + 1) % HPX_LOCALITIES;
 
@@ -67,7 +67,7 @@ int init_handler(hpx_addr_t d) {
 static HPX_ACTION(HPX_DEFAULT, 0, init, init_handler, HPX_ADDR);
 
 int init_globals_handler(void) {
-  uint64_t n = ELEMENTS * sizeof(uint64_t);
+  size_t n = ELEMENTS * sizeof(uint64_t);
   hpx_addr_t data = hpx_gas_alloc_cyclic(HPX_LOCALITIES, n, 0);
   test_assert_msg(data != HPX_NULL, "failed to allocate data\n");
 
@@ -156,7 +156,7 @@ HPX_ACTION(HPX_DEFAULT, 0, memget_stack, memget_stack_handler);
 /// Test memget to a registered location.
 int memget_registered_handler(void) {
   printf("Testing hpx memget to a registered address\n");
-  uint64_t n = ELEMENTS * sizeof(uint64_t);
+  size_t n = ELEMENTS * sizeof(uint64_t);
   uint64_t *buffer = hpx_malloc_registered(n);
   test_all(buffer, n);
   hpx_free_registered(buffer);
@@ -176,7 +176,7 @@ HPX_ACTION(HPX_DEFAULT, 0, memget_static, memget_static_handler);
 /// Test memget to a malloced location.
 int memget_malloc_handler(void) {
   printf("Testing hpx memget to a malloced address\n");
-  uint64_t n = ELEMENTS * sizeof(uint64_t);
+  size_t n = ELEMENTS * sizeof(uint64_t);
   uint64_t *buffer = malloc(n);
   test_all(buffer, n);
   free(buffer);
