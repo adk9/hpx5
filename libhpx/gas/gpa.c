@@ -38,7 +38,7 @@ static uint64_t _block_of(hpx_addr_t addr, uint32_t bsize) {
   return block;
 }
 
-static hpx_addr_t _triple_to_gpa(ptrdiff_t rank, ptrdiff_t bid, ptrdiff_t phase,
+static hpx_addr_t _triple_to_gpa(int64_t rank, int64_t bid, int64_t phase,
                                  uint32_t bsize) {
   // make sure that the values are actually in the expected range.
   dbg_assert(0 <= rank && rank < UINT16_MAX);
@@ -48,12 +48,12 @@ static hpx_addr_t _triple_to_gpa(ptrdiff_t rank, ptrdiff_t bid, ptrdiff_t phase,
   // make sure that the phase is not inside the padded region
   DEBUG_IF (bsize && phase) {
     if (phase >= bsize) {
-      dbg_error("phase %"PRIdPTR" must be less than %"PRIu32"\n", phase, bsize);
+      dbg_error("phase %"PRId64" must be less than %"PRIu32"\n", phase, bsize);
     }
   }
 
   DEBUG_IF (!bsize && phase) {
-    dbg_error("cannot initialize a non-cyclic gpa with a phase of %"PRIdPTR"\n",
+    dbg_error("cannot initialize a non-cyclic gpa with a phase of %"PRId64"\n",
               phase);
   }
 
@@ -113,15 +113,15 @@ static hpx_addr_t _add_cyclic(hpx_addr_t gpa, ptrdiff_t n, uint32_t bsize,
   // Add the extra bsize because this has no impact on % and correctly deals
   // with the blocks when @p n is negative. The compiler is smart enough in this
   // case to use one division for both the % and / operation.
-  ptrdiff_t  _phase = _phase_of(gpa, bsize) + n + bsize;
-  ptrdiff_t   phase = _phase % bsize;
-  ptrdiff_t  blocks = _phase / bsize - 1;
+  int64_t  _phase = _phase_of(gpa, bsize) + n + bsize;
+  int64_t   phase = _phase % bsize;
+  int64_t  blocks = _phase / bsize - 1;
 
   // Add the extra here->ranks for the same reason as above.
-  ptrdiff_t   _rank = gpa_to_rank(gpa) + blocks + here->ranks;
-  ptrdiff_t    rank = _rank % here->ranks;
-  ptrdiff_t  cycles = _rank / here->ranks - 1;
-  ptrdiff_t blockid = _block_of(gpa, bsize) + cycles;
+  int64_t   _rank = gpa_to_rank(gpa) + blocks + here->ranks;
+  int64_t    rank = _rank % here->ranks;
+  int64_t  cycles = _rank / here->ranks - 1;
+  int64_t blockid = _block_of(gpa, bsize) + cycles;
 
   // Fix phase and rank in case they were negative. The blockid is already fixed
   // by the `-1` in initialization.
