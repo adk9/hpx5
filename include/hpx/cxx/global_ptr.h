@@ -192,7 +192,7 @@ class global_ptr {
   /// check this constraint more carefully.
   ptrdiff_t operator-(const global_ptr<T>& rhs) const noexcept {
     assert(_elems_per_blk == rhs.get_block_size());
-    int64_t bytes = hpx_addr_sub(_gbl_ptr, rhs.get(), bsize());
+    ptrdiff_t bytes = hpx_addr_sub(_gbl_ptr, rhs.get(), bsize());
     assert(bytes % sizeof(T) == 0);
     return bytes / sizeof(T);
   }

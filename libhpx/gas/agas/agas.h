@@ -58,8 +58,8 @@ hpx_addr_t agas_alloc_local(size_t n, size_t bsize, uint32_t boundary,
                             uint32_t attr);
 hpx_addr_t agas_calloc_local(size_t n, size_t bsize, uint32_t boundary,
                              uint32_t attr);
-int64_t agas_sub_local(const agas_t *agas, gva_t lhs, gva_t rhs, size_t bsize);
-hpx_addr_t agas_add_local(const agas_t *agas, gva_t gva, int64_t bytes,
+ptrdiff_t agas_sub_local(const agas_t *agas, gva_t lhs, gva_t rhs, size_t bsize);
+hpx_addr_t agas_add_local(const agas_t *agas, gva_t gva, ptrdiff_t bytes,
                           size_t bsize);
 
 /// Cyclic allocation operations.

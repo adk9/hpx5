@@ -75,7 +75,7 @@ hpx_addr_t hpx_addr_add(hpx_addr_t addr, ptrdiff_t bytes, size_t bsize)
 ///          - positive if @p lhs > @p rhs
 ///          - 0 if @p lhs == @p rhs
 ///          - negative if @p lhs < @p rhs
-int64_t hpx_addr_sub(hpx_addr_t lhs, hpx_addr_t rhs, size_t bsize)
+ptrdiff_t hpx_addr_sub(hpx_addr_t lhs, hpx_addr_t rhs, size_t bsize)
   HPX_PUBLIC;
 
 /// @}

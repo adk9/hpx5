@@ -38,7 +38,7 @@ static uint64_t _block_of(hpx_addr_t addr, uint32_t bsize) {
   return block;
 }
 
-static hpx_addr_t _triple_to_gpa(int64_t rank, int64_t bid, int64_t phase,
+static hpx_addr_t _triple_to_gpa(ptrdiff_t rank, ptrdiff_t bid, ptrdiff_t phase,
                                  uint32_t bsize) {
   // make sure that the values are actually in the expected range.
   dbg_assert(0 <= rank && rank < UINT16_MAX);
@@ -48,12 +48,12 @@ static hpx_addr_t _triple_to_gpa(int64_t rank, int64_t bid, int64_t phase,
   // make sure that the phase is not inside the padded region
   DEBUG_IF (bsize && phase) {
     if (phase >= bsize) {
-      dbg_error("phase %"PRId64" must be less than %"PRIu32"\n", phase, bsize);
+      dbg_error("phase %"PRIdPTR" must be less than %"PRIu32"\n", phase, bsize);
     }
   }
 
   DEBUG_IF (!bsize && phase) {
-    dbg_error("cannot initialize a non-cyclic gpa with a phase of %"PRId64"\n",
+    dbg_error("cannot initialize a non-cyclic gpa with a phase of %"PRIdPTR"\n",
               phase);
   }
 
@@ -65,11 +65,11 @@ static hpx_addr_t _triple_to_gpa(int64_t rank, int64_t bid, int64_t phase,
 }
 
 /// Forward declaration to be used in checking of address difference.
-static hpx_addr_t _add_cyclic(hpx_addr_t, int64_t, uint32_t, bool);
+static hpx_addr_t _add_cyclic(hpx_addr_t, ptrdiff_t, uint32_t, bool);
 
 /// Implementation of address difference to be called from the public interface.
 /// The debug parameter is used to stop recursion in debugging checks.
-static int64_t _sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize,
+static ptrdiff_t _sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize,
                            bool check) {
   // for a block cyclic computation, we look at the three components
   // separately, and combine them to get the overall offset
@@ -80,14 +80,14 @@ static int64_t _sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize,
   uint64_t blhs = _block_of(lhs, bsize);
   uint64_t brhs = _block_of(rhs, bsize);
 
-  int64_t dphase = plhs - prhs;
-  int64_t dlocality = llhs - lrhs;
-  int64_t dblock = blhs - brhs;
+  ptrdiff_t dphase = plhs - prhs;
+  ptrdiff_t dlocality = llhs - lrhs;
+  ptrdiff_t dblock = blhs - brhs;
 
   // each difference in the phase is just one byte,
   // each difference in the locality is bsize bytes, and
   // each difference in the block is entire cycle of bsize bytes
-  int64_t d = dblock * here->ranks * bsize +
+  ptrdiff_t d = dblock * here->ranks * bsize +
               dlocality * bsize +
               dphase;
 
@@ -95,7 +95,7 @@ static int64_t _sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize,
     // make sure we're not crazy
     dbg_assert_str(_add_cyclic(rhs, d, bsize, false) == lhs,
                    "Address difference %"PRIu64"-%"PRIu64
-                   " computed incorrectly as %"PRId64"\n",
+                   " computed incorrectly as %"PRIdPTR"\n",
                    lhs, rhs, d);
   }
 
@@ -108,20 +108,20 @@ static int64_t _sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize,
 ///
 /// This code has been carefully tuned to minimize the number of `idiv`
 /// operations and to eliminate branching in the common case.
-static hpx_addr_t _add_cyclic(hpx_addr_t gpa, int64_t n, uint32_t bsize,
+static hpx_addr_t _add_cyclic(hpx_addr_t gpa, ptrdiff_t n, uint32_t bsize,
                               bool check) {
   // Add the extra bsize because this has no impact on % and correctly deals
   // with the blocks when @p n is negative. The compiler is smart enough in this
   // case to use one division for both the % and / operation.
-  int64_t  _phase = _phase_of(gpa, bsize) + n + bsize;
-  int64_t   phase = _phase % bsize;
-  int64_t  blocks = _phase / bsize - 1;
+  ptrdiff_t  _phase = _phase_of(gpa, bsize) + n + bsize;
+  ptrdiff_t   phase = _phase % bsize;
+  ptrdiff_t  blocks = _phase / bsize - 1;
 
   // Add the extra here->ranks for the same reason as above.
-  int64_t   _rank = gpa_to_rank(gpa) + blocks + here->ranks;
-  int64_t    rank = _rank % here->ranks;
-  int64_t  cycles = _rank / here->ranks - 1;
-  int64_t blockid = _block_of(gpa, bsize) + cycles;
+  ptrdiff_t   _rank = gpa_to_rank(gpa) + blocks + here->ranks;
+  ptrdiff_t    rank = _rank % here->ranks;
+  ptrdiff_t  cycles = _rank / here->ranks - 1;
+  ptrdiff_t blockid = _block_of(gpa, bsize) + cycles;
 
   // Fix phase and rank in case they were negative. The blockid is already fixed
   // by the `-1` in initialization.
@@ -135,17 +135,17 @@ static hpx_addr_t _add_cyclic(hpx_addr_t gpa, int64_t n, uint32_t bsize,
   // Sanity check during debugging, the difference between the two addresses
   // should be n.
   hpx_addr_t addr = _triple_to_gpa(rank, blockid, phase, bsize);
-  int64_t    diff = _sub_cyclic(addr, gpa, bsize, false);
-  dbg_assert_str(diff == n, "Address %"PRIu64"+%"PRId64" computed as %"PRIu64"."
-                 " Expected %"PRId64".\n", gpa, n, addr, diff);
+  ptrdiff_t    diff = _sub_cyclic(addr, gpa, bsize, false);
+  dbg_assert_str(diff == n, "Address %"PRIu64"+%"PRIdPTR" computed as %"PRIu64"."
+                 " Expected %"PRIdPTR".\n", gpa, n, addr, diff);
   return addr;
   (void)diff;
 }
 
-int64_t gpa_sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
+ptrdiff_t gpa_sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
   return _sub_cyclic(lhs, rhs, bsize, DEBUG);
 }
 
-hpx_addr_t gpa_add_cyclic(hpx_addr_t gpa, int64_t bytes, uint32_t bsize) {
+hpx_addr_t gpa_add_cyclic(hpx_addr_t gpa, ptrdiff_t bytes, uint32_t bsize) {
   return (bsize) ? _add_cyclic(gpa, bytes, bsize, DEBUG) : gpa + bytes;
 }

@@ -62,7 +62,7 @@ _agas_dealloc(void *gas) {
   free(agas);
 }
 
-static int64_t
+static ptrdiff_t
 _agas_sub(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs, size_t bbsize) {
   dbg_assert(bbsize <= _agas_max_block_size);
   uint32_t bsize = bbsize;
@@ -89,7 +89,7 @@ _agas_sub(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs, size_t bbsize) {
 }
 
 static hpx_addr_t
-_agas_add(const void *gas, hpx_addr_t addr, int64_t bytes, size_t bbsize) {
+_agas_add(const void *gas, hpx_addr_t addr, ptrdiff_t bytes, size_t bbsize) {
   dbg_assert(bbsize <= _agas_max_block_size);
   uint32_t bsize = bbsize;
 

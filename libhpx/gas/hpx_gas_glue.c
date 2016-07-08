@@ -45,7 +45,7 @@ hpx_addr_t hpx_addr_add(hpx_addr_t addr, ptrdiff_t bytes, size_t bsize) {
   return gas->add(here->gas, addr, bytes, bsize);
 }
 
-int64_t hpx_addr_sub(hpx_addr_t lhs, hpx_addr_t rhs, size_t bsize) {
+ptrdiff_t hpx_addr_sub(hpx_addr_t lhs, hpx_addr_t rhs, size_t bsize) {
   dbg_assert(here && here->gas);
   gas_t *gas = here->gas;
   dbg_assert(gas->sub);

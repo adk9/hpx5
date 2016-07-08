@@ -82,12 +82,12 @@ static inline hpx_addr_t offset_to_gpa(uint32_t locality, uint64_t offset)
 /// @param          rhs The right-hand-side address.
 ///
 /// @returns            (lhs - rhs)
-static inline int64_t gpa_sub(hpx_addr_t lhs, hpx_addr_t rhs) {
+static inline ptrdiff_t gpa_sub(hpx_addr_t lhs, hpx_addr_t rhs) {
     return (lhs - rhs);
 }
 
 /// Compute standard address arithmetic on the global address.
-static inline hpx_addr_t gpa_add(hpx_addr_t gpa, int64_t bytes) {
+static inline hpx_addr_t gpa_add(hpx_addr_t gpa, ptrdiff_t bytes) {
   return gpa + bytes;
 }
 
@@ -107,7 +107,7 @@ static inline hpx_addr_t gpa_add(hpx_addr_t gpa, int64_t bytes) {
 ///                                             gpa_sub_cyclic(lhs, rhs, bsize),
 ///                                             bsize)
 ///                     @endcode
-int64_t gpa_sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize);
+ptrdiff_t gpa_sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize);
 
 /// Compute cyclic address arithmetic on the global address.
 ///
@@ -118,7 +118,7 @@ int64_t gpa_sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize);
 ///
 /// @returns            The global address representation that is @p bytes away
 ///                     from @p gpa.
-hpx_addr_t gpa_add_cyclic(hpx_addr_t gpa, int64_t bytes, uint32_t bsize);
+hpx_addr_t gpa_add_cyclic(hpx_addr_t gpa, ptrdiff_t bytes, uint32_t bsize);
 
 
 #endif // LIBHPX_GPA_H

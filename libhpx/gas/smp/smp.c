@@ -43,7 +43,7 @@ _smp_dealloc(void *gas) {
 #define _smp_max_block_size (UINT64_MAX)
 
 /// Figure out how far apart two addresses are.
-static int64_t
+static ptrdiff_t
 _smp_sub(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs, size_t bsize) {
   dbg_assert(lhs != HPX_NULL);
   dbg_assert(rhs != HPX_NULL);
@@ -52,7 +52,7 @@ _smp_sub(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs, size_t bsize) {
 
 /// Adjust an address by an offset.
 static hpx_addr_t
-_smp_add(const void *gas, hpx_addr_t gva, int64_t bytes, size_t bsize) {
+_smp_add(const void *gas, hpx_addr_t gva, ptrdiff_t bytes, size_t bsize) {
   dbg_assert(gva != HPX_NULL);
   return gva + bytes;
 }

@@ -75,7 +75,7 @@ hpx_addr_t pgas_lva_to_gpa(const void *lva) {
 
 void *pgas_gpa_to_lva(hpx_addr_t gpa) {
   uint64_t offset = gpa_to_offset(gpa);
-   return heap_offset_to_lva(global_heap, offset);
+  return heap_offset_to_lva(global_heap, offset);
 }
 
 void *pgas_offset_to_lva(uint64_t offset) {
@@ -86,7 +86,7 @@ uint64_t pgas_max_offset(void) {
   return (1ull << GPA_OFFSET_BITS);
 }
 
-static int64_t
+static ptrdiff_t
 _pgas_sub(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs, size_t bsize) {
   dbg_assert_str(bsize <= _pgas_max_block_size, "block size overflow.\n");
   bool l = _gpa_is_cyclic(lhs);
@@ -98,7 +98,7 @@ _pgas_sub(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs, size_t bsize) {
 }
 
 static hpx_addr_t
-_pgas_add(const void *gas, hpx_addr_t gpa, int64_t bytes, size_t bsize) {
+_pgas_add(const void *gas, hpx_addr_t gpa, ptrdiff_t bytes, size_t bsize) {
   dbg_assert_str(bsize <= _pgas_max_block_size, "block size overflow.\n");
   bool cyclic = _gpa_is_cyclic(gpa);
   return (cyclic) ? gpa_add_cyclic(gpa, bytes, bsize) : gpa_add(gpa, bytes);

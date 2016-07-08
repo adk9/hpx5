@@ -77,7 +77,7 @@ agas_calloc_local(size_t n, size_t bsize, uint32_t boundary, uint32_t attr) {
   return base;
 }
 
-int64_t
+ptrdiff_t
 agas_sub_local(const agas_t *agas, gva_t lhs, gva_t rhs, size_t bsize) {
   uint64_t bits = lhs.bits.size;
   uint64_t mask = (UINT64_C(1) << bits) - 1;
@@ -89,9 +89,9 @@ agas_sub_local(const agas_t *agas, gva_t lhs, gva_t rhs, size_t bsize) {
 }
 
 hpx_addr_t
-agas_add_local(const agas_t *agas, gva_t gva, int64_t n, size_t bsize) {
-  int64_t blocks = n / bsize;
-  int64_t bytes = n % bsize;
+agas_add_local(const agas_t *agas, gva_t gva, ptrdiff_t n, size_t bsize) {
+  ptrdiff_t blocks = n / bsize;
+  ptrdiff_t bytes = n % bsize;
   uint64_t block_size = (UINT64_C(1) << gva.bits.size);
   uint64_t addr = gva.addr + blocks * block_size + bytes;
   dbg_assert((addr & (block_size - 1)) < bsize);
