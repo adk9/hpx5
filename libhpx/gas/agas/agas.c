@@ -62,10 +62,11 @@ _agas_dealloc(void *gas) {
   free(agas);
 }
 
-static int64_t
+static hpx_gas_ptrdiff_t
 _agas_sub(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs, size_t bbsize) {
   dbg_assert(bbsize <= _agas_max_block_size);
   uint32_t bsize = bbsize;
+  hpx_gas_ptrdiff_t ret;
 
   gva_t l = { .addr = lhs };
   gva_t r = { .addr = rhs };
@@ -76,20 +77,20 @@ _agas_sub(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs, size_t bbsize) {
   }
 
   if (l.bits.cyclic && r.bits.cyclic) {
-    return gpa_sub_cyclic(lhs, rhs, bsize);
-  }
-
-  if (!l.bits.cyclic && !r.bits.cyclic) {
+    ret = gpa_sub_cyclic(lhs, rhs, bsize);
+  } else if (!l.bits.cyclic && !r.bits.cyclic) {
     if (l.bits.home == r.bits.home) {
-      return agas_sub_local(gas, l, r, bsize);
+      ret = agas_sub_local(gas, l, r, bsize);
     }
+  } else {
+    dbg_error("could not compare pointers between allocations\n");
   }
-
-  dbg_error("could not compare pointers between allocations\n");
+  return ret;
 }
 
 static hpx_addr_t
-_agas_add(const void *gas, hpx_addr_t addr, int64_t bytes, size_t bbsize) {
+_agas_add(const void *gas, hpx_addr_t addr, hpx_gas_ptrdiff_t bytes,
+          size_t bbsize) {
   dbg_assert(bbsize <= _agas_max_block_size);
   uint32_t bsize = bbsize;
 

@@ -56,9 +56,9 @@ typedef struct gas {
   size_t (*local_size)(const void *gas);
   void *(*local_base)(const void *gas);
 
-  int64_t (*sub)(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs,
+  hpx_gas_ptrdiff_t (*sub)(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs,
                  size_t bsize);
-  hpx_addr_t (*add)(const void *gas, hpx_addr_t gva, int64_t bytes,
+  hpx_addr_t (*add)(const void *gas, hpx_addr_t gva, hpx_gas_ptrdiff_t bytes,
                     size_t bsize);
 
   hpx_addr_t (*there)(const void *gas, uint32_t i);

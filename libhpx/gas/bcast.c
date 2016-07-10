@@ -34,7 +34,8 @@ int _va_gas_bcast_cont(hpx_action_t act, hpx_addr_t base, int n,
   for (int i = 0; i < n; ++i) {
     va_list temp;
     va_copy(temp, *vargs);
-    hpx_addr_t addr = hpx_addr_add(base, i * bsize + offset, bsize);
+    hpx_gas_ptrdiff_t off = i * bsize + offset;
+    hpx_addr_t addr = hpx_addr_add(base, off, bsize);
     int e = action_call_async_va(act, addr, and, set, rsync, rop, nargs, &temp);
     dbg_check(e, "failed to call action\n");
     va_end(temp);

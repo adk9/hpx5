@@ -86,7 +86,7 @@ uint64_t pgas_max_offset(void) {
   return (1ull << GPA_OFFSET_BITS);
 }
 
-static int64_t
+static hpx_gas_ptrdiff_t
 _pgas_sub(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs, size_t bsize) {
   dbg_assert_str(bsize <= _pgas_max_block_size, "block size overflow.\n");
   bool l = _gpa_is_cyclic(lhs);
@@ -94,11 +94,13 @@ _pgas_sub(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs, size_t bsize) {
   dbg_assert_str(l == r, "cannot compare addresses across allocations.\n");
   dbg_assert_str(!(l ^ r), "cannot compare cyclic with non-cyclic.\n");
 
-  return (l && r) ? gpa_sub_cyclic(lhs, rhs, bsize) : gpa_sub(lhs, rhs);
+  return (hpx_gas_ptrdiff_t)(l && r) ?
+    gpa_sub_cyclic(lhs, rhs, bsize) : gpa_sub(lhs, rhs);
 }
 
 static hpx_addr_t
-_pgas_add(const void *gas, hpx_addr_t gpa, int64_t bytes, size_t bsize) {
+_pgas_add(const void *gas, hpx_addr_t gpa, hpx_gas_ptrdiff_t bytes,
+          size_t bsize) {
   dbg_assert_str(bsize <= _pgas_max_block_size, "block size overflow.\n");
   bool cyclic = _gpa_is_cyclic(gpa);
   return (cyclic) ? gpa_add_cyclic(gpa, bytes, bsize) : gpa_add(gpa, bytes);

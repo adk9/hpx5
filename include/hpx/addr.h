@@ -27,6 +27,10 @@ extern "C" {
 /// An HPX global address.
 typedef uint64_t hpx_addr_t;
 
+// An HPX global pointer difference type for global pointer arithmetic
+// and global array indexing.
+typedef int64_t hpx_gas_ptrdiff_t;
+
 /// The equivalent of NULL for global memory
 #define HPX_NULL ((hpx_addr_t)0)
 
@@ -56,7 +60,7 @@ hpx_addr_t HPX_THERE(uint32_t i) HPX_PUBLIC;
 /// @param    bsize The block size of the allocation associated with @p addr.
 ///
 /// @returns The address of the memory at offset @p bytes from @p addr.
-hpx_addr_t hpx_addr_add(hpx_addr_t addr, int64_t bytes, size_t bsize)
+hpx_addr_t hpx_addr_add(hpx_addr_t addr, hpx_gas_ptrdiff_t bytes, size_t bsize)
   HPX_PUBLIC;
 
 /// Perform global address distance arithmetic.
@@ -75,7 +79,7 @@ hpx_addr_t hpx_addr_add(hpx_addr_t addr, int64_t bytes, size_t bsize)
 ///          - positive if @p lhs > @p rhs
 ///          - 0 if @p lhs == @p rhs
 ///          - negative if @p lhs < @p rhs
-int64_t hpx_addr_sub(hpx_addr_t lhs, hpx_addr_t rhs, size_t bsize)
+hpx_gas_ptrdiff_t hpx_addr_sub(hpx_addr_t lhs, hpx_addr_t rhs, size_t bsize)
   HPX_PUBLIC;
 
 /// @}
