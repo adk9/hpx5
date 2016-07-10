@@ -56,7 +56,7 @@ hpx_addr_t HPX_THERE(uint32_t i) HPX_PUBLIC;
 /// @param    bsize The block size of the allocation associated with @p addr.
 ///
 /// @returns The address of the memory at offset @p bytes from @p addr.
-hpx_addr_t hpx_addr_add(hpx_addr_t addr, ptrdiff_t bytes, size_t bsize)
+hpx_addr_t hpx_addr_add(hpx_addr_t addr, int64_t bytes, size_t bsize)
   HPX_PUBLIC;
 
 /// Perform global address distance arithmetic.
