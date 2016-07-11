@@ -1,0 +1,230 @@
+HPX–5 Version 3.1.0 Release Notes
+---------------------------------
+
+Release date: 07/11/2016
+
+Distributed under the Indiana University License.
+(See accompanying file LICENSE.txt) 
+
+HPX-5 is the High Performance ParalleX runtime library, a state-of-the-art 
+runtime system from the Center for Research in Extreme Scale Technology (CREST) 
+at Indiana University for exascale-scale computing. HPX-5 employs dynamic and 
+adaptive resource management and task scheduling to achieve the significant 
+improvements in efficiency and scalability necessary to deploy many classes of 
+parallel applications at exascale. Although still under development, HPX-5 
+supports a diverse set of systems, is reliable and programmable, is scalable 
+across multi-core and multi-node systems, and delivers efficiency improvements 
+for irregular, time-varying problems. HPX-5 is a realization of ParalleX, an 
+abstract crosscutting execution model, which establishes the runtime's roles 
+and responsibilities with respect to other interoperating system layers, and is 
+evaluated within the SLOWER performance model that provide a framework for 
+performance, understanding, and optimization.
+
+HPX-5 is a reduction to practice of the revolutionary ParalleX execution model, 
+which establishes roles and responsibilities between layers in an exascale 
+system and supports dynamic and adaptive resource management and scheduling. 
+It is implemented in portable C99 and is organized around a cooperative 
+lightweight thread scheduler, a global address space, an active-message parcel 
+transport, and a group of globally addressable local synchronization object 
+classes. Internally, the infrastructure is built on scalable concurrent data 
+structures to minimize shared-memory synchronization overhead. The global 
+address space and parcel transport are based on the innovative Photon network 
+transport library, which supports low-level access to network hardware and 
+provides RDMA with remote completion events for low overhead signaling. An 
+alternative ISend/IRecv network layer is included for portability, along with 
+a reference MPI implementation. HPX-5 is compatible with Linux running on Intel 
+x86, MAC OSX and Xeon Phi processors and various ARM core platforms (including 
+both ARMv7 and ARMv8/Aarch64).
+
+Contents
+-----------
+
+The HPX–5 distribution contains two top-level directories.
+
+/hpx
+This contains the HPX–5 interface and runtime library implementation, along with
+ examples, the test suite, and third-party dependencies. The project installs 
+the HPX–5 headers and the libhpx.{a,so} runtime library, along with built 
+dependencies and an hpx.pc file for use with pkg-config for external projects.
+
+/hpx-apps
+This contains example applications designed to depend on an installed instance 
+of HPX–5, and should serve as a usage model. In particular, it includes a 
+tutorial as well as the Lulesh, Wavelet-AMR, HPCG, CoMD, and SSSP applications.
+
+What's new in HPX-5 v3.1.0?
+----------------------------
+
+HPX-5 API
+==========
+
+1. Extended HPX-5 with the concept of a SPMD epoch, exposed through the 
+hpx_run_spmd() top-level run command. SPMD epochs will launch one instance of 
+their top-level action at each locality, and will collectively terminate when 
+each of these actions has exited by continuing a return code. This 
+functionality is provided to assist with legacy compatibility.
+2. Extended HPX-5 with soft GAS affinity, through the 
+hpx_gas_{set,clear}_affinity() interface. An application may use GAS affinity 
+to specify a preferred intra-locality core for a global address, and affinity
+aware implementations can use this information during scheduling.
+3. Removed the hpx_thread_affinity() interface. GAS affinity serves a similar 
+purpose in the context of an active message execution model.
+4. Provide hpx_{de}register_memory() to allow application users explicit 
+control over network memory registration. This is primarily for legacy 
+compatibility with applications designed using traditional distributed memory.
+5. The experimental C++ API has been extended to support: SPMD epochs, 
+HPX_POINTER argument types, and rvalue continuation.
+
+HPX Implementation
+====================
+
+1. AGAS Changes
+1.1 Implemented address translation caching to improve performance for 
+relocated blocks.
+1.2 Implemented user-defined data distributions to allow arbitrary initial 
+data distributions in the global address space.
+1.3 Implemented blocked allocations.
+
+2. Tracing infrastructure changes
+2.1 Added the libhpx_inst_phase_{enable,disable}() interface to allow 
+runtime control over trace activity.
+2.2 New event EVENT_PARCEL_DELETE has been added to handle local send 
+completion.
+2.3 Added an AGAS miss event to count the number of remote translations.
+2.4 The console trace backend will dump trace events to the console 
+(see --hpx-trace-backend).
+2.5 The stats trace backend will accumulate event counts and dump them to the 
+console (see --hpx-trace-backend).
+2.6 The file trace backend format has changed, and can be processed using the 
+scripts/read_log.py script.
+
+3. Scheduler changes
+3.1 Added a userspace read-copy-update implementation of GAS affinity 
+(see hpx_gas_{set,clear}_affinity(), --hpx-gas-affinity).
+3.2 Added a libcuckoo implementation of GAS affinity 
+(see hpx_gas_{set,clear}_affinity(), --hpx-gas-affinity).
+
+4. Network changes
+4.1 Implemented the ssync event handler.
+4.2 Added support for non-strict ordering from the photon network 
+(see --hpx-photon-comporder).
+
+5. Runtime options
+5.1 The --hpx-thread-affinity default has been changed to none. Testing has 
+shown that this is a safer default than numa across multiple platforms, 
+applications, and launcher topologies.
+5.2 The --hpx-gas-affinity option selects how the scheduler responds to the 
+hpx_gas_{set,clear}_affinity() interface. The default none option ignores 
+affinity, the urcu option selects the userspace read-copy-update implementation 
+and is recommended for applications that depend on affinity, and the cuckoo 
+implementation uses a libcuckoo hash table and is provided for portability.
+5.3 The --hpx-trace-backend option selects the trace backend at runtime. The 
+file backend generates trace files, the console backend dumps events to the 
+console, and the stats backend counts events and dumps them to the console 
+at shutdown.
+5.4 The --hpx-photon-comporder option controls the network ordering constraints 
+for the photon backend. none permits low-level out-of-order delivery while 
+strict enforces in-order delivery and is the default. This has no impact on HPX 
+semantics.
+5.5 The --hpx-trace-off option disables the automatic call to 
+libhpx_inst_phase_enable() at startup when --hpx-trace-at is specified.
+
+Removed/Retired Features
+---------------------------
+1. Removed the unsupported --hpx-statistics flag.
+2. Removed the hpx_thread_affinity() interface 
+(see hpx_gas_{set,clear}_affinity()).
+3. Removed the hpx_thread_set_affinity() interface.
+
+Dependencies changes
+---------------------------
+
+1. Building HPX-5 now requires a C++11 compiler by default.
+2. A dependency on the userspace rcu library has been added, and a version has 
+been included in the distribution.
+3. The distributed version of jemalloc has been upgraded to 4.2.1.
+
+Bug Fixes
+-----------
+
+1. The libffi API now correctly detects complex support.
+2. The C++ API now correctly defines wrappers as inline.
+3. The SLURM -c option now correctly sets --hpx-threads.
+4. The PGAS cyclic arithmetic functions now correctly handle large blocks.
+5. The scheduler no longer violates MPI_THREAD_SERIALIZED during epoch shutdown 
+(see #65).
+
+Application Updates
+--------------------
+
+No application updates.
+
+Known bugs & limitations in the release
+-----------------------------------------
+
+1. HPX-5 on Mac OS X only builds with default xcode toolchain. Use 
+$ ./configure --with-hwloc=contrib --with-libffi=contrib CC=clang to configure. 
+gcc installed with brew or port is not supported. We believe this is due to 
+https://gcc.gnu.org/bugzilla/show_bug.cgi?format=multiple&id=60893.
+2. There are known regressions with TBBmalloc 4.4. Please use TBBmalloc 4.3 
+or earlier.
+3. The Intel toolchain on Cray platforms requires the gcc 4.8 or 4.9 compiler 
+in the path (see https://www.nersc.gov/users/software/compilers/intel-fortran-c-
+and-c/intel-bug-reports/c-11-header-files-appear-missing-on-edison/).
+4. Clang versions prior to 3.6 (3.5.1 or earlier) contain regressions that 
+trigger runtime failures in HPX.
+5. The --map-by node:pe=1 flag will be incorrectly interpreted when using 
+openmpi version 1.10.0, and will spawn #cores HPX-5 worker threads. Use 
+--hpx-threads=1 to force 1 worker thread if necessary.
+6. LULESH induces a performance regression with jemalloc, prefer tbbmalloc for 
+it. When using jemalloc set MALLOC_CONF=lg_dirty_mult:-1 on the command 
+line—this resolves the performance regression but may cause memory exhaustion. 
+Also use hugetlbfs when available.
+7. Remote hpx_lco_get/wait operations do not propagate errors correctly.
+8. User registered signal handlers are overwritten by --hpx-dbg-waitonsig.
+9. lco_gencount unit test fails with odd number of localities > 1.
+10. HPX-5 does not currently account for dynamic changes in system 
+configuration. Systems that turn cores on and off may cause an unexpected 
+state during startup, which will result in triggering a guarding assert check.
+
+General Information
+---------------------
+
+If you plan to use HPX–5, we suggest starting with the latest released
+version (currently HPX–5 v3.1.0) which can be downloaded from
+http://hpx.crest.iu.edu/download. If you would like to work with the
+cutting edge version of HPX–5, we suggest using the the `develop`
+branch at https://gitlab.crest.iu.edu/extreme/hpx. While we try to
+keep the develop branch stable and usable, sometimes new bugs trick
+their way into the code base - be aware!
+
+Documentation for the latest release of HPX–5 (currently v3.1.0) and
+the previous versions can be accessed at
+http://hpx.crest.iu.edu/documentation. The FAQ can be found at
+http://hpx.crest.iu.edu/faqs_and_tutorials.
+
+Reporting bugs
+=================
+
+In any case, if you happen to run into problems we very much encourage and 
+appreciate issue reports through the issue tracker for this Gitlab project 
+(https://gitlab.crest.iu.edu/extreme/hpx/issues).  
+
+Participate in HPX-5
+======================
+
+HPX-5 is published under a liberal open-source license and has an open, 
+active, and thriving developer community. Further information can be found at 
+http://hpx.crest.iu.edu.
+
+More about HPX-5
+--------------------
+
+For more information about HPX-5, including information about the latest 
+release, please check out the main https://hpx.crest.iu.edu/about. If you 
+have questions or comments, the HPX-5 Developer’s Mailing List is a good 
+place to send them.
+
+Subscribe your e-mail address to be notified when new releases of HPX-5 
+are released using the mailing list: HPX-5 Announcements List 
+http://www.crest.iu.edu/mailman/listinfo.cgi/hpx-announce.
