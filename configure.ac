@@ -9,7 +9,7 @@
 
 AC_PREREQ([2.63])
 m4_define([LIBHPX_MAJOR], [3])
-m4_define([LIBHPX_MINOR], [0])
+m4_define([LIBHPX_MINOR], [1])
 m4_define([LIBHPX_PATCH], [0])
 AC_INIT([hpx-5], LIBHPX_MAJOR.LIBHPX_MINOR.LIBHPX_PATCH, [hpx@indiana.edu])
 
