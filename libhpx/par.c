@@ -266,7 +266,7 @@ int hpx_count_range_call(hpx_action_t action,
   args->increment = increment; args->bsize = bsize; args->arg_size = arg_size;
   for (size_t l = 0; l < HPX_LOCALITIES; ++l) {
     for (size_t t = 0; t < HPX_THREADS; ++t) {
-      const uint64_t addr_delta =
+      const hpx_gas_ptrdiff_t addr_delta =
         (l * HPX_THREADS + t) * thread_chunk * increment;
       args->addr = hpx_addr_add(addr, addr_delta, bsize);
       hpx_call(HPX_THERE(l), _hpx_count_range_call, HPX_NULL, args,
@@ -274,7 +274,7 @@ int hpx_count_range_call(hpx_action_t action,
     }
   }
   args->count = count % (HPX_LOCALITIES * HPX_THREADS);
-  const uint64_t addr_delta =
+  const hpx_gas_ptrdiff_t addr_delta =
     HPX_LOCALITIES * HPX_THREADS * thread_chunk * increment;
   args->addr = hpx_addr_add(addr, addr_delta, bsize);
   hpx_call(HPX_HERE, _hpx_count_range_call, HPX_NULL, args,

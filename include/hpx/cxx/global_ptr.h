@@ -173,7 +173,7 @@ class global_ptr {
   template <typename U>
   global_ptr<T> operator+(U n) const noexcept {
     static_assert(std::is_integral<U>::value, "integer type required");
-    ptrdiff_t bytes = n * sizeof(T);
+    hpx_gas_ptrdiff_t bytes = n * sizeof(T);
     hpx_addr_t addr = hpx_addr_add(_gbl_ptr, bytes, bsize());
     return global_ptr<T>(addr, _elems_per_blk);
   }
@@ -190,9 +190,9 @@ class global_ptr {
   /// Pointers can only be compared between the same allocation, which implies
   /// that they will have the same block size. Without more information we can't
   /// check this constraint more carefully.
-  ptrdiff_t operator-(const global_ptr<T>& rhs) const noexcept {
+  hpx_gas_ptrdiff_t operator-(const global_ptr<T>& rhs) const noexcept {
     assert(_elems_per_blk == rhs.get_block_size());
-    int64_t bytes = hpx_addr_sub(_gbl_ptr, rhs.get(), bsize());
+    hpx_gas_ptrdiff_t bytes = hpx_addr_sub(_gbl_ptr, rhs.get(), bsize());
     assert(bytes % sizeof(T) == 0);
     return bytes / sizeof(T);
   }
