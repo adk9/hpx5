@@ -265,7 +265,8 @@ static int lco_waitall_handler(void) {
   }
 
   for (int i = 0; i < rem; i++) {
-    hpx_addr_t block = hpx_addr_add(addr, args[1] * ranks + i * block_bytes, block_bytes);
+    hpx_gas_ptrdiff_t off = args[1] * ranks + i * block_bytes;
+    hpx_addr_t block = hpx_addr_add(addr, off, block_bytes);
     hpx_call(block, _init_memory, done[1], args, sizeof(args));
   }
 
