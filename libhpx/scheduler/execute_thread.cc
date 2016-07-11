@@ -40,12 +40,17 @@ namespace {
 
 void HPX_NORETURN worker_execute_thread(hpx_parcel_t *p) {
   EVENT_THREAD_RUN(p, self);
+  EVENT_SCHED_END(0, 0);
   int status = HPX_SUCCESS;
   try {
     status = action_exec_parcel(p->action, p);
   } catch (const ThreadExitStatus &e) {
     status = e.status;
   }
+  // NB: No EVENT_SCHED_BEGIN here. All code paths from this point will reach
+  //     _schedule_nb in worker.c and that will begin scheduling
+  //     again. Effectively we consider continuation generation as user-level
+  //     work.
   worker_finish_thread(p, status);
 }
 

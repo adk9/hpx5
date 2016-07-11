@@ -41,7 +41,6 @@ for APEX are:
 1. Get the code:
 wget https://github.com/khuck/xpress-apex/archive/v0.5.tar.gz
 tar -xvzf v0.5.tar.gz
-cd xpress-apex-v0.5
 
 2. Enter the repo directory, make a build directory:
 
@@ -153,3 +152,9 @@ srun -N 42 ./luleshparcels -n 1000 -x 48 -i 100 --hpx-threads=48 --hpx-network=p
 
 module load gnuplot
 gnuplot-persist concurrency.*.gnuplot
+
+# Documentation references
+
+1. User documentation to APEX - http://khuck.github.io/xpress-apex/.
+2. Detailed HPX-5 specific APEX documentation can be found at:
+http://khuck.github.io/xpress-apex/usage/#hpx-5-indiana-university.

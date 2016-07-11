@@ -31,7 +31,11 @@ static int _get_resources_by_affinity(topology_t *topology,
                                       libhpx_thread_affinity_t policy) {
   int n = 0;
   switch (policy) {
+   default:
+     log_error("unknown thread affinity policy\n");
    case HPX_THREAD_AFFINITY_DEFAULT:
+   case HPX_THREAD_AFFINITY_NONE:
+     return 0;
    case HPX_THREAD_AFFINITY_NUMA:
      n = topology->nnodes;
      break;
@@ -41,11 +45,6 @@ static int _get_resources_by_affinity(topology_t *topology,
    case HPX_THREAD_AFFINITY_HWTHREAD:
      n = topology->ncpus;
      break;
-   case HPX_THREAD_AFFINITY_NONE:
-     return 0;
-   default:
-     log_error("unknown thread affinity policy\n");
-     return 0;
   }
   return n;
 }
@@ -197,6 +196,12 @@ topology_t *topology_new(const struct config *config) {
   // use, otherwise we try and use hwloc to figure out what the process mask is
   // set to, otherwise we just bail out and use all CPUs.
   int cores = libhpx_getenv_num("ALPS_APP_DEPTH", 0);
+
+  // Check for slurm launcher.
+  if (!cores) {
+    cores = libhpx_getenv_num("SLURM_CPUS_PER_TASK", 0);
+  }
+
   if (cores) {
     hwloc_bitmap_set_range(topo->allowed_cpus, 0, cores - 1);
   }

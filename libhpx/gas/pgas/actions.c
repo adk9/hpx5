@@ -43,7 +43,7 @@ static HPX_ACTION_DECL(_set_csbrk);
 /// @param    bsize The block size for this allocation.
 ///
 /// @returns The base address of the global allocation.
-hpx_addr_t pgas_alloc_cyclic_sync(size_t n, uint32_t bsize) {
+hpx_addr_t pgas_alloc_cyclic_sync(size_t n, size_t bsize) {
   uint64_t offset = heap_alloc_cyclic(global_heap, n, bsize);
   assert(offset != 0);
 
@@ -76,7 +76,7 @@ LIBHPX_ACTION(HPX_DEFAULT, 0, pgas_alloc_cyclic, _alloc_cyclic_handler,
 /// @param    bsize The block size for this allocation.
 ///
 /// @returns The base address of the global allocation.
-hpx_addr_t pgas_calloc_cyclic_sync(size_t n, uint32_t bsize) {
+hpx_addr_t pgas_calloc_cyclic_sync(size_t n, size_t bsize) {
   assert(here->rank == 0);
 
   // Figure out how many blocks ber node that we need, and then allocate that
@@ -119,7 +119,7 @@ LIBHPX_ACTION(HPX_DEFAULT, 0, pgas_calloc_cyclic, _calloc_cyclic_handler,
 /// @param        bsize The block size.
 ///
 /// @returns HPX_SUCCESS
-static int _calloc_init_handler(uint64_t offset, uint32_t bytes, uint32_t bsize)
+static int _calloc_init_handler(uint64_t offset, uint32_t bytes, size_t bsize)
 {
   // Create a global physical address from the offset so that we can perform
   // cyclic address arithmetic on it. This avoids any issues with internal
@@ -139,7 +139,7 @@ static int _calloc_init_handler(uint64_t offset, uint32_t bytes, uint32_t bsize)
   return HPX_SUCCESS;
 }
 static LIBHPX_ACTION(HPX_INTERRUPT, 0, _calloc_init, _calloc_init_handler,
-                     HPX_UINT64, HPX_UINT32, HPX_UINT32);
+                     HPX_UINT64, HPX_UINT32, HPX_SIZE_T);
 
 int pgas_free_handler(void) {
   hpx_addr_t gpa = hpx_thread_current_target();

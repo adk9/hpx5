@@ -23,23 +23,19 @@
 
 /// The record type for the pending send circular buffer.
 typedef struct {
-  hpx_addr_t      lsync;
   const hpx_parcel_t *p;
 } record_t;
 
 /// Append a record to the parcel's pending send buffer.
 ///
 /// @param        sends The send buffer.
-/// @param        lsync The local command.
 /// @param            p The parcel to buffer.
 ///
 /// @returns  LIBHXP_OK The parcel was buffered successfully.
 ///        LIBHPX_ERROR A pending record could not be allocated.
-static int _append(send_buffer_t *sends, hpx_addr_t lsync,
-                   const hpx_parcel_t *p) {
+static int _append(send_buffer_t *sends, const hpx_parcel_t *p) {
   record_t *r = circular_buffer_append(&sends->pending);
   dbg_assert_str(r, "could not append a send operation to the buffer\n");
-  r->lsync = lsync;
   r->p = p;
   return LIBHPX_OK;
 }
@@ -95,13 +91,7 @@ void send_buffer_fini(send_buffer_t *sends) {
   circular_buffer_fini(&sends->pending);
 }
 
-int send_buffer_send(send_buffer_t *sends, hpx_addr_t lsync,
-                     const hpx_parcel_t *p) {
-  if (lsync != HPX_NULL) {
-    log_error("local send complete event unimplemented\n");
-    return LIBHPX_EUNIMPLEMENTED;
-  }
-
+int send_buffer_send(send_buffer_t *sends, const hpx_parcel_t *p) {
   int status = LIBHPX_OK;
   sync_tatas_acquire(&sends->lock);
 
@@ -120,7 +110,7 @@ int send_buffer_send(send_buffer_t *sends, hpx_addr_t lsync,
 
   // We need to buffer this parcel, because either we're already buffering
   // parcels, or we need to buffer while the parcel transport refreshes.
-  status = _append(sends, lsync, p);
+  status = _append(sends, p);
   dbg_check(status, "could not append send operation\n");
 
  unlock:

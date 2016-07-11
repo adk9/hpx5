@@ -220,7 +220,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _and_init, _and_init_handler,
 
 /// @}
 
-/// Allocate an and LCO. This is synchronous.
+/// Allocate an "and" LCO. This is synchronous.
 hpx_addr_t hpx_lco_and_new(int64_t limit) {
   _and_t *and = NULL;
   hpx_addr_t gva = lco_alloc_local(1, sizeof(*and), 0);
@@ -242,7 +242,7 @@ void hpx_lco_and_set(hpx_addr_t and, hpx_addr_t rsync) {
   hpx_lco_set(and, 0, NULL, HPX_NULL, rsync);
 }
 
-/// Set an and "num" times.
+/// Set an "and" @p num times.
 void hpx_lco_and_set_num(hpx_addr_t and, int sum, hpx_addr_t rsync) {
   hpx_addr_t lsync = hpx_lco_future_new(0);
   hpx_lco_set(and, sizeof(sum), &sum, lsync, rsync);

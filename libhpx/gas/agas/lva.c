@@ -31,7 +31,10 @@ _lva_to_chunk(agas_t *gas, void *lva) {
   return (void*)((uintptr_t)lva & mask);
 }
 
-gva_t agas_lva_to_gva(agas_t *gas, void *lva, uint32_t bsize) {
+gva_t agas_lva_to_gva(agas_t *gas, void *lva, size_t bbsize) {
+  dbg_assert(bbsize <= UINT32_MAX);
+  uint32_t bsize = bbsize;
+
   // we need to reverse map this address to an offset into the local portion of
   // the global address space
   void *chunk = _lva_to_chunk(gas, lva);

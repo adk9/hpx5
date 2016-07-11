@@ -30,7 +30,7 @@ extern "C" {
 
 /// Fully synchronous call interface.
 ///
-/// Performs @p action on @p args at @p addr, and sets @p out with the
+/// Performs @p action on given arguments at @p addr, and sets @p out with the
 /// resulting value. The output value @p out can be NULL (or the
 /// corresponding @p olen could be zero), in which case no return
 /// value is generated.
@@ -40,6 +40,7 @@ extern "C" {
 /// @param          out Address of the output buffer.
 /// @param         olen The length of the @p output buffer.
 /// @param            n The number of arguments for @p action.
+/// @param          ... The arguments for the call.
 ///
 /// @returns            HPX_SUCCESS, or an error code if the action generated an
 ///                     error that could not be handled remotely.
@@ -47,6 +48,7 @@ int _hpx_call_sync(hpx_addr_t addr, hpx_action_t action, void *out, size_t olen,
                    int n, ...)
   HPX_PUBLIC;
 
+/// Convenience wrapper for the fully synchronous call interface.
 #define hpx_call_sync(addr, action, out, olen, ...)                   \
   _hpx_call_sync(addr, action, out, olen, __HPX_NARGS(__VA_ARGS__) ,  \
                  ##__VA_ARGS__)
@@ -62,6 +64,7 @@ int _hpx_call_sync(hpx_addr_t addr, hpx_action_t action, void *out, size_t olen,
 /// @param       action The action to perform.
 /// @param       result An address of an LCO to trigger with the result.
 /// @param            n The number of arguments for @p action.
+/// @param          ... The arguments for the call.
 ///
 /// @returns            HPX_SUCCESS, or an error code if there was a problem
 ///                     locally during the hpx_call invocation.
@@ -69,11 +72,13 @@ int _hpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t result, int n,
               ...)
   HPX_PUBLIC;
 
+/// Convenience wrapper for the locally synchronous call interface.
 #define hpx_call(addr, action, result, ...)                             \
   _hpx_call(addr, action, result, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
-/// An experimental version of call that takes parameter symbols directly.
 #define _HPX_ADDRESSOF(x) &x
+
+/// An experimental version of hpx_call that takes parameter symbols directly.
 #define hpx_xcall(addr, action, result, ...) \
   hpx_call(addr, action, result, __HPX_FOREACH(_HPX_ADDRESSOF, __VA_ARGS__))
 
@@ -88,6 +93,7 @@ int _hpx_call(hpx_addr_t addr, hpx_action_t action, hpx_addr_t result, int n,
 /// @param       action The action to perform.
 /// @param       result An address of an LCO to trigger with the result.
 /// @param            n The number of arguments for @p action.
+/// @param          ... The arguments for the call.
 ///
 /// @returns            HPX_SUCCESS, or an error code if there was a problem
 ///                     locally during the hpx_call invocation.
@@ -95,6 +101,7 @@ int _hpx_call_when(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
                    hpx_addr_t result, int n, ...)
   HPX_PUBLIC;
 
+/// A convenience wrapper for the locally synchronous call_when interface.
 #define hpx_call_when(gate, addr, action, result, ...)                  \
   _hpx_call_when(gate, addr, action, result, __HPX_NARGS(__VA_ARGS__) , \
                  ##__VA_ARGS__)
@@ -109,6 +116,7 @@ int _hpx_call_when(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
 /// @param     c_target The address where the continuation action is executed.
 /// @param     c_action The continuation action to perform.
 /// @param            n The number of arguments for @p action.
+/// @param          ... The arguments for the call.
 ///
 /// @returns            HPX_SUCCESS, or an error code if there was a problem
 ///                     locally during the hpx_call invocation.
@@ -117,6 +125,7 @@ int _hpx_call_when_with_continuation(hpx_addr_t gate, hpx_addr_t addr,
                                      hpx_action_t c_action, int n, ...)
   HPX_PUBLIC;
 
+/// A convenience wrapper for locally synchronous call_when's with continuations
 #define hpx_call_when_with_continuation(gate, addr, action, c_target,   \
                                         c_action, ...)                  \
   _hpx_call_when_with_continuation(gate, addr, action, c_target,        \
@@ -126,9 +135,9 @@ int _hpx_call_when_with_continuation(hpx_addr_t gate, hpx_addr_t addr,
 /// Fully synchronous call interface which implements hpx_parcel_send_through()
 /// when an LCO is set.
 ///
-/// Performs @p action on @p args at @p addr, and sets @p out with the resulting
-/// value. The output value @p out can be NULL (or the corresponding @p olen
-/// could be zero), in which case no return value is generated.
+/// Performs @p action on given arguments at @p addr, and sets @p out with the 
+/// resulting value. The output value @p out can be NULL (or the corresponding 
+/// @p olen could be zero), in which case no return value is generated.
 ///
 /// The gate must be non-HPX_NULL.
 ///
@@ -138,6 +147,7 @@ int _hpx_call_when_with_continuation(hpx_addr_t gate, hpx_addr_t addr,
 /// @param          out Address of the output buffer.
 /// @param         olen The length of the @p output buffer.
 /// @param            n The number of arguments for @p action.
+/// @param          ... The arguments for the call.
 ///
 /// @returns            HPX_SUCCESS, or an error code if the action generated an
 ///                     error that could not be handled remotely.
@@ -145,6 +155,8 @@ int _hpx_call_when_sync(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
                         void *out, size_t olen, int n, ...)
   HPX_PUBLIC;
 
+/// A convenience wrapper for the fully synchronous call interface which 
+/// implements hpx_parcel_send_through() when an LCO is set.
 #define hpx_call_when_sync(gate, addr, action, out, olen, ...)  \
   _hpx_call_when_sync(gate, addr, action, out, olen,            \
                       __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
@@ -160,6 +172,7 @@ int _hpx_call_when_sync(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
 /// @param     c_target The address where the continuation action is executed.
 /// @param     c_action The continuation action to perform.
 /// @param            n The number of arguments for @p action.
+/// @param          ... The arguments for the call.
 ///
 /// @returns            HPX_SUCCESS, or an error code if there was a problem
 ///                     locally during the hpx_call invocation.
@@ -168,6 +181,8 @@ int _hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
                                 int n, ...)
   HPX_PUBLIC;
 
+/// A convenience wrapper for locally synchronous calls 
+/// with continuation interface.
 #define hpx_call_with_continuation(addr, action, c_target, c_action, ...) \
   _hpx_call_with_continuation(addr, action, c_target, c_action,           \
                               __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
@@ -179,7 +194,7 @@ int _hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
 /// the resulting value in @p result at some point in the future. This
 /// function returns even before the argument buffer has been copied
 /// and is free to reuse. If @p lsync is not HPX_NULL, it is set
-/// when @p args is safe to be reused or freed.
+/// when local operations have completed.
 ///
 /// @param         addr The address that defines where the action is executed.
 /// @param       action The action to perform.
@@ -188,6 +203,7 @@ int _hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
 ///                     HPX_NULL if we don't care.
 /// @param       result The global address of an LCO to signal with the result.
 /// @param            n The number of arguments for @p action.
+/// @param          ... The arguments for the call.
 ///
 /// @returns            HPX_SUCCESS, or an error code if there was a problem
 ///                     locally during the hpx_call_async invocation.
@@ -195,13 +211,14 @@ int _hpx_call_async(hpx_addr_t addr, hpx_action_t action, hpx_addr_t lsync,
                     hpx_addr_t result, int n, ...)
   HPX_PUBLIC;
 
+/// A convenience wrapper for fully asynchronous calls.
 #define hpx_call_async(addr, action, lsync, result, ...)                  \
   _hpx_call_async(addr, action, lsync, result, __HPX_NARGS(__VA_ARGS__) , \
                   ##__VA_ARGS__)
 
 /// Call with current continuation.
 ///
-/// This calls an action passing the currrent thread's continuation as the
+/// This calls an action passing the current thread's continuation as the
 /// continuation for the called action.
 ///
 /// The gate must be non-HPX_NULL.
@@ -218,6 +235,7 @@ int _hpx_call_when_cc(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
                       int n, ...)
   HPX_PUBLIC;
 
+/// A convenience wrapper for call_when with current continuation.
 #define hpx_call_when_cc(gate, addr, action, ...)                       \
   _hpx_call_when_cc(gate, addr, action, __HPX_NARGS(__VA_ARGS__), ##__VA_ARGS__)
 
@@ -236,20 +254,21 @@ int _hpx_call_when_cc(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t action,
 int _hpx_call_cc(hpx_addr_t addr, hpx_action_t action, int n, ...)
   HPX_PUBLIC;
 
+/// A convenience wrapper for call with current continuation.
 #define hpx_call_cc(addr, action, ...)                                  \
   _hpx_call_cc(addr, action, __HPX_NARGS(__VA_ARGS__), ##__VA_ARGS__)
 
-/// Collective calls.
-///
-
+/// A convenience wrapper for an HPX process broadcast.
 #define hpx_bcast(action, lsync, rsync, ...)                            \
   _hpx_process_broadcast(hpx_thread_current_pid(), action, lsync, rsync, \
                          __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
+/// A convenience wrapper for a locally synchronous HPX process broadcast.
 #define hpx_bcast_lsync(action, rsync, ...)                             \
   _hpx_process_broadcast_lsync(hpx_thread_current_pid(), action, rsync, \
                                __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
+/// A convenience wrapper for a fully synchronous HPX process broadcast.
 #define hpx_bcast_rsync(action, ...)                                    \
   _hpx_process_broadcast_rsync(hpx_thread_current_pid(), action,        \
                                __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)

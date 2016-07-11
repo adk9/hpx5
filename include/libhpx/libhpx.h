@@ -15,6 +15,7 @@
 #define LIBHPX_LIBHPX_H
 
 #include <errno.h>
+#include <stdbool.h>
 #include <hpx/attributes.h>
 #include <libhpx/config.h>
 
@@ -60,4 +61,23 @@ void libhpx_print_version(void)
 void libhpx_get_version(int version[3])
   HPX_PUBLIC;
 
-#endif  // LIBHPX_LIBHPX_Hx
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/// Start the instramentation infrastructure
+void libhpx_inst_phase_begin() 
+  HPX_PUBLIC;
+
+/// Stop the instramentation infrastructure
+void libhpx_inst_phase_end() 
+  HPX_PUBLIC;
+
+/// Check if the tracer is currently active
+bool libhpx_inst_tracer_active()
+  HPX_PUBLIC;
+
+#ifdef __cplusplus
+}
+#endif
+#endif  // LIBHPX_LIBHPX_H

@@ -43,13 +43,17 @@ struct is_lco<void> {
 };
 
 template <typename T>
-void reset(const global_ptr<T>& lco) {
+inline void
+reset(const global_ptr<T>& lco)
+{
   static_assert(is_lco<T>::value, "LCO type required");
   hpx_lco_reset(lco.get());
 }
 
 template <typename T>
-void wait(const global_ptr<T>& lco, bool reset = true) {
+inline void
+wait(const global_ptr<T>& lco, bool reset = true)
+{
   static_assert(is_lco<T>::value, "LCO type required");
   const hpx_addr_t& gva = lco.get();
   if (int e = (reset) ? hpx_lco_wait_reset(gva) : hpx_lco_wait(gva)) {
@@ -58,7 +62,9 @@ void wait(const global_ptr<T>& lco, bool reset = true) {
 }
 
 template <typename T, typename U>
-void get(const global_ptr<T>& lco, U& out, bool reset = false) {
+inline void
+get(const global_ptr<T>& lco, U& out, bool reset = false)
+{
   static_assert(is_lco<T>::value, "LCO type required");
   const hpx_addr_t& gva = lco.get();
   if (int e = (reset) ? hpx_lco_get_reset(gva, sizeof(out), &out) :
@@ -68,14 +74,18 @@ void get(const global_ptr<T>& lco, U& out, bool reset = false) {
 }
 
 template <typename T, template <typename> class LCO>
-T get(const global_ptr<LCO<T>>& lco, bool reset = false) {
+inline T
+get(const global_ptr<LCO<T>>& lco, bool reset = false)
+{
   T out;
   get(lco, out, reset);
   return out;
 }
 
 template <template <typename> class LCO>
-void get(const global_ptr<LCO<void>>& lco, bool reset = false) {
+inline void
+get(const global_ptr<LCO<void>>& lco, bool reset = false)
+{
   wait(lco, reset);
 }
 
@@ -93,9 +103,10 @@ void get(const global_ptr<LCO<void>>& lco, bool reset = false) {
 /// @returns statuses an array of statuses, pass NULL if statuses are not
 ///                      required
 template <typename T, template <typename> class LCO>
-std::vector<hpx_status_t>
+inline std::vector<hpx_status_t>
 get_all(const std::vector<hpx::global_ptr<LCO<T>>>& lcos,
-    std::vector<T>& values) {
+    std::vector<T>& values)
+{
   assert(lcos.size() == values.size());
 
   std::vector<hpx_addr_t> _lcos;
@@ -115,32 +126,50 @@ get_all(const std::vector<hpx::global_ptr<LCO<T>>>& lcos,
 }
 
 template <typename T, typename U>
-void set(const global_ptr<T>& lco, U&& in) {
+inline void
+set(const global_ptr<T>& lco, U&& in)
+{
   static_assert(is_lco<T>::value, "LCO type required");
   hpx_lco_set_rsync(lco.get(), sizeof(in), std::forward<U>(in));
 }
 
 template <typename T>
-void set(const global_ptr<T>& lco) {
+inline void
+set(const global_ptr<T>& lco)
+{
   static_assert(is_lco<T>::value, "LCO type required");
   hpx_lco_set_rsync(lco.get(), 0, NULL);
 }
 
 template <typename T>
-void dealloc(const global_ptr<T>& lco) {
+inline void
+set(const global_ptr<T>& lco, std::nullptr_t)
+{
+  static_assert(is_lco<T>::value, "LCO type required");
+  hpx_lco_set(lco.get(), 0, NULL, HPX_NULL, HPX_NULL);
+}
+
+template <typename T>
+inline void
+dealloc(const global_ptr<T>& lco)
+{
   static_assert(is_lco<T>::value, "LCO type required");
   hpx_lco_delete_sync(lco.get());
 }
 
 template <typename T, typename U>
-void dealloc(const global_ptr<T>& lco, const global_ptr<U>& sync) {
+inline void
+dealloc(const global_ptr<T>& lco, const global_ptr<U>& sync)
+{
   static_assert(is_lco<T>::value, "LCO type required");
   static_assert(is_lco<T>::value, "LCO type required");
   hpx_lco_delete(lco.get(), sync.get());
 }
 
 template <typename T>
-void dealloc(const global_ptr<T>& lco, std::nullptr_t) {
+inline void
+dealloc(const global_ptr<T>& lco, std::nullptr_t)
+{
   static_assert(is_lco<T>::value, "LCO type required");
   hpx_lco_delete_sync(lco.get());
 }
@@ -158,7 +187,9 @@ class Future : public LCO {
 
 /// Future to void is a 0-sized future that only contains control information.
 template <>
-global_ptr<Future<void>> Future<void>::Alloc() {
+inline global_ptr<Future<void>>
+Future<void>::Alloc()
+{
   return global_ptr<Future<void>>(hpx_lco_future_new(0));
 }
 

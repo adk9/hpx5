@@ -29,32 +29,8 @@ extern "C" {
 #include <hpx/attributes.h>
 #include <hpx/types.h>
 
-/// Forward declarations.
+/// These are the operations associated with the generic LCO class.
 /// @{
-struct hpx_parcel;
-/// @}
-
-/// Perform a commutative-associative reduction.
-///
-/// This is similar to an ALLREDUCE. It is statically sized at creation time,
-/// and is used cyclically. There is no non-blocking hpx_lco_get() operation, so
-/// users should wait to call it until they know that they need it.
-/// @{
-
-/// The commutative-associative (monoid) operation type.
-///
-/// Common operations would be min, max, +, *, etc. The runtime will pass the
-/// number of bytes that the allreduce was allocated with.
-typedef void (*hpx_monoid_id_t)(void *i, size_t bytes);
-typedef void (*hpx_monoid_op_t)(void *lhs, const void *rhs, size_t bytes);
-
-/// A predicate that "guards" the LCO.
-///
-/// This has to return true when the value pointed to by the buffer @p
-/// i is fully resolved and can be bound to the buffer associated
-/// with the LCO. All of the waiting threads are signaled once the
-/// predicate returns true.
-typedef bool (*hpx_predicate_t)(void *i, size_t bytes);
 
 /// Delete an LCO.
 ///
@@ -190,7 +166,6 @@ void hpx_lco_set_with_continuation(hpx_addr_t lco, size_t size, const void *valu
                                    hpx_addr_t lsync,
                                    hpx_addr_t raddr, hpx_action_t rop)
   HPX_PUBLIC;
-
 
 /// An action-based interface to the LCO set operation.
 /// The set action is a user-packed action that takes a buffer.
@@ -356,9 +331,10 @@ void hpx_lco_sema_v_sync(hpx_addr_t sema)
 hpx_status_t hpx_lco_sema_p(hpx_addr_t sema)
   HPX_PUBLIC;
 
-/// An and LCO represents an AND gate.
+/// An "and" LCO represents an AND gate.
 /// @{
 
+///
 /// Create an AND gate.
 ///
 /// @param inputs the number of inputs to the and (must be >= 0)
@@ -432,7 +408,288 @@ hpx_addr_t hpx_lco_future_array_at(hpx_addr_t base, int i, int size, int bsize)
 hpx_addr_t hpx_lco_array_at(hpx_addr_t base, int i, int size)
   HPX_PUBLIC;
 
+/// Allocate a new generation counter.
+///
+/// A generation counter allows an application programmer to efficiently wait
+/// for a counter. The @p ninplace indicates a bound on the typical number of
+/// generations that are explicitly active---it does not impact correctness,
+/// merely performance.
+///
+/// As an example, if there are typically three generations active (i.e.,
+/// threads may exist for up to three generations ahead of the current
+/// generation), then @p ninplace should be set to three. If it is set to two,
+/// then the runtime will perform some extra work testing threads that should
+/// not be tested.
+///
+/// @param ninplace the typical number of active generations
+///
+/// @returns The global address of the new generation count.
+hpx_addr_t hpx_lco_gencount_new(unsigned long ninplace)
+  HPX_PUBLIC;
 
+/// Increment the generation counter.
+///
+/// @param gencnt the counter to increment
+/// @param  rsync The global address of an LCO signal remote completion.
+void hpx_lco_gencount_inc(hpx_addr_t gencnt, hpx_addr_t rsync)
+  HPX_PUBLIC;
+
+/// Wait for the generation counter to reach a certain value.
+///
+/// It is OK to wait for any generation. If the generation has already passed,
+/// this will probably not block. If the generation is far in the future (far in
+/// this case means more than the depth value provided in the counters
+/// allocator) then the thread may (transparently) wake up more often than it
+/// needs to.
+///
+/// When this returns, it is guaranteed that the current count is <= @p gen, and
+/// progress is guaranteed (that is, all threads waiting for @p gen will run in
+/// some bounded amount of time when the counter reaches @p gen).
+///
+/// @param gencnt The counter to wait for.
+/// @param    gen The generation to wait for.
+///
+/// @returns HPX_SUCCESS or an error code.
+hpx_status_t hpx_lco_gencount_wait(hpx_addr_t gencnt, unsigned long gen)
+  HPX_PUBLIC;
+
+/// Allocate a new reduce LCO.
+///
+/// The reduction is allocated in reduce-mode, i.e., it expects @p participants
+/// to call the hpx_lco_set() operation as the first phase of operation.
+///
+/// @param inputs       The static number of inputs to the reduction.
+/// @param size         The size of the data being reduced.
+/// @param id           An initialization function for the data, this is used to
+///                     initialize the data in every epoch.
+/// @param op           The commutative-associative operation we're performing.
+hpx_addr_t hpx_lco_reduce_new(int inputs, size_t size, hpx_action_t id,
+                              hpx_action_t op)
+  HPX_PUBLIC;
+
+/// Allocate a new allreduce LCO.
+///
+/// The reduction is allocated in reduce-mode, i.e., it expects @p participants
+/// to call the hpx_lco_set() operation as the first phase of operation, and @p
+/// readers to "get" the value of the allreduce.
+///
+/// The preferred mode of operation with the allreduce, however, is through the
+/// hpx_lco_allreduce_join(), hpx_lco_allreduce_join_async(),
+/// hpx_lco_allreduce_join_sync(). In these contexts, the join operation is
+/// considered both a write and a read operation.
+///
+/// @param participants The static number of participants in the reduction.
+/// @param      readers The static number of the readers of the result of the
+///                     reduction.
+/// @param         size The size of the data being reduced.
+/// @param           id A function that is used to initialize the data
+///                     in every epoch.
+/// @param           op The commutative-associative operation we're performing.
+///
+/// @returns            The newly allocated LCO, or HPX_NULL on error.
+hpx_addr_t hpx_lco_allreduce_new(size_t participants, size_t readers, size_t size,
+                                 hpx_action_t id, hpx_action_t op)
+  HPX_PUBLIC;
+
+/// Join an allreduce LCO.
+///
+/// This version of the join operation allows an arbitrary continuation for the
+/// reduced data. This counts as both a set and a get operation, even if the
+/// continuation is null.
+///
+/// This interface is locally synchronous---it is safe to reuse or free @p value
+/// when it returns.
+///
+/// @param    allreduce The allreduce LCO to join.
+/// @param           id The id of this input.
+/// @param        bytes The number of bytes to send.
+/// @param        value The value to send.
+/// @param         cont A continuation action for the reduced value.
+/// @param           at A continuation target for the reduced value.
+///
+/// @return             The status of the LCO.
+hpx_status_t hpx_lco_allreduce_join(hpx_addr_t allreduce, int id, size_t bytes,
+                                    const void *value, hpx_action_t cont,
+                                    hpx_addr_t at)
+  HPX_PUBLIC;
+
+/// Join an allreduce LCO asynchronously.
+///
+/// This version of the join operation returns the reduced value asynchronously
+/// to the caller. This counts as both a set and a get operation.
+///
+/// This interface is locally synchronous---it is safe to reuse or free @p value
+/// when it returns.
+///
+/// @param    allreduce The allreduce LCO to join.
+/// @param           id The id of this input.
+/// @param        bytes The number of bytes to send.
+/// @param        value The value to send.
+/// @param          out The location to output the reduced value, must be at
+///                     least @p size bytes.
+/// @param         done An LCO that will be set when the operation completes.
+///
+/// @return             The status of the LCO.
+hpx_status_t hpx_lco_allreduce_join_async(hpx_addr_t allreduce, int id,
+                                          size_t bytes, const void *value,
+                                          void *out, hpx_addr_t done)
+  HPX_PUBLIC;
+
+/// Join an allreduce LCO synchronously.
+///
+/// This version of the join operation returns the reduced value synchronously
+/// to the caller. This counts as both a set and a get operation.
+///
+/// @param    allreduce The allreduce LCO to join.
+/// @param           id The id of this input.
+/// @param        bytes The number of bytes to send.
+/// @param        value The value to send.
+/// @param          out The location to output the reduced value, must be at
+///                     least @p size bytes.
+///
+/// @return             The status of the LCO.
+hpx_status_t hpx_lco_allreduce_join_sync(hpx_addr_t allreduce, int id,
+                                         size_t bytes, const void *value,
+                                         void *out)
+  HPX_PUBLIC;
+
+/// Set a gather LCO.
+///
+/// The gather LCO hpx_lco_set operation does not work correctly, because
+/// there is no input variable. Use this setid operation instead of set.
+///
+/// @param gather The gather we're setting.
+/// @param id        The ID of our rank.
+/// @param size      The size of the input @p value.
+/// @param value     A pointer to @p size bytes to set with.
+/// @param lsync     An LCO to test for local completion.
+/// @param rsync     An LCO to test for remote completion.
+hpx_status_t hpx_lco_gather_setid(hpx_addr_t gather, unsigned id,
+                                  int size, const void *value,
+                                  hpx_addr_t lsync, hpx_addr_t rsync)
+  HPX_PUBLIC;
+
+/// Allocate a gather LCO.
+///
+/// This allocates an gather LCO with enough space for @p inputs of @p size.
+///
+/// @param  inputs The number of writers in the gather.
+/// @param outputs The number of readers in the gather.
+/// @param    size The size of the value type that we're gathering.
+hpx_addr_t hpx_lco_gather_new(size_t inputs, size_t outputs, size_t size)
+  HPX_PUBLIC;
+
+/// Set an alltoall LCO.
+///
+/// The alltoall LCO hpx_lco_set operation does not work correctly, because
+/// there is no input variable. Use this setid operation instead of set.
+///
+/// @param alltoall    The alltoall we're setting.
+/// @param id          The ID of our rank.
+/// @param size        The size of the input @p value.
+/// @param value       A pointer to @p size bytes to set with.
+/// @param lsync       An LCO to test for local completion.
+/// @param rsync       An LCO to test for remote completion.
+hpx_status_t hpx_lco_alltoall_setid(hpx_addr_t alltoall, unsigned id,
+                                    int size, const void *value,
+                                    hpx_addr_t lsync, hpx_addr_t rsync)
+  HPX_PUBLIC;
+
+/// Get the ID for an alltoall LCO. This is global getid for the user to use.
+///
+/// @param   alltoall    Global address of the alltoall LCO
+/// @param   id          The ID of our rank
+/// @param   size        The size of the data being gathered
+/// @param   value       Address of the value buffer
+hpx_status_t hpx_lco_alltoall_getid(hpx_addr_t alltoall, unsigned id, int size,
+                                    void *value)
+  HPX_PUBLIC;
+
+/// Allocate an alltoall LCO.
+///
+/// This allocates an alltoall LCO with enough space for @p inputs of @p size.
+///
+/// @param inputs The number of participants in the alltoall.
+/// @param size   The size of the value type that we're gathering.
+hpx_addr_t hpx_lco_alltoall_new(size_t inputs, size_t size)
+  HPX_PUBLIC;
+
+/// Allocate a user-defined LCO.
+///
+/// @param size         The size of the LCO buffer.
+/// @param id           An initialization function for the data, this is used to
+///                     initialize the data in every epoch.
+/// @param op           The commutative-associative operation we're performing.
+/// @param predicate    Predicate to guard the LCO.
+/// @param init         Buffer to initialize the LCO with.
+/// @param init_size    The size of the initializer.
+hpx_addr_t hpx_lco_user_new(size_t size, hpx_action_t id, hpx_action_t op,
+                            hpx_action_t predicate, void *init,
+                            size_t init_size)
+  HPX_PUBLIC;
+
+/// Get the user-defined LCO's user data. This allows to access the buffer
+/// portion of the user-defined LCO regardless the LCO has been set or not.
+/// @param        lco The LCO we're processing.
+void *hpx_lco_user_get_user_data(void *lco) HPX_PUBLIC;
+
+/// Allocate a dataflow LCO.
+///
+hpx_addr_t hpx_lco_dataflow_new(void)
+  HPX_PUBLIC;
+
+/// Add a node to the dataflow LCO.
+///
+/// @param lco      The dataflow LCO
+/// @param action   The action to run when the inputs are available
+/// @param out      The output LCO
+/// @param n        Number of input LCOs
+/// @param ...      The input LCOs
+///
+/// @returns        HPX_SUCCESS, or an error code.
+int _hpx_lco_dataflow_add(hpx_addr_t lco, hpx_action_t action,
+                          hpx_addr_t out, int n, ...)
+  HPX_PUBLIC;
+
+#define hpx_lco_dataflow_add(lco, action, out, ...)                   \
+  _hpx_lco_dataflow_add(lco, action, out, __HPX_NARGS(__VA_ARGS__) , \
+                        ##__VA_ARGS__)
+/// @}
+
+/// LCO reduction operators.
+/// @{
+///
+/// The commutative-associative (monoid) operation type.
+///
+/// Common operations would be min, max, +, *, etc. The runtime will pass the
+/// number of bytes that the allreduce was allocated with.
+typedef void (*hpx_monoid_id_t)(void *i, size_t bytes);
+typedef void (*hpx_monoid_op_t)(void *lhs, const void *rhs, size_t bytes);
+
+/// Helper macro to declare the monoid operators for an LCO @p
+/// reduction of a given @p TYPE.
+#define _HPX_MONOID_DECL(TYPE,REDUCTION,dtype)                      \
+  void HPX_##TYPE##REDUCTION##ID(dtype *, size_t);                  \
+  void HPX_##TYPE##REDUCTION##OP(dtype *, const dtype *, size_t);
+
+/// Helper macro to declare a LCO @p reduction for a list of types.
+#define _HPX_REDUCTION_DECL(R)               \
+  _HPX_MONOID_DECL(INT_,    R, int)          \
+  _HPX_MONOID_DECL(DOUBLE_, R, double)       \
+  _HPX_MONOID_DECL(FLOAT_,  R, float)
+
+/// In-built LCO reduction operations (+,-,*,max,min) that can be used
+/// with "reduction" LCOs.
+_HPX_REDUCTION_DECL(SUM_);
+_HPX_REDUCTION_DECL(PROD_);
+_HPX_REDUCTION_DECL(MAX_);
+_HPX_REDUCTION_DECL(MIN_);
+/// @}
+
+/// Local array operations for LCOs. These allow creation of LCO arrays
+/// local to the calling locality.
+/// @{
+///
 /// Allocate an array of future LCO local to the calling locality.
 /// @param          n The (total) number of lcos to allocate
 /// @param       size The size of each future's value
@@ -518,254 +775,6 @@ hpx_addr_t hpx_lco_user_local_array_new(int n, size_t size,
                                         hpx_action_t predicate, void *init,
                                         size_t init_size)
   HPX_PUBLIC;
-
-/// Get the user-defined LCO's user data. This allows to access the buffer
-/// portion of the user-defined LCO regardless the LCO has been set or not.
-/// @param        lco The LCO we're processing.
-void *hpx_lco_user_get_user_data(void *lco) HPX_PUBLIC;
-
-/// Allocate a new generation counter.
-///
-/// A generation counter allows an application programmer to efficiently wait
-/// for a counter. The @p ninplace indicates a bound on the typical number of
-/// generations that are explicitly active---it does not impact correctness,
-/// merely performance.
-///
-/// As an example, if there are typically three generations active (i.e.,
-/// threads may exist for up to three generations ahead of the current
-/// generation), then @p ninplace should be set to three. If it is set to two,
-/// then the runtime will perform some extra work testing threads that should
-/// not be tested.
-///
-/// @param ninplace the typical number of active generations
-///
-/// @returns The global address of the new generation count.
-hpx_addr_t hpx_lco_gencount_new(unsigned long ninplace)
-  HPX_PUBLIC;
-
-/// Increment the generation counter.
-///
-/// @param gencnt the counter to increment
-/// @param  rsync The global address of an LCO signal remote completion.
-void hpx_lco_gencount_inc(hpx_addr_t gencnt, hpx_addr_t rsync)
-  HPX_PUBLIC;
-
-/// Wait for the generation counter to reach a certain value.
-///
-/// It is OK to wait for any generation. If the generation has already passed,
-/// this will probably not block. If the generation is far in the future (far in
-/// this case means more than the depth value provided in the counters
-/// allocator) then the thread may (transparently) wake up more often than it
-/// needs to.
-///
-/// When this returns, it is guaranteed that the current count is <= @p gen, and
-/// progress is guaranteed (that is, all threads waiting for @p gen will run in
-/// some bounded amount of time when the counter reaches @p gen).
-///
-/// @param gencnt The counter to wait for.
-/// @param    gen The generation to wait for.
-///
-/// @returns HPX_SUCCESS or an error code.
-hpx_status_t hpx_lco_gencount_wait(hpx_addr_t gencnt, unsigned long gen)
-  HPX_PUBLIC;
-
-/// Allocate a new reduction LCO.
-///
-/// The reduction is allocated in reduce-mode, i.e., it expects @p participants
-/// to call the hpx_lco_set() operation as the first phase of operation.
-///
-/// @param inputs       The static number of inputs to the reduction.
-/// @param size         The size of the data being reduced.
-/// @param id           An initialization function for the data, this is used to
-///                     initialize the data in every epoch.
-/// @param op           The commutative-associative operation we're performing.
-hpx_addr_t hpx_lco_reduce_new(int inputs, size_t size, hpx_action_t id,
-                              hpx_action_t op)
-  HPX_PUBLIC;
-
-/// Allocate a new all-reduction LCO.
-///
-/// The reduction is allocated in reduce-mode, i.e., it expects @p participants
-/// to call the hpx_lco_set() operation as the first phase of operation, and @p
-/// readers to "get" the value of the allreduce.
-///
-/// The preferred mode of operation with the allreduce, however, is through the
-/// hpx_lco_allreduce_join(), hpx_lco_allreduce_join_async(),
-/// hpx_lco_allreduce_join_sync(). In these contexts, the join operation is
-/// considered both a write and a read operation.
-///
-/// @param participants The static number of participants in the reduction.
-/// @param      readers The static number of the readers of the result of the
-///                     reduction.
-/// @param         size The size of the data being reduced.
-/// @param           id A function that is used to initialize the data
-///                     in every epoch.
-/// @param           op The commutative-associative operation we're performing.
-///
-/// @returns            The newly allocated LCO, or HPX_NULL on error.
-hpx_addr_t hpx_lco_allreduce_new(size_t participants, size_t readers, size_t size,
-                                 hpx_action_t id, hpx_action_t op)
-  HPX_PUBLIC;
-
-/// Join an all-reduction LCO.
-///
-/// This version of the join operation allows an arbitrary continuation for the
-/// reduced data. This counts as both a set and a get operation, even if the
-/// continuation is null.
-///
-/// This interface is locally synchronous---it is safe to reuse or free @p value
-/// when it returns.
-///
-/// @param    allreduce The allreduce LCO to join.
-/// @param           id The id of this input.
-/// @param        bytes The number of bytes to send.
-/// @param        value The value to send.
-/// @param         cont A continuation action for the reduced value.
-/// @param           at A continuation target for the reduced value.
-///
-/// @return             The status of the LCO.
-hpx_status_t hpx_lco_allreduce_join(hpx_addr_t allreduce, int id, size_t bytes,
-                                    const void *value, hpx_action_t cont,
-                                    hpx_addr_t at)
-  HPX_PUBLIC;
-
-/// Join an all-reduction LCO.
-///
-/// This version of the join operation returns the reduced value asynchronously
-/// to the caller. This counts as both a set and a get operation.
-///
-/// This interface is locally synchronous---it is safe to reuse or free @p value
-/// when it returns.
-///
-/// @param    allreduce The allreduce LCO to join.
-/// @param           id The id of this input.
-/// @param        bytes The number of bytes to send.
-/// @param        value The value to send.
-/// @param          out The location to output the reduced value, must be at
-///                     least @p size bytes.
-/// @param         done An LCO that will be set when the operation completes.
-///
-/// @return             The status of the LCO.
-hpx_status_t hpx_lco_allreduce_join_async(hpx_addr_t allreduce, int id,
-                                          size_t bytes, const void *value,
-                                          void *out, hpx_addr_t done)
-  HPX_PUBLIC;
-
-/// Join an all-reduction LCO.
-///
-/// This version of the join operation returns the reduced value synchronously
-/// to the caller. This counts as both a set and a get operation.
-///
-/// @param    allreduce The allreduce LCO to join.
-/// @param           id The id of this input.
-/// @param        bytes The number of bytes to send.
-/// @param        value The value to send.
-/// @param          out The location to output the reduced value, must be at
-///                     least @p size bytes.
-///
-/// @return             The status of the LCO.
-hpx_status_t hpx_lco_allreduce_join_sync(hpx_addr_t allreduce, int id,
-                                         size_t bytes, const void *value,
-                                         void *out)
-  HPX_PUBLIC;
-
-/// Set a gather LCO.
-///
-/// The gather LCO hpx_lco_set operation does not work correctly, because
-/// there is no input variable. Use this setid operation instead of set.
-///
-/// @param gather The gather we're setting.
-/// @param id        The ID of our rank.
-/// @param size      The size of the input @p value.
-/// @param value     A pointer to @p size bytes to set with.
-/// @param lsync     An LCO to test for local completion.
-/// @param rsync     An LCO to test for remote completion.
-hpx_status_t hpx_lco_gather_setid(hpx_addr_t gather, unsigned id,
-                                  int size, const void *value,
-                                  hpx_addr_t lsync, hpx_addr_t rsync)
-  HPX_PUBLIC;
-
-/// Allocate a gather LCO.
-///
-/// This allocates an gather LCO with enough space for @p inputs of @p size.
-///
-/// @param  inputs The number of writers in the gather.
-/// @param outputs The number of readers in the gather.
-/// @param    size The size of the value type that we're gathering.
-hpx_addr_t hpx_lco_gather_new(size_t inputs, size_t outputs, size_t size)
-  HPX_PUBLIC;
-
-/// Set an alltoall.
-///
-/// The alltoall LCO hpx_lco_set operation does not work correctly, because
-/// there is no input variable. Use this setid operation instead of set.
-///
-/// @param alltoall    The alltoall we're setting.
-/// @param id          The ID of our rank.
-/// @param size        The size of the input @p value.
-/// @param value       A pointer to @p size bytes to set with.
-/// @param lsync       An LCO to test for local completion.
-/// @param rsync       An LCO to test for remote completion.
-hpx_status_t hpx_lco_alltoall_setid(hpx_addr_t alltoall, unsigned id,
-                                    int size, const void *value,
-                                    hpx_addr_t lsync, hpx_addr_t rsync)
-  HPX_PUBLIC;
-
-/// Get the ID for alltoall. This is global getid for the user to use.
-///
-/// @param   alltoall    Global address of the alltoall LCO
-/// @param   id          The ID of our rank
-/// @param   size        The size of the data being gathered
-/// @param   value       Address of the value buffer
-hpx_status_t hpx_lco_alltoall_getid(hpx_addr_t alltoall, unsigned id, int size,
-                                    void *value)
-  HPX_PUBLIC;
-
-/// Allocate an alltoall.
-///
-/// This allocates an alltoall LCO with enough space for @p inputs of @p size.
-///
-/// @param inputs The number of participants in the alltoall.
-/// @param size   The size of the value type that we're gathering.
-hpx_addr_t hpx_lco_alltoall_new(size_t inputs, size_t size)
-  HPX_PUBLIC;
-
-/// Allocate a user-defined LCO.
-///
-/// @param size         The size of the LCO buffer.
-/// @param id           An initialization function for the data, this is used to
-///                     initialize the data in every epoch.
-/// @param op           The commutative-associative operation we're performing.
-/// @param predicate    Predicate to guard the LCO.
-/// @param init         Buffer to initialize the LCO with.
-/// @param init_size    The size of the initializer.
-hpx_addr_t hpx_lco_user_new(size_t size, hpx_action_t id, hpx_action_t op,
-                            hpx_action_t predicate, void *init,
-                            size_t init_size)
-  HPX_PUBLIC;
-/// @}
-
-/// Allocate a dataflow LCO.
-///
-hpx_addr_t hpx_lco_dataflow_new(void)
-  HPX_PUBLIC;
-
-/// Add a node to the dataflow LCO.
-///
-/// @param lco      The dataflow LCO
-/// @param action   The action to run when the inputs are available
-/// @param out      The output LCO
-/// @param n        Number of input LCOs
-/// @param ...      The input LCOs
-///
-/// @returns        HPX_SUCCESS, or an error code.
-int _hpx_lco_dataflow_add(hpx_addr_t lco, hpx_action_t action,
-                          hpx_addr_t out, int n, ...)
-  HPX_PUBLIC;
-
-#define hpx_lco_dataflow_add(lco, action, out, ...)                   \
-  _hpx_lco_dataflow_add(lco, action, out, __HPX_NARGS(__VA_ARGS__) , \
-                        ##__VA_ARGS__)
 /// @}
 
 #ifdef __cplusplus

@@ -54,7 +54,9 @@ static void
 _send_all(_funneled_t *network) {
   hpx_parcel_t *p = NULL;
   while ((p = sync_two_lock_queue_dequeue(&network->sends))) {
-    isend_buffer_append(&network->isends, p, HPX_NULL);
+    hpx_parcel_t *ssync = p->next;
+    p->next = NULL;
+    isend_buffer_append(&network->isends, p, ssync);
   }
 }
 
@@ -82,58 +84,64 @@ _funneled_delete(void *network) {
   free(isir);
 }
 
-static int _funneled_coll_init(void *network, coll_t **_c){
-  coll_t* c = *_c;
+static int _funneled_coll_init(void *network, coll_t **_c) {
+  coll_t *c = *_c;
   int num_active = c->group_sz;
 
   log_net("ISIR network collective being initialized."
-		  " Total active ranks : %d \n", num_active);
-  int32_t* ranks = (int32_t*) c->data;
-  
-  if(c->comm_bytes == 0){
-    //we have not yet allocated a communicator
+          "Total active ranks: %d\n", num_active);
+  int32_t *ranks = (int32_t*)c->data;
+
+  if (c->comm_bytes == 0) {
+    // we have not yet allocated a communicator
     int32_t comm_bytes = sizeof(MPI_Comm);
-    *_c = realloc(c, sizeof(coll_t) + c->group_bytes + comm_bytes); 
+    *_c = realloc(c, sizeof(coll_t) + c->group_bytes + comm_bytes);
     c = *_c;
     c->comm_bytes = comm_bytes;
   }
 
-  //setup communicator
+  // setup communicator
   char *comm = c->data + c->group_bytes;
 
-  _funneled_t* isir = network;
+  _funneled_t *isir = network;
   isir->vtable.flush(network);
   while (!sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE))
     ;
-  isir->xport->create_comm(comm, ranks, num_active, here->ranks);
-  
+  isir->xport->create_comm(isir, comm, ranks, num_active, here->ranks);
+
   sync_store(&isir->progress_lock, 1, SYNC_RELEASE);
-  return LIBHPX_OK;	
+  return LIBHPX_OK;
 }
 
-static int _funneled_coll_sync(void *network, void *in, size_t input_sz, void* out, coll_t* c){
+static int _funneled_coll_sync(void *network, void *in, size_t input_sz,
+                               void *out, coll_t *c) {
   void *sendbuf = in;
-  int count     = input_sz;
+  int count = input_sz;
   char *comm = c->data + c->group_bytes;
-  _funneled_t* isir = network;
-  
-  //flushing network is necessary (sufficient ?) to execute any packets
-  //destined for collective operation
+  _funneled_t *isir = network;
+
+  // flushing network is necessary (sufficient?) to execute any
+  // packets destined for collective operation
   isir->vtable.flush(network);
 
   while (!sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE))
     ;
-  if(c->type == ALL_REDUCE) {
+  if (c->type == ALL_REDUCE) {
     isir->xport->allreduce(sendbuf, out, count, NULL, &c->op, comm);
   } else {
-    log_dflt("Collective type descriptor : %d is Invalid! \n", c->type);
+    log_dflt("Collective type descriptor: %d is invalid!\n", c->type);
   }
   sync_store(&isir->progress_lock, 1, SYNC_RELEASE);
   return LIBHPX_OK;
 }
 
 static int
-_funneled_send(void *network, hpx_parcel_t *p) {
+_funneled_send(void *network, hpx_parcel_t *p, hpx_parcel_t *ssync) {
+  // Use the unused parcel-next pointer to get the ssync continuation parcels
+  // through the concurrent queue, along with the primary parcel.
+  dbg_assert(p->next == NULL);
+  p->next = ssync;
+
   _funneled_t *isir = network;
   sync_two_lock_queue_enqueue(&isir->sends, p);
   return LIBHPX_OK;
@@ -151,7 +159,11 @@ _funneled_flush(void *network) {
   while (!sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE)) {
   }
   _send_all(isir);
-  isend_buffer_flush(&isir->isends);
+  hpx_parcel_t *ssync = NULL;
+  isend_buffer_flush(&isir->isends, &ssync);
+  if (ssync) {
+    sync_two_lock_queue_enqueue(&isir->recvs, ssync);
+  }
   sync_store(&isir->progress_lock, 1, SYNC_RELEASE);
 }
 
@@ -173,27 +185,27 @@ static int
 _funneled_progress(void *network, int id) {
   _funneled_t *isir = network;
   if (sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE)) {
-    hpx_parcel_t *chain = irecv_buffer_progress(&isir->irecvs);
-    int n = 0;
-    if (chain) {
-      ++n;
-      sync_two_lock_queue_enqueue(&isir->recvs, chain);
-    }
-
+    hpx_parcel_t *chain = NULL;
+    int n = irecv_buffer_progress(&isir->irecvs, &chain);
     DEBUG_IF(n) {
       log_net("completed %d recvs\n", n);
     }
+    if (chain) {
+      sync_two_lock_queue_enqueue(&isir->recvs, chain);
+    }
 
-    int m = isend_buffer_progress(&isir->isends);
-
-    DEBUG_IF(m) {
-      log_net("completed %d sends\n", m);
+    chain = NULL;
+    n = isend_buffer_progress(&isir->isends, &chain);
+    DEBUG_IF(n) {
+      log_net("completed %d sends\n", n);
+    }
+    if (chain) {
+      sync_two_lock_queue_enqueue(&isir->recvs, chain);
     }
 
     _send_all(isir);
     sync_store(&isir->progress_lock, 1, SYNC_RELEASE);
     (void)n;
-    (void)m;
   }
   return LIBHPX_OK;
 

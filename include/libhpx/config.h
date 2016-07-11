@@ -97,7 +97,7 @@ static const char* const HPX_BOOT_TO_STRING[] = {
 
 //! Configuration options for the thread affinity policies.
 typedef enum {
-  HPX_THREAD_AFFINITY_DEFAULT = 0,  //!< The default is to bind to NUMA node.
+  HPX_THREAD_AFFINITY_DEFAULT = 0,  //!< Default is NONE.
   HPX_THREAD_AFFINITY_HWTHREAD,     //!< Bind to hyper-thread/slot.
   HPX_THREAD_AFFINITY_CORE,         //!< Bind to the core.
   HPX_THREAD_AFFINITY_NUMA,         //!< Bind to the numa node of the PE.
@@ -161,17 +161,33 @@ static const char *const HPX_LOG_LEVEL_TO_STRING[] = {
   "MEMORY"
 };
 
-//! Configuration options for instrumentation in HPX.
+//! Configuration options for tracing backends in HPX.
+typedef enum {
+  HPX_TRACE_BACKEND_DEFAULT = 0,
+  HPX_TRACE_BACKEND_FILE,
+  HPX_TRACE_BACKEND_CONSOLE,
+  HPX_TRACE_BACKEND_STATS,
+  HPX_TRACE_BACKEND_MAX
+} libhpx_trace_backend_t;
+
+static const char * const HPX_TRACE_BACKEND_TO_STRING[] = {
+  "DEFAULT",
+  "FILE",
+  "CONSOLE",
+  "STATS",
+  "INVALID_ID"
+};
+
+//! Configuration options for tracing in HPX.
 #define HPX_TRACE_PARCEL      (UINT64_C(1) << 0)
 #define HPX_TRACE_NETWORK     (UINT64_C(1) << 1)
 #define HPX_TRACE_SCHED       (UINT64_C(1) << 2)
 #define HPX_TRACE_LCO         (UINT64_C(1) << 3)
 #define HPX_TRACE_PROCESS     (UINT64_C(1) << 4)
 #define HPX_TRACE_MEMORY      (UINT64_C(1) << 5)
-#define HPX_TRACE_SCHEDTIMES  (UINT64_C(1) << 6)
-#define HPX_TRACE_TRACE       (UINT64_C(1) << 7)
-#define HPX_TRACE_GAS         (UINT64_C(1) << 8)
-#define HPX_TRACE_COLLECTIVE  (UINT64_C(1) << 9)
+#define HPX_TRACE_TRACE       (UINT64_C(1) << 6)
+#define HPX_TRACE_GAS         (UINT64_C(1) << 7)
+#define HPX_TRACE_COLLECTIVE  (UINT64_C(1) << 8)
 
 static const char *const HPX_TRACE_CLASS_TO_STRING[] = {
   "PARCEL",
@@ -180,7 +196,6 @@ static const char *const HPX_TRACE_CLASS_TO_STRING[] = {
   "LCO",
   "PROCESS",
   "MEMORY",
-  "SCHEDTIMES",
   "TRACE",
   "GAS",
   "COLLECTIVE"
@@ -205,6 +220,20 @@ static const char* const HPX_WAITON_TO_STRING[] = {
   "SIGIOT",
   "SIGSYS",
   "SIGTRAP"
+};
+
+//! Configuration options for GAS affinity implementations
+typedef enum {
+  HPX_GAS_AFFINITY_NONE = 0,
+  HPX_GAS_AFFINITY_URCU,
+  HPX_GAS_AFFINITY_CUCKOO,
+  HPX_GAS_AFFINITY_MAX
+} libhpx_gas_affinity_t;
+
+static const char * const HPX_GAS_AFFINITY_TO_STRING[] = {
+  "NONE",
+  "URCU",
+  "INVALID_ID"
 };
 
 /// The HPX configuration type.

@@ -68,12 +68,14 @@
 
 # /include/
 /include/stamp-h1
+/include/hpx/stamp-h2
 /include/config.h
 /include/config.h.in
 /include/.deps
 /include/Makefile
 /include/Makefile.in
 /include/hpx/Makefile
+/include/hpx/types.h
 /include/libhpx/Makefile
 /include/libhpx/event_stubs.h
 /include/libsync/Makefile
@@ -82,7 +84,7 @@
 # /contrib/
 contrib/Makefile
 contrib/lz4/Makefile
-contrib/hwloc-1.11.0/
+contrib/hwloc/
 contrib/libffi/
 contrib/libffi-mic/
 contrib/libffi-mic/doc/libffi.info
@@ -90,6 +92,7 @@ contrib/libffi-mic/fficonfig.py
 contrib/jemalloc/
 contrib/photon/
 contrib/libcuckoo/
+contrib/userspace-rcu/
 
 # /libapex/
 /libapex/Makefile
@@ -99,6 +102,7 @@ contrib/libcuckoo/
 /libhpx/actions/Makefile
 /libhpx/boot/Makefile
 /libhpx/gas/Makefile
+/libhpx/gas/affinity/Makefile
 /libhpx/gas/agas/Makefile
 /libhpx/gas/pgas/Makefile
 /libhpx/instrumentation/Makefile
@@ -145,6 +149,7 @@ tests/unit/parcel_send_through
 tests/unit/task
 tests/unit/lco_user
 tests/unit/gas_memput
+tests/unit/gas_set_affinity
 tests/unit/call_vectored
 tests/unit/parcel_create
 tests/unit/lco_allreduce
@@ -174,12 +179,13 @@ tests/unit/gas_move
 tests/unit/gas_coll
 tests/unit/lco_and
 tests/unit/lco_wait
-tests/perf/gas_alloc
+tests/perf/gasbench
 tests/perf/gas_addr_trans
 tests/perf/lco_sema
 tests/perf/lco_and
 tests/perf/lco_future
 tests/perf/collbench
+tests/perf/lbbench
 tests/perf/parbench
 tests/perf/sendrecv
 tests/perf/thread_switch

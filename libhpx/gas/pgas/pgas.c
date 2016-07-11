@@ -49,7 +49,14 @@
 ///
 heap_t *global_heap = NULL;
 
+/// The PGAS GPA limits block sizes to 2^32.
+#define _pgas_max_block_size (UINT64_C(1) << GPA_MAX_LG_BSIZE)
+
 static void _pgas_dealloc(void *gas) {
+  gas_t *pgas = gas;
+  affinity_delete(pgas->affinity);
+  cyclic_allocator_fini();
+  global_allocator_fini();
   if (global_heap) {
     heap_fini(global_heap);
     free(global_heap);
@@ -80,7 +87,8 @@ uint64_t pgas_max_offset(void) {
 }
 
 static int64_t
-_pgas_sub(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
+_pgas_sub(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs, size_t bsize) {
+  dbg_assert_str(bsize <= _pgas_max_block_size, "block size overflow.\n");
   bool l = _gpa_is_cyclic(lhs);
   bool r = _gpa_is_cyclic(rhs);
   dbg_assert_str(l == r, "cannot compare addresses across allocations.\n");
@@ -90,13 +98,14 @@ _pgas_sub(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
 }
 
 static hpx_addr_t
-_pgas_add(const void *gas, hpx_addr_t gpa, int64_t bytes, uint32_t bsize) {
+_pgas_add(const void *gas, hpx_addr_t gpa, int64_t bytes, size_t bsize) {
+  dbg_assert_str(bsize <= _pgas_max_block_size, "block size overflow.\n");
   bool cyclic = _gpa_is_cyclic(gpa);
   return (cyclic) ? gpa_add_cyclic(gpa, bytes, bsize) : gpa_add(gpa, bytes);
 }
 
 // Compute a global address for a locality.
-static hpx_addr_t _pgas_there(void *gas, uint32_t i) {
+static hpx_addr_t _pgas_there(const void *UNUSED, uint32_t i) {
   hpx_addr_t there = offset_to_gpa(i, UINT64_MAX);
   if (DEBUG) {
     uint64_t offset = gpa_to_offset(there);
@@ -131,8 +140,10 @@ static void _pgas_unpin(void *gas, hpx_addr_t addr) {
                  "%"PRIu64" is not local to %u\n", addr, here->rank);
 }
 
-static hpx_addr_t _pgas_gas_alloc_cyclic(size_t n, uint32_t bsize,
+static hpx_addr_t _pgas_gas_alloc_cyclic(size_t n, size_t bsize,
                                          uint32_t boundary, uint32_t attr) {
+  dbg_assert_str(bsize <= _pgas_max_block_size, "block size too large.\n");
+
   hpx_addr_t addr;
   if (here->rank == 0) {
     addr = pgas_alloc_cyclic_sync(n, bsize);
@@ -146,8 +157,9 @@ static hpx_addr_t _pgas_gas_alloc_cyclic(size_t n, uint32_t bsize,
   return addr;
 }
 
-static hpx_addr_t _pgas_gas_calloc_cyclic(size_t n, uint32_t bsize,
+static hpx_addr_t _pgas_gas_calloc_cyclic(size_t n, size_t bsize,
                                           uint32_t boundary, uint32_t attr) {
+  dbg_assert_str(bsize <= _pgas_max_block_size, "block size too large.\n");
   hpx_addr_t addr;
   if (here->rank == 0) {
     addr = pgas_calloc_cyclic_sync(n, bsize);
@@ -162,8 +174,10 @@ static hpx_addr_t _pgas_gas_calloc_cyclic(size_t n, uint32_t bsize,
 }
 
 /// Allocate global blocks from the global heap.
-static hpx_addr_t _pgas_gas_alloc_local(size_t n, uint32_t bsize,
+static hpx_addr_t _pgas_gas_alloc_local(size_t n, size_t bsize,
                                         uint32_t boundary, uint32_t attr) {
+  dbg_assert_str(bsize <= _pgas_max_block_size, "block size too large.\n");
+
   size_t bytes = n * bsize;
   void *lva = NULL;
   if (boundary) {
@@ -175,8 +189,10 @@ static hpx_addr_t _pgas_gas_alloc_local(size_t n, uint32_t bsize,
 }
 
 /// Allocate global zero-filled blocks from the global heap.
-static hpx_addr_t _pgas_gas_calloc_local(size_t n, uint32_t bsize,
+static hpx_addr_t _pgas_gas_calloc_local(size_t n, size_t bsize,
                                          uint32_t boundary, uint32_t attr) {
+  dbg_assert_str(bsize <= _pgas_max_block_size, "block size too large.\n");
+
   size_t bytes = n * bsize;
   void *lva = NULL;
   if (boundary) {
@@ -186,6 +202,28 @@ static hpx_addr_t _pgas_gas_calloc_local(size_t n, uint32_t bsize,
     lva = global_calloc(n, bsize);
   }
   return (lva) ? pgas_lva_to_gpa(lva) : HPX_NULL;
+}
+
+static hpx_addr_t _pgas_gas_alloc_blocked(size_t n, size_t bsize,
+                                          uint32_t boundary, uint32_t attr) {
+  dbg_error("Blocked GAS distributions are not supported.\n");
+}
+
+static hpx_addr_t _pgas_gas_calloc_blocked(size_t n, size_t bsize,
+                                           uint32_t boundary, uint32_t attr) {
+  dbg_error("Blocked GAS distributions are not supported.\n");
+}
+
+static
+hpx_addr_t _pgas_gas_alloc_user(size_t n, size_t bsize, uint32_t boundary,
+                                hpx_gas_dist_t dist, uint32_t attr) {
+  dbg_error("User-defined GAS distributions not supported for PGAS.\n");
+}
+
+static
+hpx_addr_t _pgas_gas_calloc_user(size_t n, size_t bsize, uint32_t boundary,
+                                 hpx_gas_dist_t dist, uint32_t attr) {
+  dbg_error("User-defined GAS distributions not supported for PGAS.\n");
 }
 
 /// Free a global address.
@@ -222,11 +260,11 @@ static void _pgas_move(void *gas, hpx_addr_t src, hpx_addr_t dst,
   hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
 }
 
-static size_t _pgas_local_size(void *gas) {
+static size_t _pgas_local_size(const void *UNUSED) {
   return global_heap->nbytes;
 }
 
-static void *_pgas_local_base(void *gas) {
+static void *_pgas_local_base(const void *UNUSED) {
   return global_heap->base;
 }
 
@@ -234,7 +272,7 @@ static uint32_t _pgas_owner_of(const void *pgas, hpx_addr_t addr) {
   return gpa_to_rank(addr);
 }
 
-static gas_t _pgas_vtable = {
+static gas_t _pgas = {
   .type           = HPX_GAS_PGAS,
   .string = {
     .memget       = pgas_memget,
@@ -246,6 +284,7 @@ static gas_t _pgas_vtable = {
     .memcpy       = pgas_memcpy,
     .memcpy_sync  = pgas_memcpy_sync,
   },
+  .max_block_size = _pgas_max_block_size,
   .dealloc        = _pgas_dealloc,
   .local_size     = _pgas_local_size,
   .local_base     = _pgas_local_base,
@@ -256,21 +295,24 @@ static gas_t _pgas_vtable = {
   .unpin          = _pgas_unpin,
   .alloc_cyclic   = _pgas_gas_alloc_cyclic,
   .calloc_cyclic  = _pgas_gas_calloc_cyclic,
-  .alloc_blocked  = NULL,
-  .calloc_blocked = NULL,
+  .alloc_blocked  = _pgas_gas_alloc_blocked,
+  .calloc_blocked = _pgas_gas_calloc_blocked,
   .alloc_local    = _pgas_gas_alloc_local,
   .calloc_local   = _pgas_gas_calloc_local,
+  .alloc_user     = _pgas_gas_alloc_user,
+  .calloc_user    = _pgas_gas_calloc_user,
   .free           = _pgas_gas_free,
   .set_attr       = NULL,
   .move           = _pgas_move,
-  .owner_of       = _pgas_owner_of
+  .owner_of       = _pgas_owner_of,
+  .affinity       = NULL
 };
 
 gas_t *gas_pgas_new(const config_t *cfg, boot_t *boot) {
   size_t heap_size = cfg->heapsize;
 
   if (global_heap) {
-    return &_pgas_vtable;
+    return &_pgas;
   }
 
   global_heap = malloc(sizeof(*global_heap));
@@ -285,10 +327,8 @@ gas_t *gas_pgas_new(const config_t *cfg, boot_t *boot) {
     return NULL;
   }
 
-  global_allocator_init();
-  if (here->rank == 0) {
-    cyclic_allocator_init();
-  }
-
-  return &_pgas_vtable;
+  global_allocator_init(here->rank);
+  cyclic_allocator_init(here->rank);
+  _pgas.affinity = affinity_new(cfg);
+  return &_pgas;
 }

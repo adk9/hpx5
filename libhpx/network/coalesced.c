@@ -75,9 +75,10 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _demux, _demux_handler,
 static void _send_n(_coalesced_network_t *network, int n) {
   // 0) Allocate temporary storage.
   struct {
-    hpx_parcel_t *fatp;
-    char         *next;
-    int        n_bytes;
+    hpx_parcel_t  *fatp;                        //!< the fat parcel
+    hpx_parcel_t *ssync;                        //!< the continuations
+    char          *next;                        //!< next cursor into fatp
+    int         n_bytes;                        //!< the number of bytes
   } *locs = calloc(HPX_LOCALITIES, sizeof(*locs));
 
   // 1) We'll pull n parcels off the global send queue, and store them
@@ -86,11 +87,17 @@ static void _send_n(_coalesced_network_t *network, int n) {
   gas_t          *gas = here->gas;
   hpx_parcel_t *chain = NULL;
   hpx_parcel_t     *p = NULL;
+  uint32_t   *targets = calloc(n, sizeof(*targets));
   while (n--) {
     p = sync_two_lock_queue_dequeue(&network->sends);
     size_t bytes = parcel_size(p);
     uint32_t   l = gas_owner_of(gas, p->target);
+    targets[n]   = l;
     locs[l].n_bytes += bytes;
+    // start accumulating ssync continuations here
+    if (p->next) {
+      parcel_stack_push(&locs[l].ssync, p->next);
+    }
     parcel_stack_push(&chain, p);
   }
 
@@ -105,9 +112,10 @@ static void _send_n(_coalesced_network_t *network, int n) {
   }
 
   // 3) Copy the chained parcels to the appropriate buffers.
+  int i = 0;
   while ((p = parcel_stack_pop(&chain))) {
     size_t bytes = parcel_size(p);
-    uint32_t   l = gas_owner_of(gas, p->target);
+    uint32_t   l = targets[i++];
     memcpy(locs[l].next, p, bytes);
     locs[l].next += bytes;
     parcel_delete(p);
@@ -116,18 +124,20 @@ static void _send_n(_coalesced_network_t *network, int n) {
   // 4) Send the fat parcel to each target.
   for (int l = 0, e = HPX_LOCALITIES; l < e; ++l) {
     if (locs[l].fatp) {
-      network_send(network->next, locs[l].fatp);
+      network_send(network->next, locs[l].fatp, locs[l].ssync);
     }
   }
 
-  // 5) Clean up the temporary array.
+  // 5) Clean up the temporary arrays.
   free(locs);
+  free(targets);
 }
 
-static int _coalesced_network_send(void *obj, hpx_parcel_t *p) {
+static int _coalesced_network_send(void *obj, hpx_parcel_t *p,
+                                   hpx_parcel_t *ssync) {
   _coalesced_network_t *network = obj;
   if (!action_is_coalesced(p->action)) {
-    return network_send(network->next, p);
+    return network_send(network->next, p, ssync);
   }
 
   // Coalesce on demand as long as we have enough parcels available.
@@ -138,7 +148,7 @@ static int _coalesced_network_send(void *obj, hpx_parcel_t *p) {
     // coalesced buffers to send.
     _atomic_inc(&network->syncflush);
 
-    // The cas updates the count for the next loop iteration if it fails,
+    // The CAS updates the count for the next loop iteration if it fails,
     // otherwise we manually update it.
     int n = count - network->coalescing_size;
     if (sync_cas(&network->count, &count, n, SYNC_RELAXED, SYNC_RELAXED)) {

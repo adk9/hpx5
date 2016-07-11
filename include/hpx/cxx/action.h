@@ -112,41 +112,34 @@ struct Checked_Map_Reduce {
                                    std::false_type>::type;
 };
 
-/// HPX basic datatypes
-/// HPX_CHAR, HPX_UCHAR, HPX_SCHAR, HPX_SHORT, HPX_USHORT, HPX_SSHORT, HPX_INT,
-/// HPX_UINT, HPX_SINT, HPX_LONG, HPX_ULONG, HPX_SLONG, HPX_VOID, HPX_UINT8,
-/// HPX_SINT8, HPX_UINT16, HPX_SINT16, HPX_UINT32, HPX_SINT32, HPX_UINT64,
-/// HPX_SINT64, HPX_FLOAT, HPX_DOUBLE, HPX_POINTER, HPX_LONGDOUBLE,
-/// HPX_COMPLEX_FLOAT, HPX_COMPLEX_DOUBLE, HPX_COMPLEX_LONGDOUBLE
+namespace conversions {
+template <typename T>
+struct type2type;
 
-template <typename T> struct _convert_arg_type;
+/// Template specialization for integral types.
+#define HPX_PLUS_PLUS_TYPE_MAP(ctype, hpxtype)  \
+  template <>                                   \
+  struct type2type<ctype>                       \
+  {                                             \
+    constexpr static auto type = hpxtype;       \
+  };
+#include <hpx/cxx/types.def>
+#undef HPX_PLUS_PLUS_TYPE_MAP
 
-#define DEF_CONVERT_TYPE(cpptype, hpxtype)                                     \
-  template <> struct _convert_arg_type<cpptype> {                              \
-    constexpr static auto type = hpxtype;                                      \
-  };                                                                           \
-  constexpr decltype(hpxtype) _convert_arg_type<cpptype>::type;
-
-DEF_CONVERT_TYPE(char, HPX_CHAR)
-DEF_CONVERT_TYPE(short, HPX_SHORT)
-DEF_CONVERT_TYPE(int, HPX_INT)
-DEF_CONVERT_TYPE(float, HPX_FLOAT)
-DEF_CONVERT_TYPE(double, HPX_DOUBLE)
-DEF_CONVERT_TYPE(std::size_t, HPX_SIZE_T)
-
-// global ptr conversion
-template <typename T> struct _convert_arg_type<hpx::global_ptr<T>> {
+// Partial specialization for global pointers
+template <typename T>
+struct type2type<hpx::global_ptr<T>>
+{
   constexpr static auto type = HPX_ADDR;
 };
-template <typename T>
-constexpr decltype(HPX_ADDR) _convert_arg_type<hpx::global_ptr<T>>::type;
 
-// pointer convesion
-template <typename T> struct _convert_arg_type<T *> {
+// Partial specialization for local pointers
+template <typename T>
+struct type2type<T*>
+{
   constexpr static auto type = HPX_POINTER;
 };
-template <typename T>
-constexpr decltype(HPX_POINTER) _convert_arg_type<T *>::type;
+}
 
 template <hpx_action_type_t Type, uint32_t Attr, typename Alist>
 struct typecheck_action_args;
@@ -162,13 +155,9 @@ struct typecheck_action_args<Type, HPX_MARSHALLED, tlist<T1, T2>> {
                       typename std::is_unsigned<decayed_t2>::type>;
   using type = typename Reduce_Right<And, std::false_type, cond1>::type;
 };
-/// for actions that are not marshalled, arguments cannot be pointers
-/// and must be one of the hpx supported types
-template <hpx_action_type_t Type, typename... Ts>
-struct typecheck_action_args<Type, HPX_ATTR_NONE, tlist<Ts...>> {
-  using type = typename Reduce_Right<And, std::true_type,
-                                     tlist<Not<std::is_pointer<Ts>>...>>::type;
-};
+/// no checks on the types of formal arguments of the action function
+template <hpx_action_type_t Type, typename Alist>
+struct typecheck_action_args<Type, HPX_ATTR_NONE, Alist> : std::true_type {};
 template <hpx_action_type_t Type, typename Alist>
 struct typecheck_action_args<Type, HPX_PINNED, Alist>
     : typecheck_action_args<Type, HPX_ATTR_NONE, Alist> {};
@@ -216,7 +205,7 @@ private:
   int _register_helper(R (&f)(Args...)) {
     return hpx_register_action(TYPE, ATTR, __FILE__ ":" _HPX_XSTR(_id), &(_id),
                                sizeof...(Args) + 1, f,
-                               hpx::detail::_convert_arg_type<Args>::type...);
+                               hpx::detail::conversions::type2type<Args>::type...);
   }
 
   /// This overloaded function converts actual call arguments to pointers
@@ -660,6 +649,19 @@ public:
     return _hpx_run(&_id, sizeof...(Args), _convert_arg(args)...);
   }
 
+  template <typename... Args> int run_spmd(Args &&... args) {
+    using L1 = typename hpx::detail::tlist<Args...>;
+    using L2 = typename hpx::detail::function_traits<F>::arg_types;
+    static_assert(
+                  hpx::detail::typecheck_action_args<TYPE, ATTR, L1>::type::value,
+                  "argument typecheck failed");
+    static_assert(
+                  hpx::detail::Checked_Map_Reduce<std::is_convertible, hpx::detail::And,
+                  std::true_type, L1, L2>::type::value,
+                  "action and argument types do not match");
+    return _hpx_run_spmd(&_id, sizeof...(Args), _convert_arg(args)...);
+  }
+
   template <typename R, typename... Args> int _register(R (&f)(Args...)) {
     return _register_helper(f);
   }
@@ -668,7 +670,7 @@ public:
 
 // helper methods to create action object
 template <typename R, typename T1, typename T2, typename... ContTs>
-Action<HPX_DEFAULT, HPX_MARSHALLED, R(T1 *, T2), ContTs...>
+inline Action<HPX_DEFAULT, HPX_MARSHALLED, R(T1 *, T2), ContTs...>
 make_action(R (&f)(T1 *, T2)) {
   //   static_assert(std::is_unsigned<T2>::value, "The second argument of a "
   //                                              "marshalled action should be
@@ -677,11 +679,11 @@ make_action(R (&f)(T1 *, T2)) {
   return Action<HPX_DEFAULT, HPX_MARSHALLED, R(T1 *, T2), ContTs...>(f);
 }
 template <hpx_action_type_t T, uint32_t ATTR, typename F, typename... ContTs>
-Action<T, ATTR, F, ContTs...> make_action(F &f) {
+inline Action<T, ATTR, F, ContTs...> make_action(F &f) {
   return Action<T, ATTR, F, ContTs...>(f);
 }
 template <typename F, typename... ContTs>
-Action<HPX_DEFAULT, HPX_ATTR_NONE, F, ContTs...> make_action(F &f) {
+inline Action<HPX_DEFAULT, HPX_ATTR_NONE, F, ContTs...> make_action(F &f) {
   return Action<HPX_DEFAULT, HPX_ATTR_NONE, F, ContTs...>(f);
 }
 }

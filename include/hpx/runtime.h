@@ -47,25 +47,21 @@ int hpx_init(int *argc, char ***argv)
 void hpx_finalize()
   HPX_PUBLIC;
 
-/// Start the HPX runtime, and run a given action.
+/// Start an HPX main process.
 ///
-/// This creates an HPX "main" process, and calls the given action @p entry in
-/// the context of this process. The @p entry action is invoked only on the root
-/// locality. On termination, it deletes the main process and returns the status
-/// returned by hpx_exit()
+/// This collective creates an HPX "main" process, and calls the given action @p
+/// entry in the context of this process.
 ///
-/// hpx_run finalizes action registration, starts up any scheduler and native
-/// threads that need to run, and transfers all control into the HPX scheduler,
-/// beginning execution of the top action in the scheduler queue.
-///
-/// The scheduler queue could be empty, in which case the entire scheduler
-/// instance is running, waiting for a successful inter-locality steal operation
-/// (if that is implemented) or a network parcel.
-///
-/// @param        entry An action to execute, or HPX_ACTION NULL to wait for an
-///                     incoming parcel or a inter-locality steal (if
-///                     implemented).
+/// * The @p entry action is invoked only on the root locality and represents a
+///   diffusing computation.
+/// * The process does not use termination detection and must be terminated
+///   through a single explicit call to hpx_exit().
+/// * On termination, it deletes the main process and returns the status
+///   returned by hpx_exit().
+///OB
+/// @param        entry An action to execute.
 /// @param        nargs The number of arguments to pass to @p entry.
+/// @param          ... Pointers to the arguments for @p entry.
 ///
 /// @returns            The status code passed to hpx_exit() upon termination.
 int _hpx_run(hpx_action_t *entry, int nargs, ...)
@@ -73,6 +69,29 @@ int _hpx_run(hpx_action_t *entry, int nargs, ...)
 
 #define hpx_run(entry, ...)                                 \
   _hpx_run(entry, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
+
+/// Start an HPX main process.
+///
+/// This creates an HPX "main" process, and calls the given action @p entry in
+/// the context of this process.
+///
+/// * The @p entry action is invoked at startup on every locality.
+/// * The process will terminate implicitly when all of the @p entry threads
+///   terminate completely. Outstanding asynchronous operations may result in
+///   undefined behavior.
+/// * On termination the main process is deleted and the value returned will be
+///   zero for success and non-zero for failure.
+///
+/// @param        entry An action to execute.
+/// @param        nargs The number of arguments to pass to @p entry.
+/// @param          ... Pointers to the arguments for @p entry.
+///
+/// @returns            Zero for success and non-zero for failure.
+int _hpx_run_spmd(hpx_action_t *entry, int nargs, ...)
+  HPX_PUBLIC;
+
+#define hpx_run_spmd(entry, ...)                                    \
+  _hpx_run_spmd(entry, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
 /// Exit the HPX runtime.
 ///

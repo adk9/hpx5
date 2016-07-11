@@ -48,5 +48,6 @@ nobase_include_HEADERS += hpx/hpx++.h \
                           hpx/cxx/runtime.h \
                           hpx/cxx/string.h \
                           hpx/cxx/system.h \
-                          hpx/cxx/thread.h
+                          hpx/cxx/thread.h \
+                          hpx/cxx/types.def
 endif

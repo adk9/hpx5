@@ -25,31 +25,44 @@
 #include "parcel_utils.h"
 #include "xport.h"
 
-extern MPI_Comm LIBHPX_COMM;
+static const int LIBHPX_THREAD_LEVEL = MPI_THREAD_SERIALIZED;
+
+typedef struct {
+  isir_xport_t vtable;
+  MPI_Comm       comm;
+  int            fini;
+} _mpi_xport_t;
 
 static void
-_mpi_check_tag(int tag) {
+_mpi_check_tag(const void *xport, int tag)
+{
+  const _mpi_xport_t *mpi = xport;
   int *tag_ub;
   int flag = 0;
-  int e = MPI_Comm_get_attr(LIBHPX_COMM, MPI_TAG_UB, &tag_ub, &flag);
+  int e = MPI_Comm_get_attr(mpi->comm, MPI_TAG_UB, &tag_ub, &flag);
   dbg_check(e, "Could not extract tag upper bound\n");
   dbg_assert_str(*tag_ub > tag, "tag value out of bounds (%d > %d)\n", tag,
                  *tag_ub);
 }
 
 static size_t
-_mpi_sizeof_request(void) {
+_mpi_sizeof_request(void)
+{
   return sizeof(MPI_Request);
 }
 
 static size_t
-_mpi_sizeof_status(void) {
+_mpi_sizeof_status(void)
+{
   return sizeof(MPI_Status);
 }
 
 static int
-_mpi_isend(int to, const void *from, unsigned n, int tag, void *r) {
-  int e = MPI_Isend((void *)from, n, MPI_BYTE, to, tag, LIBHPX_COMM, r);
+_mpi_isend(const void *xport, int to, const void *from, unsigned n, int tag,
+           void *r)
+{
+  const _mpi_xport_t *mpi = xport;
+  int e = MPI_Isend((void *)from, n, MPI_BYTE, to, tag, mpi->comm, r);
   if (MPI_SUCCESS != e) {
     return log_error("failed MPI_Isend: %u bytes to %d\n", n, to);
   }
@@ -59,9 +72,10 @@ _mpi_isend(int to, const void *from, unsigned n, int tag, void *r) {
 }
 
 static int
-_mpi_irecv(void *to, size_t n, int tag, void *request) {
+_mpi_irecv(const void *xport, void *to, size_t n, int tag, void *request) {
+  const _mpi_xport_t *mpi = xport;
   const int src = MPI_ANY_SOURCE;
-  const MPI_Comm com = LIBHPX_COMM;
+  const MPI_Comm com = mpi->comm;
   if (MPI_SUCCESS != MPI_Irecv(to, n, MPI_BYTE, src, tag, com, request)) {
     return log_error("could not start irecv\n");
   }
@@ -69,11 +83,13 @@ _mpi_irecv(void *to, size_t n, int tag, void *request) {
 }
 
 static int
-_mpi_iprobe(int *tag) {
+_mpi_iprobe(const void *xport, int *tag) {
+  const _mpi_xport_t *mpi = xport;
   int flag;
   MPI_Status stat;
-  int e = MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, LIBHPX_COMM, &flag, &stat);
-  if (MPI_SUCCESS != e) {
+  const int src = MPI_ANY_SOURCE;
+  const MPI_Comm comm = mpi->comm;
+  if (MPI_SUCCESS != MPI_Iprobe(src, MPI_ANY_TAG, comm, &flag, &stat)) {
     return log_error("failed MPI_Iprobe\n");
   }
 
@@ -88,7 +104,8 @@ _mpi_iprobe(int *tag) {
 }
 
 static void
-_mpi_testsome(int n, void *requests, int *nout, int *out, void *stats) {
+_mpi_testsome(int n, void *requests, int *nout, int *out, void *stats)
+{
   if (!stats) {
     stats = MPI_STATUS_IGNORE;
   }
@@ -100,13 +117,15 @@ _mpi_testsome(int n, void *requests, int *nout, int *out, void *stats) {
 }
 
 static void
-_mpi_clear(void *request) {
+_mpi_clear(void *request)
+{
   MPI_Request *r = request;
   *r = MPI_REQUEST_NULL;
 }
 
 static int
-_mpi_cancel(void *request, int *cancelled) {
+_mpi_cancel(void *request, int *cancelled)
+{
   MPI_Request *r = request;
   if (*r == MPI_REQUEST_NULL) {
     *cancelled = 1;
@@ -131,7 +150,8 @@ _mpi_cancel(void *request, int *cancelled) {
 }
 
 static void
-_mpi_finish(void *status, int *src, int *bytes) {
+_mpi_finish(void *status, int *src, int *bytes)
+{
   MPI_Status *s = status;
   if (MPI_SUCCESS != MPI_Get_count(s, MPI_BYTE, bytes)) {
     dbg_error("could not extract the size of an irecv\n");
@@ -142,59 +162,42 @@ _mpi_finish(void *status, int *src, int *bytes) {
 }
 
 static void
-_mpi_delete(void *mpi) {
+_mpi_delete(void *xport)
+{
+  _mpi_xport_t *mpi = xport;
+  if (mpi->fini) {
+    MPI_Finalize();
+  }
   free(mpi);
 }
 
 static void
-_mpi_pin(const void *base, size_t bytes, void *key) {
+_mpi_pin(const void *base, size_t bytes, void *key)
+{
 }
 
 static void
-_mpi_unpin(const void *base, size_t bytes) {
+_mpi_unpin(const void *base, size_t bytes)
+{
 }
 
 static void
-_init_mpi(void) {
-  int init = 0;
-  MPI_Initialized(&init);
-  if (!init) {
-    static const int LIBHPX_THREAD_LEVEL = MPI_THREAD_SERIALIZED;
-    int level;
-    int e = MPI_Init_thread(NULL, NULL, LIBHPX_THREAD_LEVEL, &level);
-    if (e != MPI_SUCCESS) {
-      dbg_error("mpi initialization failed\n");
-    }
-
-    if (level != LIBHPX_THREAD_LEVEL) {
-      log_error("MPI thread level failed requested %d, received %d.\n",
-                LIBHPX_THREAD_LEVEL, level);
-    }
-
-    if (LIBHPX_COMM == MPI_COMM_NULL) {
-      if (MPI_SUCCESS != MPI_Comm_dup(LIBHPX_COMM, &LIBHPX_COMM)) {
-        log_error("mpi communicator duplication failed\n");
-      }
-    }
-
-    log_trans("thread_support_provided = %d\n", level);
-  }
-}
-
-static void _mpi_create_comm(void *c, void *active_ranks, int num_active,
-                             int total) {
+_mpi_create_comm(const void *xport, void *c, void *active_ranks, int num_active,
+                 int total)
+{
+  const _mpi_xport_t *mpi = xport;
   MPI_Comm *comm = (MPI_Comm *)c;
   MPI_Comm active_comm;
   MPI_Group active_group, world_group;
   if (num_active < total) {
-    MPI_Comm_group(LIBHPX_COMM, &world_group);
+    MPI_Comm_group(mpi->comm, &world_group);
     MPI_Group_incl(world_group, num_active, active_ranks, &active_group);
-    MPI_Comm_create(LIBHPX_COMM, active_group, &active_comm);
+    MPI_Comm_create(mpi->comm, active_group, &active_comm);
     *comm = active_comm;
   } else {
     // in this case we dont have to create an active comm group
     // comm_group is MPI_COMM_WORKD
-    *comm = LIBHPX_COMM;
+    *comm = mpi->comm;
   }
 }
 
@@ -207,14 +210,18 @@ typedef struct {
 /// handle for reduction operation
 /// MPI will call this function in a colelctive reduction op
 /// and then delegate to the real action
-void op_handler(void *in, void *inout, int *len, MPI_Datatype *dp) {
+void
+op_handler(void *in, void *inout, int *len, MPI_Datatype *dp)
+{
   val_t *v = (val_t *)in;
   val_t *out = (val_t *)inout;
   v->op(out->operands, v->operands, v->bytes);
 }
 
-static void _mpi_allreduce(void *sendbuf, void *out, int count, void *datatype,
-                           void *op, void *c) {
+static void
+_mpi_allreduce(void *sendbuf, void *out, int count, void *datatype, void *op,
+               void *c)
+{
   MPI_Comm *comm = c;
   hpx_monoid_op_t *hpx_handle = (hpx_monoid_op_t *)op;
   int bytes = sizeof(val_t) + count;
@@ -242,31 +249,55 @@ static void _mpi_allreduce(void *sendbuf, void *out, int count, void *datatype,
 
 isir_xport_t *
 isir_xport_new_mpi(const config_t *cfg, gas_t *gas) {
-  isir_xport_t *xport = malloc(sizeof(*xport));
-  dbg_assert(xport);
-  _init_mpi();
+  _mpi_xport_t *mpi = malloc(sizeof(*mpi));
+  mpi->vtable.type           = HPX_TRANSPORT_MPI;
+  mpi->vtable.delete         = _mpi_delete;
+  mpi->vtable.check_tag      = _mpi_check_tag;
+  mpi->vtable.sizeof_request = _mpi_sizeof_request;
+  mpi->vtable.sizeof_status  = _mpi_sizeof_status;
+  mpi->vtable.isend          = _mpi_isend;
+  mpi->vtable.irecv          = _mpi_irecv;
+  mpi->vtable.iprobe         = _mpi_iprobe;
+  mpi->vtable.testsome       = _mpi_testsome;
+  mpi->vtable.clear          = _mpi_clear;
+  mpi->vtable.cancel         = _mpi_cancel;
+  mpi->vtable.finish         = _mpi_finish;
+  mpi->vtable.pin            = _mpi_pin;
+  mpi->vtable.unpin          = _mpi_unpin;
+  mpi->vtable.create_comm    = _mpi_create_comm;
+  mpi->vtable.allreduce      = _mpi_allreduce;
 
-  xport->type           = HPX_TRANSPORT_MPI;
-  xport->delete         = _mpi_delete;
-  xport->check_tag      = _mpi_check_tag;
-  xport->sizeof_request = _mpi_sizeof_request;
-  xport->sizeof_status  = _mpi_sizeof_status;
-  xport->isend          = _mpi_isend;
-  xport->irecv          = _mpi_irecv;
-  xport->iprobe         = _mpi_iprobe;
-  xport->testsome       = _mpi_testsome;
-  xport->clear          = _mpi_clear;
-  xport->cancel         = _mpi_cancel;
-  xport->finish         = _mpi_finish;
-  xport->pin            = _mpi_pin;
-  xport->unpin          = _mpi_unpin;
-  xport->create_comm    = _mpi_create_comm;
-  xport->allreduce      = _mpi_allreduce;
+  int already_initialized = 0;
+  if (MPI_SUCCESS != MPI_Initialized(&already_initialized)) {
+    log_error("mpi initialization failed\n");
+    free(mpi);
+    return NULL;
+  }
 
-  // local = address_space_new_default(cfg);
-  // registered = address_space_new_default(cfg);
-  // global = address_space_new_jemalloc_global(cfg, xport, _mpi_pin, _mpi_unpin,
-  //                                            gas, gas_mmap, gas_munmap);
+  if (!already_initialized) {
+    int level = MPI_THREAD_SINGLE;
+    if (MPI_SUCCESS != MPI_Init_thread(NULL, NULL, LIBHPX_THREAD_LEVEL, &level)) {
+      log_error("mpi initialization failed\n");
+      free(mpi);
+      return NULL;
+    }
 
-  return xport;
+    if (level != LIBHPX_THREAD_LEVEL) {
+      log_error("MPI thread level failed requested %d, received %d.\n",
+                LIBHPX_THREAD_LEVEL, level);
+      free(mpi);
+      return NULL;
+    }
+  }
+
+  // remember if we need to finalize MPI and use a duplication COMM_WORLD
+  mpi->fini = !already_initialized;
+  if (MPI_SUCCESS != MPI_Comm_dup(MPI_COMM_WORLD, &mpi->comm)) {
+    log_error("mpi communicator duplication failed\n");
+    free(mpi);
+    return NULL;
+  }
+
+  log_trans("thread_support_provided = %d\n", LIBHPX_THREAD_LEVEL);
+  return &mpi->vtable;
 }

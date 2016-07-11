@@ -38,52 +38,40 @@
 #include <libhpx/memory.h>
 #include <libhpx/network.h>
 #include <libhpx/percolation.h>
+#include <libhpx/process.h>
 #include <libhpx/scheduler.h>
 #include <libhpx/system.h>
 #include <libhpx/time.h>
 #include <libhpx/topology.h>
 
 #ifdef HAVE_APEX
-#include "apex.h"
+# include "apex.h"
 #endif
 
-static hpx_addr_t _hpx_143;
-static int _hpx_143_fix_handler(void) {
-  _hpx_143 = hpx_gas_alloc_cyclic(sizeof(void*), HPX_LOCALITIES, 0);
-  hpx_exit(HPX_SUCCESS);
-  return LIBHPX_OK;
-}
-static LIBHPX_ACTION(HPX_DEFAULT, 0, _hpx_143_fix, _hpx_143_fix_handler);
-
-/// Stop HPX
+/// Cleanup utility function.
 ///
-/// This will stop HPX by stopping the network and scheduler, and cleaning up
-/// anything that should not persist between hpx_run() calls.
-static void _stop(locality_t *l) {
-  if (!l)
-    return;
+/// This will delete the global objects, if they've been allocated.
+static void _cleanup(locality_t *l) {
+  as_leave();
+
+  if (l->tracer) {
+    trace_destroy(l->tracer);
+    l->tracer = NULL;
+  }
 
   if (l->sched) {
     scheduler_delete(l->sched);
     l->sched = NULL;
   }
 
+#ifdef HAVE_APEX
+  apex_finalize();
+#endif
+
   if (l->net) {
     network_delete(l->net);
     l->net = NULL;
   }
-}
-
-/// Cleanup utility function.
-///
-/// This will delete the global objects, if they've been allocated.
-static void _cleanup(locality_t *l) {
-  if (!l)
-    return;
-
-#ifdef HAVE_APEX
-  apex_finalize();
-#endif
 
   if (l->percolation) {
     percolation_delete(l->percolation);
@@ -106,6 +94,8 @@ static void _cleanup(locality_t *l) {
     topology_delete(l->topology);
     l->topology = NULL;
   }
+
+  spmd_fini();
 
   action_table_finalize();
 
@@ -171,12 +161,19 @@ int hpx_init(int *argc, char ***argv) {
     }
   }
 
+  // Initialize the tracing backend---have to wait until after bootstrap is
+  // initialized because it checks to see if this rank is tracing.
+  here->tracer = trace_new(here->config);
+
   // see if we're supposed to output the configuration, only do this at rank 0
   if (config_log_level_isset(here->config, HPX_LOG_CONFIG)) {
     if (here->rank == 0) {
       config_print(here->config, stdout);
     }
   }
+
+  // initialize the spmd process functionality
+  spmd_init();
 
   // topology discovery and initialization
   here->topology = topology_new(here->config);
@@ -214,6 +211,12 @@ int hpx_init(int *argc, char ***argv) {
     goto unwind1;
   }
 
+#ifdef HAVE_APEX
+  // initialize APEX, give this main thread a name
+  apex_init("HPX WORKER THREAD");
+  apex_set_node_id(here->rank);
+#endif
+
   // thread scheduler
   here->sched = scheduler_new(here->config);
   if (!here->sched) {
@@ -221,56 +224,46 @@ int hpx_init(int *argc, char ***argv) {
     goto unwind1;
   }
 
-#ifdef HAVE_APEX
-  // initialize APEX, give this main thread a name
-  apex_init("HPX WORKER THREAD");
-  apex_set_node_id(here->rank);
-#endif
-
   action_registration_finalize();
-  inst_start();
-
-  // start the scheduler, this will return after scheduler_shutdown()
-  if (scheduler_startup(here->sched, here->config) != LIBHPX_OK) {
-    log_error("scheduler shut down with error.\n");
-    goto unwind1;
-  }
-
-  if ((here->ranks > 1 && here->config->gas != HPX_GAS_AGAS) ||
-      !here->config->opt_smp) {
-    status = hpx_run(&_hpx_143_fix);
-  }
-
+  trace_start(here->tracer);
   return status;
  unwind1:
-  _stop(here);
   _cleanup(here);
  unwind0:
   return status;
 }
 
-/// Called to run HPX.
-int _hpx_run(hpx_action_t *act, int n, ...) {
-  if (here->rank == 0) {
-    va_list args;
-    va_start(args, n);
-    hpx_parcel_t *p = action_new_parcel_va(*act, HPX_HERE, 0, 0, n, &args);
-    va_end(args);
-    dbg_check(hpx_parcel_send(p, HPX_NULL), "failed to spawn initial action\n");
-  }
+static int
+_run(int spmd, hpx_parcel_t *p)
+{
   log_dflt("hpx started running %"PRIu64"\n", here->epoch);
-  int status = scheduler_restart(here->sched);
+  int status = scheduler_start(here->sched, p, spmd);
   log_dflt("hpx stopped running %"PRIu64"\n", here->epoch);
-
-  // We need to flush the network here, because it might have messages that are
-  // required for progress.
-  self->network->flush(self->network);
-
-  // Bump our epoch, and enforce the "collective" nature of run with a boot
-  // barrier.
   here->epoch++;
   boot_barrier(here->boot);
+  return status;
+}
 
+/// Called to run HPX.
+int
+_hpx_run(hpx_action_t *act, int n, ...)
+{
+  va_list args;
+  va_start(args, n);
+  int status = _run(0, action_new_parcel_va(*act, HPX_HERE, 0, 0, n, &args));
+  va_end(args);
+  return status;
+}
+
+int
+_hpx_run_spmd(hpx_action_t *act, int n, ...)
+{
+  va_list args;
+  va_start(args, n);
+  hpx_parcel_t *p = action_new_parcel_va(*act, HPX_HERE, HPX_THERE(0),
+                                         spmd_epoch_terminate, n, &args);
+  int status = _run(1, p);
+  va_end(args);
   return status;
 }
 
@@ -297,16 +290,32 @@ void hpx_exit(int code) {
 
   uint64_t c = (uint32_t)code;
 
-  // Make sure we flush our local network when we stop, but don't send our own
-  // shutdown here because it can "arrive" locally very quickly, before we've
-  // even come close to sending the rest of the stop commands. This can cause
-  // problems with flushing.
+  // Loop through, sending the shutdown event to every locality. We use the
+  // network_send operation manually here because it allows us to wait for the
+  // `ssync` event (this event means that we're guaranteed that we don't need to
+  // keep progressing locally for the send to be seen remotely).
+  //
+  // Don't perform the local shutdown until we're sure all the remote shutdowns
+  // have gotten out, otherwise we might not progress the network enough.
+  hpx_addr_t sync = hpx_lco_and_new(here->ranks - 1);
   for (int i = 0, e = here->ranks; i < e; ++i) {
     if (i != here->rank) {
-      int e = action_call_lsync(locality_stop, HPX_THERE(i), 0, 0, 1, &c);
-      dbg_check(e);
+      hpx_parcel_t *p = action_new_parcel(locality_stop, // action
+                                          HPX_THERE(i),  // target
+                                          0,             // continuation target
+                                          0,             // continuation action
+                                          1,             // number of args
+                                          &c);           // the exit code
+      hpx_parcel_t *q = action_new_parcel(hpx_lco_set_action, // action
+                                          sync,          // target
+                                          0,             // continuation target
+                                          0,             // continuation action                                          0,
+                                          0);            // number of args
+      dbg_check( network_send(here->net, p, q) );
     }
   }
+  dbg_check( hpx_lco_wait(sync) );
+  hpx_lco_delete_sync(sync);
 
   // Call our own shutdown through cc, which orders it locally after the effects
   // from the loop above.
@@ -342,19 +351,5 @@ const char *hpx_strerror(hpx_status_t s) {
 }
 
 void hpx_finalize(void) {
-  // clean up after _hpx_143
-  if (_hpx_143 != HPX_NULL) {
-    hpx_gas_free(_hpx_143, HPX_NULL);
-  }
-
-#if defined(HAVE_APEX)
-  // this will add the stats to the APEX data set
-  libhpx_save_apex_stats();
-#endif
-
-#if defined(ENABLE_PROFILING)
-  libhpx_stats_print();
-#endif
-  _stop(here);
   _cleanup(here);
 }

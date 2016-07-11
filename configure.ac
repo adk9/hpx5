@@ -9,7 +9,7 @@
 
 AC_PREREQ([2.63])
 m4_define([LIBHPX_MAJOR], [3])
-m4_define([LIBHPX_MINOR], [0])
+m4_define([LIBHPX_MINOR], [1])
 m4_define([LIBHPX_PATCH], [0])
 AC_INIT([hpx-5], LIBHPX_MAJOR.LIBHPX_MINOR.LIBHPX_PATCH, [hpx@indiana.edu])
 
@@ -33,7 +33,7 @@ AC_LANG([C])
 
 # Standard preliminary autotools stuff.
 AC_CONFIG_SRCDIR([include/config.h.in])
-AC_CONFIG_HEADERS([include/config.h])
+AC_CONFIG_HEADERS([include/config.h include/hpx/types.h])
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
 
@@ -50,7 +50,7 @@ AM_PROG_AS
 AX_CFI_DIRECTIVES
 
 # Initialize automake and libtool
-AM_INIT_AUTOMAKE([1.11 dist-bzip2 subdir-objects foreign tar-ustar -Wall
+AM_INIT_AUTOMAKE([1.11 nostdinc dist-bzip2 subdir-objects foreign tar-ustar -Wall
                   -Werror parallel-tests color-tests])
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
@@ -77,6 +77,11 @@ LT_INIT([disable-shared])
 # HPX_PC_REQUIRES_PKGS: packages required to link to installed libhpx.so
 # HPX_PC_PRIVATE_LIBS: -L and -l flags required to link to installed libhpx.a
 # HPX_PC_PRIVATE_PKGS: packages required to link to installed libhpx.a
+
+# Start by adding some standard includes, the current source directory and the
+# configured config.h directory.
+LIBHPX_CPPFLAGS="-I\$(srcdir) -I\$(top_builddir)/include"
+HPX_APPS_CPPFLAGS="-I\$(srcdir) -I\$(top_builddir)/include"
 
 HPX_CONFIG_COMPILER
 HPX_CONFIG_HOST
@@ -145,20 +150,27 @@ AS_IF([test "x$enable_parallel_config" != xno],
 # The substituted variables are straightforward. The LIBHPX_ prefixed variables
 # are variables required to build an link libhpx itself. The HPX_PC variables
 # are replaced in the hpx.pc file to allow external tools to link with libhpx.
+HPX_CONFIG_URCU([contrib/userspace-rcu], [$want_urcu])
 HPX_CONFIG_HPXPP
 HPX_CONFIG_PHOTON([contrib/photon], [photon])
 HPX_CONFIG_MPI([ompi])
 HPX_CONFIG_PMI([cray-pmi])
 HPX_CONFIG_JEMALLOC([contrib/jemalloc], ["jemalloc >= 4.0"]) 
 HPX_CONFIG_TBBMALLOC
-HPX_CONFIG_HWLOC([contrib/hwloc-1.11.0], [hwloc])
+
+HPX_CONFIG_HWLOC_PRE_SETUP_CORE
+HWLOC_SETUP_CORE([contrib/hwloc])
+HPX_CONFIG_HWLOC_POST_SETUP_CORE
+HPX_CONFIG_HWLOC([hwloc])
+
 HPX_CONFIG_HUGETLBFS([hugetlbfs])
 HPX_CONFIG_UTHASH([contrib/uthash])
 HPX_CONFIG_VALGRIND([contrib/valgrind])
 HPX_CONFIG_LIBFFI([contrib/$libffi_contrib_dir], [libffi])
 HPX_CONFIG_AGAS
 HPX_CONFIG_METIS([metis], [$have_agas_rebalancing])
-HPX_CONFIG_LIBCUCKOO([contrib/libcuckoo], [$have_agas])
+HPX_CONFIG_CITYHASH([contrib/libcuckoo])
+HPX_CONFIG_LIBCUCKOO([contrib/libcuckoo], [yes])
 HPX_CONFIG_PERCOLATION
 HPX_CONFIG_OPENCL([opencl], [$have_percolation])
 HPX_CONFIG_DOCS

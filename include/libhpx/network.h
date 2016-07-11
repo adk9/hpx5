@@ -39,7 +39,7 @@ typedef enum {
 
 typedef struct collective{
   coll_type_t      type;   //!< type of collective operation
-  hpx_monoid_op_t    op;   //!< collective operator 
+  hpx_monoid_op_t    op;   //!< collective operator
   int32_t      group_sz;   //!< active group size
   int32_t    recv_count;   //!< how many bytes to be recieved
   int32_t    comm_bytes;   //!< active comm size in bytes
@@ -57,7 +57,7 @@ typedef struct network {
 
   int (*progress)(void*, int);
 
-  int (*send)(void*, hpx_parcel_t *p);
+  int (*send)(void*, hpx_parcel_t *p, hpx_parcel_t *ssync);
 
   int (*coll_init)(void*, coll_t** c);
   int (*coll_sync)(void*, void *in, size_t in_size, void* out, coll_t* c);
@@ -132,12 +132,13 @@ network_progress(void *obj, int id) {
 ///
 /// @param          obj The network to use for the send.
 /// @param            p The parcel to send.
+/// @param        ssync The local synchronization continuation.
 ///
 /// @returns  LIBHPX_OK The send was buffered successfully
 static inline int
-network_send(void *obj, hpx_parcel_t *p) {
+network_send(void *obj, hpx_parcel_t *p, hpx_parcel_t *ssync) {
   network_t *network = obj;
-  return network->send(network, p);
+  return network->send(network, p, ssync);
 }
 
 /// Probe for received parcels.

@@ -50,7 +50,7 @@ static int _payload_size_to_tag(isend_buffer_t *isends, uint32_t payload) {
   uint32_t parcel_size = payload + sizeof(hpx_parcel_t);
   int tag = ceil_div_32(parcel_size, HPX_CACHELINE_SIZE);
   if (DEBUG) {
-    isends->xport->check_tag(tag);
+    isends->xport->check_tag(isends->xport, tag);
   }
   return tag;
 }
@@ -159,7 +159,7 @@ static int _resize(isend_buffer_t *buffer, uint32_t size) {
 
 /// Start an isend operation.
 ///
-/// A precondition of this function is that there must be a valid entry in the 
+/// A precondition of this function is that there must be a valid entry in the
 /// buffer that is not yet active.
 ///
 /// @param       isends The buffer to start the send from.
@@ -176,7 +176,7 @@ static int _start(isend_buffer_t *isends, int i) {
   int n = payload_size_to_isir_bytes(p->size);
   int tag = _payload_size_to_tag(isends, p->size);
   void *r = _request_at(isends, i);
-  return isends->xport->isend(to, from, n, tag, r);
+  return isends->xport->isend(isends->xport, to, from, n, tag, r);
 }
 
 /// Start as many isend operations as we can.
@@ -208,9 +208,11 @@ int _start_all(isend_buffer_t *isends) {
 /// @param            i The physical index at which the range starts.
 /// @param            n The number of sends to test.
 /// @param            o The index added to buffer->out.
+/// @param[out]   ssync Any synchronization parcels that we completed.
 ///
 /// @returns            The number of completed requests in this range.
-static int _test_range(isend_buffer_t *buffer, uint32_t i, uint32_t n, int o) {
+static int _test_range(isend_buffer_t *buffer, uint32_t i, uint32_t n, int o,
+                       hpx_parcel_t **ssync) {
   assert(0 <= i && i + n <= buffer->size);
 
   if (n == 0)
@@ -228,7 +230,11 @@ static int _test_range(isend_buffer_t *buffer, uint32_t i, uint32_t n, int o) {
 
     // handle each of the completed requests
     parcel_delete(buffer->records[k].parcel);
-    hpx_gas_free(buffer->records[k].handler, HPX_NULL);
+
+    hpx_parcel_t *p = NULL;
+    while ((p = parcel_stack_pop(&buffer->records[k].ssync))) {
+      parcel_stack_push(ssync, p);
+    }
   }
 
   return cnt;
@@ -275,9 +281,10 @@ static void _compact(isend_buffer_t *buffer, int n) {
 /// two ranges, depending on if the buffer is currently wrapped.
 ///
 /// @param       buffer The buffer to test.
+/// @param[out]   ssync The collected synchronization parcels.
 ///
 /// @returns            The number of sends completed.
-static int _test_all(isend_buffer_t *buffer) {
+static int _test_all(isend_buffer_t *buffer, hpx_parcel_t **ssync) {
   uint32_t twin = buffer->twin;
   uint32_t size = buffer->size;
   uint32_t i = _index_of(buffer->min, size);
@@ -293,8 +300,8 @@ static int _test_all(isend_buffer_t *buffer) {
   m = (m > (twin - n)) ? (twin - n) : m;
 
   int total = 0;
-  total += _test_range(buffer, i, n, total);
-  total += _test_range(buffer, 0, m, total);
+  total += _test_range(buffer, i, n, total, ssync);
+  total += _test_range(buffer, 0, m, total, ssync);
   if (total) {
     _compact(buffer, total);
   }
@@ -320,10 +327,11 @@ static int _test_all(isend_buffer_t *buffer) {
 ///
 /// @param       buffer The buffer.
 /// @param            i The index to cancel.
+/// @param[out] parcels Any canceled parcels.
 ///
 /// @returns  LIBHPX_OK The request was successfully canceled.
 ///        LIBHPX_ERROR Three was an error during the operation.
-static int _cancel(isend_buffer_t *buffer, int i) {
+static int _cancel(isend_buffer_t *buffer, int i, hpx_parcel_t **parcels) {
   assert(0 <= i && i < buffer->size);
 
   void *request = _request_at(buffer, i);
@@ -333,8 +341,11 @@ static int _cancel(isend_buffer_t *buffer, int i) {
   }
 
   if (buffer->records) {
-    hpx_gas_free(buffer->records[i].handler, HPX_NULL);
-    parcel_delete(buffer->records[i].parcel);
+    parcel_stack_push(parcels, buffer->records[i].parcel);
+    hpx_parcel_t *p = NULL;
+    while ((p = parcel_stack_pop(&buffer->records[i].ssync))) {
+      parcel_stack_push(parcels, p);
+    }
   }
   return LIBHPX_OK;
 }
@@ -342,14 +353,15 @@ static int _cancel(isend_buffer_t *buffer, int i) {
 /// Cancel and cleanup all outstanding requests in the buffer.
 ///
 /// @param       buffer The buffer.
-static void _cancel_all(isend_buffer_t *buffer) {
+/// @param[out] parcels Any canceled parcels.
+static void _cancel_all(isend_buffer_t *buffer, hpx_parcel_t **parcels) {
   if (!buffer->requests) {
     return;
   }
 
   uint32_t size = buffer->size;
   for (uint64_t i = buffer->min, e = buffer->active; i < e; ++i) {
-    if (LIBHPX_OK != _cancel(buffer, _index_of(i, size))) {
+    if (LIBHPX_OK != _cancel(buffer, _index_of(i, size), parcels)) {
       log_error("failed to cancel pending send\n");
     }
   }
@@ -378,8 +390,13 @@ int isend_buffer_init(isend_buffer_t *buffer, isir_xport_t *xport,
 
 void isend_buffer_fini(isend_buffer_t *buffer) {
   dbg_assert(buffer);
+  hpx_parcel_t *parcels = NULL;
+  _cancel_all(buffer, &parcels);
 
-  _cancel_all(buffer);
+  hpx_parcel_t *p;
+  while ((p = parcel_stack_pop(&parcels))) {
+    parcel_delete(p);
+  }
 
   if (buffer->records) {
     free(buffer->records);
@@ -394,7 +411,8 @@ void isend_buffer_fini(isend_buffer_t *buffer) {
   }
 }
 
-int isend_buffer_append(isend_buffer_t *buffer, hpx_parcel_t *p, hpx_addr_t h) {
+int isend_buffer_append(isend_buffer_t *buffer, hpx_parcel_t *p,
+                        hpx_parcel_t *ssync) {
   uint64_t i = buffer->max++;
   uint32_t size = buffer->size;
   if (size <= buffer->max - buffer->min) {
@@ -411,22 +429,22 @@ int isend_buffer_append(isend_buffer_t *buffer, hpx_parcel_t *p, hpx_addr_t h) {
     buffer->xport->clear(request);
   }
   buffer->records[j].parcel = p;
-  buffer->records[j].handler = h;
+  buffer->records[j].ssync = ssync;
   return LIBHPX_OK;
 }
 
 
-int isend_buffer_flush(isend_buffer_t *buffer) {
+int isend_buffer_flush(isend_buffer_t *buffer, hpx_parcel_t **ssync) {
   int total = 0;
   do {
-    total += isend_buffer_progress(buffer);
+    total += isend_buffer_progress(buffer, ssync);
   } while (buffer->min != buffer->max);
   return total;
 }
 
 
-int isend_buffer_progress(isend_buffer_t *isends) {
-  int m = _test_all(isends);
+int isend_buffer_progress(isend_buffer_t *isends, hpx_parcel_t **ssync) {
+  int m = _test_all(isends, ssync);
   DEBUG_IF (m) {
     log_net("finished %d sends\n", m);
   }

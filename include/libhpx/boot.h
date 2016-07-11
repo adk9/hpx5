@@ -14,9 +14,7 @@
 #ifndef LIBHPX_BOOT_H
 #define LIBHPX_BOOT_H
 
-#include "hpx/attributes.h"
-#include "hpx/hpx.h"
-#include "libhpx/config.h"
+#include <libhpx/config.h>
 
 typedef struct boot {
   libhpx_boot_t type;

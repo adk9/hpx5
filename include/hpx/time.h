@@ -37,6 +37,7 @@ typedef uint64_t hpx_time_t;
 /// @struct {hpx_time_t} the type used internally by HPX to represent
 /// time
 
+/// The equivalent of NULL for the hpx_time_t type
 #define HPX_TIME_NULL hpx_time_construct(0,0)
 
 /// Get the current time

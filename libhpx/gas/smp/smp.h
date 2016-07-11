@@ -15,7 +15,8 @@
 #define LIBHPX_GAS_SMP_SMP_H
 
 struct gas;
+struct config;
 
-struct gas *gas_smp_new(void);
+struct gas *gas_smp_new(const struct config *config);
 
 #endif

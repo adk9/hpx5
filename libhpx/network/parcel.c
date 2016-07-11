@@ -44,7 +44,7 @@
 #include <libhpx/topology.h>
 
 // this will only be used during instrumentation
-__thread uint64_t parcel_count = 0;
+__thread uint64_t parcel_count = 1;
 
 static int _delete_launch_through_parcel_handler(hpx_parcel_t *p) {
   hpx_addr_t lsync = hpx_thread_current_target();
@@ -129,7 +129,7 @@ void parcel_launch(hpx_parcel_t *p) {
              actions[p->c_action].key,
              p->c_target);
 
-  EVENT_PARCEL_SEND(p->id, p->action, p->size, 
+  EVENT_PARCEL_SEND(p->id, p->action, p->size,
                     (self && self->current) ? self->current->target : HPX_NULL,
                     p->target);
 
@@ -142,8 +142,7 @@ void parcel_launch(hpx_parcel_t *p) {
     scheduler_spawn(p);
   }
   else {
-    EVENT_COUNT(++self->stats.remote_msgs);
-    int e = network_send(self->network, p);
+    int e = network_send(self->network, p, NULL);
     dbg_check(e, "failed to perform a network send\n");
   }
 }
@@ -211,6 +210,9 @@ hpx_parcel_t *parcel_alloc(size_t payload) {
 
   hpx_parcel_t *p = as_memalign(AS_REGISTERED, HPX_CACHELINE_SIZE, size);
   dbg_assert_str(p, "parcel: failed to allocate %zu registered bytes.\n", size);
+#ifdef ENABLE_INSTRUMENTATION
+  *(uint64_t*)&p->padding = UINT64_C(0);        // initialize read-only padding
+#endif
   return p;
 }
 
@@ -220,7 +222,7 @@ hpx_parcel_t *parcel_new(hpx_addr_t target, hpx_action_t action,
   hpx_parcel_t *p = parcel_alloc(len);
   parcel_init(target, action, c_target, c_action, pid, data, len, p);
   EVENT_PARCEL_CREATE(p->id, p->action, p->size,
-                      ((self->current) ? self->current->id : 0));
+                      ((self && self->current) ? self->current->id : 0));
   return p;
 }
 
@@ -272,6 +274,7 @@ void parcel_delete(hpx_parcel_t *p) {
     return;
   }
 
+  EVENT_PARCEL_DELETE(p->id, p->action);
   as_free(AS_REGISTERED, p);
 }
 

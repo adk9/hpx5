@@ -35,12 +35,13 @@ static const uint64_t AGAS_THERE_OFFSET = UINT64_C(4398046511103);
 
 __thread size_t agas_alloc_bsize;
 
-HPX_ACTION_DECL(agas_alloc_cyclic);
-HPX_ACTION_DECL(agas_calloc_cyclic);
+/// The AGAS use of GPA limits block sizes to 2^32.
+#define _agas_max_block_size (UINT64_C(1) << GPA_MAX_LG_BSIZE)
 
 static void
 _agas_dealloc(void *gas) {
   agas_t *agas = gas;
+  affinity_delete(agas->vtable.affinity);
   if (agas->chunk_table) {
     chunk_table_delete(agas->chunk_table);
   }
@@ -62,7 +63,10 @@ _agas_dealloc(void *gas) {
 }
 
 static int64_t
-_agas_sub(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
+_agas_sub(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs, size_t bbsize) {
+  dbg_assert(bbsize <= _agas_max_block_size);
+  uint32_t bsize = bbsize;
+
   gva_t l = { .addr = lhs };
   gva_t r = { .addr = rhs };
 
@@ -85,7 +89,10 @@ _agas_sub(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize) {
 }
 
 static hpx_addr_t
-_agas_add(const void *gas, hpx_addr_t addr, int64_t bytes, uint32_t bsize) {
+_agas_add(const void *gas, hpx_addr_t addr, int64_t bytes, size_t bbsize) {
+  dbg_assert(bbsize <= _agas_max_block_size);
+  uint32_t bsize = bbsize;
+
   gva_t gva = { .addr = addr };
   uint32_t size = ceil_log2_32(bsize);
   if (gva.bits.size != size) {
@@ -104,7 +111,7 @@ _agas_add(const void *gas, hpx_addr_t addr, int64_t bytes, uint32_t bsize) {
 }
 
 static hpx_addr_t
-_agas_there(void *gas, uint32_t i) {
+_agas_there(const void *UNUSED, uint32_t i) {
   // We reserve a small range of addresses in the "large" allocation space that
   // will represent locality addresses.
   dbg_assert(i < here->ranks);
@@ -137,8 +144,17 @@ static uint32_t
 _agas_owner_of(const void *gas, hpx_addr_t addr) {
   const agas_t *agas = gas;
   gva_t gva = { .addr = addr };
+
   uint32_t owner;
-  btt_get_owner(agas->btt, gva, &owner);
+  if (gva.bits.offset == AGAS_THERE_OFFSET) {
+    owner = gva.bits.home;
+  } else {
+    bool found = btt_get_owner(agas->btt, gva, &owner);
+    INST_IF(!found) {
+      EVENT_GAS_MISS(addr, owner);
+    }
+    (void)found;
+  }
   dbg_assert(owner < here->ranks);
   return owner;
 }
@@ -149,129 +165,23 @@ void _agas_set_attr(void *gas, hpx_addr_t addr, uint32_t attr) {
   btt_set_attr(agas->btt, gva, attr);
 }
 
-static int
-_locality_alloc_cyclic_handler(uint64_t blocks, uint32_t align, uint64_t offset,
-                               void *lva, uint32_t attr, int zero) {
-  agas_t *agas = (agas_t*)here->gas;
-  uint32_t bsize = 1u << align;
-  if (here->rank != 0) {
-    uint32_t boundary = (bsize < 8) ? 8 : bsize;
-    lva = NULL;
-    int e = posix_memalign(&lva, boundary, blocks * bsize);
-    dbg_check(e, "Failed memalign\n");
-    (void)e;
-  }
-
-  if (zero) {
-    lva = memset(lva, 0, blocks * bsize);
-  }
-
-  // and insert entries into our block translation table
-  gva_t gva = {
-    .bits = {
-      .offset = offset,
-      .cyclic = 1,
-      .size = align,
-      .home = here->rank
-    }
-  };
-
-  for (int i = 0; i < blocks; i++) {
-    btt_insert(agas->btt, gva, here->rank, lva, blocks, attr);
-    lva += bsize;
-    gva.bits.offset += bsize;
-  }
-  return HPX_SUCCESS;
-}
-static LIBHPX_ACTION(HPX_DEFAULT, 0, _locality_alloc_cyclic,
-                     _locality_alloc_cyclic_handler, HPX_UINT64, HPX_UINT32,
-                     HPX_UINT64, HPX_POINTER, HPX_UINT32, HPX_INT);
-
-hpx_addr_t _agas_alloc_cyclic_sync(size_t n, uint32_t bsize, uint32_t attr,
-                                   int zero) {
-  agas_t *agas = (agas_t*)here->gas;
-  dbg_assert(here->rank == 0);
-
-  // Figure out how many blocks per node we need.
-  uint64_t blocks = ceil_div_64(n, here->ranks);
-  uint32_t  align = ceil_log2_32(bsize);
-  dbg_assert(align < 32);
-  uint32_t padded = 1u << align;
-
-  agas_alloc_bsize = padded;
-  // Allocate the blocks as a contiguous, aligned array from cyclic memory.
-  void *lva = cyclic_memalign(padded, blocks * padded);
-  if (!lva) {
-    dbg_error("failed cyclic allocation\n");
-  }
-
-  gva_t gva = agas_lva_to_gva(agas, lva, padded);
-  gva.bits.cyclic = 1;
-  uint64_t offset = gva.bits.offset;
-  int e = hpx_bcast_rsync(_locality_alloc_cyclic, &blocks, &align, &offset,
-                          &lva, &attr, &zero);
-  dbg_check(e, "failed to insert btt entries.\n");
-
-  // and return the address
-  return gva.addr;
+hpx_addr_t _blocked_dist(uint32_t i, size_t n, size_t bsize) {
+  // int blocks_per_locality = (n + (HPX_LOCALITES-1)) / HPX_LOCALITIES;
+  int blocks_per_locality = n / HPX_LOCALITIES;
+  return HPX_THERE((i/blocks_per_locality) % HPX_LOCALITIES);
 }
 
-hpx_addr_t agas_alloc_cyclic_sync(size_t n, uint32_t bsize, uint32_t attr) {
-  dbg_assert(here->rank == 0);
-  return _agas_alloc_cyclic_sync(n, bsize, attr, 0);
+static hpx_addr_t _agas_alloc_blocked(size_t n, size_t bsize,
+                                      uint32_t boundary, uint32_t attr) {
+  return agas_alloc_user(n, bsize, boundary, _blocked_dist, attr);
 }
 
-static int _alloc_cyclic_handler(size_t n, size_t bsize, uint32_t attr) {
-  hpx_addr_t addr = agas_alloc_cyclic_sync(n, bsize, attr);
-  return HPX_THREAD_CONTINUE(addr);
-}
-LIBHPX_ACTION(HPX_DEFAULT, 0, agas_alloc_cyclic, _alloc_cyclic_handler,
-              HPX_SIZE_T, HPX_SIZE_T, HPX_UINT32);
-
-static hpx_addr_t
-_agas_alloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary, uint32_t attr) {
-  hpx_addr_t addr;
-  if (here->rank == 0) {
-    addr = agas_alloc_cyclic_sync(n, bsize, attr);
-  }
-  else {
-    int e = hpx_call_sync(HPX_THERE(0), agas_alloc_cyclic, &addr, sizeof(addr),
-                          &n, &bsize, &attr);
-    dbg_check(e, "Failed to call agas_alloc_cyclic_handler.\n");
-  }
-  dbg_assert_str(addr != HPX_NULL, "HPX_NULL is not a valid allocation\n");
-  return addr;
+static hpx_addr_t _agas_calloc_blocked(size_t n, size_t bsize,
+                                       uint32_t boundary, uint32_t attr) {
+  return agas_calloc_user(n, bsize, boundary, _blocked_dist, attr);
 }
 
-hpx_addr_t agas_calloc_cyclic_sync(size_t n, uint32_t bsize, uint32_t attr) {
-  assert(here->rank == 0);
-  return _agas_alloc_cyclic_sync(n, bsize, attr, 1);
-}
-
-static int _calloc_cyclic_handler(size_t n, size_t bsize, uint32_t attr) {
-  hpx_addr_t addr = agas_calloc_cyclic_sync(n, bsize, attr);
-  return HPX_THREAD_CONTINUE(addr);
-}
-LIBHPX_ACTION(HPX_DEFAULT, 0, agas_calloc_cyclic, _calloc_cyclic_handler,
-              HPX_SIZE_T, HPX_SIZE_T, HPX_UINT32);
-
-static hpx_addr_t
-_agas_calloc_cyclic(size_t n, uint32_t bsize, uint32_t boundary,
-                    uint32_t attr) {
-  hpx_addr_t addr;
-  if (here->rank == 0) {
-    addr = agas_calloc_cyclic_sync(n, bsize, attr);
-  }
-  else {
-    int e = hpx_call_sync(HPX_THERE(0), agas_calloc_cyclic, &addr, sizeof(addr),
-                          &n, &bsize, &attr);
-    dbg_check(e, "Failed to call agas_calloc_cyclic_handler.\n");
-  }
-  dbg_assert_str(addr != HPX_NULL, "HPX_NULL is not a valid allocation\n");
-  return addr;
-}
-
-static gas_t _agas_vtable = {
+static gas_t _agas = {
   .type           = HPX_GAS_AGAS,
   .string = {
     .memget       = agas_memget,
@@ -283,6 +193,7 @@ static gas_t _agas_vtable = {
     .memcpy       = agas_memcpy,
     .memcpy_sync  = agas_memcpy_sync,
   },
+  .max_block_size = _agas_max_block_size,
   .dealloc        = _agas_dealloc,
   .local_size     = NULL,
   .local_base     = NULL,
@@ -291,16 +202,19 @@ static gas_t _agas_vtable = {
   .there          = _agas_there,
   .try_pin        = _agas_try_pin,
   .unpin          = _agas_unpin,
-  .alloc_cyclic   = _agas_alloc_cyclic,
-  .calloc_cyclic  = _agas_calloc_cyclic,
-  .alloc_blocked  = NULL,
-  .calloc_blocked = NULL,
+  .alloc_cyclic   = agas_alloc_cyclic,
+  .calloc_cyclic  = agas_calloc_cyclic,
+  .alloc_blocked  = _agas_alloc_blocked,
+  .calloc_blocked = _agas_calloc_blocked,
+  .alloc_user     = agas_alloc_user,
+  .calloc_user    = agas_calloc_user,
   .alloc_local    = agas_alloc_local,
   .calloc_local   = agas_calloc_local,
   .free           = agas_free,
   .set_attr       = _agas_set_attr,
   .move           = agas_move,
-  .owner_of       = _agas_owner_of
+  .owner_of       = _agas_owner_of,
+  .affinity       = NULL
 };
 
 gas_t *gas_agas_new(const config_t *config, boot_t *boot) {
@@ -308,7 +222,7 @@ gas_t *gas_agas_new(const config_t *config, boot_t *boot) {
   dbg_assert(agas);
 
   agas_alloc_bsize = 0;
-  agas->vtable = _agas_vtable;
+  agas->vtable = _agas;
   agas->chunk_table = chunk_table_new(0);
   agas->btt = btt_new(0);
 
@@ -318,15 +232,16 @@ gas_t *gas_agas_new(const config_t *config, boot_t *boot) {
   // get the chunk size from jemalloc
   agas->chunk_size = as_bytes_per_chunk();
 
-  size_t heap_size = 1lu << GVA_OFFSET_BITS;
-  size_t nchunks = ceil_div_size_t(heap_size, agas->chunk_size);
+  uint64_t heap_size = UINT64_C(1) << GVA_OFFSET_BITS;
+  uint32_t nchunks = ceil_div_64(heap_size, agas->chunk_size);
+  dbg_assert(nchunks > 0);
   uint32_t min_align = ceil_log2_64(agas->chunk_size);
   uint32_t base_align = ceil_log2_64(heap_size);
   agas->bitmap = bitmap_new(nchunks, min_align, base_align);
   agas_global_allocator_init(agas);
 
   if (here->rank == 0) {
-    size_t nchunks = ceil_div_size_t(here->ranks * heap_size, agas->chunk_size);
+    uint32_t nchunks = ceil_div_64(here->ranks * heap_size, agas->chunk_size);
     uint32_t min_align = ceil_log2_64(agas->chunk_size);
     uint32_t base_align = ceil_log2_64(heap_size);
     agas->cyclic_bitmap = bitmap_new(nchunks, min_align, base_align);
@@ -336,6 +251,7 @@ gas_t *gas_agas_new(const config_t *config, boot_t *boot) {
 
   gva_t there = { .addr = _agas_there(agas, here->rank) };
   btt_insert(agas->btt, there, here->rank, here, 1, HPX_GAS_ATTR_NONE);
+  agas->vtable.affinity = affinity_new(config);
   return &agas->vtable;
 }
 
@@ -348,7 +264,7 @@ agas_chunk_alloc(agas_t *agas, void *bitmap, void *addr, size_t n, size_t align)
   uint32_t log2_align = ceil_log2_size_t(max_size_t(align, agas_alloc_bsize));
   uint32_t bit;
   int e = bitmap_reserve(bitmap, nbits, log2_align, &bit);
-  dbg_check(e, "Could not reserve gva for %lu bytes\n", n);
+  dbg_check(e, "Could not reserve gva for %zu bytes\n", n);
   uint64_t offset = bit * agas->chunk_size;
 
   // 2) get backing memory

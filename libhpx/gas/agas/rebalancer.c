@@ -195,7 +195,6 @@ _bulk_move_handler(int n, void *args[], size_t sizes[]) {
     int new_owner = partition[i];
     if (new_owner != here->rank) {
       log_gas("move block 0x%lx from %d to %d\n", vtxs[i], here->rank, new_owner);
-      EVENT_GAS_MOVE(vtxs[i], HPX_HERE, HPX_THERE(new_owner));
       hpx_gas_move(vtxs[i], HPX_THERE(new_owner), done);
     } else {
       hpx_lco_set(done, 0, NULL, HPX_NULL, HPX_NULL);

@@ -45,7 +45,7 @@ static int _agas_free_block_handler(hpx_addr_t block) {
   agas_t *agas = here->gas;
   gva_t    gva = { .addr = block };
   void    *lva = NULL;
-  int        e = btt_remove_when_count_zero(agas->btt, gva, &lva);
+  int        e = btt_try_delete(agas->btt, gva, &lva);
   dbg_check(e, "No btt entry for %"PRIu64" at %d\n", gva.addr, here->rank);
 
   // This was the home for the block, ultimately the continuation of this action
@@ -133,7 +133,8 @@ static int _agas_free_async_handler(hpx_addr_t base) {
   dbg_assert(gva.bits.home == here->rank);
 
   // We need to free this after everything has been cleaned up.
-  void   *lva = btt_lookup(gas->btt, gva);
+  void *lva = NULL;
+  btt_get_lva(gas->btt, gva, &lva);
   dbg_assert_str(lva, "No btt entry for %"PRIu64" at %d\n", gva.addr, here->rank);
 
   // Cyclic allocations have segments at each rank, so we broadcast the command
@@ -200,13 +201,14 @@ void agas_free(void *obj, hpx_addr_t addr, hpx_addr_t rsync) {
     void *lva;
     size_t blocks;
     int32_t count;
-    int found = btt_get_all(gas->btt, gva, &lva, &blocks, &count, NULL, NULL);
+    uint32_t owner = gva.bits.home;
+    int found = btt_get_all(gas->btt, gva, &lva, &blocks, &count, &owner, NULL);
     dbg_assert(found);
     dbg_assert(blocks > 0);
     dbg_assert(count >= 0);
-    dbg_assert(lva);
 
     if (!count && blocks == 1) {
+      dbg_assert(lva);
       btt_remove(gas->btt, gva);
       global_free(lva);
       hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);

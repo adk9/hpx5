@@ -49,7 +49,7 @@ gas_t *gas_new(config_t *cfg, struct boot *boot) {
 
   switch (type) {
    case HPX_GAS_SMP:
-    gas = gas_smp_new();
+    gas = gas_smp_new(cfg);
     break;
 
    case HPX_GAS_AGAS:
@@ -74,6 +74,10 @@ gas_t *gas_new(config_t *cfg, struct boot *boot) {
   else {
     log_gas("GAS %s initialized\n", HPX_GAS_TO_STRING[type]);
   }
+
+  // NB: HPX_GAS_BLOCK_BYTES_MAX is declared const in the interface... this does
+  //     a C-style const cast during initialization to set it up.
+  HPX_GAS_BLOCK_BYTES_MAX = gas->max_block_size;
 
   return gas;
 }

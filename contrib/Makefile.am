@@ -1,5 +1,5 @@
 SUBDIRS       = lz4
-DIST_SUBDIRS  = libffi hwloc-1.11.0 photon libcuckoo lz4
+DIST_SUBDIRS  = libffi hwloc photon libcuckoo lz4
 EXTRA_DIST    = jemalloc libffi-mic uthash valgrind
 
 if BUILD_LIBFFI
@@ -7,7 +7,7 @@ SUBDIRS      += $(LIBFFI_CONTRIB_DIR)
 endif
 
 if BUILD_HWLOC
-SUBDIRS      += hwloc-1.11.0
+SUBDIRS      += hwloc
 endif
 
 if BUILD_PHOTON
@@ -20,6 +20,10 @@ endif
 
 if BUILD_LIBCUCKOO
 SUBDIRS      += libcuckoo
+endif
+
+if BUILD_URCU
+SUBDIRS      += userspace-rcu
 endif
 
 check-recursive: all-recursive

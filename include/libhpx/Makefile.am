@@ -19,7 +19,6 @@ noinst_HEADERS = \
                  process.h \
                  rebalancer.h \
                  scheduler.h \
-                 stats.h \
                  system.h \
                  termination.h \
                  time.h \

@@ -24,7 +24,7 @@ int _foo_action_handler(void) {
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _foo, _foo_action_handler);
 
-int _main_action_handler(int iteration) {
+static int _inner(int iteration) {
   printf("Hello World from main action rank : %u : ranks : %u : "
          "threads : %u : iteration : %d.\n",
          hpx_get_my_rank(), hpx_get_num_ranks(), hpx_get_num_threads(),
@@ -38,14 +38,20 @@ int _main_action_handler(int iteration) {
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);
 
-  if (iteration & 1) {
-    hpx_exit(HPX_SUCCESS);
-  }
-  else {
-    hpx_exit(HPX_ERROR);
-  }
+  return (iteration & 1) ? HPX_SUCCESS : -42;
 }
-HPX_ACTION(HPX_DEFAULT, 0, _hello, _main_action_handler, HPX_INT);
+
+static int _diffusion_handler(int iteration) {
+  int status = _inner(iteration);
+  hpx_exit(status);
+}
+HPX_ACTION(HPX_DEFAULT, 0, _diffusion, _diffusion_handler, HPX_INT);
+
+static int _spmd_handler(int iteration) {
+  int status = _inner(iteration);
+  return hpx_thread_continue(&status);
+}
+HPX_ACTION(HPX_DEFAULT, 0, _spmd, _spmd_handler, HPX_INT);
 
 int main(int argc, char *argv[argc]) {
   if (hpx_init(&argc, &argv) != 0) {
@@ -54,8 +60,13 @@ int main(int argc, char *argv[argc]) {
   }
 
   for (int i = 0; i < RUNS; ++i) {
-    int success = hpx_run(&_hello, &i);
+    int success = hpx_run(&_diffusion, &i);
     printf("%i hpx_run returned %d.\n", i+1, success);
+  }
+
+  for (int i = 0; i < RUNS; ++i) {
+    int success = hpx_run_spmd(&_spmd, &i);
+    printf("%i hpx_run_spmd returned %d.\n", i+1, success);
   }
 
   hpx_finalize();

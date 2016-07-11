@@ -33,7 +33,6 @@ typedef struct ustack {
   int         stack_id;                        //!< used by VALGRIND
   int             size;                        //!< the size of this stack
   short           cont;                        //!< the continuation flag
-  short       affinity;                        //!< set by user
   short         masked;                        //!< should we checkpoint sigmask
   char         stack[];
 } ustack_t;

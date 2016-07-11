@@ -126,6 +126,18 @@ int main (int argc, char *argv[])
   srand(time(NULL)); //seed random
   uint64_t NUM = DNUM;
 
+  // Register the main action
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action,
+                      HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _parallelQuicksortHelper,
+                      _parallelQuicksortHelper_action, HPX_POINTER, HPX_SIZE_T);
+
+  int e = hpx_init(&argc, &argv);
+  if (e) {
+    fprintf(stderr, "HPX: failed to initialize.\n");
+    return e;
+  }
+
   while ((opt = getopt(argc, argv,  "h?")) != -1) {
     switch (opt) {
      case 'h':
@@ -147,18 +159,6 @@ int main (int argc, char *argv[])
    case 1:
      NUM = atoi(argv[0]);
      break;
-  }
-
-  // Register the main action
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action,
-                      HPX_POINTER, HPX_SIZE_T);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _parallelQuicksortHelper,
-                      _parallelQuicksortHelper_action, HPX_POINTER, HPX_SIZE_T);
-
-  int e = hpx_init(&argc, &argv);
-  if (e) {
-    fprintf(stderr, "HPX: failed to initialize.\n");
-    return e;
   }
 
   // Run the main action

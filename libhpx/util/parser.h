@@ -44,9 +44,12 @@ enum enum_hpx_transport { hpx_transport__NULL = -1, hpx_transport_arg_default = 
 enum enum_hpx_network { hpx_network__NULL = -1, hpx_network_arg_default = 0, hpx_network_arg_smp, hpx_network_arg_pwc, hpx_network_arg_isir };
 enum enum_hpx_thread_affinity { hpx_thread_affinity__NULL = -1, hpx_thread_affinity_arg_default = 0, hpx_thread_affinity_arg_hwthread, hpx_thread_affinity_arg_core, hpx_thread_affinity_arg_numa, hpx_thread_affinity_arg_none };
 enum enum_hpx_sched_policy { hpx_sched_policy__NULL = -1, hpx_sched_policy_arg_default = 0, hpx_sched_policy_arg_random, hpx_sched_policy_arg_hier };
+enum enum_hpx_gas_affinity { hpx_gas_affinity__NULL = -1, hpx_gas_affinity_arg_none = 0, hpx_gas_affinity_arg_urcu, hpx_gas_affinity_arg_cuckoo };
 enum enum_hpx_log_level { hpx_log_level__NULL = -1, hpx_log_level_arg_default = 0, hpx_log_level_arg_boot, hpx_log_level_arg_sched, hpx_log_level_arg_gas, hpx_log_level_arg_lco, hpx_log_level_arg_net, hpx_log_level_arg_trans, hpx_log_level_arg_parcel, hpx_log_level_arg_action, hpx_log_level_arg_config, hpx_log_level_arg_memory, hpx_log_level_arg_coll, hpx_log_level_arg_all };
 enum enum_hpx_dbg_waitonsig { hpx_dbg_waitonsig__NULL = -1, hpx_dbg_waitonsig_arg_segv = 0, hpx_dbg_waitonsig_arg_abrt, hpx_dbg_waitonsig_arg_fpe, hpx_dbg_waitonsig_arg_ill, hpx_dbg_waitonsig_arg_bus, hpx_dbg_waitonsig_arg_iot, hpx_dbg_waitonsig_arg_sys, hpx_dbg_waitonsig_arg_trap, hpx_dbg_waitonsig_arg_all };
-enum enum_hpx_trace_classes { hpx_trace_classes__NULL = -1, hpx_trace_classes_arg_parcel = 0, hpx_trace_classes_arg_network, hpx_trace_classes_arg_sched, hpx_trace_classes_arg_lco, hpx_trace_classes_arg_process, hpx_trace_classes_arg_memory, hpx_trace_classes_arg_schedtimes, hpx_trace_classes_arg_trace, hpx_trace_classes_arg_gas, hpx_trace_classes_arg_collective, hpx_trace_classes_arg_all };
+enum enum_hpx_trace_backend { hpx_trace_backend__NULL = -1, hpx_trace_backend_arg_default = 0, hpx_trace_backend_arg_file, hpx_trace_backend_arg_console, hpx_trace_backend_arg_stats };
+enum enum_hpx_trace_classes { hpx_trace_classes__NULL = -1, hpx_trace_classes_arg_parcel = 0, hpx_trace_classes_arg_network, hpx_trace_classes_arg_sched, hpx_trace_classes_arg_lco, hpx_trace_classes_arg_process, hpx_trace_classes_arg_memory, hpx_trace_classes_arg_trace, hpx_trace_classes_arg_gas, hpx_trace_classes_arg_collective, hpx_trace_classes_arg_all };
+enum enum_hpx_photon_comporder { hpx_photon_comporder__NULL = -1, hpx_photon_comporder_arg_default = 0, hpx_photon_comporder_arg_none, hpx_photon_comporder_arg_strict };
 enum enum_hpx_photon_backend { hpx_photon_backend__NULL = -1, hpx_photon_backend_arg_default = 0, hpx_photon_backend_arg_verbs, hpx_photon_backend_arg_ugni, hpx_photon_backend_arg_fi };
 enum enum_hpx_photon_coll { hpx_photon_coll__NULL = -1, hpx_photon_coll_arg_default = 0, hpx_photon_coll_arg_pwc, hpx_photon_coll_arg_nbc };
 
@@ -72,8 +75,6 @@ struct hpx_options_t
   enum enum_hpx_network hpx_network_arg;	/**< @brief type of network to use.  */
   char * hpx_network_orig;	/**< @brief type of network to use original value given at command line.  */
   const char *hpx_network_help; /**< @brief type of network to use help description.  */
-  int hpx_statistics_flag;	/**< @brief print HPX runtime statistics (default=off).  */
-  const char *hpx_statistics_help; /**< @brief print HPX runtime statistics help description.  */
   char * hpx_configfile_arg;	/**< @brief HPX runtime configuration file.  */
   char * hpx_configfile_orig;	/**< @brief HPX runtime configuration file original value given at command line.  */
   const char *hpx_configfile_help; /**< @brief HPX runtime configuration file help description.  */
@@ -95,6 +96,9 @@ struct hpx_options_t
   int hpx_sched_stackcachelimit_arg;	/**< @brief bound on the number of stacks to cache.  */
   char * hpx_sched_stackcachelimit_orig;	/**< @brief bound on the number of stacks to cache original value given at command line.  */
   const char *hpx_sched_stackcachelimit_help; /**< @brief bound on the number of stacks to cache help description.  */
+  enum enum_hpx_gas_affinity hpx_gas_affinity_arg;	/**< @brief GAS affinity implementation.  */
+  char * hpx_gas_affinity_orig;	/**< @brief GAS affinity implementation original value given at command line.  */
+  const char *hpx_gas_affinity_help; /**< @brief GAS affinity implementation help description.  */
   int* hpx_log_at_arg;	/**< @brief filter by locality, -1 for all (default none).  */
   char ** hpx_log_at_orig;	/**< @brief filter by locality, -1 for all (default none) original value given at command line.  */
   unsigned int hpx_log_at_min; /**< @brief filter by locality, -1 for all (default none)'s minimum occurreces */
@@ -121,9 +125,9 @@ struct hpx_options_t
   const char *hpx_dbg_mprotectstacks_help; /**< @brief use mprotect() to bracket stacks to look for stack overflows help description.  */
   int hpx_dbg_syncfree_flag;	/**< @brief use synchronous GAS free operations (default=off).  */
   const char *hpx_dbg_syncfree_help; /**< @brief use synchronous GAS free operations help description.  */
-  char * hpx_trace_dir_arg;	/**< @brief file output directory.  */
-  char * hpx_trace_dir_orig;	/**< @brief file output directory original value given at command line.  */
-  const char *hpx_trace_dir_help; /**< @brief file output directory help description.  */
+  enum enum_hpx_trace_backend hpx_trace_backend_arg;	/**< @brief type of tracing backend to use.  */
+  char * hpx_trace_backend_orig;	/**< @brief type of tracing backend to use original value given at command line.  */
+  const char *hpx_trace_backend_help; /**< @brief type of tracing backend to use help description.  */
   int* hpx_trace_at_arg;	/**< @brief filter by locality, -1 for all (default all).  */
   char ** hpx_trace_at_orig;	/**< @brief filter by locality, -1 for all (default all) original value given at command line.  */
   unsigned int hpx_trace_at_min; /**< @brief filter by locality, -1 for all (default all)'s minimum occurreces */
@@ -134,9 +138,14 @@ struct hpx_options_t
   unsigned int hpx_trace_classes_min; /**< @brief filter by class's minimum occurreces */
   unsigned int hpx_trace_classes_max; /**< @brief filter by class's maximum occurreces */
   const char *hpx_trace_classes_help; /**< @brief filter by class help description.  */
-  long hpx_trace_buffersize_arg;	/**< @brief size of trace buffers.  */
-  char * hpx_trace_buffersize_orig;	/**< @brief size of trace buffers original value given at command line.  */
-  const char *hpx_trace_buffersize_help; /**< @brief size of trace buffers help description.  */
+  char * hpx_trace_dir_arg;	/**< @brief output directory (file backend).  */
+  char * hpx_trace_dir_orig;	/**< @brief output directory (file backend) original value given at command line.  */
+  const char *hpx_trace_dir_help; /**< @brief output directory (file backend) help description.  */
+  long hpx_trace_buffersize_arg;	/**< @brief size of trace buffers (file backend).  */
+  char * hpx_trace_buffersize_orig;	/**< @brief size of trace buffers (file backend) original value given at command line.  */
+  const char *hpx_trace_buffersize_help; /**< @brief size of trace buffers (file backend) help description.  */
+  int hpx_trace_off_flag;	/**< @brief disable tracing at startup (default=off).  */
+  const char *hpx_trace_off_help; /**< @brief disable tracing at startup help description.  */
   long hpx_isir_testwindow_arg;	/**< @brief number of ISIR requests to test in progress loop.  */
   char * hpx_isir_testwindow_orig;	/**< @brief number of ISIR requests to test in progress loop original value given at command line.  */
   const char *hpx_isir_testwindow_help; /**< @brief number of ISIR requests to test in progress loop help description.  */
@@ -154,6 +163,9 @@ struct hpx_options_t
   const char *hpx_pwc_parceleagerlimit_help; /**< @brief set the largest eager parcel size (header inclusive) help description.  */
   int hpx_coll_network_flag;	/**< @brief set collective implementation to network based version (override parcel collectives) (default=off).  */
   const char *hpx_coll_network_help; /**< @brief set collective implementation to network based version (override parcel collectives) help description.  */
+  enum enum_hpx_photon_comporder hpx_photon_comporder_arg;	/**< @brief request completion ordering mode.  */
+  char * hpx_photon_comporder_orig;	/**< @brief request completion ordering mode original value given at command line.  */
+  const char *hpx_photon_comporder_help; /**< @brief request completion ordering mode help description.  */
   enum enum_hpx_photon_backend hpx_photon_backend_arg;	/**< @brief set the underlying network API to use.  */
   char * hpx_photon_backend_orig;	/**< @brief set the underlying network API to use original value given at command line.  */
   const char *hpx_photon_backend_help; /**< @brief set the underlying network API to use help description.  */
@@ -223,7 +235,6 @@ struct hpx_options_t
   unsigned int hpx_boot_given ;	/**< @brief Whether hpx-boot was given.  */
   unsigned int hpx_transport_given ;	/**< @brief Whether hpx-transport was given.  */
   unsigned int hpx_network_given ;	/**< @brief Whether hpx-network was given.  */
-  unsigned int hpx_statistics_given ;	/**< @brief Whether hpx-statistics was given.  */
   unsigned int hpx_configfile_given ;	/**< @brief Whether hpx-configfile was given.  */
   unsigned int hpx_threads_given ;	/**< @brief Whether hpx-threads was given.  */
   unsigned int hpx_thread_affinity_given ;	/**< @brief Whether hpx-thread-affinity was given.  */
@@ -231,6 +242,7 @@ struct hpx_options_t
   unsigned int hpx_sched_policy_given ;	/**< @brief Whether hpx-sched-policy was given.  */
   unsigned int hpx_sched_wfthreshold_given ;	/**< @brief Whether hpx-sched-wfthreshold was given.  */
   unsigned int hpx_sched_stackcachelimit_given ;	/**< @brief Whether hpx-sched-stackcachelimit was given.  */
+  unsigned int hpx_gas_affinity_given ;	/**< @brief Whether hpx-gas-affinity was given.  */
   unsigned int hpx_log_at_given ;	/**< @brief Whether hpx-log-at was given.  */
   unsigned int hpx_log_level_given ;	/**< @brief Whether hpx-log-level was given.  */
   unsigned int hpx_dbg_waitat_given ;	/**< @brief Whether hpx-dbg-waitat was given.  */
@@ -238,16 +250,19 @@ struct hpx_options_t
   unsigned int hpx_dbg_waitonsig_given ;	/**< @brief Whether hpx-dbg-waitonsig was given.  */
   unsigned int hpx_dbg_mprotectstacks_given ;	/**< @brief Whether hpx-dbg-mprotectstacks was given.  */
   unsigned int hpx_dbg_syncfree_given ;	/**< @brief Whether hpx-dbg-syncfree was given.  */
-  unsigned int hpx_trace_dir_given ;	/**< @brief Whether hpx-trace-dir was given.  */
+  unsigned int hpx_trace_backend_given ;	/**< @brief Whether hpx-trace-backend was given.  */
   unsigned int hpx_trace_at_given ;	/**< @brief Whether hpx-trace-at was given.  */
   unsigned int hpx_trace_classes_given ;	/**< @brief Whether hpx-trace-classes was given.  */
+  unsigned int hpx_trace_dir_given ;	/**< @brief Whether hpx-trace-dir was given.  */
   unsigned int hpx_trace_buffersize_given ;	/**< @brief Whether hpx-trace-buffersize was given.  */
+  unsigned int hpx_trace_off_given ;	/**< @brief Whether hpx-trace-off was given.  */
   unsigned int hpx_isir_testwindow_given ;	/**< @brief Whether hpx-isir-testwindow was given.  */
   unsigned int hpx_isir_sendlimit_given ;	/**< @brief Whether hpx-isir-sendlimit was given.  */
   unsigned int hpx_isir_recvlimit_given ;	/**< @brief Whether hpx-isir-recvlimit was given.  */
   unsigned int hpx_pwc_parcelbuffersize_given ;	/**< @brief Whether hpx-pwc-parcelbuffersize was given.  */
   unsigned int hpx_pwc_parceleagerlimit_given ;	/**< @brief Whether hpx-pwc-parceleagerlimit was given.  */
   unsigned int hpx_coll_network_given ;	/**< @brief Whether hpx-coll-network was given.  */
+  unsigned int hpx_photon_comporder_given ;	/**< @brief Whether hpx-photon-comporder was given.  */
   unsigned int hpx_photon_backend_given ;	/**< @brief Whether hpx-photon-backend was given.  */
   unsigned int hpx_photon_coll_given ;	/**< @brief Whether hpx-photon-coll was given.  */
   unsigned int hpx_photon_ibdev_given ;	/**< @brief Whether hpx-photon-ibdev was given.  */
@@ -462,9 +477,12 @@ extern const char *hpx_option_parser_hpx_transport_values[];  /**< @brief Possib
 extern const char *hpx_option_parser_hpx_network_values[];  /**< @brief Possible values for hpx-network. */
 extern const char *hpx_option_parser_hpx_thread_affinity_values[];  /**< @brief Possible values for hpx-thread-affinity. */
 extern const char *hpx_option_parser_hpx_sched_policy_values[];  /**< @brief Possible values for hpx-sched-policy. */
+extern const char *hpx_option_parser_hpx_gas_affinity_values[];  /**< @brief Possible values for hpx-gas-affinity. */
 extern const char *hpx_option_parser_hpx_log_level_values[];  /**< @brief Possible values for hpx-log-level. */
 extern const char *hpx_option_parser_hpx_dbg_waitonsig_values[];  /**< @brief Possible values for hpx-dbg-waitonsig. */
+extern const char *hpx_option_parser_hpx_trace_backend_values[];  /**< @brief Possible values for hpx-trace-backend. */
 extern const char *hpx_option_parser_hpx_trace_classes_values[];  /**< @brief Possible values for hpx-trace-classes. */
+extern const char *hpx_option_parser_hpx_photon_comporder_values[];  /**< @brief Possible values for hpx-photon-comporder. */
 extern const char *hpx_option_parser_hpx_photon_backend_values[];  /**< @brief Possible values for hpx-photon-backend. */
 extern const char *hpx_option_parser_hpx_photon_coll_values[];  /**< @brief Possible values for hpx-photon-coll. */
 

@@ -24,6 +24,7 @@ TESTS = allreduce               \
         gas_memget              \
         gas_memput              \
         gas_move                \
+        gas_set_affinity        \
         init                    \
         lco_get_remote          \
         lco_allreduce           \
@@ -50,7 +51,6 @@ TESTS = allreduce               \
         thread_continue         \
         thread_create           \
         thread_gettlsid         \
-        thread_set_affinity     \
         thread_sigmask          \
         thread_yield
 
@@ -87,6 +87,7 @@ gas_global_alloc_DEPENDENCIES       = $(HPX_APPS_DEPS)
 gas_memget_DEPENDENCIES             = $(HPX_APPS_DEPS)
 gas_memput_DEPENDENCIES             = $(HPX_APPS_DEPS)
 gas_move_DEPENDENCIES               = $(HPX_APPS_DEPS)
+gas_set_affinity_DEPENDENCIES       = $(HPX_APPS_DEPS)
 init_DEPENDENCIES                   = $(HPX_APPS_DEPS)
 lco_allreduce_DEPENDENCIES          = $(HPX_APPS_DEPS)
 lco_and_DEPENDENCIES                = $(HPX_APPS_DEPS)
@@ -115,6 +116,5 @@ thread_cont_action_DEPENDENCIES     = $(HPX_APPS_DEPS)
 thread_continue_DEPENDENCIES        = $(HPX_APPS_DEPS)
 thread_create_DEPENDENCIES          = $(HPX_APPS_DEPS)
 thread_gettlsid_DEPENDENCIES        = $(HPX_APPS_DEPS)
-thread_set_affinity_DEPENDENCIES    = $(HPX_APPS_DEPS)
 thread_sigmask_DEPENDENCIES         = $(HPX_APPS_DEPS)
 thread_yield_DEPENDENCIES           = $(HPX_APPS_DEPS)

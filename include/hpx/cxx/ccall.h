@@ -21,8 +21,9 @@
 namespace hpx {
 namespace c {
 template <typename T, typename U, typename... Params>
-void call(T&& target, hpx_action_t action, global_ptr<U>& sync,
-          Params... params) {
+inline void
+call(T&& target, hpx_action_t action, global_ptr<U>& sync, Params... params)
+{
   static_assert(lco::is_lco<U>::value, "lsync must be an LCO");
   const auto n = sizeof...(params);
   if (int e = _hpx_call(target.get(), action, sync.get(), n, &params...)) {
@@ -31,8 +32,9 @@ void call(T&& target, hpx_action_t action, global_ptr<U>& sync,
 }
 
 template <typename T, typename... Params>
-void call(T&& target, hpx_action_t action, std::nullptr_t,
-          Params... params) {
+inline void
+call(T&& target, hpx_action_t action, std::nullptr_t, Params... params)
+{
   const auto n = sizeof...(params);
   if (int e = _hpx_call(target.get(), action, HPX_NULL, n, &params...)) {
     throw Error(e);
@@ -40,7 +42,9 @@ void call(T&& target, hpx_action_t action, std::nullptr_t,
 }
 
 template <typename T, typename... Params>
-void call(T&& target, hpx_action_t action, Params... params) {
+inline void
+call(T&& target, hpx_action_t action, Params... params)
+{
   const auto n = sizeof...(params);
   if (int e = _hpx_call_sync(target.get(), action, NULL, 0, n, &params...)) {
     throw Error(e);
@@ -48,8 +52,10 @@ void call(T&& target, hpx_action_t action, Params... params) {
 }
 
 template <typename U, typename... Params>
-void call(hpx_addr_t target, hpx_action_t action, global_ptr<U>& sync,
-          Params... params) {
+inline void
+call(hpx_addr_t target, hpx_action_t action, global_ptr<U>& sync,
+     Params... params)
+{
   static_assert(lco::is_lco<U>::value, "lsync must be an LCO");
   const auto n = sizeof...(params);
   if (int e = _hpx_call(target, action, sync.get(), n, &params...)) {
@@ -58,8 +64,9 @@ void call(hpx_addr_t target, hpx_action_t action, global_ptr<U>& sync,
 }
 
 template <typename... Params>
-void call(hpx_addr_t target, hpx_action_t action, std::nullptr_t,
-          Params... params) {
+inline void
+call(hpx_addr_t target, hpx_action_t action, std::nullptr_t, Params... params)
+{
   const auto n = sizeof...(params);
   if (int e = _hpx_call(target, action, HPX_NULL, n, &params...)) {
     throw Error(e);
@@ -67,11 +74,21 @@ void call(hpx_addr_t target, hpx_action_t action, std::nullptr_t,
 }
 
 template <typename... Params>
-void call(hpx_addr_t target, hpx_action_t action, Params... params) {
+inline void
+call(hpx_addr_t target, hpx_action_t action, Params... params)
+{
   const auto n = sizeof...(params);
   if (int e = _hpx_call_sync(target, action, NULL, 0, n, &params...)) {
     throw Error(e);
   }
+}
+
+template <typename ... Params>
+inline int
+thread_continue(Params ... params)
+{
+  const auto n = sizeof...(params);
+  return _hpx_thread_continue(n, &params...);
 }
 } // namespace c
 } // namespace hpx

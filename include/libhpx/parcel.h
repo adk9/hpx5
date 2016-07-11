@@ -66,7 +66,7 @@ static inline uint16_t parcel_pinned(parcel_state_t state) {
 struct hpx_parcel {
   struct ustack   *ustack;  //!< A pointer to a stack.
   struct hpx_parcel *next;  //!< A pointer to the next parcel.
-  int                 src;  //!< The src rank for the parcel.
+  uint32_t            src;  //!< The src rank for the parcel.
   uint32_t           size;  //!< The data size in bytes.
   parcel_state_t    state;  //!< The parcel's state bits.
   uint16_t         offset;  //!< Reserved for future use.

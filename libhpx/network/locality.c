@@ -19,13 +19,14 @@
 #include <libhpx/action.h>
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
-#include <libhpx/parcel.h>
 #include <libhpx/scheduler.h>
 
 locality_t *here = NULL;
 
 /// The action that shuts down the HPX scheduler.
-static int _locality_stop_handler(uint64_t code) {
+static int
+_locality_stop_handler(uint64_t code)
+{
   dbg_assert(code < UINT64_MAX);
   log_net("received shutdown (code %i)\n", (uint32_t)code);
   scheduler_stop(here->sched, (uint32_t)code);

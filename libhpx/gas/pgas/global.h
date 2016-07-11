@@ -18,7 +18,8 @@
 extern "C" {
 #endif
 
-void global_allocator_init(void);
+void global_allocator_init(int rank);
+void global_allocator_fini(void);
 
 #ifdef __cplusplus
 }

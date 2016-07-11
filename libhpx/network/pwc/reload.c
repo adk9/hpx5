@@ -65,7 +65,6 @@ static void _buffer_fini(buffer_t *b) {
 
 static void
 _buffer_reload(buffer_t *b, pwc_xport_t *xport) {
-  dbg_assert(1ul << ceil_log2_size_t(b->n) == b->n);
   b->block = parcel_block_new(b->n, b->n, &b->i);
   xport->key_find(xport, b->block, b->n, &b->key);
 }
@@ -122,8 +121,8 @@ _buffer_send(buffer_t *send, pwc_xport_t *xport, xport_op_t *op) {
   dbg_error("could not complete send operation\n");
 }
 
-static int
-_reload_send(void *obj, pwc_xport_t *xport, int rank, const hpx_parcel_t *p) {
+static int _reload_send(void *obj, pwc_xport_t *xport, int rank,
+                        const hpx_parcel_t *p) {
   size_t n = parcel_size(p);
   xport_op_t op = {
     .rank = rank,
@@ -145,8 +144,7 @@ _reload_send(void *obj, pwc_xport_t *xport, int rank, const hpx_parcel_t *p) {
   return _buffer_send(send, xport, &op);
 }
 
-static hpx_parcel_t *
-_buffer_recv(buffer_t *recv) {
+static hpx_parcel_t *_buffer_recv(buffer_t *recv) {
   const hpx_parcel_t *p = parcel_block_at(recv->block, recv->i);
   recv->i += parcel_size(p);
   if (recv->i >= recv->n) {

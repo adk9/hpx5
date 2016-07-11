@@ -37,8 +37,11 @@ _cyclic_chunk_free(intptr_t pool_id, void* raw_ptr, size_t raw_bytes) {
   return 0;
 }
 
-void
-cyclic_allocator_init(void) {
+void cyclic_allocator_init(int rank) {
+  if (rank) {
+    return;
+  }
+
   int id = AS_CYCLIC;
   size_t granularity = as_bytes_per_chunk();
   const MemPoolPolicy policy(_cyclic_chunk_alloc, _cyclic_chunk_free,
@@ -47,4 +50,7 @@ cyclic_allocator_init(void) {
   MemoryPool* pool = NULL;
   pool_create_v1(id, &policy, &pool);
   pools[id] = pool;
+}
+
+void cyclic_allocator_fini(void) {
 }

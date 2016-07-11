@@ -43,7 +43,7 @@ namespace hpx {
 /// @param argc   count of command-line arguments
 /// @param argv   array of command-line arguments
 /// @returns      HPX_SUCCESS on success
-int init(int *argc, char ***argv) {
+inline int init(int *argc, char ***argv) {
   return hpx_init(argc, argv);
 }
 
@@ -52,7 +52,7 @@ int init(int *argc, char ***argv) {
 /// This function will remove almost all data structures and allocations, and
 /// will finalize the underlying network implementation. Note that run()
 /// must never be called after finalize().
-void finalize() {
+inline void finalize() {
   hpx_finalize();
 }
 
@@ -79,7 +79,7 @@ void finalize() {
 /// @returns     the status code passed to exit() upon
 ///              termination.
 template <typename Act, typename... Args>
-int run(Act &action, Args &&... args) {
+inline int run(Act &action, Args &&... args) {
   return action.run(std::forward<Args>(args)...);
 }
 
@@ -96,7 +96,7 @@ int run(Act &action, Args &&... args) {
 /// It is safe to call run() again after exit().
 ///
 /// @param code a status code to be returned by run()
-void HPX_NORETURN exit(int code) {
+inline void HPX_NORETURN exit(int code) {
   hpx_exit(code);
 }
 
@@ -110,20 +110,20 @@ void HPX_NORETURN exit(int code) {
 /// the state of the system after the return is not well defined. The
 /// application's main native thread should only rely on the async-safe
 /// interface provided in signal(7).
-void HPX_NORETURN abort(void) {
+inline void HPX_NORETURN abort(void) {
   hpx_abort();
 }
 
 /// Print the help string associated with the runtime configuration
 /// options supported by the HPX runtime.
 ///
-void print_help(void) {
+inline void print_help(void) {
   hpx_print_help();
 }
 
 /// Print the version string associated with the HPX interface implemented by
 /// the runtime.
-void print_version(void) {
+inline void print_version(void) {
   hpx_print_version();
 }
 

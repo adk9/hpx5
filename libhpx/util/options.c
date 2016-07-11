@@ -348,7 +348,6 @@ void config_print(const config_t *cfg, FILE *f) {
              "HPX PARSED CONFIGURATION\n"
              "------------------------\n");
   fprintf(f, "General\n");
-  fprintf(f, "  statistics\t\t%d\n", cfg->statistics);
   fprintf(f, "  heapsize\t\t%zu\n", cfg->heapsize);
   fprintf(f, "  gas\t\t\t\"%s\"\n", HPX_GAS_TO_STRING[cfg->gas]);
   fprintf(f, "  boot\t\t\t\"%s\"\n", HPX_BOOT_TO_STRING[cfg->boot]);

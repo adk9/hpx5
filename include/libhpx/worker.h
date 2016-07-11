@@ -25,12 +25,12 @@ extern "C" {
 #include <libsync/queues.h>
 #include <libhpx/instrumentation.h>
 #include <libhpx/padding.h>
-#include <libhpx/stats.h>
 
 /// Forward declarations.
 /// @{
 struct ustack;
 struct network;
+struct scheduler;
 /// @}
 
 /// Class representing a worker thread's state.
@@ -47,55 +47,99 @@ typedef struct {
 } padded_deque_t;
 
 struct worker {
-  pthread_t        thread;                //!< this worker's native thread
-  int                  id;                //!< this worker's id
-  unsigned           seed;                //!< my random seed
-  int          work_first;                //!< this worker's mode
-  int             nstacks;                //!< count of freelisted stacks
-  int             yielded;                //!< used by APEX
-  int              active;                //!< used by APEX scheduler throttling
-  hpx_parcel_t    *system;                //!< this worker's native parcel
-  hpx_parcel_t   *current;                //!< current thread
-  struct ustack   *stacks;                //!< freelisted stacks
+  pthread_t        thread;                      //!< this worker's native thread
+  int                  id;                      //!< this worker's id
+  unsigned           seed;                      //!< my random seed
+  int          work_first;                      //!< this worker's mode
+  int             nstacks;                      //!< count of freelisted stacks
+  int             yielded;                      //!< used by APEX
+  int              active;                      //!< used by APEX
+  int         last_victim;                      //!< last successful victim
+  int           numa_node;                      //!< this worker's numa node
+  void          *profiler;                      //!< reference to the profiler
+  void               *bst;                      //!< the block statistics table
+  struct network *network;                      //!< reference to the network
+  struct logtable   *logs;                      //!< reference to tracer data
+  uint64_t         *stats;                      //!< reference to statistics data
+  struct scheduler *sched;                      //!< pointer to the scheduler
+  hpx_parcel_t    *system;                      //!< this worker's native parcel
+  hpx_parcel_t   *current;                      //!< current thread
+  struct ustack   *stacks;                      //!< freelisted stacks
   PAD_TO_CACHELINE(sizeof(pthread_t) +
-                   sizeof(int) * 6 +
-                   sizeof(hpx_parcel_t*) * 2 +
-                   sizeof(struct ustack*));
+                   sizeof(int) * 8 +
+                   sizeof(void*) * 9);
+  pthread_mutex_t    lock;                      //!< state lock
+  pthread_cond_t  running;                      //!< local condition for sleep
+  volatile int      state;                      //!< what state are we in
   volatile int    work_id;                      //!< which queue are we using
-  PAD_TO_CACHELINE(sizeof(int));
-  padded_deque_t   queues[2];             //!< work and yield queues
-  two_lock_queue_t  inbox;                //!< mail sent to me
-  libhpx_stats_t    stats;                //!< per-worker statistics
-  int           last_victim;              //!< last successful victim
-  int           numa_node;                //!< this worker's numa node
-  void          *profiler;                //!< reference to the profiler
-  void               *bst;                //!< reference to the profiler
-  struct network *network;                //!< reference to the network
-  inst_t            *inst;                //!< reference to instrumentation data
+  PAD_TO_CACHELINE(sizeof(pthread_mutex_t) +
+                   sizeof(pthread_cond_t) +
+                   sizeof(int) * 2);
+  padded_deque_t   queues[2];                   //!< work and yield queues
+  two_lock_queue_t  inbox;                      //!< mail sent to me
 };
 typedef struct worker worker_t;
-/// @}
 
+_HPX_ASSERT((sizeof(worker_t) & (HPX_CACHELINE_SIZE - 1)) == 0, worker_align);
+
+/// @}
 
 extern __thread worker_t * volatile self;
 
 /// Initialize a worker structure.
 ///
+/// This initializes a worker.
+///
 /// @param            w The worker structure to initialize.
+/// @param        sched The scheduler associated with this worker.
 /// @param           id The worker's id.
-/// @param         seed The random seed for this worker.
-/// @param    work_size The initial size of the work queue.
 ///
 /// @returns  LIBHPX_OK or an error code
-int worker_init(worker_t *w, int id, unsigned seed, unsigned work_size)
-  HPX_NON_NULL(1);
+void worker_init(worker_t *w, struct scheduler *sched, int id)
+  HPX_NON_NULL(1, 2);
 
 /// Finalize a worker structure.
+///
+/// This will cleanup any queues and free any stacks and parcels associated with
+/// the worker. This should only be called once *all* of the workers have been
+/// joined so that an _in-flight_ mail message doesn't get missed.
+///
+/// @param            w The worker structure to finalize.
 void worker_fini(worker_t *w)
   HPX_NON_NULL(1);
 
-/// Start processing lightweight threads.
-int worker_start(void);
+/// Create a scheduler worker thread.
+///
+/// This starts an underlying system thread for the scheduler. Assuming the
+/// scheduler is stopped the underlying thread will immediately sleep waiting
+/// for a run condition.
+///
+/// @param            w The worker structure to initialize.
+/// @param        sched The scheduler associated with this worker.
+/// @param           id The worker's id.
+///
+/// @returns  LIBHPX_OK or an error code
+int worker_create(worker_t *w)
+  HPX_NON_NULL(1);
+
+/// Join with a scheduler worker thread.
+///
+/// This will block waiting for the designated worker thread to exit. It should
+/// be used before calling worker_fini() on this thread in order to avoid race
+/// conditions on the mailbox and scheduling and whatnot.
+///
+/// @param            w The worker to join (should be active).
+void worker_join(worker_t *w)
+  HPX_NON_NULL(1);
+
+void worker_stop(worker_t *w)
+  HPX_NON_NULL(1);
+
+void worker_start(worker_t *w)
+  HPX_NON_NULL(1);
+
+void worker_shutdown(worker_t *w)
+  HPX_NON_NULL(1);
 
 /// The thread entry function that the worker uses to start a thread.
 ///
@@ -122,12 +166,6 @@ void worker_execute_thread(hpx_parcel_t *p)
 /// @param       status The status code that the thread returned with.
 void worker_finish_thread(hpx_parcel_t *p, int status)
   HPX_NORETURN;
-
-/// Check to see if the current worker is active.
-int worker_is_active(void);
-
-/// Check to see if the current worker is stopped.
-int worker_is_stopped(void);
 
 #ifdef __cplusplus
 }

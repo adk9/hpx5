@@ -102,6 +102,10 @@ static inline uint64_t min_u64(uint64_t lhs, uint64_t rhs) {
   return (lhs < rhs) ? lhs : rhs;
 }
 
+static inline int max_int(int lhs, int rhs) {
+  return (lhs < rhs) ? rhs : lhs;
+}
+
 static inline int32_t max_i32(int32_t lhs, int32_t rhs) {
   return (lhs < rhs) ? rhs : lhs;
 }

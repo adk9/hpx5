@@ -28,11 +28,7 @@ extern "C" {
 
 #include <pthread.h>
 #include <hpx/hpx.h>
-#include <libsync/sync.h>
-#include <libsync/locks.h>
 #include <libsync/queues.h>
-#include <libhpx/stats.h>
-#include <libhpx/system.h>
 #include <libhpx/worker.h>
 
 /// Preprocessor define that tells us if the scheduler is cooperative or
@@ -44,9 +40,17 @@ extern "C" {
 
 /// Forward declarations
 /// @{
-struct barrier;
 struct config;
 struct cvar;
+/// @}
+
+/// Scheduler states.
+/// @{
+enum {
+  SCHED_SHUTDOWN,
+  SCHED_STOP,
+  SCHED_RUN,
+};
 /// @}
 
 /// The scheduler class.
@@ -63,32 +67,28 @@ struct cvar;
 /// table, though all of the functionality that is required to make this work is
 /// not implemented.
 struct scheduler {
-  volatile int     stopped;                     // fast flag to avoid locking
-
-  struct {
-    volatile int     state;
-    pthread_mutex_t   lock;
-    pthread_cond_t running;
-  } run_state;
-
-  volatile int next_tls_id;
-  int            n_workers;
-  uint32_t    wf_threshold;
-  system_barrier_t barrier;
-  worker_t        *workers;
-  int     n_active_workers;           // used by APEX scheduler throttling : akp
+  pthread_mutex_t     lock;                  //!< lock for running condition
+  pthread_cond_t   stopped;                  //!< the running condition
+  volatile int       state;                  //!< the run state
+  volatile int next_tls_id;                  //!< lightweight thread ids
+  long             ns_wait;                  //!< nanoseconds to wait in start()
+  int            n_workers;                  //!< total number of workers
+  int             n_target;                  //!< target number of workers
+  volatile int    n_active;                  //!< active number of workers
+  volatile int        code;                  //!< the exit code
+  PAD_TO_CACHELINE(sizeof(pthread_mutex_t) +
+                   sizeof(pthread_cond_t) +
+                   sizeof(int) * 6);            //!< padding to align workers
+  worker_t         workers[];                   //!< array of worker data
 };
-
-#define SCHED_RUN INT_MAX
-#define SCHED_STOP HPX_SUCCESS
-#define SCHED_SHUTDOWN 2
+typedef struct scheduler scheduler_t;
 
 /// Allocate and initialize a new scheduler.
 ///
 /// @param       config The configuration object.
 ///
 /// @returns            The scheduler object, or NULL if there was an error.
-struct scheduler *scheduler_new(const struct config *config)
+scheduler_t *scheduler_new(const struct config *config)
   HPX_MALLOC;
 
 /// Finalize and free the scheduler object.
@@ -98,57 +98,40 @@ struct scheduler *scheduler_new(const struct config *config)
 /// undefined behavior.
 ///
 /// @param    scheduler The scheduler to free.
-void scheduler_delete(struct scheduler *scheduler);
-
-/// Starts the scheduler.
-///
-/// This starts all of the low-level scheduler threads. After this call, threads
-/// can be spawned using the scheduler_spawn() routine. Parcels for this queue
-/// may come from the network, or from the main thread.
-///
-/// @param    scheduler The scheduler to start.
-/// @param          cfg The configuration object.
-///
-/// @returns            LIBHPX_OK or an error code.
-int scheduler_startup(struct scheduler *scheduler, const struct config *cfg)
-  HPX_NON_NULL(1);
+void scheduler_delete(scheduler_t *scheduler);
 
 /// Restart the scheduler.
 ///
 /// This resumes all of the low-level scheduler threads that were
-/// suspened at the end of the previous execution of hpx_run. Also
-/// reset any scheduler specific flags to their original state.
+/// suspended at the end of the previous execution of hpx_run. It will block
+/// until the run epoch is terminated, at which point it will return the
+/// status.
 ///
-/// @param    scheduler The scheduler to restart.
-///
-/// @returns            LIBHPX_OK or an error code.
-int scheduler_restart(struct scheduler *scheduler)
-  HPX_NON_NULL(1);
+/// @param        sched The scheduler to restart.
+/// @param      startup The initial lightweight thread.
+/// @param         spmd True if every locality should run the startup action.
+int scheduler_start(scheduler_t *sched, hpx_parcel_t *startup, int spmd)
+  HPX_NON_NULL(1, 2);
 
 /// Suspend the scheduler cooperatively.
 ///
-/// This asks all of the threads to shutdown the next time they get a chance to
-/// schedule. It is nonblocking.
+/// This asks all of the threads to stop running.
 ///
 /// @param    scheduler The scheduler to stop.
-/// @param         code The code to return from scheduler_stop().
-void scheduler_stop(struct scheduler *scheduler, int code)
+/// @param         code The code to return .
+void scheduler_stop(scheduler_t *scheduler, int code)
   HPX_NON_NULL(1);
 
-/// Check to see if the scheduler was shutdown.
+/// Check to see if the scheduler is running.
 ///
 /// @param    scheduler The scheduler to check.
 ///
 /// @returns            True if the scheduler is stopped.
-int scheduler_is_stopped(struct scheduler *scheduler)
+int scheduler_is_stopped(const scheduler_t *scheduler)
   HPX_NON_NULL(1);
 
-/// Join the scheduler at shutdown.
-///
-/// This will wait until all of the scheduler's worker threads have shutdown.
-///
-/// @param    scheduler The scheduler to join.
-void scheduler_join(struct scheduler *scheduler)
+/// Get a worker by id.
+worker_t *scheduler_get_worker(scheduler_t *sched, int id)
   HPX_NON_NULL(1);
 
 /// Spawn a new user-level thread for the parcel on the specified
@@ -196,7 +179,7 @@ void scheduler_yield(void);
 /// @param          env The environment to pass to the continuation @p f.
 /// @param        block A flag indicating if it is okay to block before running
 ///                     @p f.
-void scheduler_suspend(void (*f)(hpx_parcel_t *, void*), void *env, int block);
+void scheduler_suspend(void (*f)(hpx_parcel_t *, void*), void *env);
 
 /// Wait for an condition.
 ///
@@ -207,11 +190,11 @@ void scheduler_suspend(void (*f)(hpx_parcel_t *, void*), void *env, int block);
 /// scheduler_wait() will call _schedule() and transfer away from the calling
 /// thread.
 ///
-/// @param         lock The lock protecting the condition.
+/// @param         lock The tatas lock protecting the condition.
 /// @param          con The condition we'd like to wait for.
 ///
 /// @returns            LIBHPX_OK or an error
-hpx_status_t scheduler_wait(tatas_lock_t *lock, struct cvar *con)
+hpx_status_t scheduler_wait(void *lock, struct cvar *con)
   HPX_NON_NULL(1, 2);
 
 /// Signal a condition.
@@ -247,9 +230,14 @@ void scheduler_signal_error(struct cvar *cvar, hpx_status_t code)
 /// Get the parcel bound to the current executing thread.
 hpx_parcel_t *scheduler_current_parcel(void);
 
-/// Get a worker by id.
-worker_t *scheduler_get_worker(struct scheduler *sched, int id)
-  HPX_NON_NULL(1);
+/// Set the number of target threads in the scheduler.
+///
+/// This will go in and actively tell threads to start or stop, however it does
+/// not _wait_ for them to start or stop.
+///
+/// @param    scheduler A pointer to the scheduler object.
+/// @param            n The new target number of threads.
+void scheduler_set_target_threads(void * const scheduler, int n);
 
 #ifdef __cplusplus
 }

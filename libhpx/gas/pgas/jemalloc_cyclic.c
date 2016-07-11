@@ -61,8 +61,12 @@ static bool _cyclic_chunk_free(void *addr, size_t n, bool committed,
   return 0;
 }
 
-void cyclic_allocator_init(void) {
-  static const chunk_hooks_t _cyclic_hooks = {
+void cyclic_allocator_init(int rank) {
+  if (rank) {
+    return;
+  }
+
+  static const chunk_hooks_t cyclic_hooks = {
     .alloc    = _cyclic_chunk_alloc,
     .dalloc   = _cyclic_chunk_free,
     .commit   = as_null_commit,
@@ -72,5 +76,8 @@ void cyclic_allocator_init(void) {
     .merge    = as_null_merge
   };
 
-  as_set_allocator(AS_CYCLIC, &_cyclic_hooks);
+  as_set_allocator(AS_CYCLIC, &cyclic_hooks);
+}
+
+void cyclic_allocator_fini(void) {
 }
