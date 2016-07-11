@@ -57,11 +57,11 @@ int init_handler(hpx_addr_t data) {
   remote = hpx_addr_add(data, peer * n, n);
 
   // test hpx_addr_add with negative offsets
-  hpx_gas_ptrdiff_t off = -rank * n;
+  hpx_gas_ptrdiff_t off = (hpx_gas_ptrdiff_t)-rank * n;
   hpx_addr_t _local = hpx_addr_add(local, off, n);
   test_assert (_local == data);
 
-  off = -peer * n;
+  off = (hpx_gas_ptrdiff_t)-peer * n;
   hpx_addr_t _remote = hpx_addr_add(remote, off, n);
   test_assert (_remote == data);
 
