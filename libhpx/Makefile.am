@@ -10,7 +10,7 @@ lib_LTLIBRARIES	   = libhpx.la
 libhpx_la_CPPFLAGS = -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
 libhpx_la_CXXFLAGS = $(LIBHPX_CXXFLAGS)
 libhpx_la_SOURCES  = libhpx.cpp hpx.cpp call.cpp par.cpp debug.cpp version.cpp \
-                     Interfaces.cpp
+                     Interfaces.cpp symbol_table.c
 
 libhpx_la_LDFLAGS  = $(LIBHPX_LDFLAGS)
 libhpx_la_LIBADD   = $(LIBHPX_LIBADD) \

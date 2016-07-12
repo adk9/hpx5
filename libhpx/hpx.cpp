@@ -85,6 +85,12 @@ static void _cleanup(locality_t *l) {
   }
 
   free(l);
+
+#ifdef ENABLE_DEBUG
+  // clear symbol table if not empty
+  symbol_table_delete_all();
+#endif
+
 }
 
 int hpx_init(int *argc, char ***argv) {
@@ -200,6 +206,11 @@ int hpx_init(int *argc, char ***argv) {
     status = log_error("failed to create scheduler.\n");
     goto unwind1;
   }
+
+#ifdef ENABLE_DEBUG
+  // initialize symbol table to null.
+  here->sym_tab = NULL;
+#endif
 
   action_registration_finalize();
   trace_start(here->tracer);

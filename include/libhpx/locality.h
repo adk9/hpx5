@@ -54,9 +54,14 @@ extern "C" {
 #define Topology void
 #endif
 
-/// Forward declarations.
+///Forward declarations.
 /// @{
 struct config;
+struct network;
+struct scheduler;
+struct topology;
+struct tracer;
+struct symbol_table;
 /// @}
 
 /// The locality object.
@@ -89,6 +94,8 @@ typedef struct locality {
   sigset_t               mask; //!< The default signal mask.
   struct logtable      **logs; //!< reference to instrumentation log data
   uint64_t            **stats; //!< reference to stats instrumentation backend
+  struct symbol_table *sym_tab;  //!< Symbol Table to map hpx addresses and 
+                                 //!< their data types.
 } locality_t;
 
 /// The global locality is exposed through this "here" pointer.
