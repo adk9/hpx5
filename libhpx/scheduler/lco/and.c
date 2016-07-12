@@ -234,6 +234,12 @@ hpx_addr_t hpx_lco_and_new(int64_t limit) {
     _and_init_handler(and, limit);
     hpx_gas_unpin(gva);
   }
+  
+  // For a debugging instance update the symbol table
+  // @TO_DO replace below check with simple check for debug instance
+  if (config_dbg_waitat_isset(here->config, 0)) {
+    symbol_table_add(gva, "_and_t");
+  }
   return gva;
 }
 

@@ -6,8 +6,7 @@ import gdb
 
 def print_parcels():
   ### Retrieve Action Table entries
-  number_of_actions = gdb.parse_and_eval('here->actions->n')
-  actions = gdb.parse_and_eval('here->actions->entries')
+  actions = gdb.parse_and_eval('actions')
 
   ### Display parcels for current rank.
   print ("--------------------\nScheduler Parcels:\n--------------------")

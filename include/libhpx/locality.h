@@ -34,7 +34,7 @@
 extern "C" {
 #endif
 
-/// Forward declarations.
+///Forward declarations.
 /// @{
 struct boot;
 struct config;
@@ -42,10 +42,12 @@ struct network;
 struct scheduler;
 struct topology;
 struct tracer;
+struct symbol_table;
 /// @}
 
 /// The locality object.
 typedef struct locality {
+<<<<<<< cfc1ffe2409555ed09570b25642471d19223dc26
   uint32_t               rank; //!< The dense, 0-based rank of this locality.
   uint32_t              ranks; //!< The total number of ranks running the
                                //!< current job.
@@ -73,6 +75,8 @@ typedef struct locality {
   void           *percolation; //!< An interface for dealing with GPU backends.
   struct trace        *tracer; //!< Reference to the tracer object
   sigset_t               mask; //!< The default signal mask.
+  struct symbol_table *sym_tab;  //!< Symbol Table to map hpx addresses and 
+                                 //!< their data types.
 } locality_t;
 
 /// Inter-locality action interface.
