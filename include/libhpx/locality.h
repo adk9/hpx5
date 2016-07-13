@@ -47,7 +47,6 @@ struct symbol_table;
 
 /// The locality object.
 typedef struct locality {
-<<<<<<< cfc1ffe2409555ed09570b25642471d19223dc26
   uint32_t               rank; //!< The dense, 0-based rank of this locality.
   uint32_t              ranks; //!< The total number of ranks running the
                                //!< current job.
