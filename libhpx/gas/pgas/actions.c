@@ -22,8 +22,6 @@
 #include <libhpx/gpa.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
-
-
 #include "heap.h"
 #include "pgas.h"
 

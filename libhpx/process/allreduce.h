@@ -16,8 +16,6 @@
 
 #include <hpx/hpx.h>
 #include <libsync/locks.h>
-#include <libhpx/network.h>
-
 
 typedef struct continuation continuation_t;
 
@@ -43,7 +41,7 @@ typedef struct {
   continuation_t *continuation;           // our continuation data
   reduce_t             *reduce;           // the local reduction
   int32_t                   id;           // our identifier for our parent
-  coll_t                  *ctx;           // collective context info for this reduce
+  void                    *ctx;           // collective context info for this reduce
 } allreduce_t;
 
 void allreduce_init(allreduce_t *obj, size_t bytes, hpx_addr_t parent,

@@ -15,8 +15,6 @@
 #define LIBHPX_GAS_PGAS_H
 
 #include <hpx/hpx.h>
-#include <hpx/attributes.h>
-#include <libhpx/network.h>
 
 struct config;
 struct gas;

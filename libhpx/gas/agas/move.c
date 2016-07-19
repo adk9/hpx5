@@ -17,14 +17,13 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <libsync/locks.h>
 #include <libhpx/action.h>
 #include <libhpx/config.h>
 #include <libhpx/debug.h>
 #include <libhpx/lco.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
-#include <libhpx/network.h>
-#include <libsync/locks.h>
 #include "agas.h"
 #include "btt.h"
 

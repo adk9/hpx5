@@ -93,11 +93,14 @@ static void _pwc_release_dma(void *network, const void* base, size_t n) {
   pwc->xport->unpin(base, n);
 }
 
-static int _pwc_coll_init(void *network, coll_t **_c) {
+static int _pwc_coll_init(void *network, void **c) {
   return LIBHPX_OK;
 }
 
-int _pwc_coll_sync(void *network, void *in, size_t in_size, void *out, coll_t *c) {
+int
+_pwc_coll_sync(void *network, void *in, size_t in_size, void *out, void *ctx)
+{
+  coll_t *c = ctx;
   void *sendbuf = in;
   int count = in_size;
   char *comm = c->data + c->group_bytes;

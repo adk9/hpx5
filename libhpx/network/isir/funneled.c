@@ -84,8 +84,8 @@ _funneled_delete(void *network) {
   free(isir);
 }
 
-static int _funneled_coll_init(void *network, coll_t **_c) {
-  coll_t *c = *_c;
+static int _funneled_coll_init(void *network, void **ctx) {
+  coll_t *c = *(coll_t **)ctx;
   int num_active = c->group_sz;
 
   log_net("ISIR network collective being initialized."
@@ -95,8 +95,8 @@ static int _funneled_coll_init(void *network, coll_t **_c) {
   if (c->comm_bytes == 0) {
     // we have not yet allocated a communicator
     int32_t comm_bytes = sizeof(MPI_Comm);
-    *_c = realloc(c, sizeof(coll_t) + c->group_bytes + comm_bytes);
-    c = *_c;
+    *ctx = realloc(c, sizeof(coll_t) + c->group_bytes + comm_bytes);
+    c = *ctx;
     c->comm_bytes = comm_bytes;
   }
 
@@ -114,7 +114,8 @@ static int _funneled_coll_init(void *network, coll_t **_c) {
 }
 
 static int _funneled_coll_sync(void *network, void *in, size_t input_sz,
-                               void *out, coll_t *c) {
+                               void *out, void *ctx) {
+  coll_t *c = ctx;
   void *sendbuf = in;
   int count = input_sz;
   char *comm = c->data + c->group_bytes;

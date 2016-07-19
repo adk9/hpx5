@@ -25,7 +25,6 @@
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
-#include <libhpx/network.h>
 #include <libhpx/rebalancer.h>
 #include <libhpx/scheduler.h>
 #include "thread.h"
