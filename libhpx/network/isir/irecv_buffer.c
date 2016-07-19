@@ -22,7 +22,6 @@
 #include <libhpx/libhpx.h>
 #include <libhpx/network.h>
 #include <libhpx/parcel.h>
-#include <libhpx/worker.h>
 #include "irecv_buffer.h"
 #include "parcel_utils.h"
 #include "xport.h"

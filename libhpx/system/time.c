@@ -17,11 +17,10 @@
 
 #include <string.h>
 #include <unistd.h>
+#include <hpx/hpx.h>
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/time.h>
-#include <libhpx/worker.h>
-#include "hpx/hpx.h"
 
 static hpx_time_t _beginning_of_time;
 

@@ -22,12 +22,12 @@
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
 #include <libhpx/parcel.h>
-#include <libhpx/worker.h>
 
 static
 int _va_gas_bcast_cont(hpx_action_t act, hpx_addr_t base, int n,
                        size_t offset, size_t bsize, hpx_action_t rop,
-                       hpx_addr_t rsync, int nargs, va_list *vargs) {
+                       hpx_addr_t rsync, int nargs, va_list *vargs)
+{
   hpx_addr_t and = hpx_lco_and_new(n);
   hpx_action_t set = hpx_lco_set_action;
   for (int i = 0; i < n; ++i) {
@@ -47,7 +47,8 @@ int _va_gas_bcast_cont(hpx_action_t act, hpx_addr_t base, int n,
 int
 _hpx_gas_bcast_with_continuation(hpx_action_t action, hpx_addr_t base, int n,
                                  size_t offset, size_t bsize, hpx_action_t rop,
-                                 hpx_addr_t raddr, int nargs, ...) {
+                                 hpx_addr_t raddr, int nargs, ...)
+{
   va_list vargs;
   va_start(vargs, nargs);
   int e = _va_gas_bcast_cont(action, base, n, offset, bsize, rop, raddr, nargs,
@@ -59,7 +60,8 @@ _hpx_gas_bcast_with_continuation(hpx_action_t action, hpx_addr_t base, int n,
 
 int
 _hpx_gas_bcast_sync(hpx_action_t action, hpx_addr_t base, int n,
-                    size_t offset, size_t bsize, int nargs, ...) {
+                    size_t offset, size_t bsize, int nargs, ...)
+{
   hpx_addr_t sync = hpx_lco_and_new(n);
   if (sync == HPX_NULL) {
     log_error("could not allocate an LCO.\n");

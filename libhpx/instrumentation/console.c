@@ -27,9 +27,10 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include <hpx/hpx.h>
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
-#include <hpx/hpx.h>
+#include <libhpx/worker.h>
 #include "metadata.h"
 
 /// This will output a list of action ids and names.

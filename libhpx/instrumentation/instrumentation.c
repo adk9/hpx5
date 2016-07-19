@@ -28,7 +28,7 @@
 #include <pwd.h>
 
 #include <hpx/hpx.h>
-#include <hpx/attributes.h>
+#include <libsync/sync.h>
 #include <libhpx/action.h>
 #include <libhpx/config.h>
 #include <libhpx/debug.h>
@@ -37,6 +37,7 @@
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
 #include <libhpx/parcel.h>
+#include <libhpx/worker.h>
 #include "file.h"
 
 trace_t *trace_new(const config_t *cfg) {
