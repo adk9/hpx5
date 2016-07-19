@@ -21,7 +21,6 @@
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
-#include <libhpx/scheduler.h>
 #include "agas.h"
 #include "btt.h"
 

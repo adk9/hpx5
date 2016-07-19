@@ -22,7 +22,6 @@
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
 #include <libhpx/parcel.h>
-#include <libhpx/scheduler.h>
 #include <libhpx/worker.h>
 
 static

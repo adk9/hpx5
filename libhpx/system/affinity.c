@@ -20,7 +20,6 @@
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
-#include <libhpx/scheduler.h>
 #include <libhpx/system.h>
 #include <libhpx/topology.h>
 #include <libhpx/worker.h>

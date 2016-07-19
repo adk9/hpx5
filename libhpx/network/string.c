@@ -19,7 +19,6 @@
 #include <libhpx/action.h>
 #include <libhpx/debug.h>
 #include <libhpx/parcel.h>
-#include <libhpx/scheduler.h>
 #include <libhpx/string.h>
 
 typedef struct {
@@ -62,7 +61,7 @@ int _parcel_memget_request_handler(const void *from, void *to, size_t n,
                                    hpx_addr_t lsync) {
   // Allocate a generic "large enough" parcel to send the data back to the
   // source. We do it like this in order to avoid a temporary copy of the data.
-  hpx_parcel_t *current = self->current;
+  const hpx_parcel_t *current = hpx_thread_current_parcel();
   size_t          bytes = sizeof(_parcel_memget_reply_args_t) + n;
   hpx_addr_t     target = HPX_THERE(current->src);
   hpx_action_t       op = _parcel_memget_reply;

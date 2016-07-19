@@ -29,7 +29,6 @@
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
 #include <libhpx/network.h>
-#include <libhpx/scheduler.h>
 #include "cyclic.h"
 #include "global.h"
 #include "heap.h"

@@ -16,10 +16,10 @@
 #endif
 
 #include <string.h>
-#include "libhpx/action.h"
-#include "libhpx/debug.h"
-#include "libhpx/parcel.h"
-#include "libhpx/scheduler.h"
+#include <libhpx/action.h>
+#include <libhpx/debug.h>
+#include <libhpx/parcel.h>
+#include <libhpx/scheduler.h>
 #include "isir.h"
 
 typedef struct {

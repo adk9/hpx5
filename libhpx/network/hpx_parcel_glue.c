@@ -20,7 +20,6 @@
 #include <libhpx/action.h>
 #include <libhpx/config.h>
 #include <libhpx/debug.h>
-#include <libhpx/scheduler.h>
 #include <libhpx/parcel.h>
 
 hpx_parcel_t *hpx_parcel_acquire(const void *buffer, size_t bytes) {

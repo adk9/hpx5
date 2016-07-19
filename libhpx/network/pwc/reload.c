@@ -27,7 +27,6 @@
 #include <libhpx/parcel.h>
 #include <libhpx/parcel_block.h>
 #include <libhpx/scheduler.h>
-
 #include "commands.h"
 #include "parcel_emulation.h"
 #include "pwc.h"

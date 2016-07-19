@@ -15,12 +15,12 @@
 # include "config.h"
 #endif
 
-#include "libhpx/action.h"
-#include "libhpx/config.h"
-#include "libhpx/debug.h"
-#include "libhpx/parcel.h"
-#include "libhpx/scheduler.h"
-#include "libhpx/worker.h"
+#include <libhpx/action.h>
+#include <libhpx/config.h>
+#include <libhpx/debug.h>
+#include <libhpx/parcel.h>
+#include <libhpx/scheduler.h>
+#include <libhpx/worker.h>
 #include "commands.h"
 #include "pwc.h"
 #include "xport.h"

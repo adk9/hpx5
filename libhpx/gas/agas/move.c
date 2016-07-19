@@ -24,7 +24,6 @@
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
 #include <libhpx/network.h>
-#include <libhpx/scheduler.h>
 #include <libhpx/worker.h>
 #include <libsync/locks.h>
 #include "agas.h"

@@ -28,7 +28,6 @@
 #include <libhpx/locality.h>
 #include <libhpx/parcel.h>
 #include <libhpx/percolation.h>
-#include <libhpx/scheduler.h>
 
 
 static const char *_dummy_id(void) {
@@ -67,7 +66,7 @@ percolation_t *percolation_new(void) {
 }
 
 int percolation_execute_handler(int nargs, void *vargs[], size_t sizes[]) {
-  hpx_parcel_t *p = scheduler_current_parcel();
+  const hpx_parcel_t *p = hpx_thread_current_parcel();
 
   percolation_t *percolation = here->percolation;
   dbg_assert(percolation);

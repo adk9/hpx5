@@ -22,7 +22,6 @@
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
-#include <libhpx/scheduler.h>
 #include "agas.h"
 #include "btt.h"
 #include "gva.h"
@@ -42,7 +41,7 @@ static int
 _alloc_user_handler(void *UNUSED, hpx_addr_t addr, size_t n, size_t padded,
                     uint32_t attr, void *lva, int zero) {
   agas_t *agas = (agas_t*)here->gas;
-  hpx_parcel_t *p = scheduler_current_parcel();
+  const hpx_parcel_t *p = hpx_thread_current_parcel();
 
   if (p->src != here->rank) {
     size_t boundary = (padded < 8) ? 8 : padded;

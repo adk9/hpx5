@@ -16,11 +16,11 @@
 #endif
 
 #include <string.h>
-#include "libhpx/action.h"
-#include "libhpx/gas.h"
-#include "libhpx/locality.h"
-#include "libhpx/parcel.h"
-#include "libhpx/scheduler.h"
+#include <libhpx/action.h>
+#include <libhpx/gas.h>
+#include <libhpx/locality.h>
+#include <libhpx/parcel.h>
+#include <libhpx/scheduler.h>
 #include "emulate_pwc.h"
 
 /// Emulate a put-with-completion operation.
