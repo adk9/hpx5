@@ -16,8 +16,8 @@
 #endif
 
 #include <libhpx/action.h>
+#include <libhpx/collective.h>
 #include <libhpx/debug.h>
-#include <libhpx/network.h>
 #include "allreduce.h"
 
 static int _allreduce_init_handler(allreduce_t *r, size_t bytes,

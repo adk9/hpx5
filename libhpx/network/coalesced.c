@@ -267,6 +267,8 @@ network_t* coalesced_network_new(network_t *next,  const struct config *cfg) {
   network->vtable.release_dma  = _coalesced_network_release_dma;
   network->vtable.lco_get      = _coalesced_network_lco_get;
   network->vtable.lco_wait     = _coalesced_network_lco_wait;
+  network->vtable.coll_init    = next->coll_init;
+  network->vtable.coll_sync    = next->coll_sync;
 
   // set the next network
   network->next = next;

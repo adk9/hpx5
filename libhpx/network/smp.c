@@ -61,13 +61,12 @@ static int _smp_lco_get(void *o, hpx_addr_t lco, size_t n, void *to, int reset) 
   return (reset) ? hpx_lco_get_reset(lco, n, to) : hpx_lco_get(lco, n, to);
 }
 
-static int _smp_coll_init(void *network, coll_t **_c) {
-
+static int _smp_coll_init(void *network, void **_c) {
   return LIBHPX_OK;
 }
 
 static int _smp_coll_sync(void *network, void *in, size_t in_size, void *out,
-                          coll_t *c) {
+                          void *c) {
   void *sendbuf = in;
   int count = in_size;
   memcpy(out, sendbuf, count);

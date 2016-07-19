@@ -17,17 +17,16 @@
 
 #include <inttypes.h>
 #include <stdlib.h>
+#include <mpi.h>
 #include <hpx/builtins.h>
 #include <libsync/queues.h>
-
+#include <libhpx/collective.h>
 #include <libhpx/debug.h>
 #include <libhpx/gas.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
 #include <libhpx/padding.h>
 #include <libhpx/parcel.h>
-#include <mpi.h>
-
 #include "irecv_buffer.h"
 #include "isend_buffer.h"
 #include "isir.h"

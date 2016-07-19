@@ -153,6 +153,8 @@ network_t* compressed_network_new(network_t *impl) {
   network->vtable.release_dma  = _compressed_network_release_dma;
   network->vtable.lco_get      = _compressed_network_lco_get;
   network->vtable.lco_wait     = _compressed_network_lco_wait;
+  network->vtable.coll_init    = impl->coll_init;
+  network->vtable.coll_sync    = impl->coll_sync;
 
   network->impl = impl;
 

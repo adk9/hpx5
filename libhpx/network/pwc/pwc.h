@@ -15,9 +15,9 @@
 #define LIBHPX_NETWORK_PWC_PWC_H
 
 #include <hpx/hpx.h>
+#include <libhpx/collective.h>
 #include <libhpx/network.h>
 #include <libhpx/padding.h>
-
 #include "commands.h"
 
 /// Forward declarations.
