@@ -15,21 +15,7 @@
 #define LIBHPX_NETWORK_ISIR_ISEND_BUFFER_H
 
 #include <hpx/hpx.h>
-
-typedef enum {
-  DIRECT = 10001,
-  COLL_ALLRED,
-  COLL_BCAST
-} cmd_t;
-
-typedef struct {
-  void *in;  
-  void *out;
-  void *data_type;
-  void *op;  
-  void *comm;  
-  int count;
-} coll_data_t;
+#include <libhpx/network.h>
 
 struct isir_xport;
 

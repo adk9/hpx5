@@ -126,7 +126,7 @@ static int _funneled_coll_sync(void *network, void *in, size_t input_sz,
 
   while (!sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE))
     ;
-  if (c->type == ALL_REDUCE) {
+  if (c->type == COLL_ALLRED) {
     isir->xport->allreduce(sendbuf, out, count, NULL, &c->op, comm);
   } else {
     log_dflt("Collective type descriptor: %d is invalid!\n", c->type);
@@ -137,15 +137,13 @@ static int _funneled_coll_sync(void *network, void *in, size_t input_sz,
 
 static int _funneled_coll_async(void *network, void *in, size_t input_sz,
                                void *out, coll_t *c, hpx_addr_t lsync, hpx_addr_t rsync) {
-  void *sendbuf = in;
-  int count = input_sz;
   char *comm = c->data + c->group_bytes;
   _funneled_t *isir = network;
 
   //acquire lock before collective operation `put` into buffer
   while (!sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE))
     ;
-  dbg_assert(c->type == ALL_REDUCE);
+  dbg_assert(c->type == COLL_ALLRED);
 
   coll_data_t *data = (coll_data_t*)calloc(1, sizeof(coll_data_t));
   data->in = in;

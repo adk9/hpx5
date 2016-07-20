@@ -41,7 +41,7 @@ void allreduce_init(allreduce_t *r, size_t bytes, hpx_addr_t parent,
   r->ctx->comm_bytes = 0;
   r->ctx->group_sz = 0;
   r->ctx->recv_count = bytes;
-  r->ctx->type = ALL_REDUCE;
+  r->ctx->type = COLL_ALLRED;
   r->ctx->op = op;
 }
 

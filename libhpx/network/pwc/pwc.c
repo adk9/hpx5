@@ -107,7 +107,7 @@ int _pwc_coll_sync(void *network, void *in, size_t in_size, void *out, coll_t *c
   // destined for collective operation
   pwc->vtable.flush(network);
 
-  if (c->type == ALL_REDUCE) {
+  if (c->type == COLL_ALLRED) {
     pwc->xport->allreduce(sendbuf, out, count, NULL, &c->op, comm);
   }
   return LIBHPX_OK;

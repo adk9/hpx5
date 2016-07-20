@@ -34,11 +34,22 @@ struct transport;
 
 /// collective definitions/interfaces
 typedef enum {
-  ALL_REDUCE = 1000 ,
-} coll_type_t;
+  DIRECT = 10001,
+  COLL_ALLRED,
+  COLL_BCAST
+} cmd_t;
+
+typedef struct {
+  void *in;  
+  void *out;
+  void *data_type;
+  void *op;  
+  void *comm;  
+  int count;
+} coll_data_t;
 
 typedef struct collective{
-  coll_type_t      type;   //!< type of collective operation
+  cmd_t type;   //!< type of collective operation
   hpx_monoid_op_t    op;   //!< collective operator
   int32_t      group_sz;   //!< active group size
   int32_t    recv_count;   //!< how many bytes to be recieved
