@@ -55,7 +55,7 @@ static int _decompress_handler(char* buffer, int n) {
   size_t size = *(size_t*)buffer;
   hpx_parcel_t *p = (hpx_parcel_t *)as_memalign(AS_REGISTERED, HPX_CACHELINE_SIZE, size);
   buffer += sizeof(size_t);
-  size_t osize = LZ4_decompress_fast(buffer, (char*)p, size);
+  int osize = LZ4_decompress_fast(buffer, (char*)p, size);
   dbg_assert(osize == n);
 
   p->ustack = NULL;

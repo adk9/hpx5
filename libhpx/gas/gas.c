@@ -77,6 +77,7 @@ gas_t *gas_new(config_t *cfg, struct boot *boot) {
 
   // NB: HPX_GAS_BLOCK_BYTES_MAX is declared const in the interface... this does
   //     a C-style const cast during initialization to set it up.
+  dbg_assert(gas);
   HPX_GAS_BLOCK_BYTES_MAX = gas->max_block_size;
 
   return gas;

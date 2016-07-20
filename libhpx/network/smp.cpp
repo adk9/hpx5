@@ -74,19 +74,19 @@ static int _smp_coll_sync(void *network, void *in, size_t in_size, void *out,
 }
 
 static Network _smp = {
-  .type = HPX_NETWORK_SMP,
-  .string = NULL,
-  .deallocate = _smp_deallocate,
-  .progress = _smp_progress,
-  .send = _smp_send,
-  .probe = _smp_probe,
-  .flush = _smp_flush,
-  .register_dma = _smp_register_dma,
-  .release_dma = _smp_release_dma,
-  .lco_get = _smp_lco_get,
-  .lco_wait = _smp_lco_wait,
-  .coll_init = _smp_coll_init,
-  .coll_sync = _smp_coll_sync
+  HPX_NETWORK_SMP,
+  nullptr,
+  _smp_deallocate,
+  _smp_progress,
+  _smp_send,
+  _smp_coll_init,
+  _smp_coll_sync,
+  _smp_lco_wait,
+  _smp_lco_get,
+  _smp_probe,
+  _smp_flush,
+  _smp_register_dma,
+  _smp_release_dma
 };
 
 void *network_smp_new(const struct config *cfg, boot_t *boot) {

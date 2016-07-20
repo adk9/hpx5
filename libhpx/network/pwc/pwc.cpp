@@ -196,19 +196,20 @@ static void _pwc_register_gas_heap(void *network, boot_t *boot, gas_t *gas) {
   (void)segment;
 }
 
-static const class_string_t _pwc_string_vtable = {
-  .memget       = pwc_memget,
-  .memget_lsync = pwc_memget_lsync,
-  .memget_rsync = pwc_memget_rsync,
-  .memput       = pwc_memput,
-  .memput_lsync = pwc_memput_lsync,
-  .memput_rsync = pwc_memput_rsync,
-  .memcpy       = pwc_memcpy,
-  .memcpy_sync  = pwc_memcpy_sync
+static const class_string_t _pwc_string_vtable  = {
+  pwc_memget,
+  pwc_memget_rsync,
+  pwc_memget_lsync,
+  pwc_memput,
+  pwc_memput_lsync,
+  pwc_memput_rsync,
+  pwc_memcpy,
+  pwc_memcpy_sync
 };
 
 network_t *
 network_pwc_funneled_new(const config_t *cfg, boot_t *boot, gas_t *gas) {
+
   // Validate parameters.
   if (boot->type == HPX_BOOT_SMP) {
     log_net("will not instantiate PWC for the SMP boot network\n");
@@ -279,17 +280,15 @@ int pwc_get(void *obj, void *lva, hpx_addr_t from, size_t n,
   pwc_network_t *pwc = (pwc_network_t *)obj;
   int rank = gpa_to_rank(from);
 
-  xport_op_t op = {
-    .rank = rank,
-    .n = n,
-    .dest = lva,
-    .dest_key = pwc->xport->key_find_ref(pwc->xport, lva, n),
-    .src = pwc->heap_segments[rank].base + gpa_to_offset(from),
-    .src_key = &pwc->heap_segments[rank].key,
-    .lop = lcmd,
-    .rop = rcmd
-  };
-
+  xport_op_t op;
+  op.rank = rank;
+  op.n = n;
+  op.dest = lva;
+  op.dest_key = pwc->xport->key_find_ref(pwc->xport, lva, n);
+  op.src = pwc->heap_segments[rank].base + gpa_to_offset(from);
+  op.src_key = &pwc->heap_segments[rank].key;
+  op.lop = lcmd;
+  op.rop = rcmd;
   return pwc->xport->gwc(&op);
 }
 
@@ -298,17 +297,15 @@ int pwc_put(void *obj, hpx_addr_t to, const void *lva, size_t n,
   pwc_network_t *pwc = (pwc_network_t *)obj;
   int rank = gpa_to_rank(to);
 
-  xport_op_t op = {
-    .rank = rank,
-    .n = n,
-    .dest = pwc->heap_segments[rank].base + gpa_to_offset(to),
-    .dest_key = &pwc->heap_segments[rank].key,
-    .src = lva,
-    .src_key = pwc->xport->key_find_ref(pwc->xport, lva, n),
-    .lop = lcmd,
-    .rop = rcmd
-  };
-
+  xport_op_t op;
+  op.rank = rank;
+  op.n = n;
+  op.dest = pwc->heap_segments[rank].base + gpa_to_offset(to);
+  op.dest_key = &pwc->heap_segments[rank].key;
+  op.src = lva;
+  op.src_key = pwc->xport->key_find_ref(pwc->xport, lva, n);
+  op.lop = lcmd;
+  op.rop = rcmd;
   return pwc->xport->pwc(&op);
 }
 
