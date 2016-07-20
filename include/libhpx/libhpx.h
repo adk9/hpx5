@@ -18,6 +18,7 @@
 #include <stdbool.h>
 #include <hpx/attributes.h>
 #include <libhpx/config.h>
+#include <hpx/time.h>
 
 enum {
   LIBHPX_ENOMEM = -(ENOMEM),
@@ -75,6 +76,9 @@ void libhpx_inst_phase_end()
 
 /// Check if the tracer is currently active
 bool libhpx_inst_tracer_active()
+  HPX_PUBLIC;
+
+hpx_time_t libhpx_get_inst_time()
   HPX_PUBLIC;
 
 #ifdef __cplusplus

@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <inttypes.h>
 #include "hpx/hpx.h"
+#include <libhpx/libhpx.h>
 
 static void _usage(FILE *f, int error) {
   fprintf(f, "Usage: fibonacci [options] NUMBER\n"
@@ -92,11 +93,14 @@ static int _fib_main_action(int *args, size_t size) {
 
   hpx_call_sync(HPX_HERE, _fib, &fn, sizeof(fn), &n, sizeof(n));
   double elapsed = hpx_time_elapsed_ms(now)/1e3;
+  double inst_time = hpx_time_ms(libhpx_get_inst_time())/1e3;
 
   printf("%d\n", fn);
   printf("seconds: %.7f\n", elapsed);
+  printf("inst time:; %.7f\n", inst_time);
   printf("localities: %d\n", HPX_LOCALITIES);
   printf("threads/locality: %d\n", HPX_THREADS);
+
   hpx_exit(HPX_SUCCESS);
 }
 

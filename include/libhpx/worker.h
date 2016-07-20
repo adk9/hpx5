@@ -20,6 +20,7 @@ extern "C" {
 
 #include <pthread.h>
 #include <hpx/hpx.h>
+#include <hpx/time.h>
 #include <hpx/attributes.h>
 #include <libsync/deques.h>
 #include <libsync/queues.h>
@@ -77,6 +78,7 @@ struct worker {
                    sizeof(int) * 2);
   padded_deque_t   queues[2];                   //!< work and yield queues
   two_lock_queue_t  inbox;                      //!< mail sent to me
+  hpx_time_t   counter;
 };
 typedef struct worker worker_t;
 

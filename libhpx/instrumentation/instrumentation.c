@@ -79,6 +79,10 @@ bool libhpx_inst_tracer_active() {
   return sync_load(&here->tracer->active, SYNC_RELAXED);
 }
 
+hpx_time_t libhpx_get_inst_time() {
+  return self->counter;
+}
+
 int inst_check_vappend(int id, ...) {;
   if (!here) {
     return 0;

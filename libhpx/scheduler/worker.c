@@ -758,6 +758,7 @@ void worker_init(worker_t *this, struct scheduler *sched, int id) {
   this->system      = NULL;
   this->current     = NULL;
   this->stacks      = NULL;
+  this->counter     = HPX_TIME_NULL;
 
   if (pthread_mutex_init(&this->lock, NULL)) {
     dbg_error("could not initialize the lock for %d\n", id);

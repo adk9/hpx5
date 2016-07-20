@@ -287,11 +287,12 @@ static void _create_logtable(worker_t *w, int class, int id, size_t size) {
 static void _vappend(int UNUSED, int n, int id, ...) {
   va_list vargs;
   va_start(vargs, id);
+  hpx_time_t start = hpx_time_now();
 
   dbg_assert(self->logs);
   logtable_t *log = &self->logs[id];
   dbg_assert(log);
-  uint64_t time = hpx_time_from_start_ns(hpx_time_now());
+  uint64_t time = hpx_time_from_start_ns(hpx_time_now()) - hpx_time_ns(self->counter);
   char *next = log->next + log->record_bytes;
   if (next - log->buffer > log->max_size) {
     EVENT_TRACE_FILE_IO_BEGIN();
@@ -308,6 +309,10 @@ static void _vappend(int UNUSED, int n, int id, ...) {
     r->user[i] = va_arg(vargs, uint64_t);
   }
 
+  hpx_time_t end = hpx_time_now();
+  hpx_time_t diff;
+  hpx_time_diff(start, end, &diff);
+  self->counter = hpx_time_add(self->counter, diff);
   va_end(vargs);
 }
 
