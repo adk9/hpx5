@@ -13,10 +13,10 @@ libnetwork_la_SOURCES  = locality.c \
                          parcel.c \
                          parcel_block.c \
                          hpx_parcel_glue.c \
-                         smp.c inst.c \
-                         coalesced.c \
+                         smp.cpp inst.cpp \
+                         coalesced.cpp \
                          string.c \
-                         compressed.c
+                         compressed.cpp
 
 if HAVE_NETWORK
 libnetwork_la_LIBADD   = isir/libisir.la \

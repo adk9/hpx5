@@ -15,6 +15,7 @@
 # include "config.h"
 #endif
 
+#include "compressed.h"
 #include <stdlib.h>
 #include <string.h>
 #include <libsync/queues.h>
@@ -40,7 +41,7 @@ typedef struct {
 } _compressed_network_t;
 
 static void _compressed_network_deallocate(void *obj) {
-  _compressed_network_t *network = obj;
+  _compressed_network_t *network = (_compressed_network_t*)obj;
   network_delete(network->impl);
   free(obj);
 }
@@ -52,7 +53,7 @@ static void _compressed_network_deallocate(void *obj) {
 static int _decompress_handler(char* buffer, int n) {
   // retrieve the original size from the payload.
   size_t size = *(size_t*)buffer;
-  hpx_parcel_t *p = as_memalign(AS_REGISTERED, HPX_CACHELINE_SIZE, size);
+  hpx_parcel_t *p = (hpx_parcel_t *)as_memalign(AS_REGISTERED, HPX_CACHELINE_SIZE, size);
   buffer += sizeof(size_t);
   size_t osize = LZ4_decompress_fast(buffer, (char*)p, size);
   dbg_assert(osize == n);
@@ -68,7 +69,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _decompress, _decompress_handl
 
 static int _compressed_network_send(void *obj, hpx_parcel_t *p,
                                     hpx_parcel_t *ssync) {
-  _compressed_network_t *network = obj;
+  _compressed_network_t *network = (_compressed_network_t*)obj;
   if (!action_is_compressed(p->action)) {
     return network_send(network->impl, p, ssync);
   }
@@ -83,7 +84,7 @@ static int _compressed_network_send(void *obj, hpx_parcel_t *p,
 
   // the original size is stored in the payload since we need it
   // during decompression.
-  char *data = hpx_parcel_get_data(cp);
+  char *data = (char*)hpx_parcel_get_data(cp);
   *(size_t*)data = isize;
   data += sizeof(size_t);
 
@@ -101,46 +102,46 @@ static int _compressed_network_send(void *obj, hpx_parcel_t *p,
 }
 
 static int _compressed_network_progress(void *obj, int id) {
-  _compressed_network_t *network = obj;
+  _compressed_network_t *network = (_compressed_network_t*)obj;
   return network_progress(network->impl, id);
 }
 
 static hpx_parcel_t* _compressed_network_probe(void *obj, int rank) {
-  _compressed_network_t *network = obj;
+  _compressed_network_t *network = (_compressed_network_t*)obj;
   return network_probe(network->impl, rank);
 }
 
 static void _compressed_network_flush(void *obj) {
-  _compressed_network_t *network = obj;
+  _compressed_network_t *network = (_compressed_network_t*)obj;
   network_flush(network->impl);
 }
 
 static void _compressed_network_register_dma(void *obj, const void *base,
                                             size_t bytes, void *key) {
-  _compressed_network_t *network = obj;
+  _compressed_network_t *network = (_compressed_network_t*)obj;
   network_register_dma(network->impl, base, bytes, key);
 }
 
 static void _compressed_network_release_dma(void *obj, const void *base,
                                            size_t bytes) {
-  _compressed_network_t *network = obj;
+  _compressed_network_t *network = (_compressed_network_t*)obj;
   network_release_dma(network->impl, base, bytes);
 }
 
 static int _compressed_network_lco_wait(void *obj, hpx_addr_t lco, int reset) {
-  _compressed_network_t *network = obj;
+  _compressed_network_t *network = (_compressed_network_t*)obj;
   return network_lco_wait(network->impl, lco, reset);
 }
 
 static int _compressed_network_lco_get(void *obj, hpx_addr_t lco, size_t n,
                                       void *out, int reset) {
-  _compressed_network_t *network = obj;
+  _compressed_network_t *network = (_compressed_network_t*)obj;
   return network_lco_get(network->impl, lco, n, out, reset);
 }
 
 void* compressed_network_new(void *impl) {
   dbg_assert(impl);
-  _compressed_network_t *network = malloc(sizeof(*network));
+  _compressed_network_t *network = (_compressed_network_t*)malloc(sizeof(*network));
 
   network->vtable.string       = ((Network*)impl)->string;
   network->vtable.type         = ((Network*)impl)->type;

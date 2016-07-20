@@ -15,13 +15,12 @@
 # include "config.h"
 #endif
 
-#include <stdlib.h>
+#include "inst.h"
 #include <libhpx/debug.h>
 #include <libhpx/events.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/network.h>
-
-#include "inst.h"
+#include <stdlib.h>
 
 typedef struct {
   Network vtable;
@@ -32,7 +31,7 @@ typedef struct {
 static void
 _inst_deallocate(void *network)
 {
-  _inst_network_t *inst = network;
+  _inst_network_t *inst = (_inst_network_t *)network;
   network_delete(inst->impl);
   free(inst);
 }
@@ -41,7 +40,7 @@ static int
 _inst_progress(void *network, int id)
 {
   EVENT_NETWORK_PROGRESS_BEGIN();
-  _inst_network_t *inst = network;
+  _inst_network_t *inst = (_inst_network_t *)network;
   int r = network_progress(inst->impl, id);
   EVENT_NETWORK_PROGRESS_END();
   return r;
@@ -51,7 +50,7 @@ static int
 _inst_send(void *network, hpx_parcel_t *p, hpx_parcel_t *ssync)
 {
   EVENT_NETWORK_SEND();
-  _inst_network_t *inst = network;
+  _inst_network_t *inst = (_inst_network_t *)network;
   return network_send(inst->impl, p, ssync);
 }
 
@@ -59,7 +58,7 @@ static hpx_parcel_t *
 _inst_probe(void *network, int nrx)
 {
   EVENT_NETWORK_PROBE_BEGIN();
-  _inst_network_t *inst = network;
+  _inst_network_t *inst = (_inst_network_t *)network;
   hpx_parcel_t *p = network_probe(inst->impl, nrx);
   EVENT_NETWORK_PROBE_END();
   return p;
@@ -68,35 +67,35 @@ _inst_probe(void *network, int nrx)
 static void
 _inst_flush(void *network)
 {
-  _inst_network_t *inst = network;
+  _inst_network_t *inst = (_inst_network_t *)network;
   network_flush(inst->impl);
 }
 
 static void
 _inst_register_dma(void *network, const void *addr, size_t n, void *key)
 {
-  _inst_network_t *inst = network;
+  _inst_network_t *inst = (_inst_network_t *)network;
   network_register_dma(inst->impl, addr, n, key);
 }
 
 static void
 _inst_release_dma(void *network, const void *addr, size_t n)
 {
-  _inst_network_t *inst = network;
+  _inst_network_t *inst = (_inst_network_t *)network;
   network_release_dma(inst->impl, addr, n);
 }
 
 static int
 _inst_lco_wait(void *network, hpx_addr_t lco, int reset)
 {
-  _inst_network_t *inst = network;
+  _inst_network_t *inst = (_inst_network_t *)network;
   return network_lco_wait(inst->impl, lco, reset);
 }
 
 static int
 _inst_lco_get(void *network, hpx_addr_t lco, size_t n, void *to, int reset)
 {
-  _inst_network_t *inst = network;
+  _inst_network_t *inst = (_inst_network_t *)network;
   return network_lco_get(inst->impl, lco, n, to, reset);
 }
 
@@ -104,7 +103,7 @@ void*
 network_inst_new(void *impl)
 {
   dbg_assert(impl);
-  _inst_network_t *inst = malloc(sizeof(*inst));
+  _inst_network_t *inst = (_inst_network_t *)malloc(sizeof(*inst));
   dbg_assert(inst);
 
   inst->vtable.string = ((Network*)impl)->string;

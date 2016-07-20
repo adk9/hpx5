@@ -15,11 +15,7 @@
 # include "config.h"
 #endif
 
-#include <stdlib.h>
-#include <string.h>
-#include <libsync/queues.h>
-#include <libsync/sync.h>
-#include <hpx/hpx.h>
+#include "coalesced.h"
 #include <libhpx/action.h>
 #include <libhpx/config.h>
 #include <libhpx/debug.h>
@@ -27,6 +23,11 @@
 #include <libhpx/libhpx.h>
 #include <libhpx/network.h>
 #include <libhpx/parcel.h>
+#include <libsync/queues.h>
+#include <libsync/sync.h>
+#include <hpx/hpx.h>
+#include <stdlib.h>
+#include <string.h>
 
 typedef struct {
   Network            vtable;
@@ -47,7 +48,7 @@ static inline void _atomic_dec(volatile int *addr) {
 }
 
 static void _coalesced_network_deallocate(void *obj) {
-  _coalesced_network_t *network = obj;
+  _coalesced_network_t *network = (_coalesced_network_t*)obj;
   network_delete(network->next);
   free(obj);
 }
@@ -59,7 +60,7 @@ static void _coalesced_network_deallocate(void *obj) {
 static int _demux_handler(char* buffer, int n) {
   // retrieve the next parcel from the fat parcel
   while (n) {
-    hpx_parcel_t *p = parcel_clone((void*)buffer);
+    hpx_parcel_t *p = parcel_clone((hpx_parcel_t*)buffer);
     size_t bytes = parcel_size(p);
     buffer += bytes;
     n -= bytes;
@@ -74,22 +75,22 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _demux, _demux_handler,
 /// Send parcels from the coalesced network.
 static void _send_n(_coalesced_network_t *network, int n) {
   // 0) Allocate temporary storage.
-  struct {
+  struct anon {
     hpx_parcel_t  *fatp;                        //!< the fat parcel
     hpx_parcel_t *ssync;                        //!< the continuations
     char          *next;                        //!< next cursor into fatp
     int         n_bytes;                        //!< the number of bytes
-  } *locs = calloc(HPX_LOCALITIES, sizeof(*locs));
+  } *locs = (struct anon *)calloc(HPX_LOCALITIES, sizeof(*locs));
 
   // 1) We'll pull n parcels off the global send queue, and store them
   //    temporarily in a local stack, so that we can accumulate the number of
   //    bytes we need to send to each rank.
-  gas_t          *gas = here->gas;
-  hpx_parcel_t *chain = NULL;
-  hpx_parcel_t     *p = NULL;
-  uint32_t   *targets = calloc(n, sizeof(*targets));
+  gas_t          *gas = (gas_t*)here->gas;
+  hpx_parcel_t *chain = nullptr;
+  hpx_parcel_t     *p = nullptr;
+  uint32_t   *targets = (uint32_t*)calloc(n, sizeof(*targets));
   while (n--) {
-    p = sync_two_lock_queue_dequeue(&network->sends);
+    p = (hpx_parcel_t*)sync_two_lock_queue_dequeue(&network->sends);
     size_t bytes = parcel_size(p);
     uint32_t   l = gas_owner_of(gas, p->target);
     targets[n]   = l;
@@ -107,7 +108,7 @@ static void _send_n(_coalesced_network_t *network, int n) {
     int n = locs[l].n_bytes;
     if (n) {
       locs[l].fatp = action_new_parcel(_demux, HPX_THERE(l), 0, 0, 2, NULL, n);
-      locs[l].next = hpx_parcel_get_data(locs[l].fatp);
+      locs[l].next = (char*)hpx_parcel_get_data(locs[l].fatp);
     }
   }
 
@@ -135,7 +136,7 @@ static void _send_n(_coalesced_network_t *network, int n) {
 
 static int _coalesced_network_send(void *obj, hpx_parcel_t *p,
                                    hpx_parcel_t *ssync) {
-  _coalesced_network_t *network = obj;
+  _coalesced_network_t *network = (_coalesced_network_t*)obj;
   if (!action_is_coalesced(p->action)) {
     return network_send(network->next, p, ssync);
   }
@@ -170,7 +171,7 @@ static int _coalesced_network_send(void *obj, hpx_parcel_t *p,
 }
 
 static int _coalesced_network_progress(void *obj, int id) {
-  _coalesced_network_t *network = obj;
+  _coalesced_network_t *network = (_coalesced_network_t*)obj;
 
   // If the number of buffered parcels is the same as the previous time we
   // progressed, we'll do an eager send operation to reduce latency and make
@@ -204,12 +205,12 @@ static int _coalesced_network_progress(void *obj, int id) {
 }
 
 static hpx_parcel_t* _coalesced_network_probe(void *obj, int rank) {
-  _coalesced_network_t *coalesced_network = obj;
+  _coalesced_network_t *coalesced_network = (_coalesced_network_t*)obj;
   return network_probe(coalesced_network->next, rank);
 }
 
 static void _coalesced_network_flush(void *obj) {
-  _coalesced_network_t *network = obj;
+  _coalesced_network_t *network = (_coalesced_network_t*)obj;
 
   // coalesce the rest of the buffered sends
   int count = sync_swap(&network->count, 0, SYNC_RELAXED);
@@ -228,30 +229,30 @@ static void _coalesced_network_flush(void *obj) {
 
 static void _coalesced_network_register_dma(void *obj, const void *base,
                                             size_t bytes, void *key) {
-  _coalesced_network_t *network = obj;
+  _coalesced_network_t *network = (_coalesced_network_t*)obj;
   network_register_dma(network->next, base, bytes, key);
 }
 
 static void _coalesced_network_release_dma(void *obj, const void *base,
                                            size_t bytes) {
-  _coalesced_network_t *network = obj;
+  _coalesced_network_t *network = (_coalesced_network_t*)obj;
   network_release_dma(network->next, base, bytes);
 }
 
 static int _coalesced_network_lco_get(void *obj, hpx_addr_t lco, size_t n,
                                       void *out, int reset) {
-  _coalesced_network_t *network = obj;
+  _coalesced_network_t *network = (_coalesced_network_t*)obj;
   return network_lco_get(network->next, lco, n, out, reset);
 }
 
 static int _coalesced_network_lco_wait(void *obj, hpx_addr_t lco, int reset) {
-  _coalesced_network_t *network = obj;
+  _coalesced_network_t *network = (_coalesced_network_t*)obj;
   return network_lco_wait(network->next, lco, reset);
 }
 
 void* coalesced_network_new(void *next,  const struct config *cfg) {
-  _coalesced_network_t *network = NULL;
-  if (posix_memalign((void*)&network, HPX_CACHELINE_SIZE, sizeof(*network))) {
+  _coalesced_network_t *network = nullptr;
+  if (posix_memalign((void**)&network, HPX_CACHELINE_SIZE, sizeof(*network))) {
     log_error("could not allocate a coalesced network\n");
     return NULL;
   }
