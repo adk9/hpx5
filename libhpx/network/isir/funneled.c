@@ -56,7 +56,7 @@ _send_all(_funneled_t *network) {
   while ((p = sync_two_lock_queue_dequeue(&network->sends))) {
     hpx_parcel_t *ssync = p->next;
     p->next = NULL;
-    isend_buffer_append(&network->isends, p, ssync);
+    isend_buffer_append(&network->isends, p, ssync, DIRECT);
   }
 }
 
@@ -131,6 +131,34 @@ static int _funneled_coll_sync(void *network, void *in, size_t input_sz,
   } else {
     log_dflt("Collective type descriptor: %d is invalid!\n", c->type);
   }
+  sync_store(&isir->progress_lock, 1, SYNC_RELEASE);
+  return LIBHPX_OK;
+}
+
+static int _funneled_coll_async(void *network, void *in, size_t input_sz,
+                               void *out, coll_t *c, hpx_addr_t lsync, hpx_addr_t rsync) {
+  void *sendbuf = in;
+  int count = input_sz;
+  char *comm = c->data + c->group_bytes;
+  _funneled_t *isir = network;
+
+  //acquire lock before collective operation `put` into buffer
+  while (!sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE))
+    ;
+  dbg_assert(c->type == ALL_REDUCE);
+
+  coll_data_t *data = (coll_data_t*)calloc(1, sizeof(coll_data_t));
+  data->in = in;
+  data->count = input_sz;
+  data->out = out ; 
+  data->comm = c;
+  data->data_type = NULL;
+  data->op = NULL;
+
+  hpx_parcel_t *ssync_local = action_new_parcel(hpx_lco_set_action, lsync, 0, 0, 0);
+  isend_buffer_append(&isir->isends, data, ssync_local, COLL_ALLRED);
+
+  //release lock now
   sync_store(&isir->progress_lock, 1, SYNC_RELEASE);
   return LIBHPX_OK;
 }
@@ -232,6 +260,7 @@ network_isir_funneled_new(const config_t *cfg, struct boot *boot, gas_t *gas) {
   network->vtable.progress     = _funneled_progress;
   network->vtable.send         = _funneled_send;
   network->vtable.coll_sync    = _funneled_coll_sync;
+  network->vtable.coll_async   = _funneled_coll_async;
   network->vtable.coll_init    = _funneled_coll_init;
   network->vtable.probe        = _funneled_probe;
   network->vtable.flush        = _funneled_flush;
