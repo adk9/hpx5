@@ -151,7 +151,7 @@ static int _funneled_coll_async(void *network, void *in, size_t input_sz,
   data->in = in;
   data->count = input_sz;
   data->out = out ; 
-  data->comm = c;
+  data->comm = comm;
   data->data_type = NULL;
   data->op = NULL;
 

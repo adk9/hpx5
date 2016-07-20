@@ -257,10 +257,10 @@ _mpi_iallreduce(void *sendbuf, void *out, int count, void *datatype, void *op,
   MPI_Datatype dt = MPI_INT;
   MPI_Request *req = (MPI_Request*) r;
 
-  if(!op){
+  if(op){
     operation = *((MPI_Op*)op);
   }
-  if(!datatype){
+  if(datatype){
     dt = *((MPI_Datatype*) datatype);
   }
 
