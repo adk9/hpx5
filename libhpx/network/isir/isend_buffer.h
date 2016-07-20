@@ -16,6 +16,21 @@
 
 #include <hpx/hpx.h>
 
+typedef enum {
+  DIRECT = 10001,
+  COLL_ALLRED,
+  COLL_BCAST
+} cmd_t;
+
+typedef struct {
+  void *in;  
+  void *out;
+  void *data_type;
+  void *op;  
+  void *comm;  
+  int count;
+} coll_data_t;
+
 struct isir_xport;
 
 typedef struct {
@@ -29,8 +44,12 @@ typedef struct {
   void  *requests;
   int        *out;
   struct {
-    hpx_parcel_t *parcel;
+    union{
+      hpx_parcel_t *parcel;
+      coll_data_t  *coll_data;		  
+    } data;	  
     hpx_parcel_t  *ssync;
+    cmd_t op_type;
   } *records;
 } isend_buffer_t;
 
@@ -58,13 +77,13 @@ void isend_buffer_fini(isend_buffer_t *buffer)
 /// This may or may not start the send immediately.
 ///
 /// @param       buffer The buffer to initialize.
-/// @param            p The stack of parcels to send.
+/// @param            p The stack of parcels/data to send.
 /// @param        ssync The stack of parcel continuations.
 ///
 /// @returns  LIBHPX_OK The message was appended successfully.
 ///        LIBHXP_ERROR There was an error in this operation.
-int isend_buffer_append(isend_buffer_t *buffer, hpx_parcel_t *p,
-                        hpx_parcel_t *ssync)
+int isend_buffer_append(isend_buffer_t *buffer, void *p,
+                        hpx_parcel_t *ssync, cmd_t op)
   HPX_NON_NULL(1,2);
 
 /// Progress the sends in the buffer.

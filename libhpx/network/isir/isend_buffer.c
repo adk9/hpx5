@@ -169,14 +169,24 @@ static int _resize(isend_buffer_t *buffer, uint32_t size) {
 ///        LIBHPX_ERROR MPI error
 static int _start(isend_buffer_t *isends, int i) {
   assert(0 <= i && i < isends->size);
+  cmd_t isend_op = isends->records[i].op_type ;
 
-  hpx_parcel_t *p = isends->records[i].parcel;
-  void *from = isir_network_offset(p);
-  int to = gas_owner_of(here->gas, p->target);
-  int n = payload_size_to_isir_bytes(p->size);
-  int tag = _payload_size_to_tag(isends, p->size);
   void *r = _request_at(isends, i);
-  return isends->xport->isend(isends->xport, to, from, n, tag, r);
+  if(isend_op == DIRECT){
+    hpx_parcel_t *p = isends->records[i].data.parcel;
+    void *from = isir_network_offset(p);
+    int to = gas_owner_of(here->gas, p->target);
+    int n = payload_size_to_isir_bytes(p->size);
+    int tag = _payload_size_to_tag(isends, p->size);
+    return isends->xport->isend(isends->xport, to, from, n, tag, r);
+  } else if(isend_op == COLL_ALLRED){
+    coll_data_t *d = isends->records[i].data.coll_data;
+    return isends->xport->iallreduce(d->in, d->out, d->count, d->data_type, 
+		    d->op, d->comm, r);
+  }
+  dbg_check(0, "Failed to start an ISIR operation, no valid op type found. provided op : %d \n"
+		  , isend_op);
+  return LIBHPX_ERROR;
 }
 
 /// Start as many isend operations as we can.
@@ -229,7 +239,12 @@ static int _test_range(isend_buffer_t *buffer, uint32_t i, uint32_t n, int o,
     assert(i <= k && k < i + n);
 
     // handle each of the completed requests
-    parcel_delete(buffer->records[k].parcel);
+    cmd_t op = buffer->records[k].op_type ;
+    if(op == DIRECT){
+      parcel_delete(buffer->records[k].data.parcel);
+    } else if(op == COLL_ALLRED){
+      free(buffer->records[k].data.coll_data);	    
+    }
 
     hpx_parcel_t *p = NULL;
     while ((p = parcel_stack_pop(&buffer->records[k].ssync))) {
@@ -341,10 +356,16 @@ static int _cancel(isend_buffer_t *buffer, int i, hpx_parcel_t **parcels) {
   }
 
   if (buffer->records) {
-    parcel_stack_push(parcels, buffer->records[i].parcel);
-    hpx_parcel_t *p = NULL;
-    while ((p = parcel_stack_pop(&buffer->records[i].ssync))) {
-      parcel_stack_push(parcels, p);
+    cmd_t isend_op = buffer->records[i].op_type ;
+
+    if(isend_op == DIRECT){
+      parcel_stack_push(parcels, buffer->records[i].data.parcel);
+      hpx_parcel_t *p = NULL;
+      while ((p = parcel_stack_pop(&buffer->records[i].ssync))) {
+        parcel_stack_push(parcels, p);
+      }
+    } else if(isend_op == COLL_ALLRED){
+      free(buffer->records[i].data.coll_data);	    
     }
   }
   return LIBHPX_OK;
@@ -411,8 +432,8 @@ void isend_buffer_fini(isend_buffer_t *buffer) {
   }
 }
 
-int isend_buffer_append(isend_buffer_t *buffer, hpx_parcel_t *p,
-                        hpx_parcel_t *ssync) {
+int isend_buffer_append(isend_buffer_t *buffer, void *p,
+                        hpx_parcel_t *ssync, cmd_t optype) {
   uint64_t i = buffer->max++;
   uint32_t size = buffer->size;
   if (size <= buffer->max - buffer->min) {
@@ -428,8 +449,15 @@ int isend_buffer_append(isend_buffer_t *buffer, hpx_parcel_t *p,
     void *request = _request_at(buffer, j);
     buffer->xport->clear(request);
   }
-  buffer->records[j].parcel = p;
+
+  if(optype == DIRECT){
+    buffer->records[j].data.parcel = (hpx_parcel_t*) p;
+  } else if(optype == COLL_ALLRED){
+    buffer->records[j].data.coll_data = (coll_data_t*) p;
+  }  
+  
   buffer->records[j].ssync = ssync;
+  buffer->records[j].op_type = optype;
   return LIBHPX_OK;
 }
 
