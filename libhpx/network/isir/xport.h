@@ -40,6 +40,8 @@ typedef struct isir_xport {
                         int num_active, int total);
   void   (*allreduce)(void *sendbuf, void* out, int count, void* datatype,
                       void* op, void* comm);
+  int (*iallreduce)(void *sendbuf, void* out, int count, void* datatype,
+                      void* op, void* comm, void* request);
   void   (*testsome)(int n, void *requests, int *cnt, int *out, void *statuses);
   void   (*pin)(const void *base, size_t bytes, void *key);
   void   (*unpin)(const void *base, size_t bytes);

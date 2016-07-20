@@ -247,6 +247,32 @@ _mpi_allreduce(void *sendbuf, void *out, int count, void *datatype, void *op,
   free(result);
 }
 
+static int
+_mpi_iallreduce(void *sendbuf, void *out, int count, void *datatype, void *op,
+               void *c, void *r)
+{
+
+  MPI_Comm *comm = c;
+  MPI_Op operation = MPI_SUM;
+  MPI_Datatype dt = MPI_INT;
+  MPI_Request *req = (MPI_Request*) r;
+
+  if(!op){
+    operation = *((MPI_Op*)op);
+  }
+  if(!datatype){
+    dt = *((MPI_Datatype*) datatype);
+  }
+
+  int e = MPI_Iallreduce(sendbuf, out, count, dt, operation, *comm, req);
+  if (MPI_SUCCESS != e) {
+    return log_error("failed MPI_Iallreduce: with count %d \n", count);
+  }
+
+  log_net("started MPI_Iallreduce with count to %d\n", count);
+  return LIBHPX_OK;
+}
+
 isir_xport_t *
 isir_xport_new_mpi(const config_t *cfg, gas_t *gas) {
   _mpi_xport_t *mpi = malloc(sizeof(*mpi));
@@ -266,6 +292,7 @@ isir_xport_new_mpi(const config_t *cfg, gas_t *gas) {
   mpi->vtable.unpin          = _mpi_unpin;
   mpi->vtable.create_comm    = _mpi_create_comm;
   mpi->vtable.allreduce      = _mpi_allreduce;
+  mpi->vtable.iallreduce     = _mpi_iallreduce;
 
   int already_initialized = 0;
   if (MPI_SUCCESS != MPI_Initialized(&already_initialized)) {
