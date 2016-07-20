@@ -18,6 +18,10 @@
 #include <libsync/locks.h>
 #include "circular_buffer.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct parcel_emulator;
 struct pwc_xport;
 
@@ -64,5 +68,9 @@ void send_buffer_fini(send_buffer_t *sends);
 int send_buffer_send(send_buffer_t *sends, const hpx_parcel_t *p);
 
 int send_buffer_progress(send_buffer_t *sends);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIBHPX_NETWORK_PWC_EAGER_BUFFER_H

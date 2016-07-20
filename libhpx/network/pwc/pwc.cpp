@@ -15,9 +15,10 @@
 # include "config.h"
 #endif
 
-#include <stdlib.h>
-#include <string.h>
-#include <hpx/builtins.h>
+#include "pwc.h"
+#include "parcel_emulation.h"
+#include "send_buffer.h"
+#include "xport.h"
 #include <libhpx/action.h>
 #include <libhpx/boot.h>
 #include <libhpx/config.h>
@@ -27,12 +28,11 @@
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
 #include <libhpx/parcel.h>
-#include "parcel_emulation.h"
-#include "pwc.h"
-#include "send_buffer.h"
-#include "xport.h"
+#include <hpx/builtins.h>
+#include <stdlib.h>
+#include <string.h>
 
-pwc_network_t *pwc_network = NULL;
+pwc_network_t *pwc_network = nullptr;
 
 typedef struct heap_segment {
   size_t        n;
@@ -61,7 +61,7 @@ static hpx_parcel_t *_probe(pwc_network_t *pwc, int rank) {
 }
 
 static int _pwc_progress(void *network, int id) {
-  pwc_network_t *pwc = network;
+  pwc_network_t *pwc = (pwc_network_t *)network;
   if (sync_swap(&pwc->progress_lock, 0, SYNC_ACQUIRE)) {
     _probe_local(pwc, id);
     sync_store(&pwc->progress_lock, 1, SYNC_RELEASE);
@@ -70,25 +70,25 @@ static int _pwc_progress(void *network, int id) {
 }
 
 static hpx_parcel_t *_pwc_probe(void *network, int rank) {
-  pwc_network_t *pwc = network;
+  pwc_network_t *pwc = (pwc_network_t *)network;
   if (sync_swap(&pwc->probe_lock, 0, SYNC_ACQUIRE)) {
     _probe(pwc, XPORT_ANY_SOURCE);
     sync_store(&pwc->probe_lock, 1, SYNC_RELEASE);
   }
-  return NULL;
+  return nullptr;
 }
 
 /// Create a network registration.
 static void
 _pwc_register_dma(void *network, const void *base, size_t n, void *key) {
-  pwc_network_t *pwc = network;
+  pwc_network_t *pwc = (pwc_network_t *)network;
   dbg_assert(pwc && pwc->xport && pwc->xport->pin);
   pwc->xport->pin(base, n, key);
 }
 
 /// Release a network registration.
 static void _pwc_release_dma(void *network, const void* base, size_t n) {
-  pwc_network_t *pwc = network;
+  pwc_network_t *pwc = (pwc_network_t *)network;
   dbg_assert(pwc && pwc->xport && pwc->xport->unpin);
   pwc->xport->unpin(base, n);
 }
@@ -100,11 +100,11 @@ static int _pwc_coll_init(void *network, void **c) {
 int
 _pwc_coll_sync(void *network, void *in, size_t in_size, void *out, void *ctx)
 {
-  coll_t *c = ctx;
+  coll_t *c = (coll_t*)ctx;
   void *sendbuf = in;
   int count = in_size;
   char *comm = c->data + c->group_bytes;
-  pwc_network_t *pwc = network;
+  pwc_network_t *pwc = (pwc_network_t *)network;
 
   // flushing network is necessary (sufficient ?) to execute any packets
   // destined for collective operation
@@ -128,7 +128,7 @@ static int _pwc_send(void *network, hpx_parcel_t *p, hpx_parcel_t *ssync) {
     return pwc_rendezvous_send(network, p);
   }
 
-  pwc_network_t *pwc = network;
+  pwc_network_t *pwc = (pwc_network_t *)network;
   int rank = gas_owner_of(here->gas, p->target);
   send_buffer_t *buffer = &pwc->send_buffers[rank];
   return send_buffer_send(buffer, p);
@@ -139,7 +139,7 @@ static void _pwc_flush(void *pwc) {
 
 static void _pwc_deallocate(void *network) {
   dbg_assert(network);
-  pwc_network_t *pwc = network;
+  pwc_network_t *pwc = (pwc_network_t *)network;
 
   // Cleanup any remaining local work---this can leak memory and stuff, because
   // we aren't actually running the commands that we cleanup.
@@ -165,7 +165,7 @@ static void _pwc_deallocate(void *network) {
     free(pwc->heap_segments);
   }
 
-  parcel_emulator_delete(pwc->parcels);
+  parcel_emulator_deallocate(pwc->parcels);
   pwc->xport->dealloc(pwc->xport);
   free(pwc);
 }
@@ -175,12 +175,12 @@ static void _pwc_register_gas_heap(void *network, boot_t *boot, gas_t *gas) {
     return;
   }
 
-  pwc_network_t *pwc = network;
-  pwc->heap_segments = calloc(here->ranks, sizeof(heap_segment_t));
+  pwc_network_t *pwc = (pwc_network_t *)network;
+  pwc->heap_segments = (heap_segment_t *)calloc(here->ranks, sizeof(heap_segment_t));
 
   heap_segment_t heap = {
     .n = gas_local_size(gas),
-    .base = gas_local_base(gas)
+    .base = (char*)gas_local_base(gas)
   };
   _pwc_register_dma(pwc, heap.base, heap.n, &heap.key);
 
@@ -228,8 +228,8 @@ network_pwc_funneled_new(const config_t *cfg, boot_t *boot, gas_t *gas) {
   }
 
   // Allocate the network object and initialize its virtual function table.
-  pwc_network_t *pwc;
-  int e = posix_memalign((void*)&pwc, HPX_CACHELINE_SIZE, sizeof(*pwc));
+  pwc_network_t *pwc = nullptr;
+  int e = posix_memalign((void**)&pwc, HPX_CACHELINE_SIZE, sizeof(*pwc));
   dbg_check(e, "failed to allocate the pwc network structure\n");
   dbg_assert(pwc);
 
@@ -259,7 +259,7 @@ network_pwc_funneled_new(const config_t *cfg, boot_t *boot, gas_t *gas) {
   pwc->cfg = cfg;
   pwc->xport = pwc_xport_new(cfg, boot, gas);
   pwc->parcels = parcel_emulator_new_reload(cfg, boot, pwc->xport);
-  pwc->send_buffers = calloc(here->ranks, sizeof(send_buffer_t));
+  pwc->send_buffers = (send_buffer_t*)calloc(here->ranks, sizeof(send_buffer_t));
 
   // Register the gas heap segment.
   _pwc_register_gas_heap(pwc, boot, gas);
@@ -276,7 +276,7 @@ network_pwc_funneled_new(const config_t *cfg, boot_t *boot, gas_t *gas) {
 
 int pwc_get(void *obj, void *lva, hpx_addr_t from, size_t n,
             command_t lcmd, command_t rcmd) {
-  pwc_network_t *pwc = obj;
+  pwc_network_t *pwc = (pwc_network_t *)obj;
   int rank = gpa_to_rank(from);
 
   xport_op_t op = {
@@ -295,7 +295,7 @@ int pwc_get(void *obj, void *lva, hpx_addr_t from, size_t n,
 
 int pwc_put(void *obj, hpx_addr_t to, const void *lva, size_t n,
             command_t lcmd, command_t rcmd) {
-  pwc_network_t *pwc = obj;
+  pwc_network_t *pwc = (pwc_network_t *)obj;
   int rank = gpa_to_rank(to);
 
   xport_op_t op = {
@@ -313,6 +313,6 @@ int pwc_put(void *obj, hpx_addr_t to, const void *lva, size_t n,
 }
 
 int pwc_cmd(void *obj, int rank, command_t lcmd, command_t rcmd) {
-  pwc_network_t *pwc = obj;
+  pwc_network_t *pwc = (pwc_network_t *)obj;
   return pwc->xport->cmd(rank, lcmd, rcmd);
 }

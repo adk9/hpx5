@@ -41,8 +41,7 @@ typedef struct {
   struct parcel_emulator    *parcels;
   struct send_buffer   *send_buffers;
   struct heap_segment *heap_segments;
-  PAD_TO_CACHELINE(sizeof(network_t) +
-                   5 * sizeof(void*));
+  PAD_TO_CACHELINE(sizeof(Network) + 5 * sizeof(void*));
   volatile int probe_lock;
   PAD_TO_CACHELINE(sizeof(int));
   volatile int progress_lock;
@@ -51,8 +50,8 @@ typedef struct {
 
 extern pwc_network_t *pwc_network;
 /// Allocate and initialize a PWC network instance.
-network_t *network_pwc_funneled_new(const struct config *cfg, struct boot *boot,
-                                    struct gas *gas)
+void *network_pwc_funneled_new(const struct config *cfg, struct boot *boot,
+                               struct gas *gas)
   HPX_MALLOC;
 
 /// Perform an LCO wait operation through the PWC network.

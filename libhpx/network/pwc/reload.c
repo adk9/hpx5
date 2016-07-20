@@ -160,7 +160,7 @@ _reload_recv(void *obj, int rank) {
 }
 
 static void
-_reload_delete(void *obj) {
+_reload_deallocate(void *obj) {
   if (obj) {
     reload_t *reload = obj;
     for (int i = 0, e = reload->ranks; i < e; ++i) {
@@ -173,7 +173,7 @@ _reload_delete(void *obj) {
   }
 }
 
-void *
+parcel_emulator_t *
 parcel_emulator_new_reload(const config_t *cfg, boot_t *boot,
                            pwc_xport_t *xport) {
   int rank = boot_rank(boot);
@@ -181,7 +181,7 @@ parcel_emulator_new_reload(const config_t *cfg, boot_t *boot,
 
   // Allocate the buffer.
   reload_t *reload = calloc(1, sizeof(*reload));
-  reload->vtable.delete = _reload_delete;
+  reload->vtable.deallocate = _reload_deallocate;
   reload->vtable.send = _reload_send;
   reload->vtable.recv = _reload_recv;
   reload->rank = rank;
@@ -238,7 +238,7 @@ parcel_emulator_new_reload(const config_t *cfg, boot_t *boot,
   // 2) A row of initialized send buffers, one for each target (corresponding to
   //    their recv buffer for me).
   // 3) A table of remote pointers, one for each send buffer targeting me.
-  return reload;
+  return &reload->vtable;
 }
 
 void handle_reload_reply(int src, command_t cmd) {

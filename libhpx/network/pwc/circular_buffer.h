@@ -17,6 +17,10 @@
 #include <stdint.h>
 #include <hpx/attributes.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct {
   uint32_t     capacity;
   uint32_t element_size;
@@ -64,5 +68,9 @@ int circular_buffer_progress(circular_buffer_t *b,
                              int (*progress_callback)(void *env, void *record),
                              void *progress_env)
   HPX_NON_NULL(1, 2);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIBHPX_NETWORK_PWC_CIRCULAR_BUFFER_H

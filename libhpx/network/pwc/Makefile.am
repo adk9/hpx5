@@ -5,7 +5,8 @@ noinst_HEADERS     = circular_buffer.h commands.h parcel_emulation.h pwc.h \
 
 libpwc_la_CPPFLAGS = -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
 libpwc_la_CFLAGS   = $(LIBHPX_CFLAGS)
-libpwc_la_SOURCES  = pwc.c \
+libpwc_la_CXXFLAGS = $(LIBHPX_CXXFLAGS)
+libpwc_la_SOURCES  = pwc.cpp \
                      reload.c \
                      xport.c \
                      send_buffer.c \
