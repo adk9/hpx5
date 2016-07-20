@@ -17,16 +17,21 @@
 #include <libhpx/config.h>
 #include <libhpx/memory.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct boot;
 struct gas;
 
 typedef struct isir_xport {
   libhpx_transport_t type;
-  void   (*delete)(void *xport);
+  void   (*deallocate)(void *xport);
 
   void   (*check_tag)(const void *xport, int tag);
   size_t (*sizeof_request)(void);
   size_t (*sizeof_status)(void);
+  size_t (*sizeof_comm)(void);
   void   (*clear)(void *request);
   int    (*cancel)(void *request, int *cancelled);
   int    (*wait)(void *request, void *status);
@@ -48,5 +53,9 @@ typedef struct isir_xport {
 isir_xport_t *isir_xport_new_mpi(const config_t *cfg, struct gas *gas);
 
 isir_xport_t *isir_xport_new(const config_t *cfg, struct gas *gas);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIBHPX_NETWORK_ISIR_XPORT_H

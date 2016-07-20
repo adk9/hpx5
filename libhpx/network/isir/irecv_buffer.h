@@ -16,6 +16,10 @@
 
 #include <hpx/hpx.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct isir_xport;
 
 typedef struct {
@@ -66,5 +70,9 @@ void irecv_buffer_fini(irecv_buffer_t *buffer)
 /// @returns            The number of received parcels.
 int irecv_buffer_progress(irecv_buffer_t *buffer, hpx_parcel_t **recvs)
   HPX_NON_NULL(1, 2);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIBHPX_NETWORK_ISIR_IRECV_BUFFER_H

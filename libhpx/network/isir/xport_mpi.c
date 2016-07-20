@@ -57,6 +57,11 @@ _mpi_sizeof_status(void)
   return sizeof(MPI_Status);
 }
 
+static size_t
+_mpi_sizeof_comm(void) {
+  return sizeof(MPI_Comm);
+}
+
 static int
 _mpi_isend(const void *xport, int to, const void *from, unsigned n, int tag,
            void *r)
@@ -162,7 +167,7 @@ _mpi_finish(void *status, int *src, int *bytes)
 }
 
 static void
-_mpi_delete(void *xport)
+_mpi_deallocate(void *xport)
 {
   _mpi_xport_t *mpi = xport;
   if (mpi->fini) {
@@ -251,10 +256,11 @@ isir_xport_t *
 isir_xport_new_mpi(const config_t *cfg, gas_t *gas) {
   _mpi_xport_t *mpi = malloc(sizeof(*mpi));
   mpi->vtable.type           = HPX_TRANSPORT_MPI;
-  mpi->vtable.delete         = _mpi_delete;
+  mpi->vtable.deallocate     = _mpi_deallocate;
   mpi->vtable.check_tag      = _mpi_check_tag;
   mpi->vtable.sizeof_request = _mpi_sizeof_request;
   mpi->vtable.sizeof_status  = _mpi_sizeof_status;
+  mpi->vtable.sizeof_comm    = _mpi_sizeof_comm;
   mpi->vtable.isend          = _mpi_isend;
   mpi->vtable.irecv          = _mpi_irecv;
   mpi->vtable.iprobe         = _mpi_iprobe;

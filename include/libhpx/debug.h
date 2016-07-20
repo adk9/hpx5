@@ -51,16 +51,21 @@ void dbg_error_internal(unsigned line, const char *filename, const char *func,
 
 #ifdef ENABLE_DEBUG
 
+# ifdef __cplusplus
+# define dbg_assert_str(e, ...) assert(e && __VA_ARGS__)
+# define dbg_assert(e) dbg_assert_str(e, "\n")
+# else
 // NB: this is complex for clang's benefit, so it can tell that we're asserting
 // e when doing static analysis
-# define dbg_assert_str(e, ...)                         \
+#  define dbg_assert_str(e, ...)                        \
   do {                                                  \
     if (!(e)) {                                         \
       dbg_error("assert failed: ("#e") "__VA_ARGS__);   \
     }                                                   \
   } while (0)
 
-# define dbg_assert(e) dbg_assert_str(e, "\n")
+#  define dbg_assert(e) dbg_assert_str(e, "\n")
+# endif
 #else
 # define dbg_assert_str(e, ...) assert(e)
 # define dbg_assert(e) assert(e)

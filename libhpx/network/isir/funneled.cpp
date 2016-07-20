@@ -17,7 +17,6 @@
 
 #include <inttypes.h>
 #include <stdlib.h>
-#include <mpi.h>
 #include <hpx/builtins.h>
 #include <libsync/queues.h>
 #include <libhpx/collective.h>
@@ -37,7 +36,7 @@ typedef struct {
   Network         vtable;
   gas_t             *gas;
   isir_xport_t    *xport;
-  PAD_TO_CACHELINE(sizeof(network_t) + sizeof(gas_t*) + sizeof(isir_xport_t*));
+  PAD_TO_CACHELINE(sizeof(Network) + sizeof(gas_t*) + sizeof(isir_xport_t*));
   two_lock_queue_t sends;
   two_lock_queue_t recvs;
   isend_buffer_t  isends;
@@ -52,7 +51,7 @@ typedef struct {
 static void
 _send_all(_funneled_t *network) {
   hpx_parcel_t *p = NULL;
-  while ((p = sync_two_lock_queue_dequeue(&network->sends))) {
+  while ((p = (hpx_parcel_t *)sync_two_lock_queue_dequeue(&network->sends))) {
     hpx_parcel_t *ssync = p->next;
     p->next = NULL;
     isend_buffer_append(&network->isends, p, ssync);
@@ -62,29 +61,32 @@ _send_all(_funneled_t *network) {
 /// Deallocate a funneled network.
 static void
 _funneled_deallocate(void *network) {
-  dbg_assert(network);
+  dbg_assert(network != nullptr);
 
-  _funneled_t *isir = network;
+  _funneled_t *isir = (_funneled_t*)network;
   isend_buffer_fini(&isir->isends);
   irecv_buffer_fini(&isir->irecvs);
 
   hpx_parcel_t *p = NULL;
-  while ((p = sync_two_lock_queue_dequeue(&isir->sends))) {
+  while ((p = (hpx_parcel_t *)sync_two_lock_queue_dequeue(&isir->sends))) {
     parcel_delete(p);
   }
-  while ((p = sync_two_lock_queue_dequeue(&isir->recvs))) {
+  while ((p = (hpx_parcel_t *)sync_two_lock_queue_dequeue(&isir->recvs))) {
     parcel_delete(p);
   }
 
   sync_two_lock_queue_fini(&isir->sends);
   sync_two_lock_queue_fini(&isir->recvs);
 
-  isir->xport->delete(isir->xport);
+  isir->xport->deallocate(isir->xport);
   free(isir);
 }
 
-static int _funneled_coll_init(void *network, void **ctx) {
+static int
+_funneled_coll_init(void *network, void **ctx)
+{
   coll_t *c = *(coll_t **)ctx;
+  _funneled_t *isir = (_funneled_t*)network;
   int num_active = c->group_sz;
 
   log_net("ISIR network collective being initialized."
@@ -93,16 +95,15 @@ static int _funneled_coll_init(void *network, void **ctx) {
 
   if (c->comm_bytes == 0) {
     // we have not yet allocated a communicator
-    int32_t comm_bytes = sizeof(MPI_Comm);
+    int32_t comm_bytes = isir->xport->sizeof_comm();
     *ctx = realloc(c, sizeof(coll_t) + c->group_bytes + comm_bytes);
-    c = *ctx;
+    c = *(coll_t**)ctx;
     c->comm_bytes = comm_bytes;
   }
 
   // setup communicator
   char *comm = c->data + c->group_bytes;
 
-  _funneled_t *isir = network;
   isir->vtable.flush(network);
   while (!sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE))
     ;
@@ -112,13 +113,15 @@ static int _funneled_coll_init(void *network, void **ctx) {
   return LIBHPX_OK;
 }
 
-static int _funneled_coll_sync(void *network, void *in, size_t input_sz,
-                               void *out, void *ctx) {
-  coll_t *c = ctx;
+static int
+_funneled_coll_sync(void *network, void *in, size_t input_sz, void *out,
+                    void *ctx)
+{
+  coll_t *c = (coll_t *)ctx;
   void *sendbuf = in;
   int count = input_sz;
   char *comm = c->data + c->group_bytes;
-  _funneled_t *isir = network;
+  _funneled_t *isir = (_funneled_t *)network;
 
   // flushing network is necessary (sufficient?) to execute any
   // packets destined for collective operation
@@ -142,20 +145,20 @@ _funneled_send(void *network, hpx_parcel_t *p, hpx_parcel_t *ssync) {
   dbg_assert(p->next == NULL);
   p->next = ssync;
 
-  _funneled_t *isir = network;
+  _funneled_t *isir = (_funneled_t *)network;
   sync_two_lock_queue_enqueue(&isir->sends, p);
   return LIBHPX_OK;
 }
 
 static hpx_parcel_t *
 _funneled_probe(void *network, int nrx) {
-  _funneled_t *isir = network;
-  return sync_two_lock_queue_dequeue(&isir->recvs);
+  _funneled_t *isir = (_funneled_t *)network;
+  return (hpx_parcel_t *)sync_two_lock_queue_dequeue(&isir->recvs);
 }
 
 static void
 _funneled_flush(void *network) {
-  _funneled_t *isir = network;
+  _funneled_t *isir = (_funneled_t *)network;
   while (!sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE)) {
   }
   _send_all(isir);
@@ -170,20 +173,20 @@ _funneled_flush(void *network) {
 /// Create a network registration.
 static void
 _funneled_register_dma(void *obj, const void *base, size_t n, void *key) {
-  _funneled_t *isir = obj;
+  _funneled_t *isir = (_funneled_t *)obj;
   isir->xport->pin(base, n, key);
 }
 
 /// Release a network registration.
 static void
 _funneled_release_dma(void *obj, const void* base, size_t n) {
-  _funneled_t *isir = obj;
+  _funneled_t *isir = (_funneled_t *)obj;
   isir->xport->unpin(base, n);
 }
 
 static int
 _funneled_progress(void *network, int id) {
-  _funneled_t *isir = network;
+  _funneled_t *isir = (_funneled_t *)network;
   if (sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE)) {
     hpx_parcel_t *chain = NULL;
     int n = irecv_buffer_progress(&isir->irecvs, &chain);
@@ -212,10 +215,10 @@ _funneled_progress(void *network, int id) {
   // suppress unused warnings
 }
 
-network_t *
+void *
 network_isir_funneled_new(const config_t *cfg, struct boot *boot, gas_t *gas) {
-  _funneled_t *network = NULL;
-  int e = posix_memalign((void*)&network, HPX_CACHELINE_SIZE, sizeof(*network));
+  _funneled_t *network = nullptr;
+  int e = posix_memalign((void**)&network, HPX_CACHELINE_SIZE, sizeof(*network));
   dbg_check(e, "failed to allocate the pwc network structure\n");
   dbg_assert(network);
 

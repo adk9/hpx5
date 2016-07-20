@@ -16,6 +16,10 @@
 
 #include <hpx/hpx.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct isir_xport;
 
 typedef struct {
@@ -87,5 +91,9 @@ int isend_buffer_progress(isend_buffer_t *buffer, hpx_parcel_t **ssync)
 /// @returns            The number of completed requests during the flush.
 int isend_buffer_flush(isend_buffer_t *buffer, hpx_parcel_t **ssync)
   HPX_NON_NULL(1, 2);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIBHPX_NETWORK_ISIR_ISEND_BUFFER_H
