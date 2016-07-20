@@ -22,10 +22,9 @@ extern "C" {
 /// @{
 struct boot;
 struct config;
-struct network;
 /// @}
 
-struct network *network_smp_new(const struct config *cfg, struct boot *boot);
+void *network_smp_new(const struct config *cfg, struct boot *boot);
 
 #ifdef __cplusplus
 }

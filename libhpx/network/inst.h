@@ -14,16 +14,14 @@
 #ifndef LIBHPX_NETWORK_INST_H
 #define LIBHPX_NETWORK_INST_H
 
+#include <hpx/attributes.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/// Forward declarations.
-/// @{
-struct network;
-/// @}
-
-struct network *network_inst_new(struct network *impl);
+void *network_inst_new(void *impl)
+  HPX_MALLOC;
 
 #ifdef __cplusplus
 }

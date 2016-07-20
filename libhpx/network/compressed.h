@@ -23,11 +23,10 @@ extern "C" {
 /// Forward declarations.
 /// @{
 struct config;
-struct network;
 /// @}
 
 
-struct network *compressed_network_new (struct network *network)
+void *compressed_network_new(void *next)
   HPX_MALLOC;
 
 #ifdef __cplusplus

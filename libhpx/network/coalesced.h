@@ -23,10 +23,9 @@ extern "C" {
 /// Forward declarations.
 /// @{
 struct config;
-struct network;
 /// @}
 
-struct network* coalesced_network_new (network_t *network, const struct config *cfg)
+void* coalesced_network_new(void *next, const struct config *cfg)
   HPX_MALLOC;
 
 #ifdef __cplusplus

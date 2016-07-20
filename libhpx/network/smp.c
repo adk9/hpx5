@@ -73,7 +73,7 @@ static int _smp_coll_sync(void *network, void *in, size_t in_size, void *out,
   return LIBHPX_OK;
 }
 
-static network_t _smp = {
+static Network _smp = {
   .type = HPX_NETWORK_SMP,
   .string = NULL,
   .deallocate = _smp_deallocate,
@@ -89,7 +89,7 @@ static network_t _smp = {
   .coll_sync = _smp_coll_sync
 };
 
-network_t *network_smp_new(const struct config *cfg, boot_t *boot) {
+void *network_smp_new(const struct config *cfg, boot_t *boot) {
   if (boot_n_ranks(boot) > 1) {
     dbg_error("SMP network does not support multiple ranks.\n");
     return NULL;

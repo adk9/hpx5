@@ -34,7 +34,7 @@
 #include "parcel_utils.h"
 
 typedef struct {
-  network_t       vtable;
+  Network         vtable;
   gas_t             *gas;
   isir_xport_t    *xport;
   PAD_TO_CACHELINE(sizeof(network_t) + sizeof(gas_t*) + sizeof(isir_xport_t*));

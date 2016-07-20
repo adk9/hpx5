@@ -24,73 +24,91 @@
 #include "inst.h"
 
 typedef struct {
-  network_t vtable;
-  network_t *impl;
+  Network vtable;
+  void *impl;
 } _inst_network_t;
 
 // Define the transports allowed for the SMP network
-static void _inst_deallocate(void *network) {
+static void
+_inst_deallocate(void *network)
+{
   _inst_network_t *inst = network;
-  inst->impl->deallocate(inst->impl);
+  network_delete(inst->impl);
   free(inst);
 }
 
-static int _inst_progress(void *network, int id) {
+static int
+_inst_progress(void *network, int id)
+{
   EVENT_NETWORK_PROGRESS_BEGIN();
   _inst_network_t *inst = network;
-  int r = inst->impl->progress(inst->impl, id);
+  int r = network_progress(inst->impl, id);
   EVENT_NETWORK_PROGRESS_END();
   return r;
 }
 
-static int _inst_send(void *network, hpx_parcel_t *p, hpx_parcel_t *ssync) {
+static int
+_inst_send(void *network, hpx_parcel_t *p, hpx_parcel_t *ssync)
+{
   EVENT_NETWORK_SEND();
   _inst_network_t *inst = network;
-  return inst->impl->send(inst->impl, p, ssync);
+  return network_send(inst->impl, p, ssync);
 }
 
-static hpx_parcel_t *_inst_probe(void *network, int nrx) {
+static hpx_parcel_t *
+_inst_probe(void *network, int nrx)
+{
   EVENT_NETWORK_PROBE_BEGIN();
   _inst_network_t *inst = network;
-  hpx_parcel_t *p = inst->impl->probe(inst->impl, nrx);
+  hpx_parcel_t *p = network_probe(inst->impl, nrx);
   EVENT_NETWORK_PROBE_END();
   return p;
 }
 
-static void _inst_flush(void *network) {
+static void
+_inst_flush(void *network)
+{
   _inst_network_t *inst = network;
-  inst->impl->flush(inst->impl);
+  network_flush(inst->impl);
 }
 
-static void _inst_register_dma(void *network, const void *addr, size_t n,
-                               void *key) {
+static void
+_inst_register_dma(void *network, const void *addr, size_t n, void *key)
+{
   _inst_network_t *inst = network;
-  inst->impl->register_dma(inst->impl, addr, n, key);
+  network_register_dma(inst->impl, addr, n, key);
 }
 
-static void _inst_release_dma(void *network, const void *addr, size_t n) {
+static void
+_inst_release_dma(void *network, const void *addr, size_t n)
+{
   _inst_network_t *inst = network;
-  inst->impl->release_dma(inst->impl, addr, n);
+  network_release_dma(inst->impl, addr, n);
 }
 
-static int _inst_lco_wait(void *network, hpx_addr_t lco, int reset) {
+static int
+_inst_lco_wait(void *network, hpx_addr_t lco, int reset)
+{
   _inst_network_t *inst = network;
-  return inst->impl->lco_wait(inst->impl, lco, reset);
+  return network_lco_wait(inst->impl, lco, reset);
 }
 
-static int _inst_lco_get(void *network, hpx_addr_t lco, size_t n, void *to,
-                         int reset) {
+static int
+_inst_lco_get(void *network, hpx_addr_t lco, size_t n, void *to, int reset)
+{
   _inst_network_t *inst = network;
-  return inst->impl->lco_get(inst->impl, lco, n, to, reset);
+  return network_lco_get(inst->impl, lco, n, to, reset);
 }
 
-network_t *network_inst_new(network_t *impl) {
+void*
+network_inst_new(void *impl)
+{
   dbg_assert(impl);
   _inst_network_t *inst = malloc(sizeof(*inst));
   dbg_assert(inst);
 
-  inst->vtable.string = impl->string;
-  inst->vtable.type = impl->type;
+  inst->vtable.string = ((Network*)impl)->string;
+  inst->vtable.type = ((Network*)impl)->type;
   inst->vtable.deallocate = _inst_deallocate;
   inst->vtable.progress = _inst_progress;
   inst->vtable.send = _inst_send;

@@ -35,7 +35,7 @@ struct send_buffer;
 /// @}
 
 typedef struct {
-  network_t                   vtable;
+  Network                     vtable;
   const struct config           *cfg;
   struct pwc_xport            *xport;
   struct parcel_emulator    *parcels;

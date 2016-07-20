@@ -35,8 +35,8 @@
 // 2. compression and coalescing.
 
 typedef struct {
-  network_t          vtable;
-  network_t           *impl;
+  Network vtable;
+  void *impl;
 } _compressed_network_t;
 
 static void _compressed_network_deallocate(void *obj) {
@@ -138,12 +138,12 @@ static int _compressed_network_lco_get(void *obj, hpx_addr_t lco, size_t n,
   return network_lco_get(network->impl, lco, n, out, reset);
 }
 
-network_t* compressed_network_new(network_t *impl) {
+void* compressed_network_new(void *impl) {
   dbg_assert(impl);
   _compressed_network_t *network = malloc(sizeof(*network));
 
-  network->vtable.string       = impl->string;
-  network->vtable.type         = impl->type;
+  network->vtable.string       = ((Network*)impl)->string;
+  network->vtable.type         = ((Network*)impl)->type;
   network->vtable.deallocate   = _compressed_network_deallocate;
   network->vtable.progress     = _compressed_network_progress;
   network->vtable.send         = _compressed_network_send;
@@ -153,8 +153,8 @@ network_t* compressed_network_new(network_t *impl) {
   network->vtable.release_dma  = _compressed_network_release_dma;
   network->vtable.lco_get      = _compressed_network_lco_get;
   network->vtable.lco_wait     = _compressed_network_lco_wait;
-  network->vtable.coll_init    = impl->coll_init;
-  network->vtable.coll_sync    = impl->coll_sync;
+  network->vtable.coll_init    = ((Network*)impl)->coll_init;
+  network->vtable.coll_sync    = ((Network*)impl)->coll_sync;
 
   network->impl = impl;
 

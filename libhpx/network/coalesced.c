@@ -29,8 +29,8 @@
 #include <libhpx/parcel.h>
 
 typedef struct {
-  network_t          vtable;
-  network_t           *next;
+  Network            vtable;
+  void                *next;
   two_lock_queue_t    sends;
   int                 count;
   int        previous_count;
@@ -223,7 +223,7 @@ static void _coalesced_network_flush(void *obj) {
   }
 
   // and flush the underlying network
-  network->next->flush(network->next);
+  network_flush(network->next);
 }
 
 static void _coalesced_network_register_dma(void *obj, const void *base,
@@ -249,7 +249,7 @@ static int _coalesced_network_lco_wait(void *obj, hpx_addr_t lco, int reset) {
   return network_lco_wait(network->next, lco, reset);
 }
 
-network_t* coalesced_network_new(network_t *next,  const struct config *cfg) {
+void* coalesced_network_new(void *next,  const struct config *cfg) {
   _coalesced_network_t *network = NULL;
   if (posix_memalign((void*)&network, HPX_CACHELINE_SIZE, sizeof(*network))) {
     log_error("could not allocate a coalesced network\n");
@@ -257,7 +257,7 @@ network_t* coalesced_network_new(network_t *next,  const struct config *cfg) {
   }
 
   // set the vtable
-  network->vtable.string       = next->string;
+  network->vtable.string       = ((Network*)next)->string;
   network->vtable.deallocate   = _coalesced_network_deallocate;
   network->vtable.progress     = _coalesced_network_progress;
   network->vtable.send         = _coalesced_network_send;
@@ -267,8 +267,8 @@ network_t* coalesced_network_new(network_t *next,  const struct config *cfg) {
   network->vtable.release_dma  = _coalesced_network_release_dma;
   network->vtable.lco_get      = _coalesced_network_lco_get;
   network->vtable.lco_wait     = _coalesced_network_lco_wait;
-  network->vtable.coll_init    = next->coll_init;
-  network->vtable.coll_sync    = next->coll_sync;
+  network->vtable.coll_init    = ((Network*)next)->coll_init;
+  network->vtable.coll_sync    = ((Network*)next)->coll_sync;
 
   // set the next network
   network->next = next;
