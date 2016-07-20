@@ -26,7 +26,7 @@ static const char *_smp_id(void) {
   return _smp_id_string;
 }
 
-static void _delete(boot_t *boot) {
+static void _deallocate(boot_t *boot) {
   free(boot);
 }
 
@@ -64,14 +64,14 @@ boot_t *boot_new_smp(void) {
     dbg_error("could not allocate an SMP network object\n");
   }
 
-  smp->type      = HPX_BOOT_SMP;
-  smp->id        = _smp_id;
-  smp->delete    = _delete;
-  smp->rank      = _rank;
-  smp->n_ranks   = _n_ranks;
-  smp->barrier   = _barrier;
-  smp->allgather = _allgather;
-  smp->alltoall  = _smp_alltoall;
-  smp->abort     = _abort;
+  smp->type       = HPX_BOOT_SMP;
+  smp->id         = _smp_id;
+  smp->deallocate = _deallocate;
+  smp->rank       = _rank;
+  smp->n_ranks    = _n_ranks;
+  smp->barrier    = _barrier;
+  smp->allgather  = _allgather;
+  smp->alltoall   = _smp_alltoall;
+  smp->abort      = _abort;
   return smp;
 }

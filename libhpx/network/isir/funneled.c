@@ -59,9 +59,9 @@ _send_all(_funneled_t *network) {
   }
 }
 
-/// Delete a funneled network.
+/// Deallocate a funneled network.
 static void
-_funneled_delete(void *network) {
+_funneled_deallocate(void *network) {
   dbg_assert(network);
 
   _funneled_t *isir = network;
@@ -228,7 +228,7 @@ network_isir_funneled_new(const config_t *cfg, struct boot *boot, gas_t *gas) {
 
   network->vtable.type         = HPX_NETWORK_ISIR;
   network->vtable.string       = &parcel_string_vtable;
-  network->vtable.delete       = _funneled_delete;
+  network->vtable.deallocate   = _funneled_deallocate;
   network->vtable.progress     = _funneled_progress;
   network->vtable.send         = _funneled_send;
   network->vtable.coll_sync    = _funneled_coll_sync;

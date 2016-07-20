@@ -39,7 +39,7 @@ typedef struct {
   network_t           *impl;
 } _compressed_network_t;
 
-static void _compressed_network_delete(void *obj) {
+static void _compressed_network_deallocate(void *obj) {
   _compressed_network_t *network = obj;
   network_delete(network->impl);
   free(obj);
@@ -144,7 +144,7 @@ network_t* compressed_network_new(network_t *impl) {
 
   network->vtable.string       = impl->string;
   network->vtable.type         = impl->type;
-  network->vtable.delete       = _compressed_network_delete;
+  network->vtable.deallocate   = _compressed_network_deallocate;
   network->vtable.progress     = _compressed_network_progress;
   network->vtable.send         = _compressed_network_send;
   network->vtable.probe        = _compressed_network_probe;

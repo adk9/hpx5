@@ -46,7 +46,7 @@ static inline void _atomic_dec(volatile int *addr) {
   sync_fadd(addr, -1, SYNC_ACQ_REL);
 }
 
-static void _coalesced_network_delete(void *obj) {
+static void _coalesced_network_deallocate(void *obj) {
   _coalesced_network_t *network = obj;
   network_delete(network->next);
   free(obj);
@@ -258,7 +258,7 @@ network_t* coalesced_network_new(network_t *next,  const struct config *cfg) {
 
   // set the vtable
   network->vtable.string       = next->string;
-  network->vtable.delete       = _coalesced_network_delete;
+  network->vtable.deallocate   = _coalesced_network_deallocate;
   network->vtable.progress     = _coalesced_network_progress;
   network->vtable.send         = _coalesced_network_send;
   network->vtable.probe        = _coalesced_network_probe;

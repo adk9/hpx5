@@ -17,6 +17,10 @@
 #include <hpx/attributes.h>
 #include <libhpx/network.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /// Forward declarations.
 /// @{
 struct boot;
@@ -34,5 +38,10 @@ int isir_lco_wait(void *obj, hpx_addr_t lco, int reset);
 
 /// Perform an LCO get operation through the Isend/Irecv network.
 int isir_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out, int reset);
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIBHPX_NETWORK_ISIR_ISIR_H

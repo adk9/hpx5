@@ -28,7 +28,7 @@
 #include "smp.h"
 
 // Define the transports allowed for the SMP network
-static void _smp_delete(void *network) {
+static void _smp_deallocate(void *network) {
 }
 
 static int _smp_progress(void *network, int id) {
@@ -76,7 +76,7 @@ static int _smp_coll_sync(void *network, void *in, size_t in_size, void *out,
 static network_t _smp = {
   .type = HPX_NETWORK_SMP,
   .string = NULL,
-  .delete = _smp_delete,
+  .deallocate = _smp_deallocate,
   .progress = _smp_progress,
   .send = _smp_send,
   .probe = _smp_probe,

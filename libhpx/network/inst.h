@@ -14,11 +14,19 @@
 #ifndef LIBHPX_NETWORK_INST_H
 #define LIBHPX_NETWORK_INST_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /// Forward declarations.
 /// @{
 struct network;
 /// @}
 
 struct network *network_inst_new(struct network *impl);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

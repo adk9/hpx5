@@ -137,7 +137,7 @@ static int _pwc_send(void *network, hpx_parcel_t *p, hpx_parcel_t *ssync) {
 static void _pwc_flush(void *pwc) {
 }
 
-static void _pwc_delete(void *network) {
+static void _pwc_deallocate(void *network) {
   dbg_assert(network);
   pwc_network_t *pwc = network;
 
@@ -239,7 +239,7 @@ network_pwc_funneled_new(const config_t *cfg, boot_t *boot, gas_t *gas) {
     pwc->vtable.string     = &_pwc_string_vtable;
   }
   pwc->vtable.type         = HPX_NETWORK_PWC;
-  pwc->vtable.delete       = _pwc_delete;
+  pwc->vtable.deallocate   = _pwc_deallocate;
   pwc->vtable.progress     = _pwc_progress;
   pwc->vtable.send         = _pwc_send;
   pwc->vtable.coll_init    = _pwc_coll_init;

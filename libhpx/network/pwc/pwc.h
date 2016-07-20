@@ -20,6 +20,10 @@
 #include <libhpx/padding.h>
 #include "commands.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /// Forward declarations.
 /// @{
 struct boot;
@@ -259,5 +263,9 @@ int pwc_put(void *obj, hpx_addr_t to, const void *lva, size_t n,
 ///
 /// @returns            The (local) status of the put operation.
 int pwc_cmd(void *obj, int rank, command_t lcmd, command_t rcmd);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

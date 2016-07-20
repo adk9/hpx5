@@ -14,6 +14,10 @@
 #ifndef LIBHPX_NETWORK_SMP_H
 #define LIBHPX_NETWORK_SMP_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /// Forward declarations.
 /// @{
 struct boot;
@@ -22,5 +26,9 @@ struct network;
 /// @}
 
 struct network *network_smp_new(const struct config *cfg, struct boot *boot);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

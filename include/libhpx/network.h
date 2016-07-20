@@ -24,6 +24,10 @@
 #include <libhpx/action.h>
 #include <libhpx/string.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /// Forward declarations.
 /// @{
 struct boot;
@@ -38,7 +42,7 @@ typedef struct network {
 
   const class_string_t * string;
 
-  void (*delete)(void*);
+  void (*deallocate)(void*);
 
   int (*progress)(void*, int);
 
@@ -80,8 +84,8 @@ network_new(struct config *cfg, struct boot *boot, struct gas *gas)
 /// @param      obj The network to delete.
 static inline void
 network_delete(void *obj) {
-  network_t *network = obj;
-  network->delete(network);
+  network_t *network = (network_t *)obj;
+  network->deallocate(network);
 }
 
 /// Perform one network progress operation.
@@ -95,7 +99,7 @@ network_delete(void *obj) {
 /// @returns  LIBHPX_OK The network was progressed without error.
 static inline int
 network_progress(void *obj, int id) {
-  network_t *network = obj;
+  network_t *network = (network_t *)obj;
   assert(network);
   return network->progress(network, id);
 }
@@ -122,21 +126,21 @@ network_progress(void *obj, int id) {
 /// @returns  LIBHPX_OK The send was buffered successfully
 static inline int
 network_send(void *obj, hpx_parcel_t *p, hpx_parcel_t *ssync) {
-  network_t *network = obj;
+  network_t *network = (network_t *)obj;
   return network->send(network, p, ssync);
 }
 
 /// Probe for received parcels.
 static inline hpx_parcel_t *
 network_probe(void *obj, int rank) {
-  network_t *network = obj;
+  network_t *network = (network_t *)obj;
   return network->probe(network, rank);
 }
 
 /// Flush the network to force it to finish its pending operations.
 static inline void
 network_flush(void *obj) {
-  network_t *network = obj;
+  network_t *network = (network_t *)obj;
   return network->flush(network);
 }
 
@@ -152,7 +156,7 @@ network_flush(void *obj) {
 /// @param          key The key to use when registering dma.
 static inline void
 network_register_dma(void *obj, const void *base, size_t bytes, void *key) {
-  network_t *network = obj;
+  network_t *network = (network_t *)obj;
   network->register_dma(network, base, bytes, key);
 }
 
@@ -166,74 +170,78 @@ network_register_dma(void *obj, const void *base, size_t bytes, void *key) {
 /// @param        bytes The number of bytes to release.
 static inline void
 network_release_dma(void *obj, const void *base, size_t bytes) {
-  network_t *network = obj;
+  network_t *network = (network_t *)obj;
   network->release_dma(network, base, bytes);
 }
 
 /// Perform an LCO get operation through the network.
 static inline int
 network_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out, int reset) {
-  network_t *network = obj;
+  network_t *network = (network_t *)obj;
   return network->lco_get(network, lco, n, out, reset);
 }
 
 /// Perform an LCO wait operation through the network.
 static inline int
 network_lco_wait(void *obj, hpx_addr_t lco, int reset) {
-  network_t *network = obj;
+  network_t *network = (network_t *)obj;
   return network->lco_wait(network, lco, reset);
 }
 
 static inline int network_memget(void *obj, void *to, hpx_addr_t from,
                                  size_t size, hpx_addr_t lsync,
                                  hpx_addr_t rsync) {
-  network_t *network = obj;
+  network_t *network = (network_t *)obj;
   return network->string->memget(network, to, from, size, lsync, rsync);
 }
 
 static inline int network_memget_rsync(void *obj, void *to, hpx_addr_t from,
                                        size_t size, hpx_addr_t lsync) {
-  network_t *network = obj;
+  network_t *network = (network_t *)obj;
   return network->string->memget_rsync(network, to, from, size, lsync);
 }
 
 static inline int network_memget_lsync(void *obj, void *to, hpx_addr_t from,
                                        size_t size) {
-  network_t *network = obj;
+  network_t *network = (network_t *)obj;
   return network->string->memget_lsync(network, to, from, size);
 }
 
 static inline int network_memput(void *obj, hpx_addr_t to, const void *from,
                                  size_t size, hpx_addr_t lsync,
                                  hpx_addr_t rsync) {
-  network_t *network = obj;
+  network_t *network = (network_t *)obj;
   return network->string->memput(network, to, from, size, lsync, rsync);
 }
 
 static inline int network_memput_lsync(void *obj, hpx_addr_t to,
                                        const void *from, size_t size,
                                        hpx_addr_t rsync) {
-  network_t *network = obj;
+  network_t *network = (network_t *)obj;
   return network->string->memput_lsync(network, to, from, size, rsync);
 }
 
 static inline int network_memput_rsync(void *obj, hpx_addr_t to,
                                        const void *from, size_t size) {
-  network_t *network = obj;
+  network_t *network = (network_t *)obj;
   return network->string->memput_rsync(network, to, from, size);
 }
 
 static inline int network_memcpy(void *obj, hpx_addr_t to, hpx_addr_t from,
                                  size_t size, hpx_addr_t sync) {
-  network_t *network = obj;
+  network_t *network = (network_t *)obj;
   // use this call syntax do deal with issues on darwin with the memcpy symbol
   return (*network->string->memcpy)(network, to, from, size, sync);
 }
 
 static inline int network_memcpy_sync(void *obj, hpx_addr_t to, hpx_addr_t from,
                                       size_t size) {
-  network_t *network = obj;
+  network_t *network = (network_t *)obj;
   return network->string->memcpy_sync(network, to, from, size);
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIBHPX_NETWORK_H

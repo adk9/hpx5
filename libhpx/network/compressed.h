@@ -14,16 +14,24 @@
 #ifndef LIBHPX_NETWORK_COMPRESSED_H
 #define LIBHPX_NETWORK_COMPRESSED_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <hpx/attributes.h>
-#include <libhpx/network.h>
 
 /// Forward declarations.
 /// @{
 struct config;
+struct network;
 /// @}
 
 
-network_t* compressed_network_new (network_t *network)
+struct network *compressed_network_new (struct network *network)
   HPX_MALLOC;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIBHPX_NETWORK_COMPRESSED_H

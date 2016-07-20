@@ -37,7 +37,7 @@ _id(void)
 }
 
 static void
-_delete(boot_t *boot)
+_deallocate(boot_t *boot)
 {
   _mpi_boot_t *mpi = (_mpi_boot_t *)boot;
   if (mpi->fini) {
@@ -122,14 +122,14 @@ boot_t *
 boot_new_mpi(void)
 {
   _mpi_boot_t *mpi = malloc(sizeof(*mpi));
-  mpi->vtable.id        = _id;
-  mpi->vtable.delete    = _delete;
-  mpi->vtable.rank      = _rank;
-  mpi->vtable.n_ranks   = _n_ranks;
-  mpi->vtable.barrier   = _barrier;
-  mpi->vtable.allgather = _allgather;
-  mpi->vtable.alltoall  = _alltoall;
-  mpi->vtable.abort     = _abort;
+  mpi->vtable.id         = _id;
+  mpi->vtable.deallocate = _deallocate;
+  mpi->vtable.rank       = _rank;
+  mpi->vtable.n_ranks    = _n_ranks;
+  mpi->vtable.barrier    = _barrier;
+  mpi->vtable.allgather  = _allgather;
+  mpi->vtable.alltoall   = _alltoall;
+  mpi->vtable.abort      = _abort;
 
   int already_initialized = 0;
   if (MPI_SUCCESS != MPI_Initialized(&already_initialized)) {

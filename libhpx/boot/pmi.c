@@ -34,7 +34,7 @@ static HPX_RETURNS_NON_NULL const char *_id(void) {
 }
 
 
-static void _delete(boot_t *boot) {
+static void _deallocate(boot_t *boot) {
   PMI_Finalize();
 }
 
@@ -234,7 +234,7 @@ static int _allgather(const boot_t *boot, const void *restrict cin,
     free(ranks);
     return log_error("pmi: failed in PMI_Allgather.\n");
   }
-  
+
   void *buf = malloc(sizeof(char) * n * nranks);
   assert(buf != NULL);
   if ((PMI_Allgather(in, buf, n)) != PMI_SUCCESS) {
@@ -286,7 +286,7 @@ static int _pmi_alltoall(const void *boot, void *restrict dest,
   if (!gather) {
     dbg_error("could not allocate enough space for PMI alltoall emulation\n");
   }
-  
+
   // Perform the allgather
   int e = _allgather(pmi, src, gather, nranks * stride);
   if (LIBHPX_OK != e) {
@@ -306,15 +306,15 @@ static int _pmi_alltoall(const void *boot, void *restrict dest,
 }
 
 static boot_t _pmi = {
-  .type      = HPX_BOOT_PMI,
-  .id        = _id,
-  .delete    = _delete,
-  .rank      = _rank,
-  .n_ranks   = _n_ranks,
-  .barrier   = _barrier,
-  .allgather = _allgather,
-  .alltoall  = _pmi_alltoall,
-  .abort     = _abort
+  .type       = HPX_BOOT_PMI,
+  .id         = _id,
+  .deallocate = _deallocate,
+  .rank       = _rank,
+  .n_ranks    = _n_ranks,
+  .barrier    = _barrier,
+  .allgather  = _allgather,
+  .alltoall   = _pmi_alltoall,
+  .abort      = _abort
 };
 
 boot_t *boot_new_pmi(void) {

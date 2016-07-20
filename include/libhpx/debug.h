@@ -17,6 +17,10 @@
 #include <hpx/hpx.h>
 #include <libhpx/config.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifdef ENABLE_DEBUG
 # define DEBUG 1
 # define DEBUG_IF(S) if (S)
@@ -105,5 +109,9 @@ int log_error_internal(unsigned line, const char *filename, const char *func,
 
 #define log_error(...)                                                  \
   log_error_internal(__LINE__, __FILE__, __func__, __VA_ARGS__)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIBHPX_DEBUG_H

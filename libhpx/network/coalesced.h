@@ -14,15 +14,23 @@
 #ifndef LIBHPX_NETWORK_COALESCED_H
 #define LIBHPX_NETWORK_COALESCED_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <hpx/attributes.h>
-#include <libhpx/network.h>
 
 /// Forward declarations.
 /// @{
 struct config;
+struct network;
 /// @}
 
-network_t* coalesced_network_new (network_t *network, const struct config *cfg)
+struct network* coalesced_network_new (network_t *network, const struct config *cfg)
   HPX_MALLOC;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIBHPX_NETWORK_COALESCED_H

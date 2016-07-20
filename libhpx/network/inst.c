@@ -29,9 +29,9 @@ typedef struct {
 } _inst_network_t;
 
 // Define the transports allowed for the SMP network
-static void _inst_delete(void *network) {
+static void _inst_deallocate(void *network) {
   _inst_network_t *inst = network;
-  inst->impl->delete(inst->impl);
+  inst->impl->deallocate(inst->impl);
   free(inst);
 }
 
@@ -91,7 +91,7 @@ network_t *network_inst_new(network_t *impl) {
 
   inst->vtable.string = impl->string;
   inst->vtable.type = impl->type;
-  inst->vtable.delete = _inst_delete;
+  inst->vtable.deallocate = _inst_deallocate;
   inst->vtable.progress = _inst_progress;
   inst->vtable.send = _inst_send;
   inst->vtable.probe = _inst_probe;

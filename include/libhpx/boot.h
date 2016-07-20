@@ -16,12 +16,17 @@
 
 #include <libhpx/config.h>
 
+#ifdef __cplusplus
+#define restrict
+extern "C" {
+#endif
+
 typedef struct boot {
   libhpx_boot_t type;
 
   const char *(*id)(void);
 
-  void (*delete)(struct boot*);
+  void (*deallocate)(struct boot*);
   int (*rank)(const struct boot*);
   int (*n_ranks)(const struct boot*);
   int (*barrier)(const struct boot*);
@@ -38,7 +43,7 @@ boot_t *boot_new_smp(void);
 boot_t *boot_new(libhpx_boot_t type);
 
 static inline void boot_delete(boot_t *boot) {
-  boot->delete(boot);
+  boot->deallocate(boot);
 }
 
 static inline libhpx_boot_t boot_type(boot_t *boot) {
@@ -70,5 +75,10 @@ static inline int boot_barrier(const boot_t *boot) {
 static inline void boot_abort(const boot_t *boot) {
   boot->abort(boot);
 }
+
+#ifdef __cplusplus
+}
+#undef restrict
+#endif
 
 #endif

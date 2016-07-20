@@ -25,6 +25,10 @@
 # include "photon_config.h"
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define LIBHPX_OPT_BITSET_ALL UINT64_MAX
 #define LIBHPX_OPT_BITSET_NONE 0
 #define LIBHPX_SMALL_THRESHOLD HPX_PAGE_SIZE
@@ -267,5 +271,9 @@ void config_print(const config_t *cfg, FILE *file);
 # include "options.def"
 #undef LIBHPX_OPT_BITSET
 #undef LIBHPX_OPT_INTSET
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIBHPX_CONFIG_H
