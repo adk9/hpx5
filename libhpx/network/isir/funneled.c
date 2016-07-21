@@ -40,6 +40,7 @@ typedef struct {
   isir_xport_t    *xport;
   PAD_TO_CACHELINE(sizeof(network_t) + sizeof(gas_t*) + sizeof(isir_xport_t*));
   two_lock_queue_t sends;
+  two_lock_queue_t colls;
   two_lock_queue_t recvs;
   isend_buffer_t  isends;
   irecv_buffer_t  irecvs;
@@ -58,6 +59,12 @@ _send_all(_funneled_t *network) {
     p->next = NULL;
     isend_buffer_append(&network->isends, p, ssync, DIRECT);
   }
+  
+  coll_data_t *d = NULL ;
+  while ((d = sync_two_lock_queue_dequeue(&network->colls))) {
+    hpx_parcel_t *ssync = d->ssync;
+    isend_buffer_append(&network->isends, d, ssync, COLL_ALLRED);
+  }
 }
 
 /// Delete a funneled network.
@@ -73,11 +80,16 @@ _funneled_delete(void *network) {
   while ((p = sync_two_lock_queue_dequeue(&isir->sends))) {
     parcel_delete(p);
   }
+  coll_data_t *d = NULL;
+  while ((d = sync_two_lock_queue_dequeue(&isir->colls))) {
+    free(d);
+  }
   while ((p = sync_two_lock_queue_dequeue(&isir->recvs))) {
     parcel_delete(p);
   }
 
   sync_two_lock_queue_fini(&isir->sends);
+  sync_two_lock_queue_fini(&isir->colls);
   sync_two_lock_queue_fini(&isir->recvs);
 
   isir->xport->delete(isir->xport);
@@ -107,7 +119,7 @@ static int _funneled_coll_init(void *network, coll_t **_c) {
   isir->vtable.flush(network);
   while (!sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE))
     ;
-  isir->xport->create_comm(isir, comm, ranks, num_active, here->ranks);
+  isir->xport->create_comm(isir->xport, comm, ranks, num_active, here->ranks);
 
   sync_store(&isir->progress_lock, 1, SYNC_RELEASE);
   return LIBHPX_OK;
@@ -141,8 +153,8 @@ static int _funneled_coll_async(void *network, void *in, size_t input_sz,
   _funneled_t *isir = network;
 
   //acquire lock before collective operation `put` into buffer
-  while (!sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE))
-    ;
+  /*while (!sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE))*/
+    /*;*/
   dbg_assert(c->type == COLL_ALLRED);
 
   coll_data_t *data = (coll_data_t*)calloc(1, sizeof(coll_data_t));
@@ -154,10 +166,13 @@ static int _funneled_coll_async(void *network, void *in, size_t input_sz,
   data->op = NULL;
 
   hpx_parcel_t *ssync_local = action_new_parcel(hpx_lco_set_action, lsync, 0, 0, 0);
-  isend_buffer_append(&isir->isends, data, ssync_local, COLL_ALLRED);
+  data->ssync = ssync_local;
+  sync_two_lock_queue_enqueue(&isir->colls, data);
+  
+  /*isend_buffer_append(&isir->isends, data, ssync_local, COLL_ALLRED);*/
 
   //release lock now
-  sync_store(&isir->progress_lock, 1, SYNC_RELEASE);
+  /*sync_store(&isir->progress_lock, 1, SYNC_RELEASE);*/
   return LIBHPX_OK;
 }
 
@@ -269,6 +284,7 @@ network_isir_funneled_new(const config_t *cfg, struct boot *boot, gas_t *gas) {
   network->gas = gas;
 
   sync_two_lock_queue_init(&network->sends, NULL);
+  sync_two_lock_queue_init(&network->colls, NULL);
   sync_two_lock_queue_init(&network->recvs, NULL);
 
   isend_buffer_init(&network->isends, network->xport, 64, cfg->isir_sendlimit,

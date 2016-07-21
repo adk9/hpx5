@@ -45,6 +45,7 @@ typedef struct {
   void *data_type;
   void *op;  
   void *comm;  
+  hpx_parcel_t *ssync;
   int count;
 } coll_data_t;
 
