@@ -16,6 +16,10 @@
 
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct hpx_parcel;
 typedef struct parcel_block parcel_block_t;
 
@@ -24,5 +28,9 @@ void parcel_block_delete(parcel_block_t *block);
 void *parcel_block_at(parcel_block_t *block, size_t offset);
 void parcel_block_deduct(parcel_block_t *block, size_t bytes);
 void parcel_block_delete_parcel(struct hpx_parcel *p);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIBHPX_PARCEL_BLOCK_H

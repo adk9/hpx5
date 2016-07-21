@@ -4,35 +4,32 @@ noinst_HEADERS     = circular_buffer.h commands.h parcel_emulation.h pwc.h \
                      registered.h send_buffer.h xport.h 
 
 libpwc_la_CPPFLAGS = -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
-libpwc_la_CFLAGS   = $(LIBHPX_CFLAGS)
 libpwc_la_CXXFLAGS = $(LIBHPX_CXXFLAGS)
 libpwc_la_SOURCES  = pwc.cpp \
-                     reload.c \
-                     xport.c \
-                     send_buffer.c \
-                     circular_buffer.c \
-                     lco_get.c \
-                     lco_wait.c \
-                     commands.c \
-                     rendezvous_send.c \
-                     memget.c memput.c memcpy.c
+                     reload.cpp \
+                     xport.cpp \
+                     send_buffer.cpp \
+                     circular_buffer.cpp \
+                     lco_get.cpp \
+                     lco_wait.cpp \
+                     commands.cpp \
+                     rendezvous_send.cpp \
+                     memget.cpp \
+                     memput.cpp \
+                     memcpy.cpp
 
 if HAVE_PHOTON
-libpwc_la_SOURCES += xport_photon.c
+libpwc_la_SOURCES += xport_photon.cpp
 endif
 
 if HAVE_JEMALLOC
-libpwc_la_SOURCES += jemalloc_registered.c
+libpwc_la_SOURCES += jemalloc_registered.cpp
 endif
 
 if HAVE_TBBMALLOC
-noinst_LTLIBRARIES		   += libtbbmalloc.la
-libtbbmalloc_la_CPPFLAGS	= -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
-libtbbmalloc_la_CXXFLAGS 	= $(LIBHPX_CXXFLAGS)
-libtbbmalloc_la_SOURCES  	= tbbmalloc_registered.cpp
-libpwc_la_LIBADD			= libtbbmalloc.la
+libpwc_la_SOURCES += tbbmalloc_registered.cpp
 endif
 
 if HAVE_DLMALLOC
-libpwc_la_SOURCES += dlmalloc_registered.c
+libpwc_la_SOURCES += dlmalloc_registered.cpp
 endif

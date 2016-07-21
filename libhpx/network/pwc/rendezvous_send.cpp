@@ -24,17 +24,20 @@
 /// events, the remote event will free the sent parcel, while the local event
 /// will schedule the parcel once the get has completed.
 
+#include "pwc.h"
+#include "commands.h"
+#include "xport.h"
 #include <libhpx/debug.h>
 #include <libhpx/parcel.h>
 #include <libhpx/scheduler.h>
-#include "pwc.h"
-#include "xport.h"
 
 /// The local event handler for the get-with-completion operation.
 ///
 /// This is used to schedule the transferred parcel once the get operation has
 /// completed. The command encodes the local address of the parcel to schedule.
-void handle_rendezvous_launch(int src, command_t cmd) {
+void
+handle_rendezvous_launch(unsigned src, command_t cmd)
+{
   hpx_parcel_t *p = (hpx_parcel_t*)(uintptr_t)cmd.arg;
   parcel_set_state(p, PARCEL_SERIALIZED);
   EVENT_PARCEL_RECV(p->id, p->action, p->size, p->src, p->target);
@@ -42,7 +45,7 @@ void handle_rendezvous_launch(int src, command_t cmd) {
 }
 
 typedef struct {
-  int              rank;
+  unsigned         rank;
   const hpx_parcel_t *p;
   size_t              n;
   xport_key_t       key;
@@ -78,7 +81,7 @@ static LIBHPX_ACTION(HPX_INTERRUPT, HPX_MARSHALLED, _rendezvous_get,
                      _rendezvous_get_handler, HPX_POINTER, HPX_SIZE_T);
 
 int pwc_rendezvous_send(void *network, const hpx_parcel_t *p) {
-  pwc_network_t *pwc = network;
+  pwc_network_t *pwc = static_cast<pwc_network_t*>(network);
   size_t n = parcel_size(p);
   _rendezvous_get_args_t args = {
     .rank = here->rank,

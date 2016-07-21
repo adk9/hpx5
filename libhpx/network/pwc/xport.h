@@ -32,7 +32,7 @@ struct gas;
 typedef char xport_key_t[XPORT_KEY_SIZE];
 
 typedef struct xport_op {
-  int             rank;
+  unsigned        rank;
   int   UNUSED_PADDING;
   size_t             n;
   void           *dest;

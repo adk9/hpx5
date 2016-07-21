@@ -28,7 +28,7 @@
 /// This acts as a parcel_suspend transfer to allow _pwc_lco_get_request_handler
 /// to wait for its pwc to complete.
 static void _get_reply_continuation(hpx_parcel_t *p, void *env) {
-  xport_op_t *op = env;
+  xport_op_t *op = static_cast<xport_op_t*>(env);
 
   // at this point we know which parcel to resume for local completion
   op->lop.op  = RESUME_PARCEL;
@@ -42,7 +42,7 @@ typedef struct {
   void *out;
   int reset;
   xport_key_t key;
-  int rank;
+  unsigned rank;
 } _pwc_lco_get_request_args_t;
 
 /// This function (*not* an action) consolidates the functionality to issue a
@@ -205,7 +205,7 @@ typedef struct {
 
 /// Issue the get request parcel from a transfer continuation.
 static void _pwc_lco_get_continuation(hpx_parcel_t *p, void *env) {
-  _pwc_lco_get_continuation_env_t *e = env;
+  auto e = static_cast<_pwc_lco_get_continuation_env_t*>(env);
   e->request.p = p;
   hpx_action_t act = _pwc_lco_get_request;
   size_t n = sizeof(e->request);

@@ -90,7 +90,7 @@ typedef struct {
 } _pwc_memput_lsync_continuation_env_t;
 
 static void _pwc_memput_lsync_continuation(hpx_parcel_t *p, void *env) {
-  _pwc_memput_lsync_continuation_env_t *e = env;
+  auto e = static_cast<_pwc_memput_lsync_continuation_env_t*>(env);
 
   command_t rcmd = {
     .op = NOP,
@@ -144,7 +144,7 @@ typedef struct {
 } _pwc_memput_rsync_continuation_env_t;
 
 static void _pwc_memput_rsync_continuation(hpx_parcel_t *p, void *env) {
-  _pwc_memput_rsync_continuation_env_t *e = env;
+  auto e = static_cast<_pwc_memput_rsync_continuation_env_t*>(env);
   command_t lcmd = { 0 };
   command_t rcmd = {
     .op  = RESUME_PARCEL_SOURCE,

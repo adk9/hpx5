@@ -79,7 +79,7 @@ typedef struct {
 } _pwc_memget_rsync_env_t;
 
 static void _pwc_memget_rsync_continuation(hpx_parcel_t *p, void *env) {
-  _pwc_memget_rsync_env_t *e = env;
+  auto e = static_cast<_pwc_memget_rsync_env_t*>(env);
   command_t lcmd = { .op = NOP, .arg = e->lsync };
   command_t rcmd = { .op = RESUME_PARCEL_SOURCE, .arg = (uintptr_t)p };
 
@@ -120,7 +120,7 @@ typedef struct {
 } _pwc_memget_lsync_env_t;
 
 static void _pwc_memget_lsync_continuation(hpx_parcel_t *p, void *env) {
-  _pwc_memget_lsync_env_t *e = env;
+  auto e = static_cast<_pwc_memget_lsync_env_t*>(env);
   command_t lcmd = {
     .op  = RESUME_PARCEL,
     .arg = (uintptr_t)p

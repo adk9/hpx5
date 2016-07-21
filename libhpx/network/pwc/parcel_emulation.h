@@ -20,30 +20,38 @@ extern "C" {
 
 struct boot;
 struct config;
+struct hpx_parcel;
 struct pwc_xport;
 
 typedef struct parcel_emulator {
   void (*deallocate)(void *obj);
-  int (*send)(void *obj, struct pwc_xport *xport, int rank,
-              const hpx_parcel_t *p);
-  hpx_parcel_t *(*recv)(void *obj, int rank);
+  int (*send)(void *obj, struct pwc_xport *xport, unsigned rank,
+              const struct hpx_parcel *p);
+  struct hpx_parcel *(*recv)(void *obj, unsigned rank);
 } parcel_emulator_t;
 
-parcel_emulator_t *parcel_emulator_new_reload(const struct config *cfg, struct boot *boot,
-                                              struct pwc_xport *xport);
+parcel_emulator_t *
+parcel_emulator_new_reload(const struct config *cfg, struct boot *boot,
+                           struct pwc_xport *xport);
 
-static inline void parcel_emulator_deallocate(void *obj) {
+static inline void
+parcel_emulator_deallocate(void *obj)
+{
   parcel_emulator_t *emulator = (parcel_emulator_t *)obj;
   emulator->deallocate(obj);
 }
 
-static inline int parcel_emulator_send(void *obj, struct pwc_xport *xport,
-                                       int rank, const hpx_parcel_t *p) {
+static inline int
+parcel_emulator_send(void *obj, struct pwc_xport *xport, unsigned rank,
+                     const struct hpx_parcel *p)
+{
   parcel_emulator_t *emulator = (parcel_emulator_t *)obj;
   return emulator->send(obj, xport, rank, p);
 }
 
-static inline hpx_parcel_t *parcel_emulator_recv(void *obj, int rank) {
+static inline struct hpx_parcel *
+parcel_emulator_recv(void *obj, unsigned rank)
+{
   parcel_emulator_t *emulator = (parcel_emulator_t *)obj;
   return emulator->recv(obj, rank);
 }

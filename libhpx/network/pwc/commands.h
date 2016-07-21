@@ -31,17 +31,17 @@ typedef union {
   };
 } command_t;
 
-typedef void (*command_handler_t)(int, command_t);
+typedef void (*command_handler_t)(unsigned, command_t);
 
-void handle_resume_parcel(int src, command_t cmd);
-void handle_resume_parcel_source(int src, command_t cmd);
-void handle_delete_parcel(int src, command_t cmd);
-void handle_lco_set(int src, command_t cmd);
-void handle_lco_set_source(int src, command_t cmd);
-void handle_recv_parcel(int src, command_t cmd);
-void handle_rendezvous_launch(int src, command_t cmd);
-void handle_reload_request(int src, command_t cmd);
-void handle_reload_reply(int src, command_t cmd);
+void handle_resume_parcel(unsigned src, command_t cmd);
+void handle_resume_parcel_source(unsigned src, command_t cmd);
+void handle_delete_parcel(unsigned src, command_t cmd);
+void handle_lco_set(unsigned src, command_t cmd);
+void handle_lco_set_source(unsigned src, command_t cmd);
+void handle_recv_parcel(unsigned src, command_t cmd);
+void handle_rendezvous_launch(unsigned src, command_t cmd);
+void handle_reload_request(unsigned src, command_t cmd);
+void handle_reload_reply(unsigned src, command_t cmd);
 
 enum {
   NOP = 0,
@@ -58,7 +58,7 @@ enum {
 };
 
 /// Handle a command.
-void command_run(int src, command_t cmd);
+void command_run(unsigned src, command_t cmd);
 
 #ifdef __cplusplus
 }

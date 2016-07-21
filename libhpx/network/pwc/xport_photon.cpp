@@ -15,12 +15,9 @@
 # include "config.h"
 #endif
 
-#include <stdlib.h>
-#include <string.h>
-#include <photon.h>
-
-#include <libsync/locks.h>
-
+#include "xport.h"
+#include "commands.h"
+#include "registered.h"
 #include <libhpx/action.h>
 #include <libhpx/boot.h>
 #include <libhpx/debug.h>
@@ -32,9 +29,12 @@
 #include <libhpx/network.h>
 #include <libhpx/padding.h>
 #include <libhpx/system.h>
-#include "commands.h"
-#include "registered.h"
-#include "xport.h"
+#include <libsync/locks.h>
+extern "C" {
+#include <photon.h>
+}
+#include <stdlib.h>
+#include <string.h>
 
 // check to make sure we can fit a photon key in the key size
 _HPX_ASSERT(XPORT_KEY_SIZE == sizeof(struct photon_buffer_priv_t),
@@ -55,7 +55,7 @@ _boot_barrier(void)
 
 /// An allgather for photon that binds to the local bootstrap network.
 static int
-_boot_allgather(void *obj, const void *restrict src, void *restrict dest, int n)
+_boot_allgather(void *obj, const void * src, void * dest, int n)
 {
   return here->boot->allgather(here->boot, src, dest, n);
 }
@@ -64,6 +64,12 @@ _boot_allgather(void *obj, const void *restrict src, void *restrict dest, int n)
 static void
 _init_photon_config(const config_t *cfg, boot_t *boot,
                     struct photon_config_t *pcfg) {
+  // C++ doesn't like it when we assign a string literal to a char *, it demands
+  // a const char *. Unfortunately, photon's interface is a char *, which I
+  // don't want to change. This uses a char array for the literal to make it
+  // non-const.
+  static char _gid_cxx_hack[] = "ff0e::ffff:0000:0000\0";
+
   pcfg->meta_exch               = PHOTON_EXCH_EXTERNAL;
   pcfg->nproc                   = boot_n_ranks(boot);
   pcfg->address                 = boot_rank(boot);
@@ -92,8 +98,9 @@ _init_photon_config(const config_t *cfg, boot_t *boot,
   // static config not relevant for current HPX usage
   pcfg->forwarder.use_forwarder =  0;
   pcfg->cap.small_msg_size      = -1;  // default 4096 - not used for PWC
-  pcfg->ibv.use_ud              =  0;  // don't enable this unless we're doing HW GAS
-  pcfg->ibv.ud_gid_prefix       = "ff0e::ffff:0000:0000";
+  pcfg->ibv.use_ud              =  0;  // don't enable this unless we're doing
+                                       // HW GAS
+  pcfg->ibv.ud_gid_prefix       = _gid_cxx_hack;
   pcfg->exch.allgather      = (__typeof__(pcfg->exch.allgather))_boot_allgather;
   pcfg->exch.barrier        = (__typeof__(pcfg->exch.barrier))_boot_barrier;
   pcfg->backend             = cfg->photon_backend;
@@ -120,7 +127,7 @@ _photon_key_clear(void *key) {
 }
 
 static void
-_photon_key_copy(void *restrict dest, const void *restrict src) {
+_photon_key_copy(void * dest, const void * src) {
   if (src) {
     dbg_assert(dest);
     memcpy(dest, src, sizeof(struct photon_buffer_priv_t));
@@ -368,7 +375,7 @@ static void _photon_allreduce(void *sendbuf, void *out, int count,
 
 pwc_xport_t *
 pwc_xport_new_photon(const config_t *cfg, boot_t *boot, gas_t *gas) {
-  photon_pwc_xport_t *photon = malloc(sizeof(*photon));
+  photon_pwc_xport_t *photon = static_cast<photon_pwc_xport_t *>(malloc(sizeof(*photon)));
   dbg_assert(photon);
   _init_photon(cfg, boot);
 

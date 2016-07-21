@@ -34,7 +34,7 @@ typedef struct {
 /// @returns  LIBHXP_OK The parcel was buffered successfully.
 ///        LIBHPX_ERROR A pending record could not be allocated.
 static int _append(send_buffer_t *sends, const hpx_parcel_t *p) {
-  record_t *r = circular_buffer_append(&sends->pending);
+  record_t *r = static_cast<record_t*>(circular_buffer_append(&sends->pending));
   dbg_assert_str(r, "could not append a send operation to the buffer\n");
   r->p = p;
   return LIBHPX_OK;
@@ -47,8 +47,8 @@ static int _start(send_buffer_t *sends, const hpx_parcel_t *p) {
 /// Wrap the eager_buffer_tx() operation in an interface that matches the
 /// circular_buffer_progress callback type.
 static int _start_record(void *buffer, void *record) {
-  send_buffer_t *sends = buffer;
-  record_t *r = record;
+  send_buffer_t *sends = static_cast<send_buffer_t*>(buffer);
+  record_t *r = static_cast<record_t*>(record);
   return _start(sends, r->p);
 }
 
