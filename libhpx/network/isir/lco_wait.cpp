@@ -15,13 +15,13 @@
 # include "config.h"
 #endif
 
-#include <alloca.h>
-#include <string.h>
+#include "isir.h"
 #include <libhpx/action.h>
 #include <libhpx/debug.h>
 #include <libhpx/parcel.h>
 #include <libhpx/scheduler.h>
-#include "isir.h"
+#include <alloca.h>
+#include <string.h>
 
 /// This action resumes a parcel that is suspended.
 ///
@@ -29,7 +29,7 @@
 ///
 /// @returns            HPX_SUCCESS
 static int _isir_lco_launch_parcel_handler(void *parcel) {
-  parcel_launch(parcel);
+  parcel_launch(static_cast<hpx_parcel_t*>(parcel));
   return HPX_SUCCESS;
 }
 static LIBHPX_ACTION(HPX_INTERRUPT, 0, _isir_lco_launch_parcel,
@@ -63,7 +63,7 @@ typedef struct {
 } _isir_lco_wait_env_t;
 
 static void _isir_lco_wait_continuation(hpx_parcel_t *p, void *env) {
-  _isir_lco_wait_env_t *e = env;
+  _isir_lco_wait_env_t *e = static_cast<_isir_lco_wait_env_t*>(env);
   hpx_action_t op = _isir_lco_wait;
   hpx_action_t rop = _isir_lco_launch_parcel;
   dbg_check( action_call_lsync(op, e->lco, HPX_HERE, rop, 2, &e->reset, &p) );

@@ -153,7 +153,7 @@ AS_IF([test "x$enable_parallel_config" != xno],
 HPX_CONFIG_URCU([contrib/userspace-rcu], [$want_urcu])
 HPX_CONFIG_HPXPP
 HPX_CONFIG_PHOTON([contrib/photon], [photon])
-HPX_CONFIG_MPI([ompi])
+HPX_CONFIG_MPI([ompi-cxx])
 HPX_CONFIG_PMI([cray-pmi])
 HPX_CONFIG_JEMALLOC([contrib/jemalloc], ["jemalloc >= 4.0"]) 
 HPX_CONFIG_TBBMALLOC

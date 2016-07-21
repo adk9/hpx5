@@ -3,11 +3,15 @@ noinst_LTLIBRARIES  = libisir.la
 noinst_HEADERS      = emulate_pwc.h irecv_buffer.h isend_buffer.h isir.h parcel_utils.h xport.h
 
 libisir_la_CPPFLAGS = -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
-libisir_la_CFLAGS   = $(LIBHPX_CFLAGS)
 libisir_la_CXXFLAGS = $(LIBHPX_CXXFLAGS)
-libisir_la_SOURCES  = xport.c funneled.cpp isend_buffer.c irecv_buffer.c \
-                      emulate_pwc.c lco_get.c lco_wait.c
+libisir_la_SOURCES  = xport.cpp \
+                      funneled.cpp \
+                      isend_buffer.cpp \
+                      irecv_buffer.cpp \
+                      emulate_pwc.cpp \
+                      lco_get.cpp \
+                      lco_wait.cpp
 
 if HAVE_MPI
-libisir_la_SOURCES += xport_mpi.c
+libisir_la_SOURCES += xport_mpi.cpp
 endif

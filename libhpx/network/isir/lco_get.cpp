@@ -50,7 +50,7 @@ _isir_lco_get_request_handler(hpx_parcel_t *p, size_t n, void *out, int reset) {
   hpx_parcel_t *cont = hpx_thread_generate_continuation(NULL, bytes);
 
   // forward the parcel and output buffer back to the sender
-  _isir_lco_get_reply_args_t *args = hpx_parcel_get_data(cont);
+  _isir_lco_get_reply_args_t *args = static_cast<_isir_lco_get_reply_args_t*>(hpx_parcel_get_data(cont));
   args->p = p;
   args->out = out;
 
@@ -81,7 +81,7 @@ typedef struct {
 } _lco_get_env_t;
 
 static void _lco_get_continuation(hpx_parcel_t *p, void *env) {
-  _lco_get_env_t *e = env;
+  _lco_get_env_t *e = (_lco_get_env_t *)env;
   hpx_addr_t addr = e->lco;
   size_t n = e->n;
   void *out = e->out;

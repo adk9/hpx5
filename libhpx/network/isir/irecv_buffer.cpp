@@ -15,16 +15,16 @@
 # include "config.h"
 #endif
 
-#include <stdlib.h>
-#include <hpx/builtins.h>
+#include "irecv_buffer.h"
+#include "parcel_utils.h"
+#include "xport.h"
 #include <libhpx/debug.h>
 #include <libhpx/gas.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/network.h>
 #include <libhpx/parcel.h>
-#include "irecv_buffer.h"
-#include "parcel_utils.h"
-#include "xport.h"
+#include <hpx/builtins.h>
+#include <stdlib.h>
 
 #ifdef NDEBUG
 # define ACTIVE_RANGE_CHECK(irecvs, i, R)
@@ -41,14 +41,14 @@
 
 static void *_request_at(irecv_buffer_t *buffer, int i) {
   dbg_assert(i >= 0);
-  char *base = buffer->requests;
+  char *base = static_cast<char*>(buffer->requests);
   int bytes = i * buffer->xport->sizeof_request();
   return base + bytes;
 }
 
 static void *_status_at(irecv_buffer_t *buffer, int i) {
   dbg_assert(i >= 0);
-  char *base = buffer->statuses;
+  char *base = static_cast<char*>(buffer->statuses);
   int bytes = i * buffer->xport->sizeof_status();
   return base + bytes;
 }
@@ -158,8 +158,8 @@ int _resize(irecv_buffer_t *buffer, uint32_t size, hpx_parcel_t **out) {
                              size * buffer->xport->sizeof_request());
   buffer->statuses = realloc(buffer->statuses,
                              size * buffer->xport->sizeof_status());
-  buffer->out = realloc(buffer->out, size * sizeof(int));
-  buffer->records = realloc(buffer->records, size * sizeof(*buffer->records));
+  buffer->out = static_cast<int*>(realloc(buffer->out, size * sizeof(int)));
+  buffer->records = static_cast<irecv_buffer_t::Record*>(realloc(buffer->records, size * sizeof(*buffer->records)));
 
   if (!size) {
     assert(!buffer->requests);

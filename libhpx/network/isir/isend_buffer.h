@@ -32,7 +32,7 @@ typedef struct {
   uint64_t    max;
   void  *requests;
   int        *out;
-  struct {
+  struct Record {
     hpx_parcel_t *parcel;
     hpx_parcel_t  *ssync;
   } *records;

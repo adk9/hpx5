@@ -15,18 +15,18 @@
 # include "config.h"
 #endif
 
-#include <inttypes.h>
-#include <stdlib.h>
-#include <string.h>
-#include <hpx/builtins.h>
+#include "isend_buffer.h"
+#include "parcel_utils.h"
+#include "xport.h"
 #include <libhpx/debug.h>
 #include <libhpx/gas.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
 #include <libhpx/parcel.h>
-#include "isend_buffer.h"
-#include "parcel_utils.h"
-#include "xport.h"
+#include <hpx/builtins.h>
+#include <inttypes.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define ISIR_TWIN_INC  10
 
@@ -57,7 +57,7 @@ static int _payload_size_to_tag(isend_buffer_t *isends, uint32_t payload) {
 
 static void *_request_at(isend_buffer_t *buffer, int i) {
   dbg_assert(i >= 0);
-  char *base = buffer->requests;
+  char *base = static_cast<char*>(buffer->requests);
   int bytes = i * buffer->xport->sizeof_request();
   return base + bytes;
 }
@@ -88,8 +88,8 @@ static int _resize(isend_buffer_t *buffer, uint32_t size) {
   uint32_t oldsize = buffer->size;
   buffer->size = size;
   buffer->requests = realloc(buffer->requests, size * buffer->xport->sizeof_request());
-  buffer->out = realloc(buffer->out, size * sizeof(int));
-  buffer->records = realloc(buffer->records, size * sizeof(*buffer->records));
+  buffer->out = static_cast<int*>(realloc(buffer->out, size * sizeof(int)));
+  buffer->records = static_cast<isend_buffer_t::Record*>(realloc(buffer->records, size * sizeof(*buffer->records)));
 
   if (!buffer->requests || !buffer->out || !buffer->records) {
     return log_error("failed to resize a send buffer from %u to %u\n",
@@ -98,7 +98,8 @@ static int _resize(isend_buffer_t *buffer, uint32_t size) {
 
   int n = buffer->max - buffer->min;
   if (!n) {
-    goto exit;
+    log_net("resized a send buffer from %u to %u\n", oldsize, size);
+    return LIBHPX_OK;
   }
 
   // Resizing the buffer changes where our index mapping is, we need to move
@@ -152,7 +153,6 @@ static int _resize(isend_buffer_t *buffer, uint32_t size) {
     return log_error("unexpected shift in isend buffer _resize\n");
   }
 
- exit:
   log_net("resized a send buffer from %u to %u\n", oldsize, size);
   return LIBHPX_OK;
 }
@@ -248,8 +248,8 @@ static void _compact(isend_buffer_t *buffer, int n) {
   uint32_t size = buffer->size;
   uint64_t m = buffer->active - buffer->min;
   if (n == m) {
-    log_net("bulk compaction of %d/%"PRIu64" sends in buffer (%u)\n", n, m,
-                size);
+    log_net("bulk compaction of %d/%" PRIu64 " sends in buffer (%u)\n", n, m,
+            size);
     buffer->min += n;
     return;
   }
@@ -270,8 +270,8 @@ static void _compact(isend_buffer_t *buffer, int n) {
     buffer->records[j] = buffer->records[k];
   }
 
-  log_net("incremental compaction of %d/%"PRIu64" sends in buffer (%u)\n", n, m,
-              size);
+  log_net("incremental compaction of %d/%" PRIu64 " sends in buffer (%u)\n", n,
+          m, size);
 }
 
 

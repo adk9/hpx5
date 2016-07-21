@@ -36,7 +36,7 @@ typedef struct {
 static void
 _mpi_check_tag(const void *xport, int tag)
 {
-  const _mpi_xport_t *mpi = xport;
+  const _mpi_xport_t *mpi = static_cast<const _mpi_xport_t *>(xport);
   int *tag_ub;
   int flag = 0;
   int e = MPI_Comm_get_attr(mpi->comm, MPI_TAG_UB, &tag_ub, &flag);
@@ -64,9 +64,10 @@ _mpi_sizeof_comm(void) {
 
 static int
 _mpi_isend(const void *xport, int to, const void *from, unsigned n, int tag,
-           void *r)
+           void *req)
 {
-  const _mpi_xport_t *mpi = xport;
+  const _mpi_xport_t *mpi = static_cast<const _mpi_xport_t *>(xport);
+  MPI_Request *r = static_cast<MPI_Request*>(req);
   int e = MPI_Isend((void *)from, n, MPI_BYTE, to, tag, mpi->comm, r);
   if (MPI_SUCCESS != e) {
     return log_error("failed MPI_Isend: %u bytes to %d\n", n, to);
@@ -78,10 +79,11 @@ _mpi_isend(const void *xport, int to, const void *from, unsigned n, int tag,
 
 static int
 _mpi_irecv(const void *xport, void *to, size_t n, int tag, void *request) {
-  const _mpi_xport_t *mpi = xport;
+  const _mpi_xport_t *mpi = static_cast<const _mpi_xport_t *>(xport);
   const int src = MPI_ANY_SOURCE;
   const MPI_Comm com = mpi->comm;
-  if (MPI_SUCCESS != MPI_Irecv(to, n, MPI_BYTE, src, tag, com, request)) {
+  MPI_Request *r = static_cast<MPI_Request*>(request);
+  if (MPI_SUCCESS != MPI_Irecv(to, n, MPI_BYTE, src, tag, com, r)) {
     return log_error("could not start irecv\n");
   }
   return LIBHPX_OK;
@@ -89,7 +91,7 @@ _mpi_irecv(const void *xport, void *to, size_t n, int tag, void *request) {
 
 static int
 _mpi_iprobe(const void *xport, int *tag) {
-  const _mpi_xport_t *mpi = xport;
+  const _mpi_xport_t *mpi = static_cast<const _mpi_xport_t *>(xport);
   int flag;
   MPI_Status stat;
   const int src = MPI_ANY_SOURCE;
@@ -109,40 +111,41 @@ _mpi_iprobe(const void *xport, int *tag) {
 }
 
 static void
-_mpi_testsome(int n, void *requests, int *nout, int *out, void *stats)
+_mpi_testsome(int n, void *requests, int *nout, int *out, void *statuses)
 {
+  auto reqs = static_cast<MPI_Request*>(requests);
+  auto stats = static_cast<MPI_Status*>(statuses);
   if (!stats) {
     stats = MPI_STATUS_IGNORE;
   }
 
-  int e = MPI_Testsome(n, requests, nout, out, stats);
+  int e = MPI_Testsome(n, reqs, nout, out, stats); (void)e;
   dbg_assert_str(e == MPI_SUCCESS, "MPI_Testsome error is fatal.\n");
   dbg_assert_str(*nout != MPI_UNDEFINED, "silent MPI_Testsome() error.\n");
-  (void)e;
 }
 
 static void
 _mpi_clear(void *request)
 {
-  MPI_Request *r = request;
+  MPI_Request *r = static_cast<MPI_Request*>(request);
   *r = MPI_REQUEST_NULL;
 }
 
 static int
 _mpi_cancel(void *request, int *cancelled)
 {
-  MPI_Request *r = request;
+  auto r = static_cast<MPI_Request*>(request);
   if (*r == MPI_REQUEST_NULL) {
     *cancelled = 1;
     return LIBHPX_OK;
   }
 
-  if (MPI_SUCCESS != MPI_Cancel(request)) {
+  if (MPI_SUCCESS != MPI_Cancel(r)) {
     return log_error("could not cancel MPI request\n");
   }
 
   MPI_Status status;
-  if (MPI_SUCCESS != MPI_Wait(request, &status)) {
+  if (MPI_SUCCESS != MPI_Wait(r, &status)) {
     return log_error("could not cleanup a canceled MPI request\n");
   }
 
@@ -157,7 +160,7 @@ _mpi_cancel(void *request, int *cancelled)
 static void
 _mpi_finish(void *status, int *src, int *bytes)
 {
-  MPI_Status *s = status;
+  auto s = static_cast<MPI_Status*>(status);
   if (MPI_SUCCESS != MPI_Get_count(s, MPI_BYTE, bytes)) {
     dbg_error("could not extract the size of an irecv\n");
   }
@@ -169,11 +172,11 @@ _mpi_finish(void *status, int *src, int *bytes)
 static void
 _mpi_deallocate(void *xport)
 {
-  _mpi_xport_t *mpi = xport;
+  auto mpi = static_cast<_mpi_xport_t *>(xport);
   if (mpi->fini) {
     MPI_Finalize();
   }
-  free(mpi);
+  delete mpi;
 }
 
 static void
@@ -190,13 +193,13 @@ static void
 _mpi_create_comm(const void *xport, void *c, void *active_ranks, int num_active,
                  int total)
 {
-  const _mpi_xport_t *mpi = xport;
-  MPI_Comm *comm = (MPI_Comm *)c;
+  auto mpi = static_cast<const _mpi_xport_t*>(xport);
+  auto comm = static_cast<MPI_Comm*>(c);
   MPI_Comm active_comm;
   MPI_Group active_group, world_group;
   if (num_active < total) {
     MPI_Comm_group(mpi->comm, &world_group);
-    MPI_Group_incl(world_group, num_active, active_ranks, &active_group);
+    MPI_Group_incl(world_group, num_active, static_cast<const int*>(active_ranks), &active_group);
     MPI_Comm_create(mpi->comm, active_group, &active_comm);
     *comm = active_comm;
   } else {
@@ -227,15 +230,15 @@ static void
 _mpi_allreduce(void *sendbuf, void *out, int count, void *datatype, void *op,
                void *c)
 {
-  MPI_Comm *comm = c;
-  hpx_monoid_op_t *hpx_handle = (hpx_monoid_op_t *)op;
+  auto comm = static_cast<MPI_Comm*>(c);
+  auto hpx_handle = static_cast<hpx_monoid_op_t*>(op);
   int bytes = sizeof(val_t) + count;
 
   // prepare operands for function
-  char *val = calloc(bytes, sizeof(char));
-  char *result = calloc(bytes, sizeof(char));
-  val_t *in = (val_t *)val;
-  val_t *res = (val_t *)result;
+  void    *val = calloc(bytes, sizeof(char));
+  void *result = calloc(bytes, sizeof(char));
+  val_t    *in = static_cast<val_t*>(val);
+  val_t   *res = static_cast<val_t*>(result);
   in->op = *hpx_handle;
   in->bytes = count;
   memcpy(in->operands, sendbuf, count);
@@ -254,7 +257,7 @@ _mpi_allreduce(void *sendbuf, void *out, int count, void *datatype, void *op,
 
 isir_xport_t *
 isir_xport_new_mpi(const config_t *cfg, gas_t *gas) {
-  _mpi_xport_t *mpi = malloc(sizeof(*mpi));
+  auto mpi = new _mpi_xport_t;
   mpi->vtable.type           = HPX_TRANSPORT_MPI;
   mpi->vtable.deallocate     = _mpi_deallocate;
   mpi->vtable.check_tag      = _mpi_check_tag;

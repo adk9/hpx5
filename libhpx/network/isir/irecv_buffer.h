@@ -31,7 +31,7 @@ typedef struct {
   void           *requests;
   void           *statuses;
   int                 *out;
-  struct {
+  struct Record {
     int              tag;
     hpx_parcel_t *parcel;
   } *records;

@@ -15,13 +15,13 @@
 # include "config.h"
 #endif
 
-#include <string.h>
+#include "emulate_pwc.h"
 #include <libhpx/action.h>
 #include <libhpx/gas.h>
 #include <libhpx/locality.h>
 #include <libhpx/parcel.h>
 #include <libhpx/scheduler.h>
-#include "emulate_pwc.h"
+#include <string.h>
 
 /// Emulate a put-with-completion operation.
 ///
@@ -56,19 +56,19 @@ static LIBHPX_ACTION(HPX_TASK, HPX_MARSHALLED, _gwc_reply,
 /// NB: once the PINNED changes get incorporated, this can be an interrupt.
 static int _gwc_request_handler(void *from, size_t n, hpx_addr_t to, void *lva)
 {
-  _gwc_reply_args_t *args = NULL;
-  hpx_parcel_t *p = hpx_parcel_acquire(NULL, sizeof(*args) + n);
+  _gwc_reply_args_t *args = nullptr;
+  hpx_parcel_t *p = hpx_parcel_acquire(nullptr, sizeof(*args) + n);
   p->target = to;
   p->action = _gwc_reply;
 
   // *take* the current continuation
-  hpx_parcel_t *this = scheduler_current_parcel();
-  p->c_target = this->c_target;
-  p->c_action = this->c_action;
-  this->c_target = HPX_NULL;
-  this->c_action = HPX_ACTION_NULL;
+  hpx_parcel_t *current = scheduler_current_parcel();
+  p->c_target = current->c_target;
+  p->c_action = current->c_action;
+  current->c_target = HPX_NULL;
+  current->c_action = HPX_ACTION_NULL;
 
-  args = hpx_parcel_get_data(p);
+  args = static_cast<_gwc_reply_args_t*>(hpx_parcel_get_data(p));
   args->lva = lva;
   memcpy(args->bytes, from, n);
   hpx_parcel_send(p, HPX_NULL);
