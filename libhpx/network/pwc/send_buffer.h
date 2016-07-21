@@ -15,7 +15,7 @@
 #define LIBHPX_NETWORK_PWC_SEND_BUFFER_H
 
 
-#include "circular_buffer.h"
+#include "CircularBuffer.h"
 #include "parcel_emulation.h"
 #include "xport.h"
 #include <libsync/locks.h>
@@ -32,7 +32,7 @@ struct send_buffer_t {
   int        UNUSED_PADDING;
   parcel_emulator_t   *emul;
   pwc_xport_t        *xport;
-  circular_buffer_t pending;
+  CircularBuffer    pending;
 };
 
 /// Initialize a send buffer.

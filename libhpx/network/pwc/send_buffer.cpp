@@ -40,7 +40,7 @@ struct Record {
 static int
 _append(send_buffer_t *sends, const hpx_parcel_t *p)
 {
-  Record *r = static_cast<Record*>(circular_buffer_append(&sends->pending));
+  Record *r = static_cast<Record*>(sends->pending.append());
   dbg_assert_str(r, "could not append a send operation to the buffer\n");
   r->p = p;
   return LIBHPX_OK;
@@ -80,7 +80,7 @@ libhpx::network::pwc::send_buffer_progress(send_buffer_t *sends)
 {
   int status = HPX_SUCCESS;
   sync_tatas_acquire(&sends->lock);
-  int i = circular_buffer_progress(&sends->pending, _start_record, sends);
+  int i = sends->pending.progress(_start_record, sends);
   if (i < 0) {
     log_error("failed to progress the send buffer\n");
     status = HPX_ERROR;
@@ -98,13 +98,14 @@ libhpx::network::pwc::send_buffer_init(send_buffer_t *sends, unsigned rank,
   sends->rank = rank;
   sends->emul = emul;
   sends->xport = xport;
-  return circular_buffer_init(&sends->pending, sizeof(Record), size);
+  sends->pending.init(sizeof(Record), size);
+  return HPX_SUCCESS;
 }
 
 void
 libhpx::network::pwc::send_buffer_fini(send_buffer_t *sends)
 {
-  circular_buffer_fini(&sends->pending);
+  sends->pending.fini();
 }
 
 int
@@ -115,7 +116,7 @@ libhpx::network::pwc::send_buffer_send(send_buffer_t *sends,
   sync_tatas_acquire(&sends->lock);
 
   // If we have no pending sends, try and start a request.
-  if (circular_buffer_size(&sends->pending) == 0) {
+  if (sends->pending.size() == 0) {
     status = _start(sends, p);
     if (status == LIBHPX_OK) {
       goto unlock;
