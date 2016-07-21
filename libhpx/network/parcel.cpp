@@ -20,13 +20,6 @@
 /// Parcels are the foundation of HPX. The parcel structure serves as both the
 /// actual, "on-the-wire," network data structure, as well as the
 /// "thread-control-block" descriptor for the threading subsystem.
-#include <assert.h>
-#include <inttypes.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ffi.h>
-#include <hpx/hpx.h>
-#include <libsync/sync.h>
 #include <libhpx/action.h>
 #include <libhpx/attach.h>
 #include <libhpx/debug.h>
@@ -42,6 +35,13 @@
 #include <libhpx/parcel_block.h>
 #include <libhpx/scheduler.h>
 #include <libhpx/topology.h>
+#include <libsync/sync.h>
+#include <hpx/hpx.h>
+#include <ffi.h>
+#include <cassert>
+#include <inttypes.h>
+#include <cstdlib>
+#include <cstring>
 
 // this will only be used during instrumentation
 __thread uint64_t parcel_count = 1;
@@ -119,7 +119,8 @@ void parcel_launch(hpx_parcel_t *p) {
 
   parcel_prepare(p);
 
-  log_parcel("PID:%"PRIu64" CREDIT:%"PRIu64" %s(%p,%u)@(%"PRIu64") => %s@(%"PRIu64")\n",
+  log_parcel("PID:%" PRIu64 " CREDIT:%" PRIu64 " %s(%p,%u)@(%" PRIu64
+             ") => %s@(%" PRIu64 ")\n",
              p->pid,
              p->credit,
              actions[p->action].key,
@@ -208,7 +209,7 @@ hpx_parcel_t *parcel_alloc(size_t payload) {
     size += _BYTES(8, size);
   }
 
-  hpx_parcel_t *p = as_memalign(AS_REGISTERED, HPX_CACHELINE_SIZE, size);
+  auto p = static_cast<hpx_parcel_t *>(as_memalign(AS_REGISTERED, HPX_CACHELINE_SIZE, size));
   dbg_assert_str(p, "parcel: failed to allocate %zu registered bytes.\n", size);
 #ifdef ENABLE_INSTRUMENTATION
   *(uint64_t*)&p->padding = UINT64_C(0);        // initialize read-only padding
@@ -229,7 +230,7 @@ hpx_parcel_t *parcel_new(hpx_addr_t target, hpx_action_t action,
 hpx_parcel_t *parcel_clone(const hpx_parcel_t *p) {
   dbg_assert(parcel_serialized(parcel_get_state(p)) || p->size == 0);
   size_t n = parcel_size(p);
-  hpx_parcel_t *clone = as_memalign(AS_REGISTERED, HPX_CACHELINE_SIZE, n);
+  auto clone = static_cast<hpx_parcel_t *>(as_memalign(AS_REGISTERED, HPX_CACHELINE_SIZE, n));
   memcpy(clone, p, n);
   clone->ustack = NULL;
   clone->next = NULL;
@@ -250,7 +251,7 @@ void parcel_delete(hpx_parcel_t *p) {
 
   if (unlikely(parcel_nested(state))) {
     size_t n = parcel_size(p);
-    hpx_parcel_t *parent = (void*)((char*)p - sizeof(*p));
+    auto parent = reinterpret_cast<hpx_parcel_t*>((char*)p - sizeof(*p));
     size_t m = parent->size;
     if (n != m) {
       dbg_error("expected payload of %zu for parent, saw %zu\n", n, m);

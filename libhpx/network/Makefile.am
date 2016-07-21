@@ -7,15 +7,15 @@ noinst_LTLIBRARIES     = libnetwork.la
 noinst_HEADERS         = inst.h smp.h coalesced.h compressed.h
 
 libnetwork_la_CPPFLAGS = -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
-libnetwork_la_CFLAGS   = $(LIBHPX_CFLAGS)
-libnetwork_la_SOURCES  = locality.c \
+libnetwork_la_CXXFLAGS = $(LIBHPX_CXXFLAGS)
+libnetwork_la_SOURCES  = locality.cpp \
                          network.cpp \
-                         parcel.c \
-                         parcel_block.c \
-                         hpx_parcel_glue.c \
+                         parcel.cpp \
+                         parcel_block.cpp \
+                         hpx_parcel_glue.cpp \
                          smp.cpp inst.cpp \
                          coalesced.cpp \
-                         string.c \
+                         string.cpp \
                          compressed.cpp
 
 if HAVE_NETWORK

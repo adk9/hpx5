@@ -15,14 +15,15 @@
 # include "config.h"
 #endif
 
-#include <libsync/sync.h>
-#include <hpx/builtins.h>
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
 #include <libhpx/padding.h>
 #include <libhpx/parcel.h>
 #include <libhpx/parcel_block.h>
+#include <libsync/sync.h>
+#include <hpx/builtins.h>
+#include <cstdint>
 
 struct parcel_block {
   size_t remaining;
@@ -30,7 +31,8 @@ struct parcel_block {
   char bytes[];
 };
 
-_HPX_ASSERT(sizeof(parcel_block_t) == HPX_CACHELINE_SIZE, block_header_size);
+static_assert(sizeof(parcel_block_t) == HPX_CACHELINE_SIZE,
+              "Unexpected parcel block header size");
 
 parcel_block_t *parcel_block_new(size_t align, size_t n, size_t *offset) {
   dbg_assert_str(align == here->config->pwc_parcelbuffersize,
@@ -39,7 +41,7 @@ parcel_block_t *parcel_block_new(size_t align, size_t n, size_t *offset) {
                  here->config->pwc_parcelbuffersize, align);
   size_t bytes = n - sizeof(parcel_block_t);
   dbg_assert(bytes < n);
-  parcel_block_t *block = registered_memalign(align, n);
+  auto block = static_cast<parcel_block_t*>(registered_memalign(align, n));
   block->remaining = bytes;
   *offset = offsetof(parcel_block_t, bytes);
   log_parcel("allocated parcel block at %p\n", (void*)block);
@@ -74,7 +76,7 @@ void parcel_block_delete_parcel(hpx_parcel_t *p) {
     uintptr_t block_size = here->config->pwc_parcelbuffersize;
     dbg_assert(1lu << ceil_log2_uintptr_t(block_size) == block_size);
     uintptr_t block_mask = ~(block_size - 1);
-    parcel_block_t *block = (void*)((uintptr_t)p & block_mask);
+    auto block = reinterpret_cast<parcel_block_t*>((uintptr_t)p & block_mask);
     size_t n = parcel_size(p);
     size_t align = (8ul - (n & 7ul)) & 7ul;
     parcel_block_deduct(block, n + align);
