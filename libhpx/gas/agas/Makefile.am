@@ -4,7 +4,7 @@ noinst_LTLIBRARIES  = libagas.la
 noinst_HEADERS      = agas.h btt.h chunk_table.h gva.h
 libagas_la_CPPFLAGS = -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
 libagas_la_CFLAGS   = $(LIBHPX_CFLAGS)
-libagas_la_SOURCES  = agas.c btt.cc chunk_table.cc string.c local.c \
+libagas_la_SOURCES  = agas.c btt.cpp chunk_table.cpp string.c local.c \
                       cyclic.c lva.c free.c move.c user.c
 
 if HAVE_JEMALLOC

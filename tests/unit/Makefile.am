@@ -10,7 +10,7 @@ LDADD            = $(HPX_APPS_LDADD)
 
 LOG_COMPILER = $(TESTS_CMD)
 
-TEST_EXTENSIONS = .cc .c
+TEST_EXTENSIONS = .cpp .c
 
 TESTS = allreduce               \
         bcast                   \
@@ -67,7 +67,7 @@ TESTS           += percolation
 endif
 
 # For some reason I need to explicitly set C++ source files
-cxx_raii_SOURCES                    = cxx_raii.cc
+cxx_raii_SOURCES                    = cxx_raii.cpp
 
 # Override libhpx tests so that they have the right paths and flags, which are
 # the LIBHPX versions rather than the HPX_APPS version.
