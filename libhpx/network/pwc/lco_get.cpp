@@ -15,15 +15,15 @@
 # include "config.h"
 #endif
 
+#include "pwc.h"
+#include "commands.h"
+#include "xport.h"
 #include <libhpx/action.h>
 #include <libhpx/config.h>
 #include <libhpx/debug.h>
 #include <libhpx/parcel.h>
 #include <libhpx/scheduler.h>
 #include <libhpx/worker.h>
-#include "commands.h"
-#include "pwc.h"
-#include "xport.h"
 
 /// This acts as a parcel_suspend transfer to allow _pwc_lco_get_request_handler
 /// to wait for its pwc to complete.
@@ -55,16 +55,15 @@ typedef struct {
 static int _get_reply(_pwc_lco_get_request_args_t *args, pwc_network_t *pwc,
                       const void *ref, command_t remote) {
   // Create the transport operation to perform the rdma put operation
-  xport_op_t op = {
-    .rank = args->rank,
-    .n = args->n,
-    .dest = args->out,
-    .dest_key = args->key,
-    .src = ref,
-    .src_key = pwc->xport->key_find_ref(pwc->xport, ref, args->n),
-    .lop = {0},                                // set in _get_reply_continuation
-    .rop = remote
-  };
+  xport_op_t op;
+  op.rank = args->rank;
+  op.n = args->n;
+  op.dest = args->out;
+  op.dest_key = args->key;
+  op.src = ref;
+  op.src_key = pwc->xport->key_find_ref(pwc->xport, ref, args->n);
+  op.lop = {0};                                // set in _get_reply_continuation
+  op.rop = remote;
   dbg_assert_str(op.src_key, "LCO reference must point to registered memory\n");
 
   // Issue the pwc and wait for synchronous local completion so that the ref
@@ -91,11 +90,9 @@ static int _get_reply_stack(_pwc_lco_get_request_args_t *args,
     dbg_error("Cannot yet return an error from a remote get operation\n");
   }
 
-  command_t resume = {
-    .op  = RESUME_PARCEL,
-    .arg = (uintptr_t)args->p
-  };
-
+  command_t resume;
+  resume.op = RESUME_PARCEL;
+  resume.arg = reinterpret_cast<uintptr_t>(args->p);
   return _get_reply(args, pwc, ref, resume);
 }
 
@@ -118,10 +115,9 @@ static int _get_reply_malloc(_pwc_lco_get_request_args_t *args,
     dbg_error("Cannot yet return an error from a remote get operation\n");
   }
 
-  command_t resume = {
-    .op  = RESUME_PARCEL,
-    .arg = (uintptr_t)args->p
-  };
+  command_t resume;
+  resume.op = RESUME_PARCEL;
+  resume.arg = reinterpret_cast<uintptr_t>(args->p);
   e = _get_reply(args, pwc, ref, resume);
   registered_free(ref);
   return e;
@@ -149,10 +145,9 @@ static int _get_reply_getref(_pwc_lco_get_request_args_t *args,
   hpx_lco_release(lco, ref);
 
   // Wake the remote getter up.
-  command_t rcmd = {
-    .op  = RESUME_PARCEL,
-    .arg = (uintptr_t)args->p
-  };
+  command_t rcmd;
+  rcmd.op = RESUME_PARCEL;
+  rcmd.arg = reinterpret_cast<uintptr_t>(args->p);
   e = pwc_cmd(pwc, args->rank, (command_t){0}, rcmd);
   dbg_check(e, "Failed to start resume command during remote lco get.\n");
   return e;
@@ -219,17 +214,13 @@ static void _pwc_lco_get_continuation(hpx_parcel_t *p, void *env) {
 /// This operation is synchronous and will block until the operation has
 /// completed.
 int pwc_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out, int reset) {
-  _pwc_lco_get_continuation_env_t env = {
-    .request = {
-      .p = NULL,                             // set in _pwc_lco_get_continuation
-      .n = n,
-      .out = out,
-      .reset = reset,
-      .rank = here->rank,
-      .key = {0}
-    },
-    .lco = lco
-  };
+  _pwc_lco_get_continuation_env_t env;
+  env.request.p = nullptr;                   // set in _pwc_lco_get_continuation
+  env.request.n = n;
+  env.request.out = out;
+  env.request.reset = reset;
+  env.request.rank = here->rank;
+  env.lco = lco;
 
   // If the output buffer is already registered, then we just need to copy the
   // key into the args structure, otherwise we need to register the region.

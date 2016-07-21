@@ -15,10 +15,10 @@
 # include "config.h"
 #endif
 
+#include "pwc.h"
 #include <libhpx/gpa.h>
 #include <libhpx/locality.h>
 #include <libhpx/scheduler.h>
-#include "pwc.h"
 
 /// The asynchronous memput operation.
 ///
@@ -31,10 +31,17 @@
 /// If we wanted to be fancy we could use a parcel if the size of the data is
 /// small. This would trade off the extra hop for a bit of extra bandwidth.
 /// @{
-int pwc_memput(void *obj, hpx_addr_t to, const void *from, size_t size,
-               hpx_addr_t lsync, hpx_addr_t rsync) {
-  command_t lcmd = { .op = NOP, .arg = lsync };
-  command_t rcmd = { .op = NOP, .arg = rsync };
+int
+pwc_memput(void *obj, hpx_addr_t to, const void *from, size_t size,
+           hpx_addr_t lsync, hpx_addr_t rsync)
+{
+  command_t lcmd;
+  lcmd.op = NOP;
+  lcmd.arg = lsync;
+
+  command_t rcmd;
+  rcmd.op = NOP;
+  rcmd.arg = rsync;
 
   if (lsync) {
     if (gpa_to_rank(lsync) == here->rank) {
@@ -89,13 +96,14 @@ typedef struct {
   hpx_addr_t rsync;
 } _pwc_memput_lsync_continuation_env_t;
 
-static void _pwc_memput_lsync_continuation(hpx_parcel_t *p, void *env) {
+static void
+_pwc_memput_lsync_continuation(hpx_parcel_t *p, void *env)
+{
   auto e = static_cast<_pwc_memput_lsync_continuation_env_t*>(env);
 
-  command_t rcmd = {
-    .op = NOP,
-    .arg = e->rsync
-  };
+  command_t rcmd;
+  rcmd.op = NOP;
+  rcmd.arg = e->rsync;
 
   if (e->rsync) {
     if (gpa_to_rank(e->rsync) == here->rank) {
@@ -111,16 +119,16 @@ static void _pwc_memput_lsync_continuation(hpx_parcel_t *p, void *env) {
     }
   }
 
-  command_t lcmd = {
-    .op  = RESUME_PARCEL,
-    .arg = (uintptr_t)p
-  };
-
+  command_t lcmd;
+  lcmd.op = RESUME_PARCEL;
+  lcmd.arg = reinterpret_cast<uintptr_t>(p);
   dbg_check( pwc_put(pwc_network, e->to, e->from, e->n, lcmd, rcmd) );
 }
 
-int pwc_memput_lsync(void *obj, hpx_addr_t to, const void *from, size_t n,
-                     hpx_addr_t rsync) {
+int
+pwc_memput_lsync(void *obj, hpx_addr_t to, const void *from, size_t n,
+                 hpx_addr_t rsync)
+{
   _pwc_memput_lsync_continuation_env_t env = {
     .to = to,
     .from = from,
@@ -143,17 +151,20 @@ typedef struct {
   size_t         n;
 } _pwc_memput_rsync_continuation_env_t;
 
-static void _pwc_memput_rsync_continuation(hpx_parcel_t *p, void *env) {
+static void
+_pwc_memput_rsync_continuation(hpx_parcel_t *p, void *env)
+{
   auto e = static_cast<_pwc_memput_rsync_continuation_env_t*>(env);
   command_t lcmd = { 0 };
-  command_t rcmd = {
-    .op  = RESUME_PARCEL_SOURCE,
-    .arg = (uintptr_t)p
-  };
+  command_t rcmd;
+  rcmd.op = RESUME_PARCEL_SOURCE;
+  rcmd.arg = reinterpret_cast<uintptr_t>(p);
   dbg_check( pwc_put(pwc_network, e->to, e->from, e->n, lcmd, rcmd) );
 }
 
-int pwc_memput_rsync(void *obj, hpx_addr_t to, const void *from, size_t n) {
+int
+pwc_memput_rsync(void *obj, hpx_addr_t to, const void *from, size_t n)
+{
   _pwc_memput_rsync_continuation_env_t env = {
     .to = to,
     .from = from,

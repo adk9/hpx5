@@ -131,16 +131,16 @@ static int
 _reload_send(void *obj, pwc_xport_t *xport, unsigned rank, const hpx_parcel_t *p)
 {
   size_t n = parcel_size(p);
-  xport_op_t op = {
-    .rank = rank,
-    .n = n,
-    .dest = NULL,
-    .dest_key = NULL,
-    .src = p,
-    .src_key = xport->key_find_ref(xport, p, n),
-    .lop = (command_t){ .op = DELETE_PARCEL, .arg = (uintptr_t)p },
-    .rop = {0}
-  };
+  xport_op_t op;
+  op.rank = rank;
+  op.n = n;
+  op.dest = nullptr;
+  op.dest_key = nullptr;
+  op.src = p;
+  op.src_key = xport->key_find_ref(xport, p, n);
+  op.lop.op = DELETE_PARCEL;
+  op.lop.arg = reinterpret_cast<uintptr_t>(p);
+  op.rop = {0};
 
   if (!op.src_key) {
     dbg_error("no rdma key for local parcel (%p, %zu)\n", (void*)p, n);
@@ -269,16 +269,16 @@ void handle_reload_request(unsigned src, command_t cmd) {
   }
   _buffer_reload(recv, xport);
 
-  xport_op_t op = {
-    .rank = src,
-    .n = sizeof(*recv),
-    .dest = reload->remotes[src].addr,
-    .dest_key = reload->remotes[src].key,
-    .src = recv,
-    .src_key = reload->recv_key,
-    .lop = {0},
-    .rop = (command_t){ .op = RELOAD_REPLY, .arg = 0 }
-  };
+  xport_op_t op;
+  op.rank = src;
+  op.n = sizeof(*recv);
+  op.dest = reload->remotes[src].addr;
+  op.dest_key = reload->remotes[src].key;
+  op.src = recv;
+  op.src_key = reload->recv_key;
+  op.lop = {0};
+  op.rop.op = RELOAD_REPLY;
+  op.rop.arg = 0;
 
   dbg_check( xport->pwc(&op) );
 }

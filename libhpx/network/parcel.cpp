@@ -136,7 +136,7 @@ void parcel_launch(hpx_parcel_t *p) {
 
   // do a local send through loopback, bypassing the network, otherwise dump the
   // parcel out to the network
-  int target = gas_owner_of(here->gas, p->target);
+  uint32_t target = gas_owner_of(here->gas, p->target);
   if (target == here->rank) {
     // instrument local "receives"
     EVENT_PARCEL_RECV(p->id, p->action, p->size, p->src, p->target);

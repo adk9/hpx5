@@ -96,7 +96,9 @@ static int _reflow(circular_buffer_t *buffer, uint32_t old_capacity) {
     memcpy(to, from, bytes);
   }
   else if (old_max == new_max) {
-    assert(new_min + prefix <= new_capacity);
+    dbg_assert((prefix > 0) &&
+               (INT32_MAX - new_min >= prefix) &&
+               (uint32_t(new_min + prefix) <= new_capacity));
 
     // copy the prefix to the new location
     size_t bytes = prefix * buffer->element_size;

@@ -15,20 +15,27 @@
 # include "config.h"
 #endif
 
+#include "pwc.h"
 #include <libhpx/gpa.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
 #include <libhpx/scheduler.h>
-#include "pwc.h"
 
 /// The fully asynchronous memget operation.
 ///
 /// This isn't being used at the moment, so we have not yet implemented it.
 /// @{
-int pwc_memget(void *obj, void *to, hpx_addr_t from, size_t size,
-               hpx_addr_t lsync, hpx_addr_t rsync) {
-  command_t lcmd = { .op = NOP, .arg = lsync };
-  command_t rcmd = { .op = NOP, .arg = rsync };
+int
+pwc_memget(void *obj, void *to, hpx_addr_t from, size_t size,
+           hpx_addr_t lsync, hpx_addr_t rsync)
+{
+  command_t lcmd;
+  lcmd.op = NOP;
+  lcmd.arg = lsync;
+
+  command_t rcmd;
+  rcmd.op = NOP;
+  rcmd.arg = rsync;
 
   if (lsync) {
     if (gpa_to_rank(lsync) == here->rank) {
@@ -78,10 +85,17 @@ typedef struct {
   hpx_addr_t lsync;
 } _pwc_memget_rsync_env_t;
 
-static void _pwc_memget_rsync_continuation(hpx_parcel_t *p, void *env) {
+static void
+_pwc_memget_rsync_continuation(hpx_parcel_t *p, void *env)
+{
   auto e = static_cast<_pwc_memget_rsync_env_t*>(env);
-  command_t lcmd = { .op = NOP, .arg = e->lsync };
-  command_t rcmd = { .op = RESUME_PARCEL_SOURCE, .arg = (uintptr_t)p };
+  command_t lcmd;
+  lcmd.op = NOP;
+  lcmd.arg = e->lsync;
+
+  command_t rcmd;
+  rcmd.op = RESUME_PARCEL_SOURCE;
+  rcmd.arg = reinterpret_cast<uintptr_t>(p);
 
   if (e->lsync) {
     if (gpa_to_rank(e->lsync) == here->rank) {
@@ -97,8 +111,10 @@ static void _pwc_memget_rsync_continuation(hpx_parcel_t *p, void *env) {
   dbg_check( pwc_get(pwc_network, e->to, e->from, e->n, lcmd, rcmd) );
 }
 
-int pwc_memget_rsync(void *obj, void *to, hpx_addr_t from, size_t n,
-                     hpx_addr_t lsync) {
+int
+pwc_memget_rsync(void *obj, void *to, hpx_addr_t from, size_t n,
+                 hpx_addr_t lsync)
+{
   _pwc_memget_rsync_env_t env = {
     .to     = to,
     .from  = from,
@@ -119,17 +135,20 @@ typedef struct {
   size_t        n;
 } _pwc_memget_lsync_env_t;
 
-static void _pwc_memget_lsync_continuation(hpx_parcel_t *p, void *env) {
+static void
+_pwc_memget_lsync_continuation(hpx_parcel_t *p, void *env)
+{
   auto e = static_cast<_pwc_memget_lsync_env_t*>(env);
-  command_t lcmd = {
-    .op  = RESUME_PARCEL,
-    .arg = (uintptr_t)p
-  };
+  command_t lcmd;
+  lcmd.op = RESUME_PARCEL;
+  lcmd.arg = reinterpret_cast<uintptr_t>(p);
   command_t rcmd = { 0 };
   dbg_check( pwc_get(pwc_network, e->to, e->from, e->n, lcmd, rcmd) );
 }
 
-int pwc_memget_lsync(void *obj, void *to, hpx_addr_t from, size_t size) {
+int
+pwc_memget_lsync(void *obj, void *to, hpx_addr_t from, size_t size)
+{
   _pwc_memget_lsync_env_t env = {
     .to = to,
     .from = from,

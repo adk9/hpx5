@@ -63,16 +63,17 @@ typedef struct {
 static int _rendezvous_get_handler(_rendezvous_get_args_t *args, size_t size) {
   hpx_parcel_t *p = parcel_alloc(args->n - sizeof(*p));
   dbg_assert(p);
-  xport_op_t op = {
-    .rank = args->rank,
-    .n = args->n,
-    .dest = p,
-    .dest_key = pwc_network->xport->key_find_ref(pwc_network->xport, p, args->n),
-    .src = args->p,
-    .src_key = &args->key,
-    .lop = (command_t){ .op = RENDEZVOUS_LAUNCH, .arg = (uintptr_t)p },
-    .rop = (command_t){ .op = DELETE_PARCEL, .arg = (uintptr_t)args->p }
-  };
+  xport_op_t op;
+  op.rank = args->rank;
+  op.n = args->n;
+  op.dest = p;
+  op.dest_key = pwc_network->xport->key_find_ref(pwc_network->xport, p, args->n);
+  op.src = args->p;
+  op.src_key = &args->key;
+  op.lop.op = RENDEZVOUS_LAUNCH;
+  op.lop.arg = reinterpret_cast<uintptr_t>(p);
+  op.rop.op = DELETE_PARCEL;
+  op.rop.arg = reinterpret_cast<uintptr_t>(args->p);
   int e = pwc_network->xport->gwc(&op);
   dbg_check(e, "could not issue get during rendezvous parcel\n");
   return HPX_SUCCESS;

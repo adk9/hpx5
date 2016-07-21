@@ -209,7 +209,9 @@ static LIBHPX_ACTION(HPX_INTERRUPT, 0, _unpin_async, _photon_unpin_async,
 /// @returns            The operation that should be used as the local
 ///                     completion event handler for the current operation
 ///                     (pwc/gwc instance).
-static command_t _chain_unpin(const void *addr, size_t n, command_t op) {
+static command_t
+_chain_unpin(const void *addr, size_t n, command_t op)
+{
   // we assume that this parcel doesn't need credit to run---technically it
   // not easy to account for this parcel because of the fact that pwc() can be
   // run as a scheduler_suspend() operation
@@ -223,21 +225,25 @@ static command_t _chain_unpin(const void *addr, size_t n, command_t op) {
                                       &here->rank,  // src for command
                                       &op.packed);  // command
 
-  return (command_t){ .op = RESUME_PARCEL, .arg = (uintptr_t)p };
+  command_t cmd;
+  cmd.op = RESUME_PARCEL;
+  cmd.arg = reinterpret_cast<uintptr_t>(p);
+  return cmd;
 }
 
-static int _photon_cmd(int rank, command_t lcmd, command_t rcmd) {
+static int
+_photon_cmd(int rank, command_t lcmd, command_t rcmd)
+{
   int flags = ((lcmd.op) ? NOP : PHOTON_REQ_PWC_NO_LCE) |
               ((rcmd.op) ? NOP : PHOTON_REQ_PWC_NO_RCE);
-  photon_cid lid = {
-    .u64 = lcmd.packed,
-    .size = 0
-  };
-  photon_cid rid = {
-    .u64 = rcmd.packed,
-    .size = 0
-  };
-  int e = photon_put_with_completion(rank, 0, NULL, NULL, lid,
+  photon_cid lid;
+  lid.u64 = lcmd.packed;
+  lid.size = 0;
+
+  photon_cid rid;
+  rid.u64 = rcmd.packed;
+  rid.size = 0;
+  int e = photon_put_with_completion(rank, 0, nullptr, nullptr, lid,
                                      rid, flags);
   if (PHOTON_OK == e) {
     return LIBHPX_OK;
@@ -251,7 +257,9 @@ static int _photon_cmd(int rank, command_t lcmd, command_t rcmd) {
   dbg_error("could not initiate a put-with-completion\n");
 }
 
-static int _photon_pwc(xport_op_t *op) {
+static int
+_photon_pwc(xport_op_t *op)
+{
   int flags = ((op->lop.op) ? NOP : PHOTON_REQ_PWC_NO_LCE) |
               ((op->rop.op) ? NOP : PHOTON_REQ_PWC_NO_RCE);
 
@@ -274,14 +282,15 @@ static int _photon_pwc(xport_op_t *op) {
     _photon_pin(op->src, op->n, &lbuf.priv);
     op->lop = _chain_unpin(op->src, op->n, op->lop);
   }
-  photon_cid lid = {
-    .u64 = op->lop.packed,
-    .size = 0
-  };
-  photon_cid rid = {
-    .u64 = op->rop.packed,
-    .size = 0
-  };
+
+  photon_cid lid;
+  lid.u64 = op->lop.packed;
+  lid.size = 0;
+
+  photon_cid rid;
+  rid.u64 = op->rop.packed;
+  rid.size = 0;
+
   int e = photon_put_with_completion(op->rank, op->n, &lbuf, &rbuf,
                                      lid, rid, flags);
   if (PHOTON_OK == e) {
@@ -297,7 +306,8 @@ static int _photon_pwc(xport_op_t *op) {
 }
 
 static int
-_photon_gwc(xport_op_t *op) {
+_photon_gwc(xport_op_t *op)
+{
   int flags = (op->rop.op) ? NOP : PHOTON_REQ_PWC_NO_RCE;
 
   struct photon_buffer_t lbuf = {
@@ -320,14 +330,15 @@ _photon_gwc(xport_op_t *op) {
   };
   dbg_assert(op->src_key);
   _photon_key_copy(&rbuf.priv, op->src_key);
-  photon_cid lid = {
-    .u64 = op->lop.packed,
-    .size = 0
-  };
-  photon_cid rid = {
-    .u64 = op->rop.packed,
-    .size = 0
-  };
+
+  photon_cid lid;
+  lid.u64 = op->lop.packed;
+  lid.size = 0;
+
+  photon_cid rid;
+  rid.u64 = op->rop.packed;
+  rid.size = 0;
+
   int e = photon_get_with_completion(op->rank, op->n, &lbuf, &rbuf,
                                      lid, rid, flags);
   if (PHOTON_OK == e) {
@@ -338,7 +349,8 @@ _photon_gwc(xport_op_t *op) {
 }
 
 static int
-_poll(command_t *op, int *remaining, int rank, int *src, int type) {
+_poll(command_t *op, int *remaining, int rank, int *src, int type)
+{
   photon_cid rid;
   int flag = 0;
   int prank = (rank == XPORT_ANY_SOURCE) ? PHOTON_ANY_SOURCE : rank;
@@ -351,31 +363,39 @@ _poll(command_t *op, int *remaining, int rank, int *src, int type) {
 }
 
 static int
-_photon_test(command_t *op, int *remaining, int id, int *src) {
+_photon_test(command_t *op, int *remaining, int id, int *src)
+{
   return _poll(op, remaining, id, src, PHOTON_PROBE_EVQ);
 }
 
 static int
-_photon_probe(command_t *op, int *remaining, int rank, int *src) {
+_photon_probe(command_t *op, int *remaining, int rank, int *src)
+{
   return _poll(op, remaining, rank, src, PHOTON_PROBE_LEDGER);
 }
 
 static void
-_photon_dealloc(void *photon) {
+_photon_dealloc(void *photon)
+{
   free(photon);
 }
 
-static void _photon_create_comm(void *c, int rank, void *active_ranks,
-                                int num_active, int total) {
+static void
+_photon_create_comm(void *c, int rank, void *active_ranks, int num_active,
+                    int total)
+{
 }
 
-static void _photon_allreduce(void *sendbuf, void *out, int count,
-                              void *datatype, void *op, void *c) {
+static void
+_photon_allreduce(void *sendbuf, void *out, int count, void *datatype, void *op,
+                  void *c)
+{
 }
 
 pwc_xport_t *
-pwc_xport_new_photon(const config_t *cfg, boot_t *boot, gas_t *gas) {
-  photon_pwc_xport_t *photon = static_cast<photon_pwc_xport_t *>(malloc(sizeof(*photon)));
+pwc_xport_new_photon(const config_t *cfg, boot_t *boot, gas_t *gas)
+{
+  photon_pwc_xport_t *photon = static_cast<photon_pwc_xport_t*>(malloc(sizeof(*photon)));
   dbg_assert(photon);
   _init_photon(cfg, boot);
 
