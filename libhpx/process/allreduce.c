@@ -23,6 +23,7 @@
 #include <libhpx/network.h>
 #include "allreduce.h"
 
+#define USE_ASYNC_NETWORK 1
 
 void allreduce_init(allreduce_t *r, size_t bytes, hpx_addr_t parent,
                     hpx_monoid_id_t id, hpx_monoid_op_t op) {
@@ -122,8 +123,16 @@ void allreduce_reduce(allreduce_t *r, const void *val) {
     void *in = calloc(r->bytes, sizeof(char));
     reduce_reset(r->reduce, in);
 
+#ifdef USE_ASYNC_NETWORK    
+    hpx_addr_t and = hpx_lco_and_new(1);
+    here->net->coll_async(here->net, in, r->bytes, output, r->ctx, and, and);
+    
+    hpx_lco_wait(and);
+    hpx_lco_delete_sync(and);
+#else
     // perform synchronized collective comm
     here->net->coll_sync(here->net, in, r->bytes, output, r->ctx);
+#endif    
 
     // call all local continuations to communicate the result
     continuation_trigger(r->continuation, output);
