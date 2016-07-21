@@ -1,4 +1,4 @@
-// =============================================================================
+// ==================================================================-*- C++ -*-
 //  High Performance ParalleX Library (libhpx)
 //
 //  Copyright (c) 2013-2016, Trustees of Indiana University,
@@ -14,54 +14,120 @@
 #ifndef LIBHPX_NETWORK_PWC_COMMANDS_H
 #define LIBHPX_NETWORK_PWC_COMMANDS_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <hpx/hpx.h>
+#include <cstdint>
 
-#include <stdint.h>
+namespace libhpx {
+namespace network {
+namespace pwc {
 
-typedef uint8_t op_t;
-typedef uint64_t arg_t;
+class Command {
+ public:
+  static Command Nop() {
+    return Command();
+  }
 
-typedef union {
-  uint64_t packed;
-  struct {
-    uint64_t   arg : 48;
-    uint64_t    op : 16;
+  static Command ResumeParcel(hpx_parcel_t *p) {
+    return Command(RESUME_PARCEL, p);
+  }
+
+  static Command ResumeParcelAtSource(hpx_parcel_t *p) {
+    return Command(RESUME_PARCEL_SOURCE, p);
+  }
+
+  static Command RecvParcel(hpx_parcel_t *p) {
+    return Command(RECV_PARCEL, p);
+  }
+
+  static Command DeleteParcel(const hpx_parcel_t *p) {
+    return Command(DELETE_PARCEL, p);
+  }
+
+  static Command SetLCO(hpx_addr_t lco) {
+    return Command(LCO_SET, lco);
+  }
+
+  static Command SetLCOAtSource(hpx_addr_t lco) {
+    return Command(LCO_SET_SOURCE, lco);
+  }
+
+  static Command ReloadRequest(size_t bytes) {
+    return Command(RELOAD_REQUEST, bytes);
+  }
+
+  static Command ReloadReply() {
+    return Command(RELOAD_REPLY, 0);
+  }
+
+  static Command RendezvousLaunch(hpx_parcel_t *p) {
+    return Command(RENDEZVOUS_LAUNCH, p);
+  }
+
+  Command() : Command(NOP, UINT64_C(0)) {
+  }
+
+  operator bool() const {
+    return (op_ != NOP);
+  }
+
+  void operator()(unsigned src) const;
+
+  static uint64_t Pack(const Command& command) {
+    union {
+      Command command;
+      uint64_t packed;
+    } pack = { command };
+    return pack.packed;
+  }
+
+  static Command Unpack(uint64_t packed) {
+    union {
+      uint64_t packed;
+      Command command;
+    } pack = { packed };
+    return pack.command;
+  }
+
+ private:
+
+  enum : uint16_t {
+    NOP = 0,
+    RESUME_PARCEL,
+    RESUME_PARCEL_SOURCE,
+    DELETE_PARCEL,
+    LCO_SET,
+    LCO_SET_SOURCE,
+    RECV_PARCEL,
+    RENDEZVOUS_LAUNCH,
+    RELOAD_REQUEST,
+    RELOAD_REPLY,
+    OP_COUNT
   };
-} command_t;
 
-typedef void (*command_handler_t)(unsigned, command_t);
+  Command(uint16_t op, uint64_t arg) : arg_(arg), op_(op) {
+  }
 
-void handle_resume_parcel(unsigned src, command_t cmd);
-void handle_resume_parcel_source(unsigned src, command_t cmd);
-void handle_delete_parcel(unsigned src, command_t cmd);
-void handle_lco_set(unsigned src, command_t cmd);
-void handle_lco_set_source(unsigned src, command_t cmd);
-void handle_recv_parcel(unsigned src, command_t cmd);
-void handle_rendezvous_launch(unsigned src, command_t cmd);
-void handle_reload_request(unsigned src, command_t cmd);
-void handle_reload_reply(unsigned src, command_t cmd);
+  template <typename T>
+  Command(uint16_t op, T *p) :
+      arg_(reinterpret_cast<uintptr_t>(p)), op_(op) {
+  }
 
-enum {
-  NOP = 0,
-  RESUME_PARCEL,
-  RESUME_PARCEL_SOURCE,
-  DELETE_PARCEL,
-  LCO_SET,
-  LCO_SET_SOURCE,
-  RECV_PARCEL,
-  RENDEZVOUS_LAUNCH,
-  RELOAD_REQUEST,
-  RELOAD_REPLY,
-  COMMAND_COUNT
+  void resumeParcel(unsigned src) const;
+  void resumeParcelAtSource(unsigned src) const;
+  void deleteParcel(unsigned src) const;
+  void lcoSet(unsigned src) const;
+  void lcoSetAtSource(unsigned src) const;
+  void recvParcel(unsigned src) const;
+  void rendezvousLaunch(unsigned src) const;
+  void reloadRequest(unsigned src) const;
+  void reloadReply(unsigned src) const;
+
+  uint64_t arg_ : 48;
+  uint64_t  op_ : 16;
 };
 
-/// Handle a command.
-void command_run(unsigned src, command_t cmd);
-
-#ifdef __cplusplus
-}
-#endif
+} // namespace pwc
+} // namespace network
+} // namespace libhpx
 
 #endif // LIBHPX_NETWORK_PWC_COMMANDS_H

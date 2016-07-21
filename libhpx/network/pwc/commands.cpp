@@ -24,73 +24,80 @@
 #include <libhpx/locality.h>
 #include <libhpx/parcel.h>
 
-void
-handle_lco_set(unsigned src, command_t cmd)
+using namespace libhpx::network::pwc;
+
+inline void
+Command::lcoSet(unsigned src) const
 {
-  hpx_addr_t lco = offset_to_gpa(here->rank, cmd.packed);
-  hpx_lco_set(lco, 0, NULL, HPX_NULL, HPX_NULL);
+  hpx_addr_t lco = offset_to_gpa(here->rank, arg_);
+  hpx_lco_set(lco, 0, nullptr, HPX_NULL, HPX_NULL);
 }
 
-void
-handle_lco_set_source(unsigned src, command_t cmd)
+inline void
+Command::lcoSetAtSource(unsigned src) const
 {
-  cmd.op = LCO_SET;
-  dbg_check( pwc_cmd(pwc_network, src, (command_t){0}, cmd) );
+  dbg_check( pwc_cmd(pwc_network, src, Command(), Command(LCO_SET, arg_)) );
 }
 
-void
-handle_delete_parcel(unsigned src, command_t cmd)
+inline void
+Command::deleteParcel(unsigned src) const
 {
-  hpx_parcel_t *p = (hpx_parcel_t *)(uintptr_t)cmd.arg;
-  log_net("releasing sent parcel %p\n", (void*)p);
+  auto p = reinterpret_cast<hpx_parcel_t*>(arg_);
+  log_net("releasing sent parcel %p\n", static_cast<void*>(p));
   hpx_parcel_t *ssync = p->next;
-  p->next = NULL;
+  p->next = nullptr;
   parcel_delete(p);
   if (ssync) {
     parcel_launch(ssync);
   }
 }
 
-void
-handle_resume_parcel(unsigned src, command_t cmd)
+inline void
+Command::resumeParcel(unsigned src) const
 {
-  hpx_parcel_t *p = (hpx_parcel_t *)(uintptr_t)cmd.arg;
-  log_net("resuming %s, (%p)\n", actions[p->action].key, (void*)p);
+  auto p = reinterpret_cast<hpx_parcel_t*>(arg_);
+  log_net("resuming %s, (%p)\n", actions[p->action].key, static_cast<void*>(p));
   parcel_launch(p);
 }
 
-void
-handle_resume_parcel_source(unsigned src, command_t cmd)
+inline void
+Command::resumeParcelAtSource(unsigned src) const
 {
-  cmd.op = RESUME_PARCEL;
-  dbg_check( pwc_cmd(pwc_network, src, (command_t){0}, cmd) );
-}
-
-static HPX_USED const char *
-_straction(hpx_action_t id)
-{
-  dbg_assert(here);
-  CHECK_ACTION(id);
-  return actions[id].key;
+  dbg_check( pwc_cmd(pwc_network, src, Command(), Command(RESUME_PARCEL, arg_)) );
 }
 
 void
-command_run(unsigned src, command_t cmd)
+Command::operator()(unsigned src) const
 {
-  log_net("invoking command: %s from %d\n", _straction(cmd.op), src);
-
-  static const command_handler_t commands[] = {
-    NULL,
-    handle_resume_parcel,
-    handle_resume_parcel_source,
-    handle_delete_parcel,
-    handle_lco_set,
-    handle_lco_set_source,
-    handle_recv_parcel,
-    handle_rendezvous_launch,
-    handle_reload_request,
-    handle_reload_reply
-  };
-
-  commands[cmd.op](src, cmd);
+  switch (op_) {
+   case NOP: abort();
+   case RESUME_PARCEL:
+    resumeParcel(src);
+    return;
+   case RESUME_PARCEL_SOURCE:
+    resumeParcelAtSource(src);
+    return;
+   case DELETE_PARCEL:
+    deleteParcel(src);
+    return;
+   case LCO_SET:
+    lcoSet(src);
+    return;
+   case LCO_SET_SOURCE:
+    lcoSetAtSource(src);
+    return;
+   case RECV_PARCEL:
+    recvParcel(src);
+    return;
+   case RENDEZVOUS_LAUNCH:
+    rendezvousLaunch(src);
+    return;
+   case RELOAD_REQUEST:
+    reloadRequest(src);
+    return;
+   case RELOAD_REPLY:
+    reloadReply(src);
+    return;
+  }
+  unreachable();
 }

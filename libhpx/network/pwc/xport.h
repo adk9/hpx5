@@ -1,4 +1,4 @@
-// =============================================================================
+// ==================================================================-*- C++ -*-
 //  High Performance ParalleX Library (libhpx)
 //
 //  Copyright (c) 2013-2016, Trustees of Indiana University,
@@ -14,24 +14,25 @@
 #ifndef LIBHPX_NETWORK_PWC_XPORT_H
 #define LIBHPX_NETWORK_PWC_XPORT_H
 
+#include "commands.h"
 #include <libhpx/config.h>
 #include <libhpx/memory.h>
-#include "commands.h"
 
-#ifdef __cplusplus
 extern "C" {
-#define restrict
-#endif
-
 struct boot;
 struct gas;
+}
+
+namespace libhpx {
+namespace network {
+namespace pwc {
 
 #define XPORT_ANY_SOURCE -1
 #define XPORT_KEY_SIZE   16
 
 typedef char xport_key_t[XPORT_KEY_SIZE];
 
-typedef struct xport_op {
+struct xport_op_t {
   unsigned        rank;
   int   UNUSED_PADDING;
   size_t             n;
@@ -39,28 +40,28 @@ typedef struct xport_op {
   const void *dest_key;
   const void      *src;
   const void  *src_key;
-  command_t        lop;
-  command_t        rop;
-} xport_op_t HPX_ALIGNED(HPX_CACHELINE_SIZE);
+  Command          lop;
+  Command          rop;
+} HPX_ALIGNED(HPX_CACHELINE_SIZE);
 
-typedef struct pwc_xport {
+struct pwc_xport_t {
   libhpx_transport_t type;
 
   void (*dealloc)(void *xport);
   const void *(*key_find_ref)(void *xport, const void *addr, size_t n);
   void (*key_find)(void *xport, const void *addr, size_t n, void *key);
-  void (*key_copy)(void *restrict dest, const void *restrict src);
+  void (*key_copy)(void * dest, const void * src);
   void (*key_clear)(void *key);
-  int (*cmd)(int rank, command_t lcmd, command_t rcmd);
+  int (*cmd)(int rank, Command lcmd, Command rcmd);
   int (*pwc)(xport_op_t *op);
   int (*gwc)(xport_op_t *op);
-  int (*test)(command_t *op, int *remaining, int id, int *src);
-  int (*probe)(command_t *op, int *remaining, int rank, int *src);
+  int (*test)(Command *op, int *remaining, int id, int *src);
+  int (*probe)(Command *op, int *remaining, int rank, int *src);
   void (*pin)(const void *base, size_t bytes, void *key);
   void (*unpin)(const void *base, size_t bytes);
   void (*create_comm)(void *comm, int rank, void* active_ranks, int num_active, int total);
   void (*allreduce)(void *sendbuf, void* out, int count, void* datatype, void* op, void* comm);
-} pwc_xport_t;
+};
 
 pwc_xport_t *pwc_xport_new_photon(const config_t *config, struct boot *boot,
                                   struct gas *gas);
@@ -68,8 +69,8 @@ pwc_xport_t *pwc_xport_new_photon(const config_t *config, struct boot *boot,
 pwc_xport_t *pwc_xport_new(const config_t *config, struct boot *boot,
                            struct gas *gas);
 
-#ifdef __cplusplus
-}
-#endif
+} // namespace pwc
+} // namespace network
+} // namespace libhpx
 
 #endif // LIBHPX_NETWORK_PWC_XPORT_H

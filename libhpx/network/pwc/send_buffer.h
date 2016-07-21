@@ -1,4 +1,4 @@
-// =============================================================================
+// ==================================================================-*- C++ -*-
 //  High Performance ParalleX Library (libhpx)
 //
 //  Copyright (c) 2013-2016, Trustees of Indiana University,
@@ -14,29 +14,30 @@
 #ifndef LIBHPX_NETWORK_PWC_SEND_BUFFER_H
 #define LIBHPX_NETWORK_PWC_SEND_BUFFER_H
 
-#include <hpx/hpx.h>
-#include <libsync/locks.h>
+
 #include "circular_buffer.h"
+#include "parcel_emulation.h"
+#include "xport.h"
+#include <libsync/locks.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+extern "C" struct hpx_parcel;
 
-struct parcel_emulator;
-struct pwc_xport;
+namespace libhpx {
+namespace network {
+namespace pwc {
 
-typedef struct send_buffer {
-  struct tatas_lock       lock;
-  int                     rank;
-  int           UNUSED_PADDING;
-  struct parcel_emulator *emul;
-  struct pwc_xport      *xport;
-  circular_buffer_t    pending;
-} send_buffer_t;
+struct send_buffer_t {
+  struct tatas_lock    lock;
+  unsigned             rank;
+  int        UNUSED_PADDING;
+  parcel_emulator_t   *emul;
+  pwc_xport_t        *xport;
+  circular_buffer_t pending;
+};
 
 /// Initialize a send buffer.
-int send_buffer_init(send_buffer_t *sends, int rank,
-                     struct parcel_emulator *emul, struct pwc_xport *xport,
+int send_buffer_init(send_buffer_t *sends, unsigned rank,
+                     parcel_emulator_t *emul, pwc_xport_t *xport,
                      uint32_t size);
 
 /// Finalize a send buffer.
@@ -65,12 +66,12 @@ void send_buffer_fini(send_buffer_t *sends);
 ///       LIBHPX_ENOMEM The send operation could not complete because it needed
 ///                       to be buffered but the system was out of memory.
 ///        LIBHPX_ERROR An unexpected error occurred.
-int send_buffer_send(send_buffer_t *sends, const hpx_parcel_t *p);
+int send_buffer_send(send_buffer_t *sends, const struct hpx_parcel *p);
 
 int send_buffer_progress(send_buffer_t *sends);
 
-#ifdef __cplusplus
-}
-#endif
+} // namespace pwc
+} // namespace network
+} // namespace libhpx
 
 #endif // LIBHPX_NETWORK_PWC_EAGER_BUFFER_H

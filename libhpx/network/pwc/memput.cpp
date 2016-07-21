@@ -20,6 +20,8 @@
 #include <libhpx/locality.h>
 #include <libhpx/scheduler.h>
 
+using namespace libhpx::network::pwc;
+
 /// The asynchronous memput operation.
 ///
 /// We;re going to satisfy this operation using pwc, but that only lets us deal
@@ -32,40 +34,34 @@
 /// small. This would trade off the extra hop for a bit of extra bandwidth.
 /// @{
 int
-pwc_memput(void *obj, hpx_addr_t to, const void *from, size_t size,
-           hpx_addr_t lsync, hpx_addr_t rsync)
+libhpx::network::pwc::pwc_memput(void *obj, hpx_addr_t to, const void *from,
+                                 size_t size, hpx_addr_t lsync,
+                                 hpx_addr_t rsync)
 {
-  command_t lcmd;
-  lcmd.op = NOP;
-  lcmd.arg = lsync;
-
-  command_t rcmd;
-  rcmd.op = NOP;
-  rcmd.arg = rsync;
+  auto lcmd = Command::Nop();
+  auto rcmd = Command::Nop();
 
   if (lsync) {
     if (gpa_to_rank(lsync) == here->rank) {
-      lcmd.op = LCO_SET;
+      lcmd = Command::SetLCO(lsync);
     }
     else {
       hpx_parcel_t *p = action_new_parcel(hpx_lco_set_action, lsync, 0, 0, 0);
       dbg_assert(p);
-      lcmd.arg = (uintptr_t)p;
-      lcmd.op  = RESUME_PARCEL;
+      lcmd = Command::ResumeParcel(p);
     }
   }
 
   if (rsync) {
     if (gpa_to_rank(rsync) == here->rank) {
-      rcmd.op = LCO_SET_SOURCE;
+      rcmd = Command::SetLCOAtSource(rsync);
     }
     else if (gpa_to_rank(rsync) == gpa_to_rank(to)) {
-      rcmd.op = LCO_SET;
+      rcmd = Command::SetLCO(rsync);
     }
     else {
       hpx_parcel_t *p = action_new_parcel(hpx_lco_set_action, rsync, 0, 0, 0);
-      rcmd.arg = (uintptr_t)p;
-      rcmd.op  = RESUME_PARCEL_SOURCE;
+      rcmd = Command::ResumeParcelAtSource(p);
     }
   }
 
@@ -89,45 +85,42 @@ pwc_memput(void *obj, hpx_addr_t to, const void *from, size_t size,
 /// is the easiest option. If we wanted to branch here we could use a parcel if
 /// the put is small.
 /// @{
-typedef struct {
+namespace {
+struct _pwc_memput_lsync_continuation_env_t {
   hpx_addr_t    to;
   const void *from;
   size_t         n;
   hpx_addr_t rsync;
-} _pwc_memput_lsync_continuation_env_t;
+};
+}
 
 static void
 _pwc_memput_lsync_continuation(hpx_parcel_t *p, void *env)
 {
   auto e = static_cast<_pwc_memput_lsync_continuation_env_t*>(env);
-
-  command_t rcmd;
-  rcmd.op = NOP;
-  rcmd.arg = e->rsync;
+  auto rcmd = Command::Nop();
 
   if (e->rsync) {
     if (gpa_to_rank(e->rsync) == here->rank) {
-      rcmd.op = LCO_SET_SOURCE;
+      rcmd = Command::SetLCOAtSource(e->rsync);
     }
     else if (gpa_to_rank(e->rsync) == gpa_to_rank(e->to)) {
-      rcmd.op = LCO_SET;
+      rcmd = Command::SetLCO(e->rsync);
     }
     else {
       hpx_parcel_t *p = action_new_parcel(hpx_lco_set_action, e->rsync, 0, 0, 0);
-      rcmd.arg = (uintptr_t)p;
-      rcmd.op = RESUME_PARCEL_SOURCE;
+      rcmd = Command::ResumeParcelAtSource(p);
     }
   }
 
-  command_t lcmd;
-  lcmd.op = RESUME_PARCEL;
-  lcmd.arg = reinterpret_cast<uintptr_t>(p);
+  auto lcmd = Command::ResumeParcel(p);
   dbg_check( pwc_put(pwc_network, e->to, e->from, e->n, lcmd, rcmd) );
 }
 
 int
-pwc_memput_lsync(void *obj, hpx_addr_t to, const void *from, size_t n,
-                 hpx_addr_t rsync)
+libhpx::network::pwc::pwc_memput_lsync(void *obj, hpx_addr_t to,
+                                       const void *from, size_t n,
+                                       hpx_addr_t rsync)
 {
   _pwc_memput_lsync_continuation_env_t env = {
     .to = to,
@@ -145,25 +138,26 @@ pwc_memput_lsync(void *obj, hpx_addr_t to, const void *from, size_t n,
 /// This shouldn't return until the remote operation has completed. We can just
 /// use pwc() to do this, with a remote command that wakes us up.
 /// @{
-typedef struct {
+namespace {
+struct _pwc_memput_rsync_continuation_env_t {
   hpx_addr_t    to;
   const void *from;
   size_t         n;
-} _pwc_memput_rsync_continuation_env_t;
+};
+}
 
 static void
 _pwc_memput_rsync_continuation(hpx_parcel_t *p, void *env)
 {
   auto e = static_cast<_pwc_memput_rsync_continuation_env_t*>(env);
-  command_t lcmd = { 0 };
-  command_t rcmd;
-  rcmd.op = RESUME_PARCEL_SOURCE;
-  rcmd.arg = reinterpret_cast<uintptr_t>(p);
+  auto lcmd = Command::Nop();
+  auto rcmd = Command::ResumeParcelAtSource(p);
   dbg_check( pwc_put(pwc_network, e->to, e->from, e->n, lcmd, rcmd) );
 }
 
 int
-pwc_memput_rsync(void *obj, hpx_addr_t to, const void *from, size_t n)
+libhpx::network::pwc::pwc_memput_rsync(void *obj, hpx_addr_t to,
+                                       const void *from, size_t n)
 {
   _pwc_memput_rsync_continuation_env_t env = {
     .to = to,

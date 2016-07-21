@@ -31,25 +31,29 @@
 #include <libhpx/parcel.h>
 #include <libhpx/scheduler.h>
 
+using namespace libhpx::network::pwc;
+
 /// The local event handler for the get-with-completion operation.
 ///
 /// This is used to schedule the transferred parcel once the get operation has
 /// completed. The command encodes the local address of the parcel to schedule.
 void
-handle_rendezvous_launch(unsigned src, command_t cmd)
+Command::rendezvousLaunch(unsigned src) const
 {
-  hpx_parcel_t *p = (hpx_parcel_t*)(uintptr_t)cmd.arg;
+  hpx_parcel_t *p = reinterpret_cast<hpx_parcel_t*>(arg_);
   parcel_set_state(p, PARCEL_SERIALIZED);
   EVENT_PARCEL_RECV(p->id, p->action, p->size, p->src, p->target);
   scheduler_spawn(p);
 }
 
-typedef struct {
+namespace {
+struct _rendezvous_get_args_t {
   unsigned         rank;
   const hpx_parcel_t *p;
   size_t              n;
   xport_key_t       key;
-} _rendezvous_get_args_t;
+};
+}
 
 /// The rendezvous request handler.
 ///
@@ -60,7 +64,9 @@ typedef struct {
 ///
 /// We need to use a marshaled operation because we send the transport key by
 /// value and we don't have an FFI type to capture that.
-static int _rendezvous_get_handler(_rendezvous_get_args_t *args, size_t size) {
+static int
+_rendezvous_get_handler(_rendezvous_get_args_t *args, size_t size)
+{
   hpx_parcel_t *p = parcel_alloc(args->n - sizeof(*p));
   dbg_assert(p);
   xport_op_t op;
@@ -70,10 +76,8 @@ static int _rendezvous_get_handler(_rendezvous_get_args_t *args, size_t size) {
   op.dest_key = pwc_network->xport->key_find_ref(pwc_network->xport, p, args->n);
   op.src = args->p;
   op.src_key = &args->key;
-  op.lop.op = RENDEZVOUS_LAUNCH;
-  op.lop.arg = reinterpret_cast<uintptr_t>(p);
-  op.rop.op = DELETE_PARCEL;
-  op.rop.arg = reinterpret_cast<uintptr_t>(args->p);
+  op.lop = Command::RendezvousLaunch(p);
+  op.rop = Command::DeleteParcel(args->p);
   int e = pwc_network->xport->gwc(&op);
   dbg_check(e, "could not issue get during rendezvous parcel\n");
   return HPX_SUCCESS;
@@ -81,7 +85,9 @@ static int _rendezvous_get_handler(_rendezvous_get_args_t *args, size_t size) {
 static LIBHPX_ACTION(HPX_INTERRUPT, HPX_MARSHALLED, _rendezvous_get,
                      _rendezvous_get_handler, HPX_POINTER, HPX_SIZE_T);
 
-int pwc_rendezvous_send(void *network, const hpx_parcel_t *p) {
+int
+libhpx::network::pwc::pwc_rendezvous_send(void *network, const hpx_parcel_t *p)
+{
   pwc_network_t *pwc = static_cast<pwc_network_t*>(network);
   size_t n = parcel_size(p);
   _rendezvous_get_args_t args = {

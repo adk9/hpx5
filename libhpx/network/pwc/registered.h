@@ -1,4 +1,4 @@
-// =============================================================================
+// ==================================================================-*- C++ -*-
 //  High Performance ParalleX Library (libhpx)
 //
 //  Copyright (c) 2013-2016, Trustees of Indiana University,
@@ -14,21 +14,18 @@
 #ifndef LIBHPX_NETWORK_PWC_REGISTERED_H
 #define LIBHPX_NETWORK_PWC_REGISTERED_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /// @file  libhpx/network/pwc/registered.h
 
-/// Forward declarations
-/// @{
-struct pwc_xport;
-/// @}
+#include "xport.h"
 
-void registered_allocator_init(struct pwc_xport *xport);
+namespace libhpx {
+namespace network {
+namespace pwc {
 
-#ifdef __cplusplus
-}
-#endif
+void registered_allocator_init(pwc_xport_t *xport);
+
+} // namespace pwc
+} // namespace network
+} // namespace libhpx
 
 #endif // LIBHPX_NETWORK_PWC_REGISTERED_H

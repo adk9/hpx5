@@ -15,13 +15,15 @@
 # include "config.h"
 #endif
 
-#include <assert.h>
-#include <stdlib.h>
-#include <string.h>
-#include <hpx/builtins.h>
+#include "circular_buffer.h"
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
-#include "circular_buffer.h"
+#include <hpx/builtins.h>
+#include <cassert>
+#include <cstdlib>
+#include <cstring>
+
+using namespace libhpx::network::pwc;
 
 /// Compute the index into the buffer for an abstract index.
 ///
@@ -32,11 +34,13 @@
 ///
 /// @returns             @p capacity = 2^k; @p i % @p capacity
 ///                      @p capacity != 2^k; undefined
-static int _index_of(uint32_t i, uint32_t capacity) {
+static int
+_index_of(unsigned i, unsigned capacity)
+{
   DEBUG_IF(capacity != (1u << ceil_log2_32(capacity))) {
     dbg_error("capacity %u is not 2^k\n", capacity);
   }
-  uint32_t mask = capacity - 1;
+  unsigned mask = capacity - 1;
   return (i & mask);
 }
 
@@ -46,7 +50,9 @@ static int _index_of(uint32_t i, uint32_t capacity) {
 /// @param            i The element index.
 ///
 /// @returns            The address of the element in the buffer.
-static void *_address_of(circular_buffer_t *buffer, uint32_t i) {
+static void *
+_address_of(circular_buffer_t *buffer, unsigned i)
+{
   size_t bytes = i * buffer->element_size;
   return (char*)buffer->records + bytes;
 }
@@ -62,7 +68,9 @@ static void *_address_of(circular_buffer_t *buffer, uint32_t i) {
 ///
 /// @returns  LIBHPX_OK The reflow was successful.
 ///        LIBHPX_ERROR An unexpected error occurred.
-static int _reflow(circular_buffer_t *buffer, uint32_t old_capacity) {
+static int
+_reflow(circular_buffer_t *buffer, unsigned old_capacity)
+{
   if (!old_capacity) {
     return LIBHPX_OK;
   }
@@ -76,7 +84,7 @@ static int _reflow(circular_buffer_t *buffer, uint32_t old_capacity) {
   int prefix = (old_min < old_max) ? old_max - old_min : old_capacity - old_min;
   int suffix = (old_min < old_max) ? 0 : old_max;
 
-  uint32_t new_capacity = buffer->capacity;
+  unsigned new_capacity = buffer->capacity;
   int new_min = _index_of(buffer->min, new_capacity);
   int new_max = _index_of(buffer->max, new_capacity);
 
@@ -98,7 +106,7 @@ static int _reflow(circular_buffer_t *buffer, uint32_t old_capacity) {
   else if (old_max == new_max) {
     dbg_assert((prefix > 0) &&
                (INT32_MAX - new_min >= prefix) &&
-               (uint32_t(new_min + prefix) <= new_capacity));
+               (unsigned(new_min + prefix) <= new_capacity));
 
     // copy the prefix to the new location
     size_t bytes = prefix * buffer->element_size;
@@ -123,7 +131,9 @@ static int _reflow(circular_buffer_t *buffer, uint32_t old_capacity) {
 /// @returns  LIBHPX_OK The buffer was expanded successfully.
 ///       LIBHPX_ENOMEM We ran out of memory during expansion.
 ///        LIBHPX_ERROR There was an unexpected error during expansion.
-static int _expand(circular_buffer_t *buffer, uint32_t capacity) {
+static int
+_expand(circular_buffer_t *buffer, unsigned capacity)
+{
   assert(capacity != 0);
 
   if (capacity < buffer->capacity) {
@@ -135,7 +145,7 @@ static int _expand(circular_buffer_t *buffer, uint32_t capacity) {
   }
 
   // realloc a new records array
-  uint32_t old_capacity = buffer->capacity;
+  unsigned old_capacity = buffer->capacity;
   buffer->capacity = capacity;
   buffer->records = realloc(buffer->records, capacity * buffer->element_size);
   if (!buffer->records) {
@@ -149,8 +159,13 @@ static int _expand(circular_buffer_t *buffer, uint32_t capacity) {
   return _reflow(buffer, old_capacity);
 }
 
-int circular_buffer_init(circular_buffer_t *b, uint32_t element_size,
-                         uint32_t capacity)
+namespace libhpx {
+namespace network {
+namespace pwc {
+
+int
+circular_buffer_init(circular_buffer_t *b, unsigned element_size,
+                     unsigned capacity)
 {
   b->capacity = 0;
   b->element_size = element_size;
@@ -162,36 +177,44 @@ int circular_buffer_init(circular_buffer_t *b, uint32_t element_size,
   return _expand(b, capacity);
 }
 
-void circular_buffer_fini(circular_buffer_t *b) {
+void
+circular_buffer_fini(circular_buffer_t *b)
+{
   if (b->records) {
     free(b->records);
   }
 }
 
-uint32_t circular_buffer_size(circular_buffer_t *b) {
+unsigned
+circular_buffer_size(circular_buffer_t *b)
+{
   uint64_t size = b->max - b->min;
   dbg_assert_str(size < UINT32_MAX, "circular buffer size invalid\n");
-  return (uint32_t)size;
+  return (unsigned)size;
 }
 
-void *circular_buffer_append(circular_buffer_t *buffer) {
+void *
+circular_buffer_append(circular_buffer_t *buffer)
+{
   uint64_t next = buffer->max++;
   if (circular_buffer_size(buffer) >= buffer->capacity) {
-    uint32_t capacity = buffer->capacity * 2;
+    unsigned capacity = buffer->capacity * 2;
     if (LIBHPX_OK != _expand(buffer, capacity)) {
       dbg_error("could not expand a circular buffer from %u to %u\n",
                 buffer->capacity, capacity);
     }
   }
-  uint32_t i = _index_of(next, buffer->capacity);
+  unsigned i = _index_of(next, buffer->capacity);
   return _address_of(buffer, i);
 }
 
-int circular_buffer_progress(circular_buffer_t *buffer,
-                             int (*progress_callback)(void *env, void *record),
-                             void *progress_env) {
+int
+circular_buffer_progress(circular_buffer_t *buffer,
+                         int (*progress_callback)(void *env, void *record),
+                         void *progress_env)
+{
   while (buffer->min < buffer->max) {
-    uint32_t i = _index_of(buffer->min, buffer->capacity);
+    unsigned i = _index_of(buffer->min, buffer->capacity);
     void *record = _address_of(buffer, i);
     int e = progress_callback(progress_env, record);
     switch (e) {
@@ -208,3 +231,7 @@ int circular_buffer_progress(circular_buffer_t *buffer,
   }
   return 0;
 }
+
+} // namespace pwc
+} // namespace network
+} // namespace libhpx

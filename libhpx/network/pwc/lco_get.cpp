@@ -25,25 +25,28 @@
 #include <libhpx/scheduler.h>
 #include <libhpx/worker.h>
 
+using namespace libhpx::network::pwc;
+
 /// This acts as a parcel_suspend transfer to allow _pwc_lco_get_request_handler
 /// to wait for its pwc to complete.
-static void _get_reply_continuation(hpx_parcel_t *p, void *env) {
+static void
+_get_reply_continuation(struct hpx_parcel *p, void *env)
+{
   xport_op_t *op = static_cast<xport_op_t*>(env);
-
-  // at this point we know which parcel to resume for local completion
-  op->lop.op  = RESUME_PARCEL;
-  op->lop.arg = (uintptr_t)p;
+  op->lop  = Command::ResumeParcel(p);
   dbg_check( pwc_network->xport->pwc(op) );
 }
 
-typedef struct {
-  hpx_parcel_t *p;
+namespace {
+struct _pwc_lco_get_request_args_t {
+  struct hpx_parcel *p;
   size_t n;
   void *out;
   int reset;
   xport_key_t key;
   unsigned rank;
-} _pwc_lco_get_request_args_t;
+};
+}
 
 /// This function (*not* an action) consolidates the functionality to issue a
 /// synchronous get reply via put-with-completion using the scheduler_suspend
@@ -52,8 +55,10 @@ typedef struct {
 /// We could actually do the xport_op_t construction in the reply transfer
 /// continuation, but we'd need an environment to pass down there anyway, so we
 /// use the xport_op_t for that.
-static int _get_reply(_pwc_lco_get_request_args_t *args, pwc_network_t *pwc,
-                      const void *ref, command_t remote) {
+static int
+_get_reply(_pwc_lco_get_request_args_t *args, pwc_network_t *pwc,
+           const void *ref, Command remote)
+{
   // Create the transport operation to perform the rdma put operation
   xport_op_t op;
   op.rank = args->rank;
@@ -62,7 +67,7 @@ static int _get_reply(_pwc_lco_get_request_args_t *args, pwc_network_t *pwc,
   op.dest_key = args->key;
   op.src = ref;
   op.src_key = pwc->xport->key_find_ref(pwc->xport, ref, args->n);
-  op.lop = {0};                                // set in _get_reply_continuation
+  op.lop = Command();                          // set in _get_reply_continuation
   op.rop = remote;
   dbg_assert_str(op.src_key, "LCO reference must point to registered memory\n");
 
@@ -74,8 +79,10 @@ static int _get_reply(_pwc_lco_get_request_args_t *args, pwc_network_t *pwc,
 
 /// This function (*not* an action) performs a get request to a temporary stack
 /// location.
-static int _get_reply_stack(_pwc_lco_get_request_args_t *args,
-                            pwc_network_t *pwc, hpx_addr_t lco) {
+static int
+_get_reply_stack(_pwc_lco_get_request_args_t *args, pwc_network_t *pwc,
+                 hpx_addr_t lco)
+{
   char ref[args->n];
 
   int e = HPX_SUCCESS;
@@ -90,16 +97,15 @@ static int _get_reply_stack(_pwc_lco_get_request_args_t *args,
     dbg_error("Cannot yet return an error from a remote get operation\n");
   }
 
-  command_t resume;
-  resume.op = RESUME_PARCEL;
-  resume.arg = reinterpret_cast<uintptr_t>(args->p);
-  return _get_reply(args, pwc, ref, resume);
+  return _get_reply(args, pwc, ref, Command::ResumeParcel(args->p));
 }
 
 /// This function (*not* an action) performs a get request to a temporary
 /// malloced location.
-static int _get_reply_malloc(_pwc_lco_get_request_args_t *args,
-                             pwc_network_t *pwc, hpx_addr_t lco) {
+static int
+_get_reply_malloc(_pwc_lco_get_request_args_t *args, pwc_network_t *pwc,
+                  hpx_addr_t lco)
+{
   void *ref = registered_malloc(args->n);
   dbg_assert(ref);
 
@@ -115,18 +121,17 @@ static int _get_reply_malloc(_pwc_lco_get_request_args_t *args,
     dbg_error("Cannot yet return an error from a remote get operation\n");
   }
 
-  command_t resume;
-  resume.op = RESUME_PARCEL;
-  resume.arg = reinterpret_cast<uintptr_t>(args->p);
-  e = _get_reply(args, pwc, ref, resume);
+  e = _get_reply(args, pwc, ref, Command::ResumeParcel(args->p));
   registered_free(ref);
   return e;
 }
 
 /// This function (*not* an action) performs a two-phase get request without any
 /// temporary storage.
-static int _get_reply_getref(_pwc_lco_get_request_args_t *args,
-                             pwc_network_t *pwc, hpx_addr_t lco) {
+static int
+_get_reply_getref(_pwc_lco_get_request_args_t *args, pwc_network_t *pwc,
+                  hpx_addr_t lco)
+{
   // Get a reference to the LCO data
   void *ref;
   int e = hpx_lco_getref(lco, args->n, &ref);
@@ -138,25 +143,23 @@ static int _get_reply_getref(_pwc_lco_get_request_args_t *args,
   // Send back the LCO data. This doesn't resume the remote thread because there
   // is a race where a delete can trigger a use-after-free during our subsequent
   // release.
-  e = _get_reply(args, pwc, ref, (command_t){0});
+  e = _get_reply(args, pwc, ref, Command());
   dbg_check(e, "Failed rendezvous put during remote lco get request.\n");
 
   // Release the reference.
   hpx_lco_release(lco, ref);
 
   // Wake the remote getter up.
-  command_t rcmd;
-  rcmd.op = RESUME_PARCEL;
-  rcmd.arg = reinterpret_cast<uintptr_t>(args->p);
-  e = pwc_cmd(pwc, args->rank, (command_t){0}, rcmd);
+  e = pwc_cmd(pwc, args->rank, Command(), Command::ResumeParcel(args->p));
   dbg_check(e, "Failed to start resume command during remote lco get.\n");
   return e;
 }
 
 /// This action is sent to execute the request half of a two-sided LCO get
 /// operation.
-static int _pwc_lco_get_request_handler(_pwc_lco_get_request_args_t *args,
-                                        size_t n) {
+static int
+_pwc_lco_get_request_handler(_pwc_lco_get_request_args_t *args, size_t n)
+{
   dbg_assert(n > 0);
 
   hpx_addr_t lco = hpx_thread_current_target();
@@ -192,14 +195,17 @@ static int _pwc_lco_get_request_handler(_pwc_lco_get_request_args_t *args,
 }
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _pwc_lco_get_request,
                      _pwc_lco_get_request_handler, HPX_POINTER, HPX_SIZE_T);
-
-typedef struct {
+namespace {
+struct _pwc_lco_get_continuation_env_t {
   _pwc_lco_get_request_args_t request;
   hpx_addr_t lco;
-} _pwc_lco_get_continuation_env_t;
+};
+}
 
 /// Issue the get request parcel from a transfer continuation.
-static void _pwc_lco_get_continuation(hpx_parcel_t *p, void *env) {
+static void
+_pwc_lco_get_continuation(struct hpx_parcel *p, void *env)
+{
   auto e = static_cast<_pwc_lco_get_continuation_env_t*>(env);
   e->request.p = p;
   hpx_action_t act = _pwc_lco_get_request;
@@ -213,7 +219,10 @@ static void _pwc_lco_get_continuation(hpx_parcel_t *p, void *env) {
 ///
 /// This operation is synchronous and will block until the operation has
 /// completed.
-int pwc_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out, int reset) {
+int
+libhpx::network::pwc::pwc_lco_get(void *obj, hpx_addr_t lco, size_t n,
+                                  void *out, int reset)
+{
   _pwc_lco_get_continuation_env_t env;
   env.request.p = nullptr;                   // set in _pwc_lco_get_continuation
   env.request.n = n;

@@ -15,16 +15,20 @@
 # include "config.h"
 #endif
 
+#include "send_buffer.h"
+#include "parcel_emulation.h"
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
-#include "parcel_emulation.h"
-#include "send_buffer.h"
+
+using namespace libhpx::network::pwc;
 
 /// The record type for the pending send circular buffer.
-typedef struct {
+namespace {
+struct Record {
   const hpx_parcel_t *p;
-} record_t;
+};
+}
 
 /// Append a record to the parcel's pending send buffer.
 ///
@@ -33,22 +37,28 @@ typedef struct {
 ///
 /// @returns  LIBHXP_OK The parcel was buffered successfully.
 ///        LIBHPX_ERROR A pending record could not be allocated.
-static int _append(send_buffer_t *sends, const hpx_parcel_t *p) {
-  record_t *r = static_cast<record_t*>(circular_buffer_append(&sends->pending));
+static int
+_append(send_buffer_t *sends, const hpx_parcel_t *p)
+{
+  Record *r = static_cast<Record*>(circular_buffer_append(&sends->pending));
   dbg_assert_str(r, "could not append a send operation to the buffer\n");
   r->p = p;
   return LIBHPX_OK;
 }
 
-static int _start(send_buffer_t *sends, const hpx_parcel_t *p) {
+static int
+_start(send_buffer_t *sends, const hpx_parcel_t *p)
+{
   return parcel_emulator_send(sends->emul, sends->xport, sends->rank, p);
 }
 
 /// Wrap the eager_buffer_tx() operation in an interface that matches the
 /// circular_buffer_progress callback type.
-static int _start_record(void *buffer, void *record) {
+static int
+_start_record(void *buffer, void *record)
+{
   send_buffer_t *sends = static_cast<send_buffer_t*>(buffer);
-  record_t *r = static_cast<record_t*>(record);
+  Record *r = static_cast<Record*>(record);
   return _start(sends, r->p);
 }
 
@@ -65,7 +75,9 @@ static int _start_record(void *buffer, void *record) {
 /// @param        sends The send buffer.
 ///
 /// @returns            HPX_SUCCESS or an error code.
-int send_buffer_progress(send_buffer_t *sends) {
+int
+libhpx::network::pwc::send_buffer_progress(send_buffer_t *sends)
+{
   int status = HPX_SUCCESS;
   sync_tatas_acquire(&sends->lock);
   int i = circular_buffer_progress(&sends->pending, _start_record, sends);
@@ -77,21 +89,28 @@ int send_buffer_progress(send_buffer_t *sends) {
   return status;
 }
 
-int send_buffer_init(send_buffer_t *sends, int rank,
-                     struct parcel_emulator *emul, struct pwc_xport *xport,
-                     uint32_t size) {
+int
+libhpx::network::pwc::send_buffer_init(send_buffer_t *sends, unsigned rank,
+                                       parcel_emulator_t *emul,
+                                       pwc_xport_t *xport, uint32_t size)
+{
   sync_tatas_init(&sends->lock);
   sends->rank = rank;
   sends->emul = emul;
   sends->xport = xport;
-  return circular_buffer_init(&sends->pending, sizeof(record_t), size);
+  return circular_buffer_init(&sends->pending, sizeof(Record), size);
 }
 
-void send_buffer_fini(send_buffer_t *sends) {
+void
+libhpx::network::pwc::send_buffer_fini(send_buffer_t *sends)
+{
   circular_buffer_fini(&sends->pending);
 }
 
-int send_buffer_send(send_buffer_t *sends, const hpx_parcel_t *p) {
+int
+libhpx::network::pwc::send_buffer_send(send_buffer_t *sends,
+                                       const hpx_parcel_t *p)
+{
   int status = LIBHPX_OK;
   sync_tatas_acquire(&sends->lock);
 

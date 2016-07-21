@@ -15,18 +15,20 @@
 # include "config.h"
 #endif
 
-#include <string.h>
+#include "registered.h"
+#include "xport.h"
 #include <libhpx/debug.h>
 #include <libhpx/memory.h>
 #include <libhpx/system.h>
-#include "registered.h"
-#include "xport.h"
+#include <cstring>
+
+using namespace libhpx::network::pwc;
 
 /// The transport we'll use for pinning. It's not ideal to stick it here, but we
 /// need to pin before the network has been exposed through the
 /// self->network. We can simply capture the transport since we know we'll need
 /// it anyway.
-static pwc_xport_t *_xport = NULL;
+static pwc_xport_t *_xport = nullptr;
 
 /// @file  libhpx/gas/pgas/registered.c
 /// @brief This file implements the address-space allocator interface for
@@ -34,24 +36,26 @@ static pwc_xport_t *_xport = NULL;
 ///
 /// In practice this is trivial. We just use these to bind the heap_chunk
 /// allocation routines to the registered_heap instance.
-static void *_registered_chunk_alloc(void *addr, size_t n, size_t align, bool *zero,
-                                     bool *commit, unsigned arena) {
+static void *
+_registered_chunk_alloc(void *addr, size_t n, size_t align, bool *zero,
+                        bool *commit, unsigned arena)
+{
   dbg_assert(zero);
   dbg_assert(commit);
-  void *chunk = system_mmap_huge_pages(NULL, addr, n, align);
+  void *chunk = system_mmap_huge_pages(nullptr, addr, n, align);
   if (!chunk) {
-    return NULL;
+    return nullptr;
   }
 
   // According to the jemalloc man page, if addr is set, then we *must* return a
   // chunk at that address.
   if (addr && addr != chunk) {
-    system_munmap_huge_pages(NULL, chunk, n);
-    return NULL;
+    system_munmap_huge_pages(nullptr, chunk, n);
+    return nullptr;
   }
 
   // Pin the memory.
-  _xport->pin(chunk, n, NULL);
+  _xport->pin(chunk, n, nullptr);
 
   // If we are asked to zero a chunk, then we do so.
   if (*zero) {
@@ -63,14 +67,17 @@ static void *_registered_chunk_alloc(void *addr, size_t n, size_t align, bool *z
   return chunk;
 }
 
-static bool _registered_chunk_free(void *chunk, size_t n, bool committed,
-                                   unsigned arena) {
+static bool
+_registered_chunk_free(void *chunk, size_t n, bool committed, unsigned arena)
+{
   _xport->unpin(chunk, n);
-  system_munmap_huge_pages(NULL, chunk, n);
+  system_munmap_huge_pages(nullptr, chunk, n);
   return 0;
 }
 
-void registered_allocator_init(pwc_xport_t *xport) {
+void
+libhpx::network::pwc::registered_allocator_init(pwc_xport_t *xport)
+{
   static const chunk_hooks_t _registered_hooks = {
     .alloc    = _registered_chunk_alloc,
     .dalloc   = _registered_chunk_free,

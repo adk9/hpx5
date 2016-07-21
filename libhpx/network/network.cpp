@@ -16,17 +16,19 @@
 #endif
 
 /// @file libhpx/network/network.c
+#include "coalesced.h"
+#include "compressed.h"
+#include "inst.h"
+#include "smp.h"
+#include "isir/isir.h"
+#include "pwc/pwc.h"
 #include <libhpx/boot.h>
 #include <libhpx/config.h>
 #include <libhpx/debug.h>
 #include <libhpx/instrumentation.h>
 #include <libhpx/network.h>
-#include "isir/isir.h"
-#include "pwc/pwc.h"
-#include "coalesced.h"
-#include "compressed.h"
-#include "inst.h"
-#include "smp.h"
+
+using namespace libhpx::network;
 
 static const int LEVEL = HPX_LOG_CONFIG | HPX_LOG_NET | HPX_LOG_DEFAULT;
 
@@ -79,8 +81,8 @@ network_new(config_t *cfg, boot_t *boot, struct gas *gas)
   switch (type) {
    case HPX_NETWORK_PWC:
 #ifdef HAVE_NETWORK
-    network = static_cast<Network*>(network_pwc_funneled_new(cfg, boot, gas));
-    pwc_network = (pwc_network_t*) network;
+    pwc::pwc_network = pwc::network_pwc_funneled_new(cfg, boot, gas);
+    network = reinterpret_cast<Network*>(pwc::pwc_network);
 #else
     log_level(LEVEL, "PWC network unavailable (no network configured)\n");
 #endif

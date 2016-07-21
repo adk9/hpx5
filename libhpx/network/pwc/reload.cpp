@@ -33,31 +33,35 @@
 #include <string.h>
 #include <stdlib.h>
 
-typedef struct {
+using namespace libhpx::network::pwc;
+
+namespace {
+struct Buffer {
   size_t              n;
   size_t              i;
   parcel_block_t *block;
   xport_key_t       key;
-} buffer_t;
+};
 
-typedef struct {
+struct Remote {
   void      *addr;
   xport_key_t key;
-} remote_t;
+};
 
-typedef struct {
+struct Reload {
   parcel_emulator_t vtable;
   unsigned            rank;
   unsigned           ranks;
-  buffer_t           *recv;
+  Buffer             *recv;
   xport_key_t     recv_key;
-  buffer_t           *send;
+  Buffer             *send;
   xport_key_t     send_key;
-  remote_t        *remotes;
-} reload_t;
+  Remote        *remotes;
+};
+}
 
 static void
-_buffer_fini(buffer_t *b)
+_buffer_fini(Buffer *b)
 {
   if (b) {
     parcel_block_delete(b->block);
@@ -65,28 +69,27 @@ _buffer_fini(buffer_t *b)
 }
 
 static void
-_buffer_reload(buffer_t *b, pwc_xport_t *xport)
+_buffer_reload(Buffer *b, pwc_xport_t *xport)
 {
   b->block = parcel_block_new(b->n, b->n, &b->i);
   xport->key_find(xport, b->block, b->n, &b->key);
 }
 
 static void
-_buffer_init(buffer_t *b, size_t n, pwc_xport_t *xport)
+_buffer_init(Buffer *b, size_t n, pwc_xport_t *xport)
 {
   b->n = n;
   _buffer_reload(b, xport);
 }
 
 void
-handle_recv_parcel(unsigned src, command_t command)
+Command::recvParcel(unsigned src) const
 {
 #ifdef __LP64__
-  hpx_parcel_t *p = (hpx_parcel_t*)(uintptr_t)command.arg;
+  auto p = reinterpret_cast<hpx_parcel_t*>(arg_);
 #else
-  arg_t arg = command.arg;
-  dbg_assert((arg & 0xffffffff) == arg);
-  hpx_parcel_t *p = (hpx_parcel_t*)(uint32_t)arg;
+  dbg_assert((arg_ & 0xffffffff) == arg_);
+  auto p = reinterpret_cast<hpx_parcel_t*>((uintptr_t)arg_);
 #endif
   p->src = src;
   parcel_set_state(p, PARCEL_SERIALIZED | PARCEL_BLOCK_ALLOCATED);
@@ -95,7 +98,7 @@ handle_recv_parcel(unsigned src, command_t command)
 }
 
 static int
-_buffer_send(buffer_t *send, pwc_xport_t *xport, xport_op_t *op)
+_buffer_send(Buffer *send, pwc_xport_t *xport, xport_op_t *op)
 {
   int i = send->i;
   dbg_assert(!(i & 7));
@@ -108,17 +111,15 @@ _buffer_send(buffer_t *send, pwc_xport_t *xport, xport_op_t *op)
                op->n + align, (void*)send->block, send->n - send->i);
     op->dest_key = &send->key;
     op->dest = parcel_block_at(send->block, i);
-    op->rop.op = RECV_PARCEL;
-    op->rop.arg = (uintptr_t)op->dest;
+    op->rop = Command::RecvParcel(static_cast<hpx_parcel_t*>(op->dest));
     return xport->pwc(op);
   }
 
   op->n = 0;
-  op->src = NULL;
-  op->src_key = NULL;
-  op->lop.op = NOP;
-  op->rop.op = RELOAD_REQUEST;
-  op->rop.arg = r;
+  op->src = nullptr;
+  op->src_key = nullptr;
+  op->lop = Command::Nop();
+  op->rop = Command::ReloadRequest(r);
   int e = xport->cmd(op->rank, op->lop, op->rop);
   if (LIBHPX_OK == e) {
     return LIBHPX_RETRY;
@@ -138,21 +139,20 @@ _reload_send(void *obj, pwc_xport_t *xport, unsigned rank, const hpx_parcel_t *p
   op.dest_key = nullptr;
   op.src = p;
   op.src_key = xport->key_find_ref(xport, p, n);
-  op.lop.op = DELETE_PARCEL;
-  op.lop.arg = reinterpret_cast<uintptr_t>(p);
-  op.rop = {0};
+  op.lop = Command::DeleteParcel(p);
+  op.rop = Command::Nop();
 
   if (!op.src_key) {
     dbg_error("no rdma key for local parcel (%p, %zu)\n", (void*)p, n);
   }
 
-  reload_t *reload = static_cast<reload_t*>(obj);
-  buffer_t *send = &reload->send[rank];
+  Reload *reload = static_cast<Reload*>(obj);
+  Buffer *send = &reload->send[rank];
   return _buffer_send(send, xport, &op);
 }
 
 static hpx_parcel_t *
-_buffer_recv(buffer_t *recv)
+_buffer_recv(Buffer *recv)
 {
   auto p = static_cast<const hpx_parcel_t*>(parcel_block_at(recv->block, recv->i));
   recv->i += parcel_size(p);
@@ -165,8 +165,8 @@ _buffer_recv(buffer_t *recv)
 static hpx_parcel_t *
 _reload_recv(void *obj, unsigned rank)
 {
-  reload_t *reload = static_cast<reload_t*>(obj);
-  buffer_t *recv = &reload->recv[rank];
+  Reload *reload = static_cast<Reload*>(obj);
+  Buffer *recv = &reload->recv[rank];
   return _buffer_recv(recv);
 }
 
@@ -174,7 +174,7 @@ static void
 _reload_deallocate(void *obj)
 {
   if (obj) {
-    reload_t *reload = static_cast<reload_t*>(obj);
+    Reload *reload = static_cast<Reload*>(obj);
     for (int i = 0, e = reload->ranks; i < e; ++i) {
       _buffer_fini(&reload->recv[i]);
     }
@@ -186,14 +186,15 @@ _reload_deallocate(void *obj)
 }
 
 parcel_emulator_t *
-parcel_emulator_new_reload(const config_t *cfg, boot_t *boot,
-                           pwc_xport_t *xport)
+libhpx::network::pwc::parcel_emulator_new_reload(const config_t *cfg,
+                                                 boot_t *boot,
+                                                 pwc_xport_t *xport)
 {
   int rank = boot_rank(boot);
   int ranks = boot_n_ranks(boot);
 
   // Allocate the buffer.
-  reload_t *reload = static_cast<reload_t*>(calloc(1, sizeof(*reload)));
+  Reload *reload = static_cast<Reload*>(calloc(1, sizeof(*reload)));
   reload->vtable.deallocate = _reload_deallocate;
   reload->vtable.send = _reload_send;
   reload->vtable.recv = _reload_recv;
@@ -201,11 +202,11 @@ parcel_emulator_new_reload(const config_t *cfg, boot_t *boot,
   reload->ranks = ranks;
 
   // Allocate my buffers.
-  size_t buffer_row_size = ranks * sizeof(buffer_t);
-  size_t remote_table_size = ranks * sizeof(remote_t);
-  reload->recv = static_cast<buffer_t*>(registered_malloc(buffer_row_size));
-  reload->send = static_cast<buffer_t*>(registered_malloc(buffer_row_size));
-  reload->remotes = static_cast<remote_t*>(malloc(remote_table_size));
+  size_t buffer_row_size = ranks * sizeof(Buffer);
+  size_t remote_table_size = ranks * sizeof(Remote);
+  reload->recv = static_cast<Buffer*>(registered_malloc(buffer_row_size));
+  reload->send = static_cast<Buffer*>(registered_malloc(buffer_row_size));
+  reload->remotes = static_cast<Remote*>(malloc(remote_table_size));
 
   // Grab the keys for the recv and send rows
   xport->key_find(xport, reload->send, buffer_row_size, &reload->send_key);
@@ -213,20 +214,20 @@ parcel_emulator_new_reload(const config_t *cfg, boot_t *boot,
 
   // Initialize the recv buffers for this rank.
   for (int i = 0, e = ranks; i < e; ++i) {
-    buffer_t *recv = &reload->recv[i];
+    Buffer *recv = &reload->recv[i];
     _buffer_init(recv, cfg->pwc_parcelbuffersize, xport);
   }
 
   // Initialize a temporary array of remote pointers for this rank's sends.
-  remote_t *remotes = static_cast<remote_t*>(malloc(remote_table_size));
+  Remote *remotes = static_cast<Remote*>(malloc(remote_table_size));
   for (int i = 0, e = ranks; i < e; ++i) {
     remotes[i].addr = &reload->send[i];
     xport->key_copy(&remotes[i].key, &reload->send_key);
   }
 
   // exchange all of the recv buffers, and all of the remote send pointers
-  size_t buffer_size = sizeof(buffer_t);
-  size_t remote_size = sizeof(remote_t);
+  size_t buffer_size = sizeof(Buffer);
+  size_t remote_size = sizeof(Remote);
   boot_alltoall(boot, reload->send, reload->recv, buffer_size, buffer_size);
   boot_alltoall(boot, reload->remotes, remotes, remote_size, remote_size);
 
@@ -235,8 +236,8 @@ parcel_emulator_new_reload(const config_t *cfg, boot_t *boot,
 
   // just do a sanity check to make sure the alltoalls worked
   if (DEBUG) {
-    buffer_t *send = &reload->send[rank];
-    buffer_t *recv = &reload->recv[rank];
+    Buffer *send = &reload->send[rank];
+    Buffer *recv = &reload->recv[rank];
     dbg_assert(send->n == recv->n);
     dbg_assert(send->i == recv->i);
     dbg_assert(send->block == recv->block);
@@ -254,16 +255,18 @@ parcel_emulator_new_reload(const config_t *cfg, boot_t *boot,
   return &reload->vtable;
 }
 
-void handle_reload_reply(unsigned src, command_t cmd) {
+void
+Command::reloadReply(unsigned src) const {
   send_buffer_t *sends = &pwc_network->send_buffers[src];
   dbg_check( send_buffer_progress(sends) );
 }
 
-void handle_reload_request(unsigned src, command_t cmd) {
+void
+Command::reloadRequest(unsigned src) const {
   pwc_xport_t *xport = pwc_network->xport;
-  reload_t *reload = (reload_t*)(pwc_network->parcels);
-  buffer_t *recv = &reload->recv[src];
-  size_t n = cmd.arg;
+  Reload *reload = reinterpret_cast<Reload*>(pwc_network->parcels);
+  Buffer *recv = &reload->recv[src];
+  size_t n = arg_;
   if (n) {
     parcel_block_deduct(recv->block, n);
   }
@@ -276,9 +279,8 @@ void handle_reload_request(unsigned src, command_t cmd) {
   op.dest_key = reload->remotes[src].key;
   op.src = recv;
   op.src_key = reload->recv_key;
-  op.lop = {0};
-  op.rop.op = RELOAD_REPLY;
-  op.rop.arg = 0;
+  op.lop = Command::Nop();
+  op.rop = Command::ReloadReply();
 
   dbg_check( xport->pwc(&op) );
 }

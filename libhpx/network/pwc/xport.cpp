@@ -15,11 +15,15 @@
 # include "config.h"
 #endif
 
-#include <libhpx/debug.h>
 #include "xport.h"
+#include <libhpx/debug.h>
 
-pwc_xport_t *pwc_xport_new(const config_t *cfg, struct boot *boot,
-                           struct gas *gas) {
+using namespace libhpx::network::pwc;
+
+pwc_xport_t *
+libhpx::network::pwc::pwc_xport_new(const config_t *cfg, struct boot *boot,
+                                    struct gas *gas)
+{
   switch (cfg->transport) {
    case (HPX_TRANSPORT_MPI):
     dbg_error("MPI support for the PWC network is not yet available.\n");

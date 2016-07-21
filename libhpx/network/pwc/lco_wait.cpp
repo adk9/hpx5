@@ -23,12 +23,14 @@
 #include <libhpx/parcel.h>
 #include <libhpx/scheduler.h>
 
+using namespace libhpx::network::pwc;
+
 /// Wait for an LCO to be set, and then resume a remote parcel.
 ///
 /// NB: We could do this through the normal parcel continuation infrastructure
 ///     without sending the parcel pointer as an argument.
 static int
-_pwc_lco_wait_handler(uint64_t p, int reset)
+_pwc_lco_wait_handler(struct hpx_parcel *p, int reset)
 {
   hpx_parcel_t *curr = self->current;
   hpx_addr_t lco = curr->target;
@@ -37,18 +39,18 @@ _pwc_lco_wait_handler(uint64_t p, int reset)
   if (e != HPX_SUCCESS) {
     dbg_error("Cannot yet return an error from a remote wait operation\n");
   }
-  command_t rcmd;
-  rcmd.op = RESUME_PARCEL;
-  rcmd.arg = p;
-  return pwc_cmd(pwc_network, curr->src, (command_t){0}, rcmd);
+
+  return pwc_cmd(pwc_network, curr->src, Command(), Command::ResumeParcel(p));
 }
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _pwc_lco_wait, _pwc_lco_wait_handler,
                      HPX_POINTER, HPX_INT);
 
-typedef struct {
+namespace {
+struct _pwc_lco_wait_env_t {
   hpx_addr_t lco;
   int reset;
-} _pwc_lco_wait_env_t;
+};
+}
 
 static void
 _pwc_lco_wait_continuation(hpx_parcel_t *p, void *env)
@@ -60,7 +62,7 @@ _pwc_lco_wait_continuation(hpx_parcel_t *p, void *env)
 }
 
 int
-pwc_lco_wait(void *obj, hpx_addr_t lco, int reset)
+libhpx::network::pwc::pwc_lco_wait(void *obj, hpx_addr_t lco, int reset)
 {
   _pwc_lco_wait_env_t env = {
     .lco = lco,

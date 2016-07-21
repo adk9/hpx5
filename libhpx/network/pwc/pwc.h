@@ -1,4 +1,4 @@
-// =============================================================================
+// ==================================================================-*- C++ -*-
 //  High Performance ParalleX Library (libhpx)
 //
 //  Copyright (c) 2013-2016, Trustees of Indiana University,
@@ -14,44 +14,47 @@
 #ifndef LIBHPX_NETWORK_PWC_PWC_H
 #define LIBHPX_NETWORK_PWC_PWC_H
 
-#include <hpx/hpx.h>
+#include "commands.h"
+#include "parcel_emulation.h"
+#include "send_buffer.h"
+#include "xport.h"
 #include <libhpx/collective.h>
 #include <libhpx/network.h>
 #include <libhpx/padding.h>
-#include "commands.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /// Forward declarations.
 /// @{
+extern "C" {
 struct boot;
 struct config;
 struct gas;
-struct parcel_emulator;
-struct pwc_xport;
-struct send_buffer;
+}
 /// @}
 
-typedef struct {
-  Network                     vtable;
-  const struct config           *cfg;
-  struct pwc_xport            *xport;
-  struct parcel_emulator    *parcels;
-  struct send_buffer   *send_buffers;
-  struct heap_segment *heap_segments;
+namespace libhpx {
+namespace network {
+namespace pwc {
+
+struct heap_segment_t;
+
+struct pwc_network_t {
+  Network                vtable;
+  const struct config      *cfg;
+  pwc_xport_t            *xport;
+  parcel_emulator_t    *parcels;
+  send_buffer_t   *send_buffers;
+  heap_segment_t *heap_segments;
   PAD_TO_CACHELINE(sizeof(Network) + 5 * sizeof(void*));
   volatile int probe_lock;
   PAD_TO_CACHELINE(sizeof(int));
   volatile int progress_lock;
   PAD_TO_CACHELINE(sizeof(int));
-} pwc_network_t;
+};
 
 extern pwc_network_t *pwc_network;
 /// Allocate and initialize a PWC network instance.
-void *network_pwc_funneled_new(const struct config *cfg, struct boot *boot,
-                               struct gas *gas)
+pwc_network_t *network_pwc_funneled_new(const struct config *cfg,
+                                        struct boot *boot, struct gas *gas)
   HPX_MALLOC;
 
 /// Perform an LCO wait operation through the PWC network.
@@ -229,7 +232,7 @@ int pwc_memcpy_sync(void *obj, hpx_addr_t to, hpx_addr_t from, size_t size);
 ///
 /// @returns            LIBHPX_OK
 int pwc_get(void *obj, void *lva, hpx_addr_t from, size_t n,
-            command_t lcmd, command_t rcmd);
+            const Command& lcmd, const Command& rcmd);
 
 /// Initiate an rDMA put operation with a remote continuation.
 ///
@@ -246,7 +249,7 @@ int pwc_get(void *obj, void *lva, hpx_addr_t from, size_t n,
 ///
 /// @returns            LIBHPX_OK
 int pwc_put(void *obj, hpx_addr_t to, const void *lva, size_t n,
-            command_t lcmd, command_t rcmd);
+            const Command& lcmd, const Command& rcmd);
 
 /// Perform a PWC network command.
 ///
@@ -261,10 +264,10 @@ int pwc_put(void *obj, hpx_addr_t to, const void *lva, size_t n,
 /// @param         rcmd A remote command to be run at @p rank.
 ///
 /// @returns            The (local) status of the put operation.
-int pwc_cmd(void *obj, int rank, command_t lcmd, command_t rcmd);
+int pwc_cmd(void *obj, int rank, const Command& lcmd, const Command& rcmd);
 
-#ifdef __cplusplus
-}
-#endif
+} // namespace pwc
+} // namespace network
+} // namespace libhpx
 
 #endif
