@@ -132,6 +132,7 @@ int
 scheduler_start(scheduler_t *this, hpx_parcel_t *p, int spmd)
 {
   if (spmd || here->rank == 0) {
+    parcel_prepare(p);
     scheduler_spawn_at(p, 0);
   }
   else {
