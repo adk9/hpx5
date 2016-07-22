@@ -116,7 +116,7 @@ static int _main_handler(void) {
     hpx_lco_delete(s1, HPX_NULL);
   }
 
-  hpx_exit(HPX_SUCCESS);
+  hpx_exit(HPX_SUCCESS, 0, NULL);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _main, _main_handler);
 
@@ -127,7 +127,7 @@ int main(int argc, char *argv[]) {
   }
 
   // run the main action
-  int e = hpx_run(&_main);
+  int e = hpx_run(&_main, NULL);
   hpx_finalize();
   return e;
 }

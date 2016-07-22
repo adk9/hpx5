@@ -54,7 +54,7 @@ static int _main_action(int *args, size_t size) {
   printf("seconds: %.7f\n", elapsed);
   printf("localities:   %d\n", HPX_LOCALITIES);
   printf("threads:      %d\n", HPX_THREADS);
-  hpx_exit(HPX_SUCCESS);
+  hpx_exit(HPX_SUCCESS, 0, NULL);
 }
 
 /// The main function parses the command line, sets up the HPX runtime system,
@@ -96,7 +96,7 @@ int main(int argc, char *argv[]) {
   }
 
   // run the main action
-  int e = hpx_run(&_main, &n, sizeof(n));
+  int e = hpx_run(&_main, NULL, &n, sizeof(n));
   hpx_finalize();
   return e;
 }

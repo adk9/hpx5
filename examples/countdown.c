@@ -33,7 +33,7 @@ static int _send_action(void *args, size_t size) {
 
   if (n-- <= 0) {
     printf("terminating.\n");
-    hpx_exit(HPX_SUCCESS);
+    hpx_exit(HPX_SUCCESS, 0, NULL);
   }
 
   hpx_parcel_t *p = hpx_parcel_acquire(NULL,sizeof(int));
@@ -83,7 +83,7 @@ int main(int argc, char * argv[argc]) {
      break;
   }
 
-  int e = hpx_run(&send, &n, sizeof(n));
+  int e = hpx_run(&send, NULL, &n, sizeof(n));
   hpx_finalize();
   return e;
 }

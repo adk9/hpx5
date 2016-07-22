@@ -124,7 +124,7 @@ static int _jacobi_main_handler(int n, int nsteps) {
 
   hpx_gas_free(f, HPX_NULL);
   hpx_gas_free(u, HPX_NULL);
-  hpx_exit(HPX_SUCCESS);
+  hpx_exit(HPX_SUCCESS, 0, NULL);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _jacobi_main, _jacobi_main_handler,
                   HPX_INT, HPX_INT);
@@ -166,7 +166,7 @@ int main(int argc, char **argv) {
   argv += optind;
 
   // run the main action
-  e = hpx_run(&_jacobi_main, &n, &nsteps);
+  e = hpx_run(&_jacobi_main, &n, NULL, &nsteps, NULL);
   hpx_finalize();
   return e;
 }

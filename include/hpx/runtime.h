@@ -58,17 +58,18 @@ void hpx_finalize()
 ///   through a single explicit call to hpx_exit().
 /// * On termination, it deletes the main process and returns the status
 ///   returned by hpx_exit().
-///OB
+///
 /// @param        entry An action to execute.
+/// @param[out]     out A user buffer for output (may be NULL).
 /// @param        nargs The number of arguments to pass to @p entry.
 /// @param          ... Pointers to the arguments for @p entry.
 ///
 /// @returns            The status code passed to hpx_exit() upon termination.
-int _hpx_run(hpx_action_t *entry, int nargs, ...)
+int _hpx_run(hpx_action_t *entry, void *out, int nargs, ...)
   HPX_PUBLIC;
 
-#define hpx_run(entry, ...)                                 \
-  _hpx_run(entry, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
+#define hpx_run(entry, out, ...)                                    \
+  _hpx_run(entry, out, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
 /// Start an HPX main process.
 ///
@@ -83,20 +84,23 @@ int _hpx_run(hpx_action_t *entry, int nargs, ...)
 ///   zero for success and non-zero for failure.
 ///
 /// @param        entry An action to execute.
+/// @param[out]     out A user buffer for output (may be NULL).
 /// @param        nargs The number of arguments to pass to @p entry.
 /// @param          ... Pointers to the arguments for @p entry.
 ///
 /// @returns            Zero for success and non-zero for failure.
-int _hpx_run_spmd(hpx_action_t *entry, int nargs, ...)
+int _hpx_run_spmd(hpx_action_t *entry, void *out, int nargs, ...)
   HPX_PUBLIC;
 
-#define hpx_run_spmd(entry, ...)                                    \
-  _hpx_run_spmd(entry, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
+#define hpx_run_spmd(entry, out, ...)                                   \
+  _hpx_run_spmd(entry, out, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
 /// Exit the HPX runtime.
 ///
 /// This causes the hpx_run() in the main native thread to return the @p
-/// code. It is safe to call hpx_run() again after hpx_exit().
+/// code. If an @p out value is provided it will be broadcast to all
+/// participants in the hpx_run() collective. It is safe to call hpx_run() again
+/// after hpx_exit().
 ///
 /// This call does not imply that the HPX runtime has shut down. In particular,
 /// system threads may continue to run and execute HPX high-speed network
@@ -114,7 +118,9 @@ int _hpx_run_spmd(hpx_action_t *entry, int nargs, ...)
 ///       system threads should be suspended.
 ///
 /// @param         code A status code to be returned by hpx_run().
-void hpx_exit(int code)
+/// @param        bytes The size of the data to be returned (may be 0).
+/// @param          out A (possibly NULL) pointer to the data to be returned.
+void hpx_exit(int code, size_t bytes, const void *out)
   HPX_PUBLIC HPX_NORETURN;
 
 /// Abort the HPX runtime.

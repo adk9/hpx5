@@ -51,7 +51,7 @@ typedef struct {
   do {                                                        \
     if (!p) {                                                 \
       fprintf(stderr, err);                                   \
-      hpx_exit(1);                                        \
+      hpx_exit(1, 0, NULL);                                   \
     }                                                         \
   } while (0)
 
@@ -109,11 +109,11 @@ int main(int argc, char *argv[]) {
          args.id, _text, _verbose);
 
   hpx_time_t start = hpx_time_now();
-  e = hpx_run(&_ping, &args, sizeof(args));
+  e = hpx_run(&_ping, NULL, &args, sizeof(args));
   double elapsed = (double)hpx_time_elapsed_ms(start);
   double latency = elapsed / (args.id * 2);
   printf("average oneway latency:   %f ms\n", latency);
-  hpx_finalize(); 
+  hpx_finalize();
   return e;
 }
 
@@ -132,7 +132,7 @@ static int _ping_handler(args_t *args, size_t n) {
   // If we completed the number of ping-pong operations that we set out to do,
   // then output the latency and terminate execution.
   if (args->id < 0)
-    hpx_exit(HPX_SUCCESS);
+    hpx_exit(HPX_SUCCESS, 0, NULL);
 
   // Generate a ping targeting pong.
   hpx_addr_t to = _partner();

@@ -41,10 +41,9 @@ static int _set_value_handler(int args) {
   return HPX_SUCCESS;
 }
 
-static int action_allreduce(void *unused, size_t size) {
+static int action_allreduce(void) {
   int num_ranks = HPX_LOCALITIES;
-  int my_rank = HPX_LOCALITY_ID;
-  assert(my_rank == 0);
+  assert(HPX_LOCALITY_ID == 0);
 
   int         values[num_ranks];
   void        *addrs[num_ranks];
@@ -74,8 +73,7 @@ static int action_allreduce(void *unused, size_t size) {
     hpx_lco_delete(futures[i], HPX_NULL);
   }
 
-  hpx_exit(HPX_SUCCESS);
-  (void)my_rank;
+  hpx_exit(HPX_SUCCESS, 1, NULL);
 }
 
 static void _init_int_handler(int *input, const size_t size) {
@@ -125,18 +123,16 @@ static int proc_allreduce_handler(int value) {
 
   hpx_lco_delete_sync(barrier);
   hpx_process_collective_allreduce_delete(lco);
-  hpx_exit(HPX_SUCCESS);
+  hpx_exit(HPX_SUCCESS, 0, NULL);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, proc_allreduce, proc_allreduce_handler,
                   HPX_INT);
 
 int main(int argc, char** argv) {
   // register actions
-  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _set_value,
-                      _set_value_handler, HPX_INT);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _set_value, _set_value_handler, HPX_INT);
   HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _get_value, _get_value_handler);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, allreduce,
-                      action_allreduce, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, allreduce, action_allreduce);
 
   int e = hpx_init(&argc, &argv);
   if (e != 0) {
@@ -147,13 +143,13 @@ int main(int argc, char** argv) {
   // Initialize the values that we want to reduce
   value = HPX_LOCALITY_ID;
 
-  e = hpx_run(&allreduce, NULL, 0);
+  e = hpx_run(&allreduce, NULL);
   if (e != HPX_SUCCESS) {
-    printf("Error %d in hpx_run(allreduce)!\n", e);
+    printf("Error %d in hpx_run(allreduce)!\n", e, NULL);
     exit(EXIT_FAILURE);
   }
 
-  e = hpx_run(&proc_allreduce, &value);
+  e = hpx_run(&proc_allreduce, NULL, &value);
   hpx_finalize();
   return e;
 }

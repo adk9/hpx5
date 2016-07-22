@@ -97,7 +97,7 @@ inline int run(Act &action, Args &&... args) {
 ///
 /// @param code a status code to be returned by run()
 inline void HPX_NORETURN exit(int code) {
-  hpx_exit(code);
+  hpx_exit(code, 0, NULL);
 }
 
 /// Abort the HPX runtime.

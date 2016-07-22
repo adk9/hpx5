@@ -43,7 +43,7 @@ static int _inner(int iteration) {
 
 static int _diffusion_handler(int iteration) {
   int status = _inner(iteration);
-  hpx_exit(status);
+  hpx_exit(status, 0, NULL);
 }
 HPX_ACTION(HPX_DEFAULT, 0, _diffusion, _diffusion_handler, HPX_INT);
 
@@ -60,12 +60,12 @@ int main(int argc, char *argv[argc]) {
   }
 
   for (int i = 0; i < RUNS; ++i) {
-    int success = hpx_run(&_diffusion, &i);
+    int success = hpx_run(&_diffusion, NULL, &i);
     printf("%i hpx_run returned %d.\n", i+1, success);
   }
 
   for (int i = 0; i < RUNS; ++i) {
-    int success = hpx_run_spmd(&_spmd, &i);
+    int success = hpx_run_spmd(&_spmd, NULL, &i);
     printf("%i hpx_run_spmd returned %d.\n", i+1, success);
   }
 

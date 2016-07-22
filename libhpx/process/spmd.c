@@ -79,7 +79,7 @@ _spmd_epoch_terminate_handler(uint64_t code)
   log_net("received shutdown spmd (code %" PRIu32 ")\n", int_code);
 
   if (_spmd_terminate(&int_code)) {
-    hpx_exit(int_code);
+    hpx_exit(int_code, 0, NULL);
   }
 
   return HPX_SUCCESS;

@@ -48,7 +48,7 @@ static int num_readers[]  ={
  192
 };
 
-static int action_get_value(void *args, size_t size) {
+static int action_get_value(void) {
   return HPX_THREAD_CONTINUE(value);
 }
 
@@ -57,7 +57,7 @@ static int action_set_value(void *args, size_t size) {
   return HPX_SUCCESS;
 }
 
-static int _main_action(int *args, size_t size) {
+static int _main_action(void) {
   hpx_time_t t;
   int count;
 
@@ -116,14 +116,14 @@ static int _main_action(int *args, size_t size) {
       hpx_lco_delete(futures[j], HPX_NULL);
     fprintf(stdout, "%*g\n", FIELD_WIDTH, hpx_time_elapsed_ms(t));
   }
-  hpx_exit(HPX_SUCCESS);
+  hpx_exit(HPX_SUCCESS, 0, NULL);
 }
 
 int main(int argc, char *argv[]) {
   // register the actions
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _main, _main_action);
   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _set_value, action_set_value, HPX_POINTER, HPX_SIZE_T);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _get_value, action_get_value, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _get_value, action_get_value);
 
   if (hpx_init(&argc, &argv)) {
     fprintf(stderr, "HPX: failed to initialize.\n");
@@ -144,7 +144,7 @@ int main(int argc, char *argv[]) {
   }
 
   // run the main action
-  int e = hpx_run(&_main, NULL, 0);
+  int e = hpx_run(&_main, NULL);
   hpx_finalize();
   return e;
 }

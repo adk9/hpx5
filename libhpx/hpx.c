@@ -246,7 +246,7 @@ _run(int spmd, hpx_parcel_t *p)
 
 /// Called to run HPX.
 int
-_hpx_run(hpx_action_t *act, int n, ...)
+_hpx_run(hpx_action_t *act, void *out, int n, ...)
 {
   va_list args;
   va_start(args, n);
@@ -256,7 +256,7 @@ _hpx_run(hpx_action_t *act, int n, ...)
 }
 
 int
-_hpx_run_spmd(hpx_action_t *act, int n, ...)
+_hpx_run_spmd(hpx_action_t *act, void *out, int n, ...)
 {
   va_list args;
   va_start(args, n);
@@ -284,7 +284,7 @@ int hpx_is_active(void) {
 }
 
 /// Called by the application to terminate the scheduler and network.
-void hpx_exit(int code) {
+void hpx_exit(int code, size_t bytes, const void *out) {
   dbg_assert_str(here->ranks,
                  "hpx_exit can only be called when the system is running.\n");
 

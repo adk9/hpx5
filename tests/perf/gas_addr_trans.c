@@ -42,7 +42,7 @@ static int num[] = {
   50000
 };
 
-static int _address_translation_action(void* args, size_t size) {
+static int _address_translation_action(void) {
   hpx_addr_t local = hpx_thread_current_target();
 
   // The pinned local address
@@ -59,7 +59,7 @@ static int _address_translation_action(void* args, size_t size) {
   return hpx_thread_continue(NULL, 0);
 }
 
-static int _main_action(void *args, size_t n) {
+static int _main_action(void) {
   hpx_time_t now;
   double elapsed;
   int size = HPX_LOCALITIES;
@@ -111,14 +111,14 @@ static int _main_action(void *args, size_t n) {
 
     fprintf(stdout, "\n");
   }
-  hpx_exit(HPX_SUCCESS);
+  hpx_exit(HPX_SUCCESS, 0, NULL);
 }
 
 int
 main(int argc, char *argv[]) {
   // register the actions
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _address_translation, _address_translation_action, HPX_POINTER, HPX_SIZE_T);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _address_translation, _address_translation_action);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _main, _main_action);
 
   if (hpx_init(&argc, &argv)) {
     fprintf(stderr, "HPX: failed to initialize.\n");
@@ -139,7 +139,7 @@ main(int argc, char *argv[]) {
   }
 
   // run the main action
-  int e = hpx_run(&_main, NULL, 0);
+  int e = hpx_run(&_main, NULL);
   hpx_finalize();
   return e;
 }

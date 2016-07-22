@@ -141,7 +141,7 @@ static int _main_action(int iters, size_t size) {
   _BENCHMARK(_allreduce_join, iters, size);
   _BENCHMARK(_allreduce_join_sync, iters, size);
 
-  hpx_exit(HPX_SUCCESS);
+  hpx_exit(HPX_SUCCESS, 0, NULL);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _main, _main_action, HPX_INT, HPX_SIZE_T);
 
@@ -183,7 +183,7 @@ int main(int argc, char *argv[]) {
   argc -= optind;
   argv += optind;
 
-  e = hpx_run(&_main, &iters, &size);
+  e = hpx_run(&_main, NULL, &iters, &size);
   assert(e == HPX_SUCCESS);
   hpx_finalize();
 }
