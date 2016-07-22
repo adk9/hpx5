@@ -32,7 +32,7 @@
 # define ACTIVE_RANGE_CHECK(irecvs, i, R)               \
   do {                                                  \
     irecv_buffer_t *_irecvs = (irecvs);                 \
-    int _i = (i);                                       \
+    uint32_t _i = (i);                                       \
     dbg_assert_str(0 <= _i && _i < _irecvs->n,          \
                    "index %i out of range [0, %u)\n",   \
                    _i, _irecvs->n);                     \

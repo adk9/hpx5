@@ -24,7 +24,7 @@
 #include <libhpx/locality.h>
 #include <libhpx/parcel.h>
 #include <hpx/builtins.h>
-#include <inttypes.h>
+#include <cinttypes>
 #include <stdlib.h>
 #include <string.h>
 
