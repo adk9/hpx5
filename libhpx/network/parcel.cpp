@@ -39,7 +39,7 @@
 #include <hpx/hpx.h>
 #include <ffi.h>
 #include <cassert>
-#include <inttypes.h>
+#include <cinttypes>
 #include <cstdlib>
 #include <cstring>
 
