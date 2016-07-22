@@ -15,7 +15,7 @@ if HAVE_TBBMALLOC
 noinst_LTLIBRARIES         += libtbbmalloc.la
 libtbbmalloc_la_CPPFLAGS    = -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
 libtbbmalloc_la_CXXFLAGS    = $(LIBHPX_CXXFLAGS)
-libtbbmalloc_la_SOURCES     = tbbmalloc_cyclic.cc tbbmalloc_global.cc
+libtbbmalloc_la_SOURCES     = tbbmalloc_cyclic.cpp tbbmalloc_global.cpp
 libagas_la_LIBADD           = libtbbmalloc.la
 endif
 

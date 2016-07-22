@@ -57,7 +57,7 @@ _registered_chunk_free(intptr_t pool_id, void* raw_ptr, size_t raw_bytes)
 }
 
 void
-libhpx::network:pwc::registered_allocator_init(pwc_xport_t *xport)
+libhpx::network::pwc::registered_allocator_init(pwc_xport_t *xport)
 {
   _xport = xport;
 
