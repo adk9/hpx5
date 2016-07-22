@@ -47,6 +47,22 @@ static int _diffusion_handler(int iteration) {
 }
 HPX_ACTION(HPX_DEFAULT, 0, _diffusion, _diffusion_handler, HPX_INT);
 
+static int _diffusion_return_handler(int *out, size_t bytes) {
+  for (int i = 0, e = bytes / sizeof(out[0]); i < e; ++i) {
+    out[i] += 3;
+  }
+  hpx_exit(HPX_SUCCESS, bytes, out);
+}
+HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _diffusion_return,
+           _diffusion_return_handler, HPX_POINTER, HPX_SIZE_T);
+
+static int _spmd_return_handler(int out) {
+  int status = HPX_SUCCESS;
+  out += HPX_LOCALITY_ID;
+  return hpx_thread_continue(&status, sizeof(out), &out);
+}
+HPX_ACTION(HPX_DEFAULT, 0, _spmd_return, _spmd_return_handler, HPX_INT);
+
 static int _spmd_handler(int iteration) {
   int status = _inner(iteration);
   return hpx_thread_continue(&status);
@@ -67,6 +83,26 @@ int main(int argc, char *argv[argc]) {
   for (int i = 0; i < RUNS; ++i) {
     int success = hpx_run_spmd(&_spmd, NULL, &i);
     printf("%i hpx_run_spmd returned %d.\n", i+1, success);
+  }
+
+  {
+    int input[] = { 0, 1, 2, 3 };
+    int success = hpx_run(&_diffusion_return, input, input, sizeof(input));
+    printf("hpx_run returned %d.\n", success);
+    for (int i = 0, e = 4; i < e; ++i) {
+      if (input[i] != i + 3) {
+        abort();
+      }
+    }
+  }
+
+  {
+    int rank = HPX_LOCALITY_ID;
+    int success = hpx_run_spmd(&_spmd_return, &rank, &rank);
+    printf("hpx_run returned %d.\n", success);
+    if (rank != 2 * HPX_LOCALITY_ID) {
+      abort();
+    }
   }
 
   hpx_finalize();
