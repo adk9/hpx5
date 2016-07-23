@@ -240,6 +240,7 @@ hpx_addr_t hpx_lco_and_new(int64_t limit) {
   if (config_dbg_waitat_isset(here->config, 0)) {
     symbol_table_add(gva, "_and_t");
   }
+
   return gva;
 }
 
@@ -272,6 +273,15 @@ hpx_addr_t hpx_lco_and_local_array_new(int n, int arg) {
   hpx_addr_t base = lco_alloc_local(n, lco_bytes, 0);
   int e = hpx_call_sync(base, _block_init, NULL, 0, &n, &arg);
   dbg_check(e, "call of _block_init_action failed\n");
+  
+  // For a debugging instance update the symbol table
+  // @TO_DO replace below check with simple check for debug instance
+  if (config_dbg_waitat_isset(here->config, 0)) {
+    for (int i = 0; i < n; i++){
+      symbol_table_add(base+(i*lco_bytes), "_and_t");
+    } 
+  }
+
   return base;
 }
 
