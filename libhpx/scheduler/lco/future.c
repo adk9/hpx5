@@ -306,6 +306,15 @@ hpx_addr_t hpx_lco_future_array_new(int n, int size, int futures_per_block) {
   hpx_lco_wait(and);
   hpx_lco_delete(and, HPX_NULL);
 
+  // For a debugging instance update the symbol table
+  // @TO_DO replace below check with simple check for debug instance
+  if (config_dbg_waitat_isset(here->config, 0)) {
+    for (int i = 0; i < n; i++){
+      symbol_table_add(hpx_addr_add(base, i * future_bytes, block_bytes),
+          "_future_t");
+    } 
+  }
+
   // return the base address of the allocation
   return base;
 }
