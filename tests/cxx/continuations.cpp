@@ -38,7 +38,7 @@ int main_act(int arg) {
   
   cont1_obj.call_with_continuation(HPX_HERE, HPX_HERE, cont2_obj, arg);
   
-  hpx::exit(hpx::SUCCESS);
+  hpx::exit();
 }
 auto main_act_obj = hpx::make_action(main_act);
 

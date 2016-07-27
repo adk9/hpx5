@@ -63,7 +63,7 @@ static int _main_handler(void) {
   hpx_call_with_continuation(HPX_HERE, _cont_fut, HPX_HERE, _typed_cont, &done);
   hpx_lco_wait(done);
   hpx_lco_delete(done, HPX_NULL);
-  hpx_exit(HPX_SUCCESS, 0, NULL);
+  hpx_exit(0, NULL);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _main, _main_handler);
 

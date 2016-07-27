@@ -372,7 +372,7 @@ static int _main_action(void)
   hpx_gas_free(new_grid, HPX_NULL);
   hpx_gas_free(domain, HPX_NULL);
 
-  hpx_exit(HPX_SUCCESS, 0, NULL);
+  hpx_exit(0, NULL);
 }
 
 /**

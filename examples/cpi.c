@@ -118,7 +118,7 @@ static int _main_action(int *args, size_t size) {
                    fabs(reduce_result - realpi));
   }
 
-  hpx_exit(HPX_SUCCESS, 0, NULL);
+  hpx_exit(0, NULL);
 }
 
 int main(int argc, char *argv[]) {

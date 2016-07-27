@@ -21,12 +21,10 @@
 /// This file implements the "glue" between the HPX public interface, and
 /// libhpx.
 
-#include <assert.h>
-#include <inttypes.h>
-#include <stdlib.h>
-#include <string.h>
-#include <pthread.h>
-#include <hpx/hpx.h>
+#ifdef HAVE_APEX
+# include "apex.h"
+#endif
+
 #include <libhpx/action.h>
 #include <libhpx/boot.h>
 #include <libhpx/config.h>
@@ -43,10 +41,12 @@
 #include <libhpx/system.h>
 #include <libhpx/time.h>
 #include <libhpx/topology.h>
-
-#ifdef HAVE_APEX
-# include "apex.h"
-#endif
+#include <hpx/hpx.h>
+#include <assert.h>
+#include <inttypes.h>
+#include <stdlib.h>
+#include <string.h>
+#include <pthread.h>
 
 /// Cleanup utility function.
 ///
@@ -95,8 +95,6 @@ static void _cleanup(locality_t *l) {
     l->topology = NULL;
   }
 
-  spmd_fini();
-
   action_table_finalize();
 
   if (l->config) {
@@ -120,7 +118,6 @@ int hpx_init(int *argc, char ***argv) {
 
   here->rank = -1;
   here->ranks = 0;
-  here->epoch = 0;
 
   sigset_t set;
   sigemptyset(&set);
@@ -171,9 +168,6 @@ int hpx_init(int *argc, char ***argv) {
       config_print(here->config, stdout);
     }
   }
-
-  // initialize the spmd process functionality
-  spmd_init();
 
   // topology discovery and initialization
   here->topology = topology_new(here->config);
@@ -233,24 +227,29 @@ int hpx_init(int *argc, char ***argv) {
   return status;
 }
 
+/// Common collective handler to start HPX processing.
+///
+/// @param         spmd True for spmd startup.
+/// @param          act The action to run.
+/// @param[out]     out An output buffer, if required.
+/// @param            n The number of arguments for @p act.
+/// @param         args The arguments for the @p act.
+///
+/// @returns The exit code for this epoch.
 static int
-_run(int spmd, hpx_parcel_t *p)
+_run(int spmd, hpx_action_t act, void *out, int n, va_list *args)
 {
-  log_dflt("hpx started running %"PRIu64"\n", here->epoch);
-  int status = scheduler_start(here->sched, p, spmd);
-  log_dflt("hpx stopped running %"PRIu64"\n", here->epoch);
-  here->epoch++;
+  int status = scheduler_start(here->sched, spmd, act, out, n, args);
   boot_barrier(here->boot);
   return status;
 }
 
-/// Called to run HPX.
 int
 _hpx_run(hpx_action_t *act, void *out, int n, ...)
 {
   va_list args;
   va_start(args, n);
-  int status = _run(0, action_new_parcel_va(*act, HPX_HERE, 0, 0, n, &args));
+  int status = _run(0, *act, out, n, &args);
   va_end(args);
   return status;
 }
@@ -260,9 +259,7 @@ _hpx_run_spmd(hpx_action_t *act, void *out, int n, ...)
 {
   va_list args;
   va_start(args, n);
-  hpx_parcel_t *p = action_new_parcel_va(*act, HPX_HERE, HPX_THERE(0),
-                                         spmd_epoch_terminate, n, &args);
-  int status = _run(1, p);
+  int status = _run(1, *act, out, n, &args);
   va_end(args);
   return status;
 }
@@ -284,48 +281,18 @@ int hpx_is_active(void) {
 }
 
 /// Called by the application to terminate the scheduler and network.
-void hpx_exit(int code, size_t bytes, const void *out) {
-  dbg_assert_str(here->ranks,
-                 "hpx_exit can only be called when the system is running.\n");
-
-  uint64_t c = (uint32_t)code;
-
-  // Loop through, sending the shutdown event to every locality. We use the
-  // network_send operation manually here because it allows us to wait for the
-  // `ssync` event (this event means that we're guaranteed that we don't need to
-  // keep progressing locally for the send to be seen remotely).
-  //
-  // Don't perform the local shutdown until we're sure all the remote shutdowns
-  // have gotten out, otherwise we might not progress the network enough.
-  hpx_addr_t sync = hpx_lco_and_new(here->ranks - 1);
-  for (int i = 0, e = here->ranks; i < e; ++i) {
-    if (i != here->rank) {
-      hpx_parcel_t *p = action_new_parcel(locality_stop, // action
-                                          HPX_THERE(i),  // target
-                                          0,             // continuation target
-                                          0,             // continuation action
-                                          1,             // number of args
-                                          &c);           // the exit code
-      hpx_parcel_t *q = action_new_parcel(hpx_lco_set_action, // action
-                                          sync,          // target
-                                          0,             // continuation target
-                                          0,             // continuation action                                          0,
-                                          0);            // number of args
-      dbg_check( network_send(here->net, p, q) );
-    }
-  }
-  dbg_check( hpx_lco_wait(sync) );
-  hpx_lco_delete_sync(sync);
-
-  // Call our own shutdown through cc, which orders it locally after the effects
-  // from the loop above.
-  int e = hpx_call_cc(HPX_HERE, locality_stop, &c);
-  hpx_thread_exit(e);
+void
+hpx_exit(size_t size, const void *out)
+{
+  assert(here && self);
+  scheduler_exit(here->sched, size, out);
 }
 
 /// Called by the application to shutdown the scheduler and network. May be
 /// called from any lightweight HPX thread, or the network thread.
-void hpx_abort(void) {
+void
+hpx_abort(void)
+{
   if (here && here->config && here->config->dbg_waitonabort) {
     dbg_wait();
   }

@@ -46,7 +46,7 @@ static int gas_move_handler(void) {
 
   if (other_rank == HPX_LOCALITY_ID) {
     printf("AGAS test: failed.\n");
-    hpx_exit(EXIT_FAILURE, 0, NULL);
+    hpx_abort();
   }
 
   hpx_addr_t done = hpx_lco_future_new(0);
@@ -55,7 +55,7 @@ static int gas_move_handler(void) {
   hpx_gas_move(other, HPX_HERE, done);
   if (hpx_lco_wait(done) != HPX_SUCCESS) {
     printf("error in hpx_move().\n");
-    hpx_exit(EXIT_FAILURE, 0, NULL);
+    hpx_abort();
   }
 
   hpx_lco_delete(done, HPX_NULL);
@@ -69,7 +69,7 @@ static int gas_move_handler(void) {
     printf("AGAS test: passed.\n");
   } else {
     printf("AGAS test: failed.\n");
-    hpx_exit(EXIT_FAILURE, 0, NULL);
+    hpx_abort();
   }
   return HPX_SUCCESS;
 }

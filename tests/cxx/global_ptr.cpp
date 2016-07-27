@@ -33,7 +33,7 @@ int test_addr_arith_handler() {
   // this should fail?
   auto ptr4 = ptr1[4];
 
-  hpx::exit(HPX_SUCCESS);
+  hpx::exit();
 }
 auto test_addr_arith = hpx::make_action(test_addr_arith_handler);
 
@@ -46,7 +46,7 @@ int test_pin_unpin_handler() {
   for (int i = 0; i != n1; i++) {
     p[i] = i;
   }
-  hpx::exit(HPX_SUCCESS);
+  hpx::exit();
 }
 auto test_pin_unpin = hpx::make_action(test_pin_unpin_handler);
 
@@ -60,7 +60,7 @@ int test_subscript_handler() {
   uint64_t *p = guard.get();
   p[0] = 1; // suppress warnings
   
-  hpx::exit(HPX_SUCCESS);
+  hpx::exit();
 }
 auto test_subscript = hpx::make_action(test_subscript_handler);
 }

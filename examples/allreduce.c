@@ -73,7 +73,7 @@ static int action_allreduce(void) {
     hpx_lco_delete(futures[i], HPX_NULL);
   }
 
-  hpx_exit(HPX_SUCCESS, 1, NULL);
+  hpx_exit(0, NULL);
 }
 
 static void _init_int_handler(int *input, const size_t size) {
@@ -123,7 +123,7 @@ static int proc_allreduce_handler(int value) {
 
   hpx_lco_delete_sync(barrier);
   hpx_process_collective_allreduce_delete(lco);
-  hpx_exit(HPX_SUCCESS, 0, NULL);
+  hpx_exit(0, NULL);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, proc_allreduce, proc_allreduce_handler,
                   HPX_INT);

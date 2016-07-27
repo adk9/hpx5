@@ -82,7 +82,7 @@ static int test_datatype_handler(void) {
   struct point point = p;
   hpx_call_sync(HPX_HERE, _test_point, NULL, 0, &point);
   
-  hpx_exit(HPX_SUCCESS, 0, NULL);
+  hpx_exit(0, NULL);
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, 0, test_datatype, test_datatype_handler);

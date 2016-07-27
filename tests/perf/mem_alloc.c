@@ -72,7 +72,7 @@ static int _main_action(void) {
     fprintf(stdout, "%*g", FIELD_WIDTH, hpx_time_elapsed_ms(t));
     fprintf(stdout, "\n");
   }
-  hpx_exit(HPX_SUCCESS, 0, NULL);
+  hpx_exit(0, NULL);
 }
 
 int main(int argc, char *argv[]) {

@@ -21,8 +21,10 @@
 #include <libhpx/locality.h>
 
 /// The core broadcast handler.
-static int _vabcast(hpx_action_t act, hpx_addr_t lsync, hpx_addr_t rsync,
-                    int n, va_list *vargs) {
+static int
+_vabcast(hpx_action_t act, hpx_addr_t lsync, hpx_addr_t rsync, int n,
+         va_list *vargs)
+{
   int e = HPX_SUCCESS;
   hpx_addr_t remote = HPX_NULL;
   hpx_addr_t local = HPX_NULL;
@@ -52,8 +54,10 @@ static int _vabcast(hpx_action_t act, hpx_addr_t lsync, hpx_addr_t rsync,
   return HPX_SUCCESS;
 }
 
-int _hpx_process_broadcast(hpx_pid_t pid, hpx_action_t action, hpx_addr_t lsync,
-                           hpx_addr_t rsync, int n, ...) {
+int
+_hpx_process_broadcast(hpx_pid_t pid, hpx_action_t action, hpx_addr_t lsync,
+                       hpx_addr_t rsync, int n, ...)
+{
   va_list vargs;
   va_start(vargs, n);
   int e = _vabcast(action, lsync, rsync, n, &vargs);
@@ -62,8 +66,10 @@ int _hpx_process_broadcast(hpx_pid_t pid, hpx_action_t action, hpx_addr_t lsync,
   return e;
 }
 
-int _hpx_process_broadcast_lsync(hpx_pid_t pid, hpx_action_t action,
-                                 hpx_addr_t rsync, int n, ...) {
+int
+_hpx_process_broadcast_lsync(hpx_pid_t pid, hpx_action_t action,
+                             hpx_addr_t rsync, int n, ...)
+{
   hpx_addr_t lsync = hpx_lco_future_new(0);
   if (lsync == HPX_NULL) {
     log_error("could not allocate an LCO.\n");
@@ -85,8 +91,10 @@ int _hpx_process_broadcast_lsync(hpx_pid_t pid, hpx_action_t action,
   return HPX_SUCCESS;
 }
 
-int _hpx_process_broadcast_rsync(hpx_pid_t pid, hpx_action_t action, int n,
-                                 ...) {
+int
+_hpx_process_broadcast_rsync(hpx_pid_t pid, hpx_action_t action, int n,
+                             ...)
+{
   hpx_addr_t rsync = hpx_lco_future_new(0);
   if (rsync == HPX_NULL) {
     log_error("could not allocate an LCO.\n");

@@ -95,12 +95,20 @@ int _hpx_run_spmd(hpx_action_t *entry, void *out, int nargs, ...)
 #define hpx_run_spmd(entry, out, ...)                                   \
   _hpx_run_spmd(entry, out, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
-/// Exit the HPX runtime.
+/// Exit the HPX runtime from an epoch.
 ///
-/// This causes the hpx_run() in the main native thread to return the @p
-/// code. If an @p out value is provided it will be broadcast to all
-/// participants in the hpx_run() collective. It is safe to call hpx_run() again
-/// after hpx_exit().
+/// * Diffuse Epochs (hpx_run())
+///
+///   This causes the hpx_run() in the main native thread to return the @p
+///   code. If an @p out value is provided it will be broadcast to all
+///   participants in the hpx_run() collective. It is safe to call hpx_run()
+///   again after hpx_exit().
+///
+/// * SPMD Epochs (hpx_run_spmd())
+///
+///   This causes the hpx_run_spmd() calls in the main native threads to return
+///   the @p code produced locally. If an @p out value is provided it will be
+///   returned locally. It is safe to call hpx_run() again after hpx_exit().
 ///
 /// This call does not imply that the HPX runtime has shut down. In particular,
 /// system threads may continue to run and execute HPX high-speed network
@@ -117,10 +125,9 @@ int _hpx_run_spmd(hpx_action_t *entry, void *out, int nargs, ...)
 ///       consumption as a result of this call. In particular, runtime-spawned
 ///       system threads should be suspended.
 ///
-/// @param         code A status code to be returned by hpx_run().
 /// @param        bytes The size of the data to be returned (may be 0).
 /// @param          out A (possibly NULL) pointer to the data to be returned.
-void hpx_exit(int code, size_t bytes, const void *out)
+void hpx_exit(size_t bytes, const void *out)
   HPX_PUBLIC HPX_NORETURN;
 
 /// Abort the HPX runtime.

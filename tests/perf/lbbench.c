@@ -125,7 +125,7 @@ static int _main_action(int iters, int work, int nelem) {
   hpx_gas_free(cyclic, HPX_NULL);
   hpx_gas_free(random, HPX_NULL);
 
-  hpx_exit(HPX_SUCCESS, 0, NULL);
+  hpx_exit(0, NULL);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _main, _main_action,
                   HPX_INT, HPX_INT, HPX_INT);

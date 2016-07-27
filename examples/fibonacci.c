@@ -97,7 +97,7 @@ static int _fib_main_action(int *args, size_t size) {
   printf("seconds: %.7f\n", elapsed);
   printf("localities: %d\n", HPX_LOCALITIES);
   printf("threads/locality: %d\n", HPX_THREADS);
-  hpx_exit(HPX_SUCCESS, 0, NULL);
+  hpx_exit(0, NULL);
 }
 
 int main(int argc, char *argv[]) {

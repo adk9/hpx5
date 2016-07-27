@@ -89,7 +89,7 @@ static int _main_handler(void) {
   printf("seconds: %.7f\n", elapsed);
   printf("localities: %d\n", HPX_LOCALITIES);
   printf("threads/locality: %d\n", HPX_THREADS);
-  hpx_exit(HPX_SUCCESS, 0, NULL);
+  hpx_exit(0, NULL);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _main, _main_handler);
 

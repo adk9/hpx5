@@ -71,15 +71,20 @@ struct scheduler {
   pthread_cond_t   stopped;                  //!< the running condition
   volatile int       state;                  //!< the run state
   volatile int next_tls_id;                  //!< lightweight thread ids
-  long             ns_wait;                  //!< nanoseconds to wait in start()
+  volatile int        code;                  //!< the exit code
+  volatile int    n_active;                  //!< active number of workers
   int            n_workers;                  //!< total number of workers
   int             n_target;                  //!< target number of workers
-  volatile int    n_active;                  //!< active number of workers
-  volatile int        code;                  //!< the exit code
+  int                epoch;                  //!< current scheduler epoch
+  int                 spmd;                  //!< 1 if the current epoch is spmd
+  long             ns_wait;                  //!< nanoseconds to wait in start()
+  void             *output;                  //!< the output slot
   PAD_TO_CACHELINE(sizeof(pthread_mutex_t) +
                    sizeof(pthread_cond_t) +
-                   sizeof(int) * 6);            //!< padding to align workers
-  worker_t         workers[];                   //!< array of worker data
+                   sizeof(int) * 10 +
+                   sizeof(long) +
+                   sizeof(void*));            //!< padding to align workers
+  worker_t         workers[];                 //!< array of worker data
 };
 typedef struct scheduler scheduler_t;
 
@@ -108,18 +113,50 @@ void scheduler_delete(scheduler_t *scheduler);
 /// status.
 ///
 /// @param        sched The scheduler to restart.
-/// @param      startup The initial lightweight thread.
 /// @param         spmd True if every locality should run the startup action.
-int scheduler_start(scheduler_t *sched, hpx_parcel_t *startup, int spmd)
-  HPX_NON_NULL(1, 2);
+/// @param          act The startup action id.
+/// @param[out]     out Local output slot, if any.
+/// @param            n The number of arguments
+/// @param         args The arguments to the action.
+int scheduler_start(scheduler_t *sched, int spmd, hpx_action_t act, void *out,
+                    int n, va_list *args)
+  HPX_NON_NULL(1);
 
 /// Suspend the scheduler cooperatively.
 ///
-/// This asks all of the threads to stop running.
+/// External interface to support hpx_exit().
 ///
 /// @param    scheduler The scheduler to stop.
-/// @param         code The code to return .
-void scheduler_stop(scheduler_t *scheduler, int code)
+/// @param        bytes The number of bytes of output data.
+/// @param          out The output data.
+void scheduler_exit(scheduler_t *scheduler, size_t bytes, const void *out)
+  HPX_NON_NULL(1) HPX_NORETURN;
+
+/// Set the output for the top level process.
+///
+/// This external interface supports the locality_set_output handler.
+///
+/// @todo: If the scheduler exposed the top-level process we would use process
+///        infrastructure for this operation.
+///
+/// @param    scheduler The scheduler to stop.
+/// @param        bytes The number of bytes of output data.
+/// @param          out The output data.
+void scheduler_set_output(scheduler_t *scheduler, size_t bytes, const void *out)
+  HPX_NON_NULL(1);
+
+/// Stop scheduling lightweight threads, and return @p code from the
+/// scheduler_stop operation.
+///
+/// This is exposed in the public scheduler interface because it is used from
+/// the locality_stop handler.
+///
+/// @todo: If the scheduler was in the global address space then we could skip
+///        the indirection through the locality, but we don't do that now.
+///
+/// @param    scheduler The scheduler to stop.
+/// @param         code The code to return.
+void scheduler_stop(scheduler_t *scheduler, uint64_t code)
   HPX_NON_NULL(1);
 
 /// Check to see if the scheduler is running.

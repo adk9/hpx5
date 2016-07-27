@@ -49,7 +49,6 @@ typedef struct locality {
   uint32_t               rank; //!< The dense, 0-based rank of this locality.
   uint32_t              ranks; //!< The total number of ranks running the
                                //!< current job.
-  uint64_t              epoch; //!< Keep track of the current hpx_run() epoch.
   struct boot           *boot; //!< The bootstrap object. This provides rank
                                //!< and ranks, as well as some basic, IP-based
                                //!< networking functionality.
@@ -75,14 +74,10 @@ typedef struct locality {
   sigset_t               mask; //!< The default signal mask.
 } locality_t;
 
-/// Inter-locality action interface.
-/// @{
-
-/// Used to cause a locality to stop.
-extern HPX_ACTION_DECL(locality_stop);
-/// @}
-
 /// The global locality is exposed through this "here" pointer.
+///
+/// @todo: Why is this symbol exposed as public? It's not exposed in libhpx.h,
+///        which is the only libhpx installed header...
 extern locality_t *here HPX_PUBLIC;
 
 #ifdef __cplusplus

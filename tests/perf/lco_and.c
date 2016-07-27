@@ -92,7 +92,7 @@ static int _main_action(void) {
     hpx_lco_delete(done, HPX_NULL);
   }
 
-  hpx_exit(HPX_SUCCESS, 0, NULL);
+  hpx_exit(0, NULL);
 }
 
 int main(int argc, char *argv[]) {

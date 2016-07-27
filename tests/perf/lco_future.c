@@ -116,7 +116,7 @@ static int _main_action(void) {
       hpx_lco_delete(futures[j], HPX_NULL);
     fprintf(stdout, "%*g\n", FIELD_WIDTH, hpx_time_elapsed_ms(t));
   }
-  hpx_exit(HPX_SUCCESS, 0, NULL);
+  hpx_exit(0, NULL);
 }
 
 int main(int argc, char *argv[]) {

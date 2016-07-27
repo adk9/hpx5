@@ -141,7 +141,7 @@ static int _main_action(int iters, size_t size) {
   _BENCHMARK(_allreduce_join, iters, size);
   _BENCHMARK(_allreduce_join_sync, iters, size);
 
-  hpx_exit(HPX_SUCCESS, 0, NULL);
+  hpx_exit(0, NULL);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _main, _main_action, HPX_INT, HPX_SIZE_T);
 
