@@ -27,7 +27,7 @@ int test_handler(void) {
   hpx::lco::dealloc(f1);
   hpx::lco::dealloc(f2);
 
-  hpx_exit(hpx::SUCCESS);
+  hpx::exit();
 }
 auto test = hpx::make_action(test_handler);
 }

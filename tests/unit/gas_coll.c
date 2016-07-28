@@ -38,7 +38,7 @@ static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _multiply, _multiply_handler,
 static int _verify_handler(float *element, float expected) {
   for (int i = 0; i < elts_per_block; ++i) {
     if (element[i] != expected) {
-      hpx_exit(EXIT_FAILURE);
+      hpx_abort();
     }
   }
   return HPX_SUCCESS;

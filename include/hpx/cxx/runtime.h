@@ -94,11 +94,15 @@ inline int run(Act &action, Args &&... args) {
 /// misbehaving HPX lightweight threads.
 ///
 /// It is safe to call run() again after exit().
-///
-/// @param code a status code to be returned by run()
-inline void HPX_NORETURN exit(int code) {
-  hpx_exit(code);
+template <typename T>
+inline void HPX_NORETURN exit(const T& out) {
+  hpx_exit(sizeof(out), &out);
 }
+
+inline void HPX_NORETURN exit() {
+  hpx_exit(0, NULL);
+}
+
 
 /// Abort the HPX runtime.
 ///

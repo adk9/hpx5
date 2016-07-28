@@ -306,7 +306,7 @@ void _main_action(guppie_config_t *cfg, size_t size)
          ((double)cfg->nupdate / s));
 
   // Verification of results (in serial or "safe" mode; optional)
-  hpx_exit(HPX_SUCCESS);
+  hpx_exit(0, NULL);
   temp = 0x1;
   lco = hpx_lco_and_new(cfg->nupdate);
   for (i=0; i<cfg->nupdate; i++) {
@@ -326,7 +326,7 @@ void _main_action(guppie_config_t *cfg, size_t size)
   printf("Found %lu errors in %lu locations (%s).\n",
          j, cfg->tabsize, (j <= 0.01*cfg->tabsize) ? "passed" : "failed");
 
-  hpx_exit(HPX_SUCCESS);
+  hpx_exit(0, NULL);
 }
 
 static void _usage(FILE *stream) {
@@ -396,7 +396,7 @@ int main(int argc, char *argv[])
   };
 
   // run the update_table action
-  e = hpx_run(&_main, &guppie_cfg, sizeof(guppie_cfg));
+  e = hpx_run(&_main, NULL, &guppie_cfg, sizeof(guppie_cfg));
   hpx_finalize();
   return e;
 }

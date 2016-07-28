@@ -646,7 +646,7 @@ public:
         hpx::detail::Checked_Map_Reduce<std::is_convertible, hpx::detail::And,
                                         std::true_type, L1, L2>::type::value,
         "action and argument types do not match");
-    return _hpx_run(&_id, sizeof...(Args), _convert_arg(args)...);
+    return _hpx_run(&_id, nullptr, sizeof...(Args), _convert_arg(args)...);
   }
 
   template <typename... Args> int run_spmd(Args &&... args) {
@@ -655,11 +655,10 @@ public:
     static_assert(
                   hpx::detail::typecheck_action_args<TYPE, ATTR, L1>::type::value,
                   "argument typecheck failed");
-    static_assert(
-                  hpx::detail::Checked_Map_Reduce<std::is_convertible, hpx::detail::And,
+    static_assert(hpx::detail::Checked_Map_Reduce<std::is_convertible, hpx::detail::And,
                   std::true_type, L1, L2>::type::value,
                   "action and argument types do not match");
-    return _hpx_run_spmd(&_id, sizeof...(Args), _convert_arg(args)...);
+    return _hpx_run_spmd(&_id, nullptr, sizeof...(Args), _convert_arg(args)...);
   }
 
   template <typename R, typename... Args> int _register(R (&f)(Args...)) {

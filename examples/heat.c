@@ -314,7 +314,7 @@ static int _initGrid_action(void *args, size_t size) {
   return HPX_SUCCESS;
 }
 
-static int _main_action(int *input, size_t size)
+static int _main_action(void)
 {
   grid = hpx_gas_calloc_cyclic(HPX_LOCALITIES, (N+2)*(N+2)*sizeof(double), (N+2)*(N+2)*sizeof(double));
   new_grid = hpx_gas_calloc_cyclic(HPX_LOCALITIES, (N+2)*(N+2)*sizeof(double), (N+2)*(N+2)*sizeof(double));
@@ -372,7 +372,7 @@ static int _main_action(int *input, size_t size)
   hpx_gas_free(new_grid, HPX_NULL);
   hpx_gas_free(domain, HPX_NULL);
 
-  hpx_exit(HPX_SUCCESS);
+  hpx_exit(0, NULL);
 }
 
 /**
@@ -380,7 +380,7 @@ static int _main_action(int *input, size_t size)
  */
 void _register_actions(void) {
   /* register action for parcel (must be done by all ranks) */
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _main, _main_action);
   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _initGlobals, _initGlobals_action, HPX_POINTER, HPX_SIZE_T);
   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _initDomain, _initDomain_action, HPX_POINTER, HPX_SIZE_T);
   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _initGrid, _initGrid_action, HPX_POINTER, HPX_SIZE_T);
@@ -414,7 +414,7 @@ int main(int argc, char *argv[])
     }
   }
 
-  e = hpx_run(&_main, NULL, 0);
+  e = hpx_run(&_main, NULL);
   hpx_finalize();
   return e;
 }

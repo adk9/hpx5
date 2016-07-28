@@ -118,7 +118,7 @@ static int _main_action(int *args, size_t size) {
                    fabs(reduce_result - realpi));
   }
 
-  hpx_exit(HPX_SUCCESS);
+  hpx_exit(0, NULL);
 }
 
 int main(int argc, char *argv[]) {
@@ -138,7 +138,7 @@ int main(int argc, char *argv[]) {
     interval = atoi(argv[1]);
   }
 
-  e = hpx_run(&_main, &interval, sizeof(interval));
+  e = hpx_run(&_main, NULL, &interval, sizeof(interval));
   hpx_finalize();
   return e;
 }

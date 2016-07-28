@@ -39,7 +39,7 @@ static void usage(FILE *stream) {
 
 static hpx_action_t _main    = 0;
 
-static int _main_action(void *args, size_t n) {
+static int _main_action(void) {
   void *local;
   hpx_time_t t;
   int size = HPX_LOCALITIES;
@@ -72,12 +72,12 @@ static int _main_action(void *args, size_t n) {
     fprintf(stdout, "%*g", FIELD_WIDTH, hpx_time_elapsed_ms(t));
     fprintf(stdout, "\n");
   }
-  hpx_exit(HPX_SUCCESS);
+  hpx_exit(0, NULL);
 }
 
 int main(int argc, char *argv[]) {
   // Register the main action
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _main, _main_action);
 
   if (hpx_init(&argc, &argv)) {
     fprintf(stderr, "HPX: failed to initialize.\n");
@@ -100,7 +100,7 @@ int main(int argc, char *argv[]) {
   fprintf(stdout, "Starting the cost of Memory Allocation benchmark\n");
 
   // run the main action
-  int e = hpx_run(&_main, NULL, 0);
+  int e = hpx_run(&_main, NULL);
   hpx_finalize();
   return e;
 }
