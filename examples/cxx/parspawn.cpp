@@ -44,7 +44,7 @@ static int _main_action(int n) {
   std::cout << "seconds: " << elapsed << std::endl;
   std::cout << "localities:   " << HPX_LOCALITIES << std::endl;
   std::cout << "threads:      " << HPX_THREADS << std::endl;
-  hpx::exit(hpx::SUCCESS);
+  hpx::exit();
 }
 auto _main = hpx::make_action(_main_action);
 /// The main function parses the command line, sets up the HPX runtime system,
@@ -84,6 +84,6 @@ int main(int argc, char *argv[]) {
   // run the main action
   int e = _main.run(n);
   hpx::finalize();
-  
+
   return e;
 }

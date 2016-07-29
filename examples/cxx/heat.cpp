@@ -355,7 +355,7 @@ static int _main_action(int *input, std::size_t size) {
   hpx_gas_free(new_grid, HPX_NULL);
   hpx_gas_free(domain, HPX_NULL);
 
-  hpx::exit(hpx::SUCCESS);
+  hpx::exit();
 }
 auto _main = hpx::make_action(_main_action);
 /**

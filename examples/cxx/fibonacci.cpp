@@ -84,7 +84,7 @@ static int _fib_main_action(int n) {
   std::cout << "seconds: " << elapsed << std::endl;
   std::cout << "localities: " << HPX_LOCALITIES << std::endl;
   std::cout << "threads/locality: " << HPX_THREADS << std::endl;
-  hpx::exit(hpx::SUCCESS);
+  hpx::exit();
 }
 auto _fib_main = hpx::make_action(_fib_main_action);
 
