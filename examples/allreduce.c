@@ -145,7 +145,7 @@ int main(int argc, char** argv) {
 
   e = hpx_run(&allreduce, NULL);
   if (e != HPX_SUCCESS) {
-    printf("Error %d in hpx_run(allreduce)!\n", e, NULL);
+    printf("Error %d in hpx_run(allreduce)!\n", e);
     exit(EXIT_FAILURE);
   }
 
