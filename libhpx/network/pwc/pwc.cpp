@@ -197,11 +197,12 @@ _pwc_deallocate(void *network)
 static void
 _pwc_register_gas_heap(void *network, boot_t *boot, gas_t *gas)
 {
+  pwc_network_t *pwc = (pwc_network_t *)network;
   if (gas->type == HPX_GAS_AGAS) {
+    pwc->heap_segments = NULL;
     return;
   }
 
-  pwc_network_t *pwc = (pwc_network_t *)network;
   pwc->heap_segments = (heap_segment_t *)calloc(here->ranks, sizeof(heap_segment_t));
 
   heap_segment_t heap = {
