@@ -36,7 +36,9 @@
 /// @param            n The size of the buffer (must be 2^k).
 ///
 /// @returns            The index in the buffer for this abstract index.
-static int _index_of(uint64_t i, uint32_t n) {
+static unsigned
+_index_of(uint64_t i, uint32_t n)
+{
   return (i & (n - 1));
 }
 
@@ -46,7 +48,9 @@ static int _index_of(uint64_t i, uint32_t n) {
 /// @param       payload The payload size.
 ///
 /// @returns             The correct tag.
-static int _payload_size_to_tag(isend_buffer_t *isends, uint32_t payload) {
+static int
+_payload_size_to_tag(isend_buffer_t *isends, uint32_t payload)
+{
   uint32_t parcel_size = payload + sizeof(hpx_parcel_t);
   int tag = ceil_div_32(parcel_size, HPX_CACHELINE_SIZE);
   if (DEBUG) {
@@ -55,15 +59,17 @@ static int _payload_size_to_tag(isend_buffer_t *isends, uint32_t payload) {
   return tag;
 }
 
-static void *_request_at(isend_buffer_t *buffer, int i) {
-  dbg_assert(i >= 0);
+static void *
+_request_at(isend_buffer_t *buffer, unsigned i)
+{
   char *base = static_cast<char*>(buffer->requests);
   int bytes = i * buffer->xport->sizeof_request();
   return base + bytes;
 }
 
-static void *_record_at(isend_buffer_t *buffer, int i) {
-  dbg_assert(i >= 0);
+static void *
+_record_at(isend_buffer_t *buffer, unsigned i)
+{
   return buffer->records + i;
 }
 
@@ -77,7 +83,9 @@ static void *_record_at(isend_buffer_t *buffer, int i) {
 ///
 /// @returns  LIBHPX_OK The buffer was resized correctly.
 ///       LIBHPX_ENOMEM There was not enough memory to resize the buffer.
-static int _resize(isend_buffer_t *buffer, uint32_t size) {
+static int
+_resize(isend_buffer_t *buffer, uint32_t size)
+{
   dbg_assert_str(size >= buffer->size, "cannot shrink send buffer\n");
 
   if (size == buffer->size) {
@@ -106,13 +114,13 @@ static int _resize(isend_buffer_t *buffer, uint32_t size) {
   // data around in the arrays. We do that by memcpy-ing either the prefix or
   // suffix of a wrapped buffer into the new position. After resizing the buffer
   // should never be wrapped.
-  int min = _index_of(buffer->min, oldsize);
-  int max = _index_of(buffer->max, oldsize);
-  int prefix = (min < max) ? max - min : oldsize - min;
-  int suffix = (min < max) ? 0 : max;
+  unsigned min = _index_of(buffer->min, oldsize);
+  unsigned max = _index_of(buffer->max, oldsize);
+  unsigned prefix = (min < max) ? max - min : oldsize - min;
+  unsigned suffix = (min < max) ? 0 : max;
 
-  int nmin = _index_of(buffer->min, size);
-  int nmax = _index_of(buffer->max, size);
+  unsigned nmin = _index_of(buffer->min, size);
+  unsigned nmax = _index_of(buffer->max, size);
 
   // This code is slightly tricky. We only need to move one of the ranges,
   // either [min, oldsize) or [0, max). We determine which range we need to move
@@ -167,8 +175,10 @@ static int _resize(isend_buffer_t *buffer, uint32_t size) {
 ///
 /// @returns  LIBHPX_OK success
 ///        LIBHPX_ERROR MPI error
-static int _start(isend_buffer_t *isends, int i) {
-  assert(0 <= i && i < isends->size);
+static int
+_start(isend_buffer_t *isends, unsigned i)
+{
+  assert(i < isends->size);
 
   hpx_parcel_t *p = isends->records[i].parcel;
   void *from = isir_network_offset(p);
@@ -184,14 +194,16 @@ static int _start(isend_buffer_t *isends, int i) {
 /// @param       isends The buffer from which to start isends.
 ///
 /// @returns            The number of sends that remain unstarted.
-int _start_all(isend_buffer_t *isends) {
+int
+_start_all(isend_buffer_t *isends)
+{
   uint32_t size = isends->size;
   uint64_t max = isends->max;
   uint64_t limit = isends->limit;
   uint64_t end = (limit) ? min_u64(isends->min + limit, max) : max;
 
   for (uint64_t i = isends->active; i < end; ++i) {
-    int j = _index_of(i, size);
+    unsigned j = _index_of(i, size);
     int e = _start(isends, j);
     dbg_check(e, "Failed to start an Isend operation.\n");
   }
@@ -211,21 +223,23 @@ int _start_all(isend_buffer_t *isends) {
 /// @param[out]   ssync Any synchronization parcels that we completed.
 ///
 /// @returns            The number of completed requests in this range.
-static int _test_range(isend_buffer_t *buffer, uint32_t i, uint32_t n, int o,
-                       hpx_parcel_t **ssync) {
-  assert(0 <= i && i + n <= buffer->size);
+static unsigned
+_test_range(isend_buffer_t *buffer, uint32_t i, uint32_t n, int o,
+            hpx_parcel_t **ssync)
+{
+  assert(i + n <= buffer->size);
 
-  if (n == 0)
-    return 0;
+  if (n == 0) return 0;
 
   int cnt = 0;
   void *requests = _request_at(buffer, i);
   int *out = buffer->out + o;
   buffer->xport->testsome(n, requests, &cnt, out, NULL);
+  assert(0 <= cnt);
 
   for (int j = 0; j < cnt; ++j) {
     out[j] += i;
-    int k = out[j];
+    unsigned k = out[j];
     assert(i <= k && k < i + n);
 
     // handle each of the completed requests
@@ -244,7 +258,9 @@ static int _test_range(isend_buffer_t *buffer, uint32_t i, uint32_t n, int o,
 ///
 /// @param       buffer The buffer to compact.
 /// @param            n The number of valid entries in buffer->out.
-static void _compact(isend_buffer_t *buffer, int n) {
+static void
+_compact(isend_buffer_t *buffer, unsigned n)
+{
   uint32_t size = buffer->size;
   uint64_t m = buffer->active - buffer->min;
   if (n == m) {
@@ -255,7 +271,8 @@ static void _compact(isend_buffer_t *buffer, int n) {
   }
 
   // incremental compaction
-  for (int i = 0; i < n; ++i) {
+  assert(n < INT_MAX / 2);
+  for (int i = 0, e = n; i < e; ++i) {
     int j = buffer->out[i];
     DEBUG_IF(true) {
       void *request = _request_at(buffer, j);
@@ -263,7 +280,7 @@ static void _compact(isend_buffer_t *buffer, int n) {
     }
 
     uint64_t min = buffer->min++;
-    int k = _index_of(min, size);
+    unsigned k = _index_of(min, size);
     void *to = _request_at(buffer, j);
     const void *from = _request_at(buffer, k);
     memmove(to, from, buffer->xport->sizeof_request());
@@ -284,7 +301,9 @@ static void _compact(isend_buffer_t *buffer, int n) {
 /// @param[out]   ssync The collected synchronization parcels.
 ///
 /// @returns            The number of sends completed.
-static int _test_all(isend_buffer_t *buffer, hpx_parcel_t **ssync) {
+static int
+_test_all(isend_buffer_t *buffer, hpx_parcel_t **ssync)
+{
   uint32_t twin = buffer->twin;
   uint32_t size = buffer->size;
   uint32_t i = _index_of(buffer->min, size);
@@ -299,7 +318,7 @@ static int _test_all(isend_buffer_t *buffer, hpx_parcel_t **ssync) {
   n = (n > twin) ? twin : n;
   m = (m > (twin - n)) ? (twin - n) : m;
 
-  int total = 0;
+  unsigned total = 0;
   total += _test_range(buffer, i, n, total, ssync);
   total += _test_range(buffer, 0, m, total, ssync);
   if (total) {
@@ -331,8 +350,10 @@ static int _test_all(isend_buffer_t *buffer, hpx_parcel_t **ssync) {
 ///
 /// @returns  LIBHPX_OK The request was successfully canceled.
 ///        LIBHPX_ERROR Three was an error during the operation.
-static int _cancel(isend_buffer_t *buffer, int i, hpx_parcel_t **parcels) {
-  assert(0 <= i && i < buffer->size);
+static int
+_cancel(isend_buffer_t *buffer, unsigned i, hpx_parcel_t **parcels)
+{
+  assert(i < buffer->size);
 
   void *request = _request_at(buffer, i);
   int e = buffer->xport->cancel(request, NULL);
@@ -354,7 +375,9 @@ static int _cancel(isend_buffer_t *buffer, int i, hpx_parcel_t **parcels) {
 ///
 /// @param       buffer The buffer.
 /// @param[out] parcels Any canceled parcels.
-static void _cancel_all(isend_buffer_t *buffer, hpx_parcel_t **parcels) {
+static void
+_cancel_all(isend_buffer_t *buffer, hpx_parcel_t **parcels)
+{
   if (!buffer->requests) {
     return;
   }
@@ -388,7 +411,9 @@ int isend_buffer_init(isend_buffer_t *buffer, isir_xport_t *xport,
   return e;
 }
 
-void isend_buffer_fini(isend_buffer_t *buffer) {
+void
+isend_buffer_fini(isend_buffer_t *buffer)
+{
   dbg_assert(buffer);
   hpx_parcel_t *parcels = NULL;
   _cancel_all(buffer, &parcels);
@@ -411,8 +436,10 @@ void isend_buffer_fini(isend_buffer_t *buffer) {
   }
 }
 
-int isend_buffer_append(isend_buffer_t *buffer, hpx_parcel_t *p,
-                        hpx_parcel_t *ssync) {
+int
+isend_buffer_append(isend_buffer_t *buffer, hpx_parcel_t *p,
+                    hpx_parcel_t *ssync)
+{
   uint64_t i = buffer->max++;
   uint32_t size = buffer->size;
   if (size <= buffer->max - buffer->min) {
@@ -422,8 +449,8 @@ int isend_buffer_append(isend_buffer_t *buffer, hpx_parcel_t *p,
     }
   }
 
-  int j = _index_of(i, size);
-  assert(0 <= j && j < buffer->size);
+  unsigned j = _index_of(i, size);
+  assert(j < buffer->size);
   if (DEBUG) {
     void *request = _request_at(buffer, j);
     buffer->xport->clear(request);
@@ -434,7 +461,9 @@ int isend_buffer_append(isend_buffer_t *buffer, hpx_parcel_t *p,
 }
 
 
-int isend_buffer_flush(isend_buffer_t *buffer, hpx_parcel_t **ssync) {
+int
+isend_buffer_flush(isend_buffer_t *buffer, hpx_parcel_t **ssync)
+{
   int total = 0;
   do {
     total += isend_buffer_progress(buffer, ssync);
@@ -443,7 +472,9 @@ int isend_buffer_flush(isend_buffer_t *buffer, hpx_parcel_t **ssync) {
 }
 
 
-int isend_buffer_progress(isend_buffer_t *isends, hpx_parcel_t **ssync) {
+int
+isend_buffer_progress(isend_buffer_t *isends, hpx_parcel_t **ssync)
+{
   int m = _test_all(isends, ssync);
   DEBUG_IF (m) {
     log_net("finished %d sends\n", m);
