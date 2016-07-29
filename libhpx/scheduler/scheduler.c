@@ -17,17 +17,17 @@
 
 #include "libhpx/scheduler.h"
 #include "thread.h"
-#include <libhpx/action.h>
-#include <libhpx/config.h>
-#include <libhpx/debug.h>
-#include <libhpx/gas.h>
-#include <libhpx/libhpx.h>
-#include <libhpx/locality.h>
-#include <libhpx/memory.h>
-#include <libhpx/network.h>
-#include <libhpx/process.h>
-#include <libhpx/rebalancer.h>
-#include <hpx/builtins.h>
+#include "libhpx/action.h"
+#include "libhpx/config.h"
+#include "libhpx/debug.h"
+#include "libhpx/gas.h"
+#include "libhpx/libhpx.h"
+#include "libhpx/locality.h"
+#include "libhpx/memory.h"
+#include "libhpx/network.h"
+#include "libhpx/process.h"
+#include "libhpx/rebalancer.h"
+#include "hpx/builtins.h"
 #include <sys/time.h>
 #include <stdlib.h>
 #include <string.h>
@@ -193,6 +193,7 @@ void
 scheduler_set_output(scheduler_t *sched, size_t bytes, const void *out)
 {
   if (!bytes) return;
+  if (!sched->output) return;
   pthread_mutex_lock(&sched->lock);
   memcpy(sched->output, out, bytes);
   pthread_mutex_unlock(&sched->lock);
