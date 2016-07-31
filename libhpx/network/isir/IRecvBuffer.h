@@ -15,7 +15,7 @@
 #define LIBHPX_NETWORK_ISIR_IRECV_BUFFER_H
 
 #include "MPITransport.h"
-#include "hpx/hpx.h"
+#include "libhpx/parcel.h"
 #include <vector>
 
 namespace libhpx {

@@ -16,7 +16,6 @@
 
 #include <mpi.h>
 #include <exception>
-#include <vector>
 #include <cassert>
 #include <cstddef>
 
