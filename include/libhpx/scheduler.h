@@ -22,14 +22,15 @@
 /// designed to work as part of a distributed set of schedulers to support a
 /// large-scale, lightweight thread-based application.
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 #include <pthread.h>
 #include <hpx/hpx.h>
 #include <libsync/queues.h>
 #include <libhpx/worker.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /// Preprocessor define that tells us if the scheduler is cooperative or
 /// preemptive. Unused at this point.

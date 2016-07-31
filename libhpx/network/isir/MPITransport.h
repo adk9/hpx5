@@ -14,16 +14,19 @@
 #ifndef LIBHPX_NETWORK_ISIR_MPI_TRANSPORT_H
 #define LIBHPX_NETWORK_ISIR_MPI_TRANSPORT_H
 
+#include "hpx/hpx.h"
 #include <mpi.h>
-#include <exception>
 #include <cassert>
 #include <cstddef>
+#include <exception>
 
 namespace libhpx {
 namespace network {
 namespace isir {
 class MPITransport {
  public:
+  typedef MPI_Comm Communicator;                //!< for legacy collectives
+
   class Request {
    public:
     Request() : request_(MPI_REQUEST_NULL) {
@@ -78,7 +81,7 @@ class MPITransport {
     Check(MPI_Initialized(&initialized));
     if (!initialized) {
       int level;
-      Check(MPI_Init_thread(NULL, NULL, MPI_THREAD_SERIALIZED, &level));
+      Check(MPI_Init_thread(nullptr, nullptr, MPI_THREAD_SERIALIZED, &level));
       assert(level >= MPI_THREAD_SERIALIZED);
       finalize_ = true;
     }
@@ -141,6 +144,41 @@ class MPITransport {
     return &world_;
   }
 
+  void createComm(Communicator *out, int n, const int ranks[])
+  {
+    int w;
+    Check(MPI_Comm_size(world_, &w));
+    if (n == w) {
+      Check(MPI_Comm_dup(world_, out));
+    }
+    else {
+      MPI_Group all, active;
+      Check(MPI_Comm_group(world_, &all));
+      Check(MPI_Group_incl(all, n, ranks, &active));
+      Check(MPI_Comm_create(world_, active, out));
+    }
+  }
+
+  void allreduce(void *sendbuf, void *result, int count, void *datatype,
+                 hpx_monoid_op_t *op, Communicator *comm)
+  {
+    int bytes = sizeof(CollectiveArg) + count;
+    CollectiveArg* in = new(alloca(bytes)) CollectiveArg(*op, count, sendbuf);
+    CollectiveArg* out = new(alloca(bytes)) CollectiveArg(*op, 0, nullptr);
+
+    MPI_Op usrOp;
+    Check(MPI_Op_create(CollectiveArg::Op, 1, &usrOp));
+    Check(MPI_Allreduce(in, out, bytes, MPI_BYTE, usrOp, *comm));
+    Check(MPI_Op_free(&usrOp));
+    out->put(result);
+  }
+
+  static void pin(const void*, size_t, void*) {
+  }
+
+  static void unpin(const void*, size_t) {
+  }
+
  private:
   static void Check(int e) {
     if (e != MPI_SUCCESS) {
@@ -148,7 +186,38 @@ class MPITransport {
     }
   }
 
- private:
+  class CollectiveArg {
+   public:
+    CollectiveArg(hpx_monoid_op_t op, int size, void *data)
+        : op_(op), size_(size)
+    {
+      if (data) {
+        std::copy(data_, data_+size, static_cast<char*>(data));
+      }
+    }
+
+    static void Op(void* lhs, void* rhs, int*, MPI_Datatype*)
+    {
+      auto in = static_cast<CollectiveArg*>(lhs);
+      auto out = static_cast<CollectiveArg*>(rhs);
+      in->op(out);
+    }
+
+    void put(void *out) const
+    {
+      std::move(data_, data_ + size_, static_cast<char*>(out));
+    }
+
+   private:
+    void op(CollectiveArg* rhs) const {
+      op_(rhs->data_, data_, size_);
+    }
+
+    hpx_monoid_op_t op_;
+    int size_;
+    char data_[];
+  };
+
   MPI_Comm world_;
   bool  finalize_;
 };

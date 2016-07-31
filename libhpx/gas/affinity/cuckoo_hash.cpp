@@ -19,12 +19,10 @@
 #include <cuckoohash_map.hh>
 #include <city_hasher.hh>
 #include <hpx/hpx.h>
-extern "C" {
 #include <libhpx/debug.h>
 #include <libhpx/gas.h>
 #include <libhpx/locality.h>
 #include <libhpx/scheduler.h>
-}
 #include "cuckoo_hash.h"
 
 using libhpx::gas::Affinity;
