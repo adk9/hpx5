@@ -17,10 +17,6 @@
 #include <libhpx/debug.h>
 #include <libhpx/parcel.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 static inline uint32_t isir_prefix_size(void) {
   return offsetof(hpx_parcel_t, action);
 }
@@ -51,9 +47,5 @@ static inline uint32_t tag_to_isir_bytes(int tag) {
   uint32_t parcel_size = tag * HPX_CACHELINE_SIZE;
   return parcel_size - offsetof(hpx_parcel_t, action);
 }
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif // LIBHPX_NETWORK_ISIR_PARCEL_UTILS_H

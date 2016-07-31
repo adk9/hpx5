@@ -15,22 +15,27 @@
 # include "config.h"
 #endif
 
-#include <inttypes.h>
-#include <stdlib.h>
-#include <hpx/builtins.h>
-#include <libsync/queues.h>
-#include <libhpx/collective.h>
-#include <libhpx/debug.h>
-#include <libhpx/gas.h>
-#include <libhpx/libhpx.h>
-#include <libhpx/locality.h>
-#include <libhpx/padding.h>
-#include <libhpx/parcel.h>
-#include "irecv_buffer.h"
-#include "isend_buffer.h"
 #include "isir.h"
+#include "MPITransport.h"
+#include "IRecvBuffer.h"
+#include "isend_buffer.h"
 #include "xport.h"
 #include "parcel_utils.h"
+#include "libsync/queues.h"
+#include "libhpx/collective.h"
+#include "libhpx/debug.h"
+#include "libhpx/gas.h"
+#include "libhpx/libhpx.h"
+#include "libhpx/locality.h"
+#include "libhpx/padding.h"
+#include "libhpx/parcel.h"
+#include "hpx/builtins.h"
+#include <inttypes.h>
+#include <stdlib.h>
+
+namespace {
+using Transport = libhpx::network::isir::MPITransport;
+using IRecvBuffer = libhpx::network::isir::IRecvBuffer;
 
 typedef struct {
   Network         vtable;
@@ -40,12 +45,13 @@ typedef struct {
   two_lock_queue_t sends;
   two_lock_queue_t recvs;
   isend_buffer_t  isends;
-  irecv_buffer_t  irecvs;
-  PAD_TO_CACHELINE(2 * sizeof(two_lock_queue_t) +
-                   sizeof(irecv_buffer_t) +
-                   sizeof(isend_buffer_t));
+  IRecvBuffer    *irecvs;
+  Transport *thetransport;
+  PAD_TO_CACHELINE(sizeof(sends) + sizeof(recvs) +
+                   sizeof(isends) + sizeof(irecvs) + sizeof(thetransport));
   volatile int progress_lock;
 } _funneled_t;
+}
 
 /// Transfer any parcels in the funneled sends queue into the isends buffer.
 static void
@@ -65,7 +71,7 @@ _funneled_deallocate(void *network) {
 
   _funneled_t *isir = (_funneled_t*)network;
   isend_buffer_fini(&isir->isends);
-  irecv_buffer_fini(&isir->irecvs);
+  delete isir->irecvs;
 
   hpx_parcel_t *p = NULL;
   while ((p = (hpx_parcel_t *)sync_two_lock_queue_dequeue(&isir->sends))) {
@@ -77,6 +83,8 @@ _funneled_deallocate(void *network) {
 
   sync_two_lock_queue_fini(&isir->sends);
   sync_two_lock_queue_fini(&isir->recvs);
+
+  delete isir->thetransport;
 
   isir->xport->deallocate(isir->xport);
   free(isir);
@@ -189,7 +197,7 @@ _funneled_progress(void *network, int id) {
   _funneled_t *isir = (_funneled_t *)network;
   if (sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE)) {
     hpx_parcel_t *chain = NULL;
-    int n = irecv_buffer_progress(&isir->irecvs, &chain);
+    int n = isir->irecvs->progress(&chain);
     DEBUG_IF(n) {
       log_net("completed %d recvs\n", n);
     }
@@ -222,7 +230,9 @@ network_isir_funneled_new(const config_t *cfg, struct boot *boot, gas_t *gas) {
   dbg_check(e, "failed to allocate the pwc network structure\n");
   dbg_assert(network);
 
-  network->xport = isir_xport_new(cfg, gas);
+  network->thetransport = new Transport();
+
+  network->xport = isir_xport_new(cfg, gas, network->thetransport->comm());
   if (!network->xport) {
     log_error("could not initialize a transport.\n");
     free(network);
@@ -249,7 +259,8 @@ network_isir_funneled_new(const config_t *cfg, struct boot *boot, gas_t *gas) {
 
   isend_buffer_init(&network->isends, network->xport, 64, cfg->isir_sendlimit,
             cfg->isir_testwindow);
-  irecv_buffer_init(&network->irecvs, network->xport, 64, cfg->isir_recvlimit);
+
+  network->irecvs = new IRecvBuffer(*network->thetransport, cfg->isir_recvlimit);
 
   sync_store(&network->progress_lock, 1, SYNC_RELEASE);
 

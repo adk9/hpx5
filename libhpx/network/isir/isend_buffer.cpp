@@ -186,6 +186,7 @@ _start(isend_buffer_t *isends, unsigned i)
   int n = payload_size_to_isir_bytes(p->size);
   int tag = _payload_size_to_tag(isends, p->size);
   void *r = _request_at(isends, i);
+  log_net("starting a parcel send: tag %d, %d bytes\n", tag, n);
   return isends->xport->isend(isends->xport, to, from, n, tag, r);
 }
 

@@ -256,7 +256,7 @@ _mpi_allreduce(void *sendbuf, void *out, int count, void *datatype, void *op,
 }
 
 isir_xport_t *
-isir_xport_new_mpi(const config_t *cfg, gas_t *gas) {
+isir_xport_new_mpi(const config_t *cfg, gas_t *gas, void *comm) {
   auto mpi = new _mpi_xport_t;
   mpi->vtable.type           = HPX_TRANSPORT_MPI;
   mpi->vtable.deallocate     = _mpi_deallocate;
@@ -276,37 +276,9 @@ isir_xport_new_mpi(const config_t *cfg, gas_t *gas) {
   mpi->vtable.create_comm    = _mpi_create_comm;
   mpi->vtable.allreduce      = _mpi_allreduce;
 
-  int already_initialized = 0;
-  if (MPI_SUCCESS != MPI_Initialized(&already_initialized)) {
-    log_error("mpi initialization failed\n");
-    free(mpi);
-    return NULL;
-  }
-
-  if (!already_initialized) {
-    int level = MPI_THREAD_SINGLE;
-    if (MPI_SUCCESS != MPI_Init_thread(NULL, NULL, LIBHPX_THREAD_LEVEL, &level)) {
-      log_error("mpi initialization failed\n");
-      free(mpi);
-      return NULL;
-    }
-
-    if (level != LIBHPX_THREAD_LEVEL) {
-      log_error("MPI thread level failed requested %d, received %d.\n",
-                LIBHPX_THREAD_LEVEL, level);
-      free(mpi);
-      return NULL;
-    }
-  }
-
   // remember if we need to finalize MPI and use a duplication COMM_WORLD
-  mpi->fini = !already_initialized;
-  if (MPI_SUCCESS != MPI_Comm_dup(MPI_COMM_WORLD, &mpi->comm)) {
-    log_error("mpi communicator duplication failed\n");
-    free(mpi);
-    return NULL;
-  }
-
+  mpi->fini = 0;
+  mpi->comm = *(MPI_Comm*)comm;
   log_trans("thread_support_provided = %d\n", LIBHPX_THREAD_LEVEL);
   return &mpi->vtable;
 }

@@ -50,9 +50,9 @@ typedef struct isir_xport {
   void   (*unpin)(const void *base, size_t bytes);
 } isir_xport_t;
 
-isir_xport_t *isir_xport_new_mpi(const config_t *cfg, struct gas *gas);
+isir_xport_t *isir_xport_new_mpi(const config_t *cfg, struct gas *gas, void *comm);
 
-isir_xport_t *isir_xport_new(const config_t *cfg, struct gas *gas);
+isir_xport_t *isir_xport_new(const config_t *cfg, struct gas *gas, void *comm);
 
 #ifdef __cplusplus
 }
