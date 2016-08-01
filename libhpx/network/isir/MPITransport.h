@@ -16,9 +16,12 @@
 
 #include "hpx/hpx.h"
 #include <mpi.h>
+#include <algorithm>
+#include <exception>
+#include <new>
+#include <alloca.h>
 #include <cassert>
 #include <cstddef>
-#include <exception>
 
 namespace libhpx {
 namespace network {
