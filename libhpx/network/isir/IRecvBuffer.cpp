@@ -18,6 +18,7 @@
 #include "IRecvBuffer.h"
 #include "parcel_utils.h"
 #include "libhpx/events.h"
+#include <memory>
 
 namespace {
 using libhpx::network::isir::IRecvBuffer;
@@ -26,11 +27,12 @@ using libhpx::network::isir::IRecvBuffer;
 IRecvBuffer::IRecvBuffer(Transport &xport, int limit)
     : xport_(xport),
       limit_(limit),
-      capacity_(std::min(64, limit)),
+      capacity_(0),
       size_(0),
-      requests_(capacity_),
-      records_(capacity_)
+      requests_(nullptr),
+      records_(nullptr)
 {
+  reserve((limit) ? std::min(64, limit) : 64);
 }
 
 IRecvBuffer::~IRecvBuffer()
@@ -46,8 +48,8 @@ IRecvBuffer::progress(hpx_parcel_t** stack)
 {
   assert(stack);
   probe();
-  std::vector<int> out(size_);
-  std::vector<Status> statuses(size_);
+  std::unique_ptr<int[]> out(new int[size_]);
+  std::unique_ptr<Status[]> statuses(new Status[size_]);
   int e = xport_.Testsome(size_, &requests_[0], &out[0], &statuses[0]);
   if (e) log_net("detected completed irecvs: %u\n", e);
   for (int i = 0; i < e; ++i) {
@@ -63,12 +65,12 @@ IRecvBuffer::reserve(unsigned capacity)
 {
   hpx_parcel_t *out = nullptr;
 
-  // saturate the capacity
-  capacity_ = (limit_) ? std::min(capacity, limit_) : capacity;
-
   if (capacity == capacity_) {
     return out;
   }
+
+  // saturate the capacity
+  capacity_ = (limit_) ? std::min(capacity, limit_) : capacity;
 
   // cancel any excess irecvs
   for (auto i = size_ - 1; size_ > capacity_; --i, --size_) {
@@ -78,8 +80,9 @@ IRecvBuffer::reserve(unsigned capacity)
   }
 
   // resize the vectors
-  requests_.reserve(capacity_);
-  records_.reserve(capacity_);
+  unsigned n = capacity_;
+  requests_ = static_cast<Request*>(realloc(requests_, n * sizeof(Request)));
+  records_ = static_cast<Record*>(realloc(records_, n* sizeof(Record)));
   return out;
 }
 
@@ -87,7 +90,6 @@ void
 IRecvBuffer::start(unsigned i)
 {
   auto& record = records_[i];
-  assert(record.p == nullptr);
   auto tag = record.tag;
   auto size = tag_to_payload_size(tag);
   record.p = parcel_alloc(size);
@@ -110,11 +112,11 @@ IRecvBuffer::probe()
     return;
   }
 
-  log_net("detected a new send with tag: %u\n", tag);
   auto i = size_++;
+  log_net("detected a new recv (%u) with tag: %u\n", i, tag);
   records_[i].tag = tag;
   start(i);
-  if (i == capacity_) {
+  if (size_ == capacity_) {
     reserve(2 * capacity_);
   }
 }
@@ -128,7 +130,7 @@ IRecvBuffer::cancel(unsigned i)
   record.p = NULL;
   record.tag = -1;
 
-  if (requests_[i].cancel()) {
+  if (xport_.cancel(requests_[i])) {
     parcel_delete(p);
     p = NULL;
   }
@@ -137,15 +139,15 @@ IRecvBuffer::cancel(unsigned i)
 }
 
 hpx_parcel_t*
-IRecvBuffer::finish(unsigned i, Status& status)
+IRecvBuffer::finish(unsigned i, const Status& status)
 {
   assert(i < size_);
-  assert(status.bytes() > 0);
+  assert(xport_.bytes(status) > 0);
   Record& record = records_[i];
   auto p = record.p;
   record.p = nullptr;
-  p->size = isir_bytes_to_payload_size(status.bytes());
-  p->src = status.source();
+  p->size = isir_bytes_to_payload_size(xport_.bytes(status));
+  p->src = xport_.source(status);
   log_net("finished a recv for a %u-byte payload\n", p->size);
   EVENT_NETWORK_RECV();
   return p;

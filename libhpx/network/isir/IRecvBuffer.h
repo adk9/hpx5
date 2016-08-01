@@ -16,7 +16,6 @@
 
 #include "MPITransport.h"
 #include "libhpx/parcel.h"
-#include <vector>
 
 namespace libhpx {
 namespace network {
@@ -84,15 +83,14 @@ class IRecvBuffer {
   ///
   /// This will use the status to finish up the irecv, turning it into a usable
   /// parcel.
-  hpx_parcel_t* finish(unsigned i, Status& status);
+  hpx_parcel_t* finish(unsigned i, const Status& status);
 
   Transport              &xport_;
   const unsigned          limit_;
   unsigned             capacity_;
   unsigned                 size_;
-  std::vector<Request> requests_;
-  std::vector<Record>   records_;
-  std::vector<Status>  statuses_;
+  Request* requests_;
+  Record*   records_;
 };
 
 } // namespace isir

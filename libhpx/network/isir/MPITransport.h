@@ -29,55 +29,8 @@ namespace isir {
 class MPITransport {
  public:
   typedef MPI_Comm Communicator;                //!< for legacy collectives
-
-  class Request {
-   public:
-    Request() : request_(MPI_REQUEST_NULL) {
-    }
-
-    void reset() {
-      request_ = MPI_REQUEST_NULL;
-    }
-
-    bool cancel() {
-      if (request_ == MPI_REQUEST_NULL) {
-        return true;
-      }
-
-      int cancelled;
-      MPI_Status status;
-      MPITransport::Check(MPI_Cancel(&request_));
-      MPITransport::Check(MPI_Wait(&request_, &status));
-      MPITransport::Check(MPI_Test_cancelled(&status, &cancelled));
-      request_ = MPI_REQUEST_NULL;
-      return cancelled;
-    }
-
-   private:
-    friend class MPITransport;
-    MPI_Request request_;
-  };
-
-  class Status {
-   public:
-    int tag() const {
-      return status_.MPI_TAG;
-    }
-
-    int source() const {
-      return status_.MPI_SOURCE;
-    }
-
-    int bytes() const {
-      int bytes;
-      MPITransport::Check(MPI_Get_count(&status_, MPI_BYTE, &bytes));
-      return bytes;
-    }
-
-   private:
-    friend class MPITransport;
-    MPI_Status status_;
-  };
+  typedef MPI_Request Request;
+  typedef MPI_Status Status;
 
   MPITransport() : world_(MPI_COMM_NULL), finalize_(false) {
     int initialized;
@@ -98,23 +51,47 @@ class MPITransport {
     }
   }
 
+  static bool cancel(Request& request) {
+    if (request == MPI_REQUEST_NULL) {
+      return true;
+    }
+
+    int cancelled;
+    MPI_Status status;
+    MPITransport::Check(MPI_Cancel(&request));
+    MPITransport::Check(MPI_Wait(&request, &status));
+    MPITransport::Check(MPI_Test_cancelled(&status, &cancelled));
+    request = MPI_REQUEST_NULL;
+    return cancelled;
+  }
+
+  static int source(const Status& status) {
+    return status.MPI_SOURCE;
+  }
+
+  static int bytes(const Status& status) {
+    int bytes;
+    MPITransport::Check(MPI_Get_count(&status, MPI_BYTE, &bytes));
+    return bytes;
+  }
+
   int iprobe() {
-    Status s;
+    Status status;
     int flag;
-    Check(MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, world_, &flag, &s.status_));
-    return (flag) ? s.tag() : -1;
+    Check(MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, world_, &flag, &status));
+    return (flag) ? status.MPI_TAG : -1;
   }
 
   Request isend(int to, const void *from, size_t n, int tag) {
-    Request r;
-    Check(MPI_Isend(from, n, MPI_BYTE, to, tag, world_, &r.request_));
-    return r;
+    Request request;
+    Check(MPI_Isend(from, n, MPI_BYTE, to, tag, world_, &request));
+    return request;
   }
 
   Request irecv(void *to, size_t n, int tag) {
-    Request r;
-    Check(MPI_Irecv(to, n, MPI_BYTE, MPI_ANY_SOURCE, tag, world_, &r.request_));
-    return r;
+    Request request;
+    Check(MPI_Irecv(to, n, MPI_BYTE, MPI_ANY_SOURCE, tag, world_, &request));
+    return request;
   }
 
   static int Testsome(int n, Request* reqs, int* out) {
@@ -128,14 +105,13 @@ class MPITransport {
     return ncomplete;
   }
 
-  static int Testsome(int n, Request* reqs, int* out, Status* stats) {
+  static int Testsome(int n, Request* reqs, int* out, Status* statuses) {
     if (!n) {
       return 0;
     }
 
     int ncomplete;
     MPI_Request *requests = reinterpret_cast<MPI_Request*>(reqs);
-    MPI_Status  *statuses = reinterpret_cast<MPI_Status*>(stats);
     Check(MPI_Testsome(n, requests, &ncomplete, out, statuses));
     if (ncomplete == MPI_UNDEFINED)  {
       throw std::exception();

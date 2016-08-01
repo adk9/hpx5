@@ -262,7 +262,7 @@ void
 ISendBuffer::cancel(unsigned long id, hpx_parcel_t **parcels)
 {
   unsigned i = _index_of(id, size_);
-  requests_[i].cancel();
+  xport_.cancel(requests_[i]);
   parcel_stack_push(parcels, records_[i].parcel);
   while (hpx_parcel_t *p = parcel_stack_pop(&records_[i].ssync)) {
     parcel_stack_push(parcels, p);
