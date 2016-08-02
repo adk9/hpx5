@@ -14,9 +14,8 @@ libpwc_la_SOURCES  = pwc.cpp \
                      lco_wait.cpp \
                      commands.cpp \
                      rendezvous_send.cpp \
-                     memget.cpp \
-                     memput.cpp \
-                     memcpy.cpp
+                     DMAStringOps.cpp \
+                     PWCNetwork.cpp
 
 if HAVE_PHOTON
 libpwc_la_SOURCES += xport_photon.cpp

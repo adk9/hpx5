@@ -1,4 +1,4 @@
-// =============================================================================
+// ==================================================================-*- C++ -*-
 //  High Performance ParalleX Library (libhpx)
 //
 //  Copyright (c) 2013-2016, Trustees of Indiana University,
@@ -11,25 +11,17 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
-#ifndef LIBHPX_NETWORK_COALESCED_H
-#define LIBHPX_NETWORK_COALESCED_H
+#ifndef LIBHPX_PARCEL_OPS_H
+#define LIBHPX_PARCEL_OPS_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+/// The abstract base class for a provider for parcel operations.
 
-#include <hpx/attributes.h>
-
-/// Forward declarations.
-/// @{
-struct config;
-/// @}
-
-void* coalesced_network_new(void *next, const struct config *cfg)
-  HPX_MALLOC;
-
-#ifdef __cplusplus
+namespace libhpx {
+class ParcelOps {
+ public:
+  virtual ~ParcelOps();
+  virtual int send(hpx_parcel_t* p, hpx_parcel_t* ssync) = 0;
+};
 }
-#endif
 
-#endif // LIBHPX_NETWORK_COALESCED_H
+#endif // LIBHPX_PARCEL_OPS_H

@@ -14,13 +14,8 @@
 #ifndef LIBHPX_NETWORK_PWC_PWC_H
 #define LIBHPX_NETWORK_PWC_PWC_H
 
-#include "commands.h"
-#include "parcel_emulation.h"
-#include "send_buffer.h"
-#include "xport.h"
-#include <libhpx/collective.h>
-#include <libhpx/network.h>
-#include <libhpx/padding.h>
+#include "libhpx/padding.h"
+#include "libhpx/parcel.h"
 
 /// Forward declarations.
 /// @{
@@ -35,16 +30,19 @@ namespace libhpx {
 namespace network {
 namespace pwc {
 
+class Command;
 struct heap_segment_t;
+struct pwc_xport_t;
+struct parcel_emulator_t;
+struct send_buffer_t;
+struct headp_segment_t;
 
 struct pwc_network_t {
-  Network                vtable;
-  const struct config      *cfg;
   pwc_xport_t            *xport;
   parcel_emulator_t    *parcels;
   send_buffer_t   *send_buffers;
   heap_segment_t *heap_segments;
-  PAD_TO_CACHELINE(sizeof(Network) + 5 * sizeof(void*));
+  PAD_TO_CACHELINE(4 * sizeof(void*));
   volatile int probe_lock;
   PAD_TO_CACHELINE(sizeof(int));
   volatile int progress_lock;
@@ -52,10 +50,22 @@ struct pwc_network_t {
 };
 
 extern pwc_network_t *pwc_network;
+
 /// Allocate and initialize a PWC network instance.
 pwc_network_t *network_pwc_funneled_new(const struct config *cfg,
                                         struct boot *boot, struct gas *gas)
   HPX_MALLOC;
+
+void pwc_deallocate(void *network);
+void pwc_flush(void *pwc);
+int pwc_send(void *network, hpx_parcel_t *p, hpx_parcel_t *ssync);
+int pwc_coll_sync(void *network, void *in, size_t in_size, void *out,
+                  void *ctx);
+int pwc_coll_init(void *network, void **c);
+void pwc_release_dma(void *network, const void* base, size_t n);
+void pwc_register_dma(void *network, const void *base, size_t n, void *key);
+hpx_parcel_t * pwc_probe(void *network, int rank);
+void pwc_progress(void *network, int id);
 
 /// Perform an LCO wait operation through the PWC network.
 ///
@@ -97,125 +107,6 @@ int pwc_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out, int reset);
 ///
 /// @returns            The status of the operation.
 int pwc_rendezvous_send(void *network, const hpx_parcel_t *p);
-
-/// The asynchronous memget operation.
-///
-/// This operation will return before either the remote or the local operations
-/// have completed. The user may specify either an @p lsync or @p rsync LCO to
-/// detect the completion of the operations.
-///
-/// @param          obj The pwc network object.
-/// @param           to The local address to memget into.
-/// @param         from The global address we're memget-ing from
-/// @param         size The number of bytes to get.
-/// @param        lsync An LCO to set when @p to has been written.
-/// @param        rsync An LCO to set when @p from has been read.
-///
-/// @returns            HPX_SUCCESS
-int pwc_memget(void *obj, void *to, hpx_addr_t from, size_t size,
-               hpx_addr_t lsync, hpx_addr_t rsync);
-
-/// The rsync memget operation.
-///
-/// This operation will not return until the remote read operation has
-/// completed. The @p lsync LCO will be set once the local write operation has
-/// completed.
-///
-/// @param          obj The pwc network object.
-/// @param           to The local address to memget into.
-/// @param         from The global address we're memget-ing from
-/// @param         size The number of bytes to get.
-/// @param        lsync An LCO to set when @p to has been written.
-///
-/// @returns            HPX_SUCCESS
-int pwc_memget_rsync(void *obj, void *to, hpx_addr_t from, size_t size,
-                     hpx_addr_t lsync);
-
-/// The rsync memget operation.
-///
-/// This operation will not return until the @p to buffer has been written,
-/// which also implies that the remote read has completed.
-///
-/// @param          obj The pwc network object.
-/// @param           to The local address to memget into.
-/// @param         from The global address we're memget-ing from
-/// @param         size The number of bytes to get.
-///
-/// @returns            HPX_SUCCESS
-int pwc_memget_lsync(void *obj, void *to, hpx_addr_t from, size_t size);
-
-/// The asynchronous memput operation.
-///
-/// The @p lsync LCO will be set when it is safe to reuse or free the @p from
-/// buffer. The @p rsync LCO will be set when the remote buffer has been
-/// written.
-///
-/// @param          obj The pwc network object.
-/// @param           to The global address to put into.
-/// @param         from The local address we're putting from.
-/// @param         size The number of bytes to put.
-/// @param        lsync An LCO to set when @p from has been read.
-/// @param        rsync An LCO to set when @p to has been written.
-///
-/// @returns            HPX_SUCCESS
-int pwc_memput(void *obj, hpx_addr_t to, const void *from, size_t size,
-               hpx_addr_t lsync, hpx_addr_t rsync);
-
-/// The locally synchronous memput operation.
-///
-/// This will not return until it is safe to modify or free the @p from
-/// buffer. The @p rsync LCO will be set when the remote buffer has been
-/// written.
-///
-/// @param          obj The pwc network object.
-/// @param           to The global address to put into.
-/// @param         from The local address we're putting from.
-/// @param         size The number of bytes to put.
-/// @param        rsync An LCO to set when @p to has been written.
-///
-/// @returns            HPX_SUCCESS
-int pwc_memput_lsync(void *obj, hpx_addr_t to, const void *from, size_t size,
-                     hpx_addr_t rsync);
-
-/// The fully synchronous memput operation.
-///
-/// This will not return until the buffer has been written and is visible at the
-/// remote size.
-///
-/// @param          obj The pwc network object.
-/// @param           to The global address to put into.
-/// @param         from The local address we're putting from.
-/// @param         size The number of bytes to put.
-///
-/// @returns            HPX_SUCCESS
-int pwc_memput_rsync(void *obj, hpx_addr_t to, const void *from, size_t size);
-
-/// The asynchronous memcpy operation.
-///
-/// This will return immediately, and set the @p sync lco when the operation has
-/// completed.
-///
-/// @param          obj The pwc network object.
-/// @param           to The global address to write into.
-/// @param         from The global address to read from (const).
-/// @param         size The number of bytes to write.
-/// @param         sync An optional LCO to signal remote completion.
-///
-/// @returns            HPX_SUCCESS;
-int pwc_memcpy(void *obj, hpx_addr_t to, hpx_addr_t from, size_t size,
-               hpx_addr_t sync);
-
-/// The asynchronous memcpy operation.
-///
-/// This will not return until the operation has completed.
-///
-/// @param          obj The pwc network object.
-/// @param           to The global address to write into.
-/// @param         from The global address to read from (const).
-/// @param         size The number of bytes to write.
-///
-/// @returns            HPX_SUCCESS;
-int pwc_memcpy_sync(void *obj, hpx_addr_t to, hpx_addr_t from, size_t size);
 
 /// Initiate an rDMA get operation.
 ///

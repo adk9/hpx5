@@ -16,24 +16,32 @@
 #endif
 
 /// @file libhpx/network/network.c
-#include "coalesced.h"
-#include "compressed.h"
-#include "inst.h"
-#include "smp.h"
-#include "isir/isir.h"
-#include "pwc/pwc.h"
-#include <libhpx/boot.h>
-#include <libhpx/config.h>
-#include <libhpx/debug.h>
-#include <libhpx/instrumentation.h>
-#include <libhpx/network.h>
-
-using namespace libhpx::network;
+#include "libhpx/Network.h"
+#include "Wrappers.h"
+#include "SMPNetwork.h"
+#ifdef HAVE_MPI
+#include "isir/FunneledNetwork.h"
+#endif
+#ifdef HAVE_PHOTON
+#include "pwc/PWCNetwork.h"
+#endif
+#include "libhpx/debug.h"
+#include "libhpx/instrumentation.h"
+#include "libhpx/network.h"
 
 static const int LEVEL = HPX_LOG_CONFIG | HPX_LOG_NET | HPX_LOG_DEFAULT;
 
+namespace {
+using namespace libhpx;
+using namespace libhpx::network;
+}
+
+Network::~Network()
+{
+}
+
 void*
-network_new(config_t *cfg, boot_t *boot, struct gas *gas)
+Network::Create(config_t *cfg, boot_t *boot, gas_t *gas)
 {
 #ifndef HAVE_NETWORK
   // if we didn't build a network we need to default to SMP
@@ -42,7 +50,7 @@ network_new(config_t *cfg, boot_t *boot, struct gas *gas)
 
   libhpx_network_t type = cfg->network;
   int ranks = boot_n_ranks(boot);
-  Network *network = nullptr;
+  Network* network = nullptr;
 
   // default to HPX_NETWORK_SMP for SMP execution
   if (ranks == 1 && cfg->opt_smp) {
@@ -80,24 +88,23 @@ network_new(config_t *cfg, boot_t *boot, struct gas *gas)
 
   switch (type) {
    case HPX_NETWORK_PWC:
-#ifdef HAVE_NETWORK
-    pwc::pwc_network = pwc::network_pwc_funneled_new(cfg, boot, gas);
-    network = reinterpret_cast<Network*>(pwc::pwc_network);
+#ifdef HAVE_PHOTON
+    network = new libhpx::network::pwc::PWCNetwork(cfg, boot, gas);
 #else
     log_level(LEVEL, "PWC network unavailable (no network configured)\n");
 #endif
     break;
 
    case HPX_NETWORK_ISIR:
-#ifdef HAVE_NETWORK
-    network = static_cast<Network*>(network_isir_funneled_new(cfg, boot, gas));
+#ifdef HAVE_MPI
+    network = new libhpx::network::isir::FunneledNetwork(cfg, boot, gas);
 #else
     log_level(LEVEL, "ISIR network unavailable (no network configured)\n");
 #endif
     break;
 
    case HPX_NETWORK_SMP:
-    network = static_cast<Network*>(network_smp_new(cfg, boot));
+    network = new SMPNetwork(boot);
     break;
 
    default:
@@ -113,11 +120,11 @@ network_new(config_t *cfg, boot_t *boot, struct gas *gas)
   }
 
   if (cfg->parcel_compression) {
-    network = static_cast<Network*>(compressed_network_new(network));
+    network = new CompressionWrapper(network);
   }
 
   if (cfg->coalescing_buffersize) {
-    network = static_cast<Network*>(coalesced_network_new(network, cfg));
+    network = new CoalescingWrapper(network, cfg, gas);
   }
 
   if (!config_trace_at_isset(here->config, here->rank)) {
@@ -128,129 +135,151 @@ network_new(config_t *cfg, boot_t *boot, struct gas *gas)
     return network;
   }
 
-  return network_inst_new(network);
+  return new InstrumentationWrapper(network);
+}
+
+network_t*
+network_new(struct config *cfg, struct boot *boot, struct gas *gas)
+{
+  return Network::Create(cfg, boot, gas);
 }
 
 void
 network_delete(void *obj)
 {
-  Network *network = static_cast<Network*>(obj);
-  network->deallocate(network);
+  delete static_cast<Network*>(obj);
 }
 
-int
+void
 network_progress(void *obj, int id)
 {
-  Network *network = static_cast<Network*>(obj);
-  return network->progress(network, id);
-}
-
-int
-network_send(void *obj, hpx_parcel_t *p, hpx_parcel_t *ssync)
-{
-  Network *network = static_cast<Network*>(obj);
-  return network->send(network, p, ssync);
+  static_cast<Network*>(obj)->progress(id);
 }
 
 hpx_parcel_t *
 network_probe(void *obj, int rank) {
-  Network *network = static_cast<Network*>(obj);
-  return network->probe(network, rank);
+  return static_cast<Network*>(obj)->probe(rank);
 }
 
 void
 network_flush(void *obj)
 {
-  Network *network = static_cast<Network*>(obj);
-  return network->flush(network);
+  return static_cast<Network*>(obj)->flush();
+}
+
+int
+network_send(void *obj, hpx_parcel_t *p, hpx_parcel_t *ssync)
+{
+  ParcelOps& parcel = static_cast<Network*>(obj)->parcelOpsProvider();
+  return parcel.send(p, ssync);
 }
 
 void
 network_register_dma(void *obj, const void *base, size_t bytes, void *key)
 {
-  Network *network = static_cast<Network*>(obj);
-  network->register_dma(network, base, bytes, key);
+  static_cast<Network*>(obj)->memoryOpsProvider().pin(base, bytes, key);
 }
 
 void
 network_release_dma(void *obj, const void *base, size_t bytes)
 {
-  Network *network = static_cast<Network*>(obj);
-  network->release_dma(network, base, bytes);
+  static_cast<Network*>(obj)->memoryOpsProvider().unpin(base, bytes);
 }
 
 int
-network_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out, int reset)
+network_coll_init(void *obj, void **collective)
 {
-  Network *network = static_cast<Network*>(obj);
-  return network->lco_get(network, lco, n, out, reset);
+  CollectiveOps& coll = static_cast<Network*>(obj)->collectiveOpsProvider();
+  return coll.init(collective);
 }
 
 int
-network_lco_wait(void *obj, hpx_addr_t lco, int reset)
+network_coll_sync(void *obj, void *in, size_t in_size, void* out,
+                  void *collective)
 {
-  Network *network = static_cast<Network*>(obj);
-  return network->lco_wait(network, lco, reset);
+  CollectiveOps& coll = static_cast<Network*>(obj)->collectiveOpsProvider();
+  return coll.sync(in, in_size, out, collective);
+}
+
+int
+network_lco_get(void *obj, hpx_addr_t gva, size_t n, void *out, int reset)
+{
+  LCOOps& lco = static_cast<Network*>(obj)->lcoOpsProvider();
+  return lco.get(gva, n, out, reset);
+}
+
+int
+network_lco_wait(void *obj, hpx_addr_t gva, int reset)
+{
+  LCOOps& lco = static_cast<Network*>(obj)->lcoOpsProvider();
+  return lco.wait(gva, reset);
 }
 
 int
 network_memget(void *obj, void *to, hpx_addr_t from, size_t size,
                hpx_addr_t lsync, hpx_addr_t rsync)
 {
-  Network *network = static_cast<Network*>(obj);
-  return network->string->memget(network, to, from, size, lsync, rsync);
+  StringOps& string = static_cast<Network*>(obj)->stringOpsProvider();
+  string.memget(to, from, size, lsync, rsync);
+  return HPX_SUCCESS;
 }
 
 int
 network_memget_rsync(void *obj, void *to, hpx_addr_t from, size_t size,
                      hpx_addr_t lsync)
 {
-  Network *network = static_cast<Network*>(obj);
-  return network->string->memget_rsync(network, to, from, size, lsync);
+  StringOps& string = static_cast<Network*>(obj)->stringOpsProvider();
+  string.memget(to, from, size, lsync);
+  return HPX_SUCCESS;
 }
 
 int
 network_memget_lsync(void *obj, void *to, hpx_addr_t from, size_t size)
 {
-  Network *network = static_cast<Network*>(obj);
-  return network->string->memget_lsync(network, to, from, size);
+  StringOps& string = static_cast<Network*>(obj)->stringOpsProvider();
+  string.memget(to, from, size);
+  return HPX_SUCCESS;
 }
 
 int
 network_memput(void *obj, hpx_addr_t to, const void *from, size_t size,
                hpx_addr_t lsync, hpx_addr_t rsync)
 {
-  Network *network = static_cast<Network*>(obj);
-  return network->string->memput(network, to, from, size, lsync, rsync);
+  StringOps& string = static_cast<Network*>(obj)->stringOpsProvider();
+  string.memput(to, from, size, lsync, rsync);
+  return HPX_SUCCESS;
 }
 
 int
 network_memput_lsync(void *obj, hpx_addr_t to, const void *from, size_t size,
                      hpx_addr_t rsync)
 {
-  Network *network = static_cast<Network*>(obj);
-  return network->string->memput_lsync(network, to, from, size, rsync);
+  StringOps& string = static_cast<Network*>(obj)->stringOpsProvider();
+  string.memput(to, from, size, rsync);
+  return HPX_SUCCESS;
 }
 
 int
 network_memput_rsync(void *obj, hpx_addr_t to, const void *from, size_t size)
 {
-  Network *network = static_cast<Network*>(obj);
-  return network->string->memput_rsync(network, to, from, size);
+  StringOps& string = static_cast<Network*>(obj)->stringOpsProvider();
+  string.memput(to, from, size);
+  return HPX_SUCCESS;
 }
 
 int
 network_memcpy(void *obj, hpx_addr_t to, hpx_addr_t from, size_t size,
                hpx_addr_t sync)
 {
-  Network *network = static_cast<Network*>(obj);
-  // use this call syntax do deal with issues on darwin with the memcpy symbol
-  return (*network->string->memcpy)(network, to, from, size, sync);
+  StringOps& string = static_cast<Network*>(obj)->stringOpsProvider();
+  string.memcpy(to, from, size, sync);
+  return HPX_SUCCESS;
 }
 
 int
 network_memcpy_sync(void *obj, hpx_addr_t to, hpx_addr_t from, size_t size)
 {
-  Network *network = static_cast<Network*>(obj);
-  return network->string->memcpy_sync(network, to, from, size);
+  StringOps& string = static_cast<Network*>(obj)->stringOpsProvider();
+  string.memcpy(to, from, size);
+  return HPX_SUCCESS;
 }

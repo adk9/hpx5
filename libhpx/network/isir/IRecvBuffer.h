@@ -15,6 +15,7 @@
 #define LIBHPX_NETWORK_ISIR_IRECV_BUFFER_H
 
 #include "MPITransport.h"
+#include "libhpx/config.h"
 #include "libhpx/parcel.h"
 
 namespace libhpx {
@@ -26,7 +27,7 @@ class IRecvBuffer {
   using Transport = libhpx::network::isir::MPITransport;
   using Status = libhpx::network::isir::MPITransport::Status;
 
-  IRecvBuffer(Transport &xport, int limit);
+  IRecvBuffer(const config_t *config, Transport &xport);
   ~IRecvBuffer();
 
   int progress(hpx_parcel_t** recvs);

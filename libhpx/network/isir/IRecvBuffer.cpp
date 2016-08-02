@@ -24,15 +24,15 @@ namespace {
 using libhpx::network::isir::IRecvBuffer;
 }
 
-IRecvBuffer::IRecvBuffer(Transport &xport, int limit)
+IRecvBuffer::IRecvBuffer(const config_t *cfg, Transport &xport)
     : xport_(xport),
-      limit_(limit),
+      limit_(cfg->isir_recvlimit),
       capacity_(0),
       size_(0),
       requests_(nullptr),
       records_(nullptr)
 {
-  reserve((limit) ? std::min(64, limit) : 64);
+  reserve((limit_) ? std::min(64u, limit_) : 64u);
 }
 
 IRecvBuffer::~IRecvBuffer()

@@ -43,8 +43,6 @@ typedef struct {
   int (*memcpy_sync)(void *obj, hpx_addr_t to, hpx_addr_t from, size_t size);
 } class_string_t;
 
-extern const class_string_t parcel_string_vtable;
-
 #ifdef __cplusplus
 }
 #endif

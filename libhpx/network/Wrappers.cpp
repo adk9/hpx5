@@ -11,23 +11,25 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
-#ifndef LIBHPX_NETWORK_SMP_H
-#define LIBHPX_NETWORK_SMP_H
-
-#ifdef __cplusplus
-extern "C" {
+#ifdef HAVE_CONFIG_H
+# include "config.h"
 #endif
 
-/// Forward declarations.
-/// @{
-struct boot;
-struct config;
-/// @}
+#include "Wrappers.h"
 
-void *network_smp_new(const struct config *cfg, struct boot *boot);
-
-#ifdef __cplusplus
+namespace {
+using libhpx::Network;
+using libhpx::network::NetworkWrapper;
 }
-#endif
 
-#endif
+NetworkWrapper::NetworkWrapper(Network *impl)
+    : Network(),
+      impl_(impl)
+{
+}
+
+libhpx::network::NetworkWrapper::~NetworkWrapper()
+{
+  delete impl_;
+}
+

@@ -16,8 +16,12 @@
 #endif
 
 #include "pwc.h"
+#include "parcel_emulation.h"
+#include "send_buffer.h"
+#include "xport.h"
 #include <libhpx/action.h>
 #include <libhpx/boot.h>
+#include "libhpx/collective.h"
 #include <libhpx/config.h>
 #include <libhpx/debug.h>
 #include <libhpx/gpa.h>
@@ -29,7 +33,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+namespace {
 using namespace libhpx::network::pwc;
+}
 
 pwc_network_t *libhpx::network::pwc::pwc_network = nullptr;
 
@@ -69,19 +75,18 @@ _probe(pwc_network_t *pwc, int rank)
   return nullptr;
 }
 
-static int
-_pwc_progress(void *network, int id)
+void
+libhpx::network::pwc::pwc_progress(void *network, int id)
 {
   pwc_network_t *pwc = (pwc_network_t *)network;
   if (sync_swap(&pwc->progress_lock, 0, SYNC_ACQUIRE)) {
     _probe_local(pwc, id);
     sync_store(&pwc->progress_lock, 1, SYNC_RELEASE);
   }
-  return 0;
 }
 
-static hpx_parcel_t *
-_pwc_probe(void *network, int rank)
+hpx_parcel_t *
+libhpx::network::pwc::pwc_probe(void *network, int rank)
 {
   pwc_network_t *pwc = (pwc_network_t *)network;
   if (sync_swap(&pwc->probe_lock, 0, SYNC_ACQUIRE)) {
@@ -92,8 +97,8 @@ _pwc_probe(void *network, int rank)
 }
 
 /// Create a network registration.
-static void
-_pwc_register_dma(void *network, const void *base, size_t n, void *key)
+void
+libhpx::network::pwc::pwc_register_dma(void *network, const void *base, size_t n, void *key)
 {
   pwc_network_t *pwc = (pwc_network_t *)network;
   dbg_assert(pwc && pwc->xport && pwc->xport->pin);
@@ -101,22 +106,22 @@ _pwc_register_dma(void *network, const void *base, size_t n, void *key)
 }
 
 /// Release a network registration.
-static void
-_pwc_release_dma(void *network, const void* base, size_t n)
+void
+libhpx::network::pwc::pwc_release_dma(void *network, const void* base, size_t n)
 {
   pwc_network_t *pwc = (pwc_network_t *)network;
   dbg_assert(pwc && pwc->xport && pwc->xport->unpin);
   pwc->xport->unpin(base, n);
 }
 
-static int
-_pwc_coll_init(void *network, void **c)
+int
+libhpx::network::pwc::pwc_coll_init(void *network, void **c)
 {
   return LIBHPX_OK;
 }
 
 int
-_pwc_coll_sync(void *network, void *in, size_t in_size, void *out, void *ctx)
+libhpx::network::pwc::pwc_coll_sync(void *network, void *in, size_t in_size, void *out, void *ctx)
 {
   coll_t *c = (coll_t*)ctx;
   void *sendbuf = in;
@@ -126,7 +131,7 @@ _pwc_coll_sync(void *network, void *in, size_t in_size, void *out, void *ctx)
 
   // flushing network is necessary (sufficient ?) to execute any packets
   // destined for collective operation
-  pwc->vtable.flush(network);
+  pwc_flush(network);
 
   if (c->type == ALL_REDUCE) {
     pwc->xport->allreduce(sendbuf, out, count, NULL, &c->op, comm);
@@ -134,8 +139,8 @@ _pwc_coll_sync(void *network, void *in, size_t in_size, void *out, void *ctx)
   return LIBHPX_OK;
 }
 
-static int
-_pwc_send(void *network, hpx_parcel_t *p, hpx_parcel_t *ssync)
+int
+libhpx::network::pwc::pwc_send(void *network, hpx_parcel_t *p, hpx_parcel_t *ssync)
 {
   // This is a blatant hack to keep track of the ssync parcel using p's next
   // pointer. It will allow us to both delete p and run ssync once the
@@ -154,13 +159,13 @@ _pwc_send(void *network, hpx_parcel_t *p, hpx_parcel_t *ssync)
   return send_buffer_send(buffer, p);
 }
 
-static void
-_pwc_flush(void *pwc)
+void
+libhpx::network::pwc::pwc_flush(void *pwc)
 {
 }
 
-static void
-_pwc_deallocate(void *network)
+void
+libhpx::network::pwc::pwc_deallocate(void *network)
 {
   dbg_assert(network);
   pwc_network_t *pwc = (pwc_network_t *)network;
@@ -185,7 +190,7 @@ _pwc_deallocate(void *network)
 
   if (pwc->heap_segments) {
     heap_segment_t *heap = &pwc->heap_segments[here->rank];
-    _pwc_release_dma(pwc, heap->base, heap->n);
+    pwc_release_dma(pwc, heap->base, heap->n);
     free(pwc->heap_segments);
   }
 
@@ -209,7 +214,7 @@ _pwc_register_gas_heap(void *network, boot_t *boot, gas_t *gas)
     .n = gas_local_size(gas),
     .base = (char*)gas_local_base(gas)
   };
-  _pwc_register_dma(pwc, heap.base, heap.n, &heap.key);
+  pwc_register_dma(pwc, heap.base, heap.n, &heap.key);
 
   // Exchange all the heap keys, and make sure it went okay
   boot_allgather(boot, &heap, pwc->heap_segments, sizeof(heap));
@@ -222,17 +227,6 @@ _pwc_register_gas_heap(void *network, boot_t *boot, gas_t *gas)
   // avoid unused variable warnings
   (void)segment;
 }
-
-static const class_string_t _pwc_string_vtable  = {
-  pwc_memget,
-  pwc_memget_rsync,
-  pwc_memget_lsync,
-  pwc_memput,
-  pwc_memput_lsync,
-  pwc_memput_rsync,
-  pwc_memcpy,
-  pwc_memcpy_sync
-};
 
 pwc_network_t *
 libhpx::network::pwc::network_pwc_funneled_new(const config_t *cfg,
@@ -262,30 +256,11 @@ libhpx::network::pwc::network_pwc_funneled_new(const config_t *cfg,
   dbg_check(e, "failed to allocate the pwc network structure\n");
   dbg_assert(pwc);
 
-  if (gas->type == HPX_GAS_AGAS) {
-    pwc->vtable.string     = &parcel_string_vtable;
-  } else {
-    pwc->vtable.string     = &_pwc_string_vtable;
-  }
-  pwc->vtable.type         = HPX_NETWORK_PWC;
-  pwc->vtable.deallocate   = _pwc_deallocate;
-  pwc->vtable.progress     = _pwc_progress;
-  pwc->vtable.send         = _pwc_send;
-  pwc->vtable.coll_init    = _pwc_coll_init;
-  pwc->vtable.coll_sync    = _pwc_coll_sync;
-  pwc->vtable.probe        = _pwc_probe;
-  pwc->vtable.flush        = _pwc_flush;
-  pwc->vtable.register_dma = _pwc_register_dma;
-  pwc->vtable.release_dma  = _pwc_release_dma;
-  pwc->vtable.lco_get      = pwc_lco_get;
-  pwc->vtable.lco_wait     = pwc_lco_wait;
-
   // Initialize locks.
   sync_store(&pwc->probe_lock, 1, SYNC_RELEASE);
   sync_store(&pwc->progress_lock, 1, SYNC_RELEASE);
 
   // Initialize transports.
-  pwc->cfg = cfg;
   pwc->xport = pwc_xport_new(cfg, boot, gas);
   pwc->parcels = parcel_emulator_new_reload(cfg, boot, pwc->xport);
   pwc->send_buffers = (send_buffer_t*)calloc(here->ranks, sizeof(send_buffer_t));

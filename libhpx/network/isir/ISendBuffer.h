@@ -15,9 +15,9 @@
 #define LIBHPX_NETWORK_ISIR_ISEND_BUFFER_H
 
 #include "MPITransport.h"
-
-extern "C" struct gas;
-extern "C" struct hpx_parcel;
+#include "libhpx/config.h"
+#include "libhpx/gas.h"
+#include "libhpx/parcel.h"
 
 namespace libhpx {
 namespace network {
@@ -29,11 +29,10 @@ class ISendBuffer {
  public:
   /// Allocate a send buffer.
   ///
+  /// @param       config The current configuration.
   /// @param          gas The global address space.
   /// @param        xport The isir xport to use.
-  /// @param        limit The limit of the number of active requests.
-  /// @param         twin The initial number of requests tested.
-  ISendBuffer(struct gas* gas, Transport &xport, unsigned limit, unsigned twin);
+  ISendBuffer(const config_t *confg, gas_t *gas, Transport &xport);
 
   /// Finalize a send buffer.
   ~ISendBuffer();
@@ -44,14 +43,14 @@ class ISendBuffer {
   ///
   /// @param            p The stack of parcels to send.
   /// @param        ssync The stack of parcel continuations.
-  void append(struct hpx_parcel *p, struct hpx_parcel *ssync);
+  void append(hpx_parcel_t *p, hpx_parcel_t *ssync);
 
   /// Progress the sends in the buffer.
   ///
   /// @param[out]   ssync A stack of synchronization parcels.
   ///
   /// @returns            The number of completed requests.
-  int progress(struct hpx_parcel **ssync);
+  int progress(hpx_parcel_t **ssync);
 
   /// Flush all outstanding sends.
   ///
@@ -61,12 +60,12 @@ class ISendBuffer {
   /// @param[out]   ssync A stack of synchronization parcels.
   ///
   /// @returns            The number of completed requests during the flush.
-  int flush(struct hpx_parcel **ssync);
+  int flush(hpx_parcel_t**ssync);
 
  private:
   struct Record {
-    struct hpx_parcel *parcel;
-    struct hpx_parcel  *ssync;
+    hpx_parcel_t *parcel;
+    hpx_parcel_t *ssync;
   };
 
   static int PayloadSizeToTag(unsigned payload);
@@ -83,7 +82,7 @@ class ISendBuffer {
   ///
   /// @param           id The isend to cancel.
   /// @param[out] parcels Any canceled parcels.
-  void cancel(unsigned long id, struct hpx_parcel **parcels);
+  void cancel(unsigned long id, hpx_parcel_t **parcels);
 
   /// Cancel and cleanup all outstanding requests in the buffer.
   ///

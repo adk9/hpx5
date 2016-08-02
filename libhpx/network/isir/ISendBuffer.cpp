@@ -18,8 +18,6 @@
 #include "ISendBuffer.h"
 #include "parcel_utils.h"
 #include "libhpx/debug.h"
-#include "libhpx/gas.h"
-#include "libhpx/parcel.h"
 #include "hpx/builtins.h"
 #include <exception>
 #include <memory>
@@ -279,12 +277,11 @@ ISendBuffer::cancelAll()
   return p;
 }
 
-ISendBuffer::ISendBuffer(gas_t* gas, Transport &xport, unsigned limit,
-                         unsigned twin)
+ISendBuffer::ISendBuffer(const config_t *cfg, gas_t *gas, Transport &xport)
     : gas_(gas),
       xport_(xport),
-      limit_(limit),
-      twin_(twin),
+      limit_(cfg->isir_sendlimit),
+      twin_(cfg->isir_testwindow),
       size_(0),
       min_(0),
       active_(0),

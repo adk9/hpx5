@@ -15,12 +15,16 @@
 # include "config.h"
 #endif
 
-#include <string.h>
-#include <libhpx/action.h>
-#include <libhpx/debug.h>
-#include <libhpx/parcel.h>
-#include <libhpx/scheduler.h>
-#include "isir.h"
+#include "FunneledNetwork.h"
+#include "libhpx/action.h"
+#include "libhpx/debug.h"
+#include "libhpx/parcel.h"
+#include "libhpx/scheduler.h"
+#include <cstring>
+
+namespace {
+using libhpx::network::isir::FunneledNetwork;
+}
 
 typedef struct {
   hpx_parcel_t *p;
@@ -92,7 +96,8 @@ static void _lco_get_continuation(hpx_parcel_t *p, void *env) {
   dbg_check(action_call_lsync(act, addr, rsync, rop, 4, &p, &n, &out, &reset));
 }
 
-int isir_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out, int reset) {
+int
+FunneledNetwork::get(hpx_addr_t lco, size_t n, void *out, int reset) {
   _lco_get_env_t env = {
     .lco = lco,
     .n = n,

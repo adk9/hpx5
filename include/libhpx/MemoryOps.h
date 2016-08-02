@@ -1,4 +1,4 @@
-// =============================================================================
+// ==================================================================-*- C++ -*-
 //  High Performance ParalleX Library (libhpx)
 //
 //  Copyright (c) 2013-2016, Trustees of Indiana University,
@@ -11,20 +11,18 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
-#ifndef LIBHPX_NETWORK_INST_H
-#define LIBHPX_NETWORK_INST_H
+#ifndef LIBHPX_MEMORY_OPS_H
+#define LIBHPX_MEMORY_OPS_H
 
-#include <hpx/attributes.h>
+/// The abstract base class for a provider for memory operations.
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-void *network_inst_new(void *impl)
-  HPX_MALLOC;
-
-#ifdef __cplusplus
+namespace libhpx {
+class MemoryOps {
+ public:
+  virtual ~MemoryOps();
+  virtual void pin(const void *base, size_t bytes, void *key) = 0;
+  virtual void unpin(const void *base, size_t bytes) = 0;
+};
 }
-#endif
 
-#endif
+#endif // LIBHPX_MEMORY_OPS_H

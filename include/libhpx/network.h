@@ -38,43 +38,6 @@ struct transport;
 
 typedef void network_t;
 
-
-/// All network objects implement the network interface.
-typedef struct network {
-  int type;
-
-  const class_string_t * string;
-
-  void (*deallocate)(void*);
-
-  int (*progress)(void*, int);
-
-  int (*send)(void*, hpx_parcel_t *p, hpx_parcel_t *ssync);
-
-  int (*coll_init)(void*, void **ctx);
-  int (*coll_sync)(void*, void *in, size_t in_size, void* out, void *ctx);
-
-  int (*lco_wait)(void *, hpx_addr_t lco, int reset);
-  int (*lco_get)(void *, hpx_addr_t lco, size_t n, void *to, int reset);
-
-  hpx_parcel_t *(*probe)(void*, int nrx);
-
-  void (*flush)(void*);
-
-  void (*register_dma)(void *, const void *base, size_t bytes, void *key);
-  void (*release_dma)(void *, const void *base, size_t bytes);
-} Network;
-
-/// Create a new network.
-///
-/// This depends on the current boot and transport object to be configured in
-/// the "here" locality.
-///
-/// @param          cfg The current configuration.
-/// @param         boot The bootstrap network object.
-/// @param          gas The global address space.
-///
-/// @returns            The network object, or NULL if there was an issue.
 network_t *network_new(struct config *cfg, struct boot *boot, struct gas *gas)
   HPX_MALLOC;
 
@@ -93,9 +56,7 @@ void network_delete(void *obj);
 ///
 /// @param      obj The network to start.
 /// @param       id The id to use when progressing the network.
-///
-/// @returns  LIBHPX_OK The network was progressed without error.
-int network_progress(void *obj, int id);
+void network_progress(void *obj, int id);
 
 /// Initiate a parcel send over the network.
 ///
@@ -146,6 +107,9 @@ void network_register_dma(void *obj, const void *base, size_t bytes, void *key);
 /// @param         base The beginning of the region to release.
 /// @param        bytes The number of bytes to release.
 void network_release_dma(void *obj, const void *base, size_t bytes);
+
+int network_coll_init(void *obj, void **collective);
+int network_coll_sync(void *obj, void *in, size_t in_size, void* out, void *collective);
 
 /// Perform an LCO get operation through the network.
 int network_lco_get(void *obj, hpx_addr_t lco, size_t n, void *out, int reset);

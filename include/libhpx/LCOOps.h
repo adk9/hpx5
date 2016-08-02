@@ -1,4 +1,4 @@
-// =============================================================================
+// ==================================================================-*- C++ -*-
 //  High Performance ParalleX Library (libhpx)
 //
 //  Copyright (c) 2013-2016, Trustees of Indiana University,
@@ -11,26 +11,19 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
-#ifndef LIBHPX_NETWORK_COMPRESSED_H
-#define LIBHPX_NETWORK_COMPRESSED_H
+#ifndef LIBHPX_LCO_OPS_H
+#define LIBHPX_LCO_OPS_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+/// The abstract base class for a provider for LCO operations.
+#include "hpx/hpx.h"
 
-#include <hpx/attributes.h>
-
-/// Forward declarations.
-/// @{
-struct config;
-/// @}
-
-
-void *compressed_network_new(void *next)
-  HPX_MALLOC;
-
-#ifdef __cplusplus
+namespace libhpx {
+class LCOOps {
+ public:
+  virtual ~LCOOps();
+  virtual int wait(hpx_addr_t lco, int reset) = 0;
+  virtual int get(hpx_addr_t lco, size_t n, void *to, int reset) = 0;
+};
 }
-#endif
 
-#endif // LIBHPX_NETWORK_COMPRESSED_H
+#endif // LIBHPX_LCO_OPS_H

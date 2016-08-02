@@ -126,7 +126,7 @@ void allreduce_reduce(allreduce_t *r, const void *val) {
     reduce_reset(r->reduce, in);
 
     // perform synchronized collective comm
-    here->net->coll_sync(here->net, in, r->bytes, output, r->ctx);
+    network_coll_sync(here->net, in, r->bytes, output, r->ctx);
 
     // call all local continuations to communicate the result
     continuation_trigger(r->continuation, output);
@@ -203,5 +203,5 @@ void allreduce_bcast_comm(allreduce_t *r, hpx_addr_t base, const void *coll) {
     ranks[i] = copy_ranks[i];
   }
   // perform collective initialization for all leaf nodes here
-  dbg_check(here->net->coll_init(here->net, &r->ctx));
+  dbg_check(network_coll_init(here->net, &r->ctx));
 }

@@ -15,13 +15,17 @@
 # include "config.h"
 #endif
 
-#include "isir.h"
-#include <libhpx/action.h>
-#include <libhpx/debug.h>
-#include <libhpx/parcel.h>
-#include <libhpx/scheduler.h>
+#include "FunneledNetwork.h"
+#include "libhpx/action.h"
+#include "libhpx/debug.h"
+#include "libhpx/parcel.h"
+#include "libhpx/scheduler.h"
 #include <alloca.h>
-#include <string.h>
+#include <cstring>
+
+namespace {
+using libhpx::network::isir::FunneledNetwork;
+}
 
 /// This action resumes a parcel that is suspended.
 ///
@@ -70,7 +74,8 @@ static void _isir_lco_wait_continuation(hpx_parcel_t *p, void *env) {
 }
 /// @}
 
-int isir_lco_wait(void *obj, hpx_addr_t lco, int reset) {
+int
+FunneledNetwork::wait(hpx_addr_t lco, int reset) {
   _isir_lco_wait_env_t env = {
     .lco = lco,
     .reset = reset
