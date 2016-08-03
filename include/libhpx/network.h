@@ -73,9 +73,8 @@ typedef struct network {
 
   int (*coll_init)(void*, coll_t** c);
   int (*coll_sync)(void*, void *in, size_t in_size, void* out, coll_t* c);
-  int (*coll_async)(void*, void *in, size_t in_size, void* out, coll_t* c, 
-		  hpx_addr_t lsync, hpx_addr_t rsync);
-
+  int (*coll_async)(void*, coll_data_t *dt, coll_t* c, hpx_addr_t lsync,
+		  hpx_addr_t rsync);
   int (*lco_wait)(void *, hpx_addr_t lco, int reset);
   int (*lco_get)(void *, hpx_addr_t lco, size_t n, void *to, int reset);
 
