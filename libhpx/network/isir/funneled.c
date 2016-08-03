@@ -147,34 +147,22 @@ static int _funneled_coll_sync(void *network, void *in, size_t input_sz,
   return LIBHPX_OK;
 }
 
-static int _funneled_coll_async(void *network, void *in, size_t input_sz,
-                               void *out, coll_t *c, hpx_addr_t lsync, hpx_addr_t rsync) {
+static int _funneled_coll_async(void *network, coll_data_t *data, coll_t *c, 
+		hpx_addr_t lsync, hpx_addr_t rsync) {
   char *comm = c->data + c->group_bytes;
   _funneled_t *isir = network;
 
-  //acquire lock before collective operation `put` into buffer
-  /*while (!sync_swap(&isir->progress_lock, 0, SYNC_ACQUIRE))*/
-    /*;*/
   dbg_assert(c->type == COLL_ALLRED);
 
-  coll_data_t *data = (coll_data_t*)calloc(1, sizeof(coll_data_t));
-  data->in = in;
-  data->count = input_sz;
-  data->out = out ; 
   data->comm = comm;
-  data->data_type = NULL;
-  data->op = NULL;
 
   hpx_parcel_t *ssync_local = action_new_parcel(hpx_lco_set_action, lsync, 0, 0, 0);
   data->ssync = ssync_local;
   sync_two_lock_queue_enqueue(&isir->colls, data);
   
-  /*isend_buffer_append(&isir->isends, data, ssync_local, COLL_ALLRED);*/
-
-  //release lock now
-  /*sync_store(&isir->progress_lock, 1, SYNC_RELEASE);*/
   return LIBHPX_OK;
 }
+
 
 static int
 _funneled_send(void *network, hpx_parcel_t *p, hpx_parcel_t *ssync) {

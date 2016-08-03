@@ -125,10 +125,23 @@ void allreduce_reduce(allreduce_t *r, const void *val) {
 
 #ifdef USE_ASYNC_NETWORK    
     hpx_addr_t and = hpx_lco_and_new(1);
-    here->net->coll_async(here->net, in, r->bytes, output, r->ctx, and, and);
+
+    //allocate a coll data parcel for async send
+    // ownership transfers to network (thus user doesn't need to free it)
+    coll_data_t *data = (coll_data_t*)calloc(1, sizeof(coll_data_t));
+    data->in = in;
+    data->count = 1;
+    data->out = output ; 
+    data->data_type = NULL;
+    data->op = NULL;
+    
+    /*here->net->coll_async2(here->net, in, r->bytes, output, r->ctx, and, HPX_NULL);*/
+    here->net->coll_async(here->net, data, r->ctx, and, HPX_NULL);
     
     hpx_lco_wait(and);
     hpx_lco_delete_sync(and);
+
+    /*free(data);*/
 #else
     // perform synchronized collective comm
     here->net->coll_sync(here->net, in, r->bytes, output, r->ctx);
