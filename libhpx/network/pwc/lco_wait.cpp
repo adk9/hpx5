@@ -15,6 +15,7 @@
 # include "config.h"
 #endif
 
+#include "PWCNetwork.h"
 #include "pwc.h"
 #include "commands.h"
 #include "xport.h"
@@ -40,7 +41,7 @@ _pwc_lco_wait_handler(struct hpx_parcel *p, int reset)
     dbg_error("Cannot yet return an error from a remote wait operation\n");
   }
 
-  return pwc_cmd(pwc_network, curr->src, Command(), Command::ResumeParcel(p));
+  return pwc_cmd(&PWCNetwork::Impl(), curr->src, Command(), Command::ResumeParcel(p));
 }
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _pwc_lco_wait, _pwc_lco_wait_handler,
                      HPX_POINTER, HPX_INT);

@@ -37,8 +37,6 @@ namespace {
 using namespace libhpx::network::pwc;
 }
 
-pwc_network_t *libhpx::network::pwc::pwc_network = nullptr;
-
 namespace libhpx {
 namespace network {
 namespace pwc {

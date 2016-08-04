@@ -90,8 +90,10 @@ class PWCNetwork final : public Network, public CollectiveOps, public LCOOps,
   /// @param         rcmd A remote command to be run at @p rank.
   void cmd(int rank, const Command& lcmd, const Command& rcmd);
 
+  static pwc_network_t& Impl();
+
  private:
-  pwc_network_t *impl_;
+  static pwc_network_t *impl_;
   StringOps* string_;
 };
 

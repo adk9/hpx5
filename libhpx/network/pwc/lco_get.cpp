@@ -15,6 +15,7 @@
 # include "config.h"
 #endif
 
+#include "PWCNetwork.h"
 #include "pwc.h"
 #include "commands.h"
 #include "xport.h"
@@ -34,7 +35,7 @@ _get_reply_continuation(struct hpx_parcel *p, void *env)
 {
   xport_op_t *op = static_cast<xport_op_t*>(env);
   op->lop  = Command::ResumeParcel(p);
-  dbg_check( pwc_network->xport->pwc(op) );
+  dbg_check( PWCNetwork::Impl().xport->pwc(op) );
 }
 
 namespace {
@@ -56,8 +57,7 @@ struct _pwc_lco_get_request_args_t {
 /// continuation, but we'd need an environment to pass down there anyway, so we
 /// use the xport_op_t for that.
 static int
-_get_reply(_pwc_lco_get_request_args_t *args, pwc_network_t *pwc,
-           const void *ref, Command remote)
+_get_reply(_pwc_lco_get_request_args_t *args, const void *ref, Command remote)
 {
   // Create the transport operation to perform the rdma put operation
   xport_op_t op;
@@ -66,7 +66,7 @@ _get_reply(_pwc_lco_get_request_args_t *args, pwc_network_t *pwc,
   op.dest = args->out;
   op.dest_key = args->key;
   op.src = ref;
-  op.src_key = pwc->xport->key_find_ref(pwc->xport, ref, args->n);
+  op.src_key = PWCNetwork::Impl().xport->key_find_ref(PWCNetwork::Impl().xport, ref, args->n);
   op.lop = Command();                          // set in _get_reply_continuation
   op.rop = remote;
   dbg_assert_str(op.src_key, "LCO reference must point to registered memory\n");
@@ -80,8 +80,7 @@ _get_reply(_pwc_lco_get_request_args_t *args, pwc_network_t *pwc,
 /// This function (*not* an action) performs a get request to a temporary stack
 /// location.
 static int
-_get_reply_stack(_pwc_lco_get_request_args_t *args, pwc_network_t *pwc,
-                 hpx_addr_t lco)
+_get_reply_stack(_pwc_lco_get_request_args_t *args, hpx_addr_t lco)
 {
   char ref[args->n];
 
@@ -97,14 +96,13 @@ _get_reply_stack(_pwc_lco_get_request_args_t *args, pwc_network_t *pwc,
     dbg_error("Cannot yet return an error from a remote get operation\n");
   }
 
-  return _get_reply(args, pwc, ref, Command::ResumeParcel(args->p));
+  return _get_reply(args, ref, Command::ResumeParcel(args->p));
 }
 
 /// This function (*not* an action) performs a get request to a temporary
 /// malloced location.
 static int
-_get_reply_malloc(_pwc_lco_get_request_args_t *args, pwc_network_t *pwc,
-                  hpx_addr_t lco)
+_get_reply_malloc(_pwc_lco_get_request_args_t *args, hpx_addr_t lco)
 {
   void *ref = registered_malloc(args->n);
   dbg_assert(ref);
@@ -121,7 +119,7 @@ _get_reply_malloc(_pwc_lco_get_request_args_t *args, pwc_network_t *pwc,
     dbg_error("Cannot yet return an error from a remote get operation\n");
   }
 
-  e = _get_reply(args, pwc, ref, Command::ResumeParcel(args->p));
+  e = _get_reply(args, ref, Command::ResumeParcel(args->p));
   registered_free(ref);
   return e;
 }
@@ -129,8 +127,7 @@ _get_reply_malloc(_pwc_lco_get_request_args_t *args, pwc_network_t *pwc,
 /// This function (*not* an action) performs a two-phase get request without any
 /// temporary storage.
 static int
-_get_reply_getref(_pwc_lco_get_request_args_t *args, pwc_network_t *pwc,
-                  hpx_addr_t lco)
+_get_reply_getref(_pwc_lco_get_request_args_t *args, hpx_addr_t lco)
 {
   // Get a reference to the LCO data
   void *ref;
@@ -143,14 +140,14 @@ _get_reply_getref(_pwc_lco_get_request_args_t *args, pwc_network_t *pwc,
   // Send back the LCO data. This doesn't resume the remote thread because there
   // is a race where a delete can trigger a use-after-free during our subsequent
   // release.
-  e = _get_reply(args, pwc, ref, Command());
+  e = _get_reply(args, ref, Command());
   dbg_check(e, "Failed rendezvous put during remote lco get request.\n");
 
   // Release the reference.
   hpx_lco_release(lco, ref);
 
   // Wake the remote getter up.
-  e = pwc_cmd(pwc, args->rank, Command(), Command::ResumeParcel(args->p));
+  e = pwc_cmd(&PWCNetwork::Impl(), args->rank, Command(), Command::ResumeParcel(args->p));
   dbg_check(e, "Failed to start resume command during remote lco get.\n");
   return e;
 }
@@ -173,13 +170,13 @@ _pwc_lco_get_request_handler(_pwc_lco_get_request_args_t *args, size_t n)
   // put operations, one to put back to the waiting buffer, and one to resume
   // the waiting thread after we drop our local reference.
   if (args->n > LIBHPX_SMALL_THRESHOLD && !args->reset) {
-    return _get_reply_getref(args, pwc_network, lco);
+    return _get_reply_getref(args, lco);
   }
 
   // If there is enough space to stack allocate a buffer to copy, use the stack
   // version, otherwise malloc a buffer to copy to.
   else if (hpx_thread_can_alloca(args->n) >= HPX_PAGE_SIZE) {
-    return _get_reply_stack(args, pwc_network, lco);
+    return _get_reply_stack(args, lco);
   }
 
   // Otherwise we get to a registered buffer and then do the put. The theory
@@ -190,7 +187,7 @@ _pwc_lco_get_request_handler(_pwc_lco_get_request_args_t *args, size_t n)
   //     LIBHPX_SMALL_THRESHOLD is appropriate. Honestly, given enough work to
   //     do, the latency of two puts might not be a big deal.
   else {
-    return _get_reply_malloc(args, pwc_network, lco);
+    return _get_reply_malloc(args, lco);
   }
 }
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _pwc_lco_get_request,
@@ -233,12 +230,12 @@ libhpx::network::pwc::pwc_lco_get(void *obj, hpx_addr_t lco, size_t n,
 
   // If the output buffer is already registered, then we just need to copy the
   // key into the args structure, otherwise we need to register the region.
-  const void *key = pwc_network->xport->key_find_ref(pwc_network->xport, out, n);
+  const void *key = PWCNetwork::Impl().xport->key_find_ref(PWCNetwork::Impl().xport, out, n);
   if (key) {
-    pwc_network->xport->key_copy(&env.request.key, key);
+    PWCNetwork::Impl().xport->key_copy(&env.request.key, key);
   }
   else {
-    pwc_network->xport->pin(out, n, &env.request.key);
+    PWCNetwork::Impl().xport->pin(out, n, &env.request.key);
   }
 
   // Perform the get operation synchronously.
@@ -247,7 +244,7 @@ libhpx::network::pwc::pwc_lco_get(void *obj, hpx_addr_t lco, size_t n,
   // If we registered the output buffer dynamically, then we need to de-register
   // it now.
   if (!key) {
-    pwc_network->xport->unpin(out, n);
+    PWCNetwork::Impl().xport->unpin(out, n);
   }
   return HPX_SUCCESS;
 }

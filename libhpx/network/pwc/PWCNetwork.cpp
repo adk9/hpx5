@@ -30,22 +30,30 @@ using libhpx::StringOps;
 using libhpx::network::ParcelStringOps;
 using libhpx::network::pwc::PWCNetwork;
 using libhpx::network::pwc::DMAStringOps;
+
+using libhpx::network::pwc::pwc_network_t;
+}
+
+pwc_network_t* PWCNetwork::impl_ = NULL;
+
+pwc_network_t&
+PWCNetwork::Impl() {
+  assert(impl_);
+  return *impl_;
 }
 
 PWCNetwork::PWCNetwork(const config_t *cfg, boot_t *boot, gas_t *gas)
-    : Network(),
-      impl_(network_pwc_funneled_new(cfg, boot, gas)),
-      string_((gas->type == HPX_GAS_AGAS) ?
+    : string_((gas->type == HPX_GAS_AGAS) ?
               static_cast<StringOps*>(new ParcelStringOps()) :
               static_cast<StringOps*>(new DMAStringOps(*this, boot_rank(boot))))
 {
-  libhpx::network::pwc::pwc_network = impl_;
+  assert(!impl_);
+  impl_ = network_pwc_funneled_new(cfg, boot, gas);
 }
 
 PWCNetwork::~PWCNetwork()
 {
   delete string_;
-  libhpx::network::pwc::pwc_network = nullptr;
   pwc_deallocate(impl_);
 }
 

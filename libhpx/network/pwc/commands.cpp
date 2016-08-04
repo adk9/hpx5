@@ -15,6 +15,7 @@
 # include "config.h"
 #endif
 
+#include "PWCNetwork.h"
 #include "commands.h"
 #include "pwc.h"
 #include "xport.h"
@@ -36,7 +37,7 @@ Command::lcoSet(unsigned src) const
 inline void
 Command::lcoSetAtSource(unsigned src) const
 {
-  dbg_check( pwc_cmd(pwc_network, src, Command(), Command(LCO_SET, arg_)) );
+  dbg_check( pwc_cmd(&PWCNetwork::Impl(), src, Command(), Command(LCO_SET, arg_)) );
 }
 
 inline void
@@ -63,7 +64,7 @@ Command::resumeParcel(unsigned src) const
 inline void
 Command::resumeParcelAtSource(unsigned src) const
 {
-  dbg_check( pwc_cmd(pwc_network, src, Command(), Command(RESUME_PARCEL, arg_)) );
+  dbg_check( pwc_cmd(&PWCNetwork::Impl(), src, Command(), Command(RESUME_PARCEL, arg_)) );
 }
 
 void

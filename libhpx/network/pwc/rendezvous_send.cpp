@@ -24,6 +24,7 @@
 /// events, the remote event will free the sent parcel, while the local event
 /// will schedule the parcel once the get has completed.
 
+#include "PWCNetwork.h"
 #include "pwc.h"
 #include "commands.h"
 #include "xport.h"
@@ -73,12 +74,12 @@ _rendezvous_get_handler(_rendezvous_get_args_t *args, size_t size)
   op.rank = args->rank;
   op.n = args->n;
   op.dest = p;
-  op.dest_key = pwc_network->xport->key_find_ref(pwc_network->xport, p, args->n);
+  op.dest_key = PWCNetwork::Impl().xport->key_find_ref(PWCNetwork::Impl().xport, p, args->n);
   op.src = args->p;
   op.src_key = &args->key;
   op.lop = Command::RendezvousLaunch(p);
   op.rop = Command::DeleteParcel(args->p);
-  int e = pwc_network->xport->gwc(&op);
+  int e = PWCNetwork::Impl().xport->gwc(&op);
   dbg_check(e, "could not issue get during rendezvous parcel\n");
   return HPX_SUCCESS;
 }
