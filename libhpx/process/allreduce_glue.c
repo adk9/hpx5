@@ -26,12 +26,15 @@ static const size_t BSIZE = sizeof(allreduce_t);
 hpx_addr_t hpx_process_collective_allreduce_new(size_t bytes,
                                                 hpx_action_t reset,
                                                 hpx_action_t op) {
+  //TODO - moidfy allreduce interface	
+  hpx_coll_optype_t netop = HPX_COLL_SUM;	
+  hpx_coll_dtype_t netdt = HPX_COLL_INT;	
   // allocate and initialize a root node
   hpx_addr_t root = hpx_gas_alloc_local(1, BSIZE, 0);
   dbg_assert(root);
   hpx_addr_t null = HPX_NULL;
   dbg_check( hpx_call_sync(root, allreduce_init_async, NULL, 0, &bytes, &null,
-                           &reset, &op) );
+                           &reset, &op, &netop, &netdt ) );
 
   // allocate an array of local elements for the process
   int n = here->ranks;
@@ -42,7 +45,7 @@ hpx_addr_t hpx_process_collective_allreduce_new(size_t bytes,
   hpx_addr_t and = hpx_lco_and_new(n);
   dbg_check( hpx_gas_bcast_with_continuation(allreduce_init_async, base, n,
                                              0, BSIZE, hpx_lco_set_action, and,
-                                             &bytes, &root, &reset, &op) );
+                                             &bytes, &root, &reset, &op, &netop, &netdt) );
   hpx_lco_wait(and);
   hpx_lco_delete_sync(and);
 

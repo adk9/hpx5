@@ -21,17 +21,18 @@
 
 static int _allreduce_init_handler(allreduce_t *r, size_t bytes,
                                    hpx_addr_t parent, hpx_action_t id,
-                                   hpx_action_t op) {
+                                   hpx_action_t op, int net_optype, int net_datatype) {
   CHECK_ACTION(id);
   CHECK_ACTION(op);
   hpx_monoid_id_t rid = (hpx_monoid_id_t)actions[id].handler;
   hpx_monoid_op_t rop = (hpx_monoid_op_t)actions[op].handler;
-  allreduce_init(r, bytes, parent, rid, rop);
+  allreduce_init(r, bytes, parent, rid, rop, (hpx_coll_optype_t) net_optype,
+		 (hpx_coll_dtype_t) net_datatype);
   return HPX_SUCCESS;
 }
 HPX_ACTION(HPX_INTERRUPT, HPX_PINNED, allreduce_init_async,
            _allreduce_init_handler, HPX_POINTER, HPX_SIZE_T, HPX_ADDR,
-           HPX_ACTION_T, HPX_ACTION_T);
+           HPX_ACTION_T, HPX_ACTION_T, HPX_INT, HPX_INT);
 
 static int _allreduce_fini_handler(allreduce_t *r) {
   allreduce_fini(r);
