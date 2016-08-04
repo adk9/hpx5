@@ -47,7 +47,7 @@ typedef struct {
 } allreduce_t;
 
 void allreduce_init(allreduce_t *obj, size_t bytes, hpx_addr_t parent,
-                    hpx_monoid_id_t id, hpx_monoid_op_t op);
+                    hpx_monoid_id_t id, hpx_monoid_op_t op, hpx_coll_optype_t nop, hpx_coll_dtype_t ndt);
 void allreduce_fini(allreduce_t *obj);
 int32_t allreduce_add(allreduce_t *obj, hpx_action_t op, hpx_addr_t addr);
 void allreduce_remove(allreduce_t *obj, int32_t id);

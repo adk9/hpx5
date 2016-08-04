@@ -26,7 +26,8 @@
 #define USE_ASYNC_NETWORK 1
 
 void allreduce_init(allreduce_t *r, size_t bytes, hpx_addr_t parent,
-                    hpx_monoid_id_t id, hpx_monoid_op_t op) {
+                    hpx_monoid_id_t id, hpx_monoid_op_t op, 
+		    hpx_coll_optype_t nop, hpx_coll_dtype_t ndt) {
   r->lock = hpx_lco_sema_new(1);
   r->bytes = bytes;
   r->parent = parent;
@@ -43,6 +44,8 @@ void allreduce_init(allreduce_t *r, size_t bytes, hpx_addr_t parent,
   r->ctx->group_sz = 0;
   r->ctx->recv_count = bytes;
   r->ctx->type = COLL_ALLRED;
+  r->ctx->net_op = nop;
+  r->ctx->net_dt = ndt;
   r->ctx->op = op;
 }
 
@@ -126,16 +129,15 @@ void allreduce_reduce(allreduce_t *r, const void *val) {
 #ifdef USE_ASYNC_NETWORK    
     hpx_addr_t and = hpx_lco_and_new(1);
 
-    //allocate a coll data parcel for async send
+    // allocate a coll data parcel for async send
     // ownership transfers to network (thus user doesn't need to free it)
     coll_data_t *data = (coll_data_t*)calloc(1, sizeof(coll_data_t));
     data->in = in;
-    data->count = 1;
+    data->bytes = r->bytes;
     data->out = output ; 
-    data->data_type = NULL;
-    data->op = NULL;
+    data->data_type = r->ctx->net_dt;
+    data->op = r->ctx->net_op;
     
-    /*here->net->coll_async2(here->net, in, r->bytes, output, r->ctx, and, HPX_NULL);*/
     here->net->coll_async(here->net, data, r->ctx, and, HPX_NULL);
     
     hpx_lco_wait(and);
