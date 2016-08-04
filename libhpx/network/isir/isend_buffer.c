@@ -181,8 +181,8 @@ static int _start(isend_buffer_t *isends, int i) {
     return isends->xport->isend(isends->xport, to, from, n, tag, r);
   } else if(isend_op == COLL_ALLRED){
     coll_data_t *d = isends->records[i].data.coll_data;
-    return isends->xport->iallreduce(d->in, d->out, d->count, d->data_type, 
-		    d->op, d->comm, r);
+    return isends->xport->iallreduce(d->in, d->out, d->bytes, &d->data_type, 
+		    &d->op, d->comm, r);
   }
   dbg_check(0, "Failed to start an ISIR operation, no valid op type found. provided op : %d \n"
 		  , isend_op);
