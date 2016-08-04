@@ -32,6 +32,28 @@ struct gas;
 struct transport;
 /// @}
 
+/// collective interface predefined data types
+typedef enum {
+  HPX_COLL_DEFAULT_TYPE = 10,
+  HPX_COLL_INT ,
+  HPX_COLL_LONG ,
+  HPX_COLL_SHORT,
+  HPX_COLL_FLOAT,
+  HPX_COLL_DOUBLE,
+  HPX_COLL_CHAR
+} hpx_coll_dtype_t;
+
+/// collective interface predefined functions
+typedef enum{
+  HPX_COLL_DEFAULT_OP = 100,
+  HPX_COLL_SUM,
+  HPX_COLL_MIN,
+  HPX_COLL_MAX,
+  HPX_COLL_AND,
+  HPX_COLL_OR,
+  HPX_COLL_XOR
+} hpx_coll_optype_t;
+
 /// collective definitions/interfaces
 typedef enum {
   DIRECT = 10001,
@@ -42,16 +64,18 @@ typedef enum {
 typedef struct {
   void *in;  
   void *out;
-  void *data_type;
-  void *op;  
+  hpx_coll_dtype_t data_type;
+  hpx_coll_optype_t op;  
   void *comm;  
   hpx_parcel_t *ssync;
-  int count;
+  long bytes;
 } coll_data_t;
 
 typedef struct collective{
   cmd_t type;   //!< type of collective operation
-  hpx_monoid_op_t    op;   //!< collective operator
+  hpx_monoid_op_t        op;   //!< collective operator
+  hpx_coll_optype_t  net_op;   //!< collective operation for network collectives
+  hpx_coll_dtype_t   net_dt;    //!< collective data type for network collectives
   int32_t      group_sz;   //!< active group size
   int32_t    recv_count;   //!< how many bytes to be recieved
   int32_t    comm_bytes;   //!< active comm size in bytes
