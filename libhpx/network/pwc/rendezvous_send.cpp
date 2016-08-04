@@ -25,14 +25,20 @@
 /// will schedule the parcel once the get has completed.
 
 #include "PWCNetwork.h"
-#include "pwc.h"
 #include "commands.h"
 #include "xport.h"
-#include <libhpx/debug.h>
-#include <libhpx/parcel.h>
-#include <libhpx/scheduler.h>
+#include "libhpx/debug.h"
+// #include <libhpx/parcel.h>
+#include "libhpx/scheduler.h"
 
-using namespace libhpx::network::pwc;
+namespace {
+using libhpx::network::pwc::Command;
+using libhpx::network::pwc::PWCNetwork;
+
+using libhpx::network::pwc::pwc_xport_t;
+using libhpx::network::pwc::xport_op_t;
+using libhpx::network::pwc::xport_key_t;
+}
 
 /// The local event handler for the get-with-completion operation.
 ///
@@ -68,18 +74,19 @@ struct _rendezvous_get_args_t {
 static int
 _rendezvous_get_handler(_rendezvous_get_args_t *args, size_t size)
 {
+  pwc_xport_t *xport = PWCNetwork::Instance().xport_;
   hpx_parcel_t *p = parcel_alloc(args->n - sizeof(*p));
   dbg_assert(p);
   xport_op_t op;
   op.rank = args->rank;
   op.n = args->n;
   op.dest = p;
-  op.dest_key = PWCNetwork::Impl().xport->key_find_ref(PWCNetwork::Impl().xport, p, args->n);
+  op.dest_key = xport->key_find_ref(xport, p, args->n);
   op.src = args->p;
   op.src_key = &args->key;
   op.lop = Command::RendezvousLaunch(p);
   op.rop = Command::DeleteParcel(args->p);
-  int e = PWCNetwork::Impl().xport->gwc(&op);
+  int e = xport->gwc(&op);
   dbg_check(e, "could not issue get during rendezvous parcel\n");
   return HPX_SUCCESS;
 }
@@ -87,15 +94,14 @@ static LIBHPX_ACTION(HPX_INTERRUPT, HPX_MARSHALLED, _rendezvous_get,
                      _rendezvous_get_handler, HPX_POINTER, HPX_SIZE_T);
 
 int
-libhpx::network::pwc::pwc_rendezvous_send(void *network, const hpx_parcel_t *p)
+PWCNetwork::rendezvousSend(const hpx_parcel_t *p)
 {
-  pwc_network_t *pwc = static_cast<pwc_network_t*>(network);
   size_t n = parcel_size(p);
   _rendezvous_get_args_t args = {
     .rank = here->rank,
     .p = p,
     .n = n
   };
-  pwc->xport->key_find(pwc->xport, p, n, &args.key);
+  xport_->key_find(xport_, p, n, &args.key);
   return hpx_call(p->target, _rendezvous_get, HPX_NULL, &args, sizeof(args));
 }

@@ -16,17 +16,19 @@
 #endif
 
 #include "PWCNetwork.h"
-#include "pwc.h"
 #include "commands.h"
 #include "xport.h"
-#include <libhpx/action.h>
-#include <libhpx/config.h>
-#include <libhpx/debug.h>
-#include <libhpx/parcel.h>
-#include <libhpx/scheduler.h>
-#include <libhpx/worker.h>
+#include "libhpx/debug.h"
+#include "libhpx/scheduler.h"
 
-using namespace libhpx::network::pwc;
+namespace {
+using libhpx::network::pwc::Command;
+using libhpx::network::pwc::PWCNetwork;
+
+using libhpx::network::pwc::pwc_xport_t;
+using libhpx::network::pwc::xport_op_t;
+using libhpx::network::pwc::xport_key_t;
+}
 
 /// This acts as a parcel_suspend transfer to allow _pwc_lco_get_request_handler
 /// to wait for its pwc to complete.
@@ -35,7 +37,7 @@ _get_reply_continuation(struct hpx_parcel *p, void *env)
 {
   xport_op_t *op = static_cast<xport_op_t*>(env);
   op->lop  = Command::ResumeParcel(p);
-  dbg_check( PWCNetwork::Impl().xport->pwc(op) );
+  dbg_check( PWCNetwork::Instance().xport_->pwc(op) );
 }
 
 namespace {
@@ -59,6 +61,7 @@ struct _pwc_lco_get_request_args_t {
 static int
 _get_reply(_pwc_lco_get_request_args_t *args, const void *ref, Command remote)
 {
+  pwc_xport_t *xport = PWCNetwork::Instance().xport_;
   // Create the transport operation to perform the rdma put operation
   xport_op_t op;
   op.rank = args->rank;
@@ -66,7 +69,7 @@ _get_reply(_pwc_lco_get_request_args_t *args, const void *ref, Command remote)
   op.dest = args->out;
   op.dest_key = args->key;
   op.src = ref;
-  op.src_key = PWCNetwork::Impl().xport->key_find_ref(PWCNetwork::Impl().xport, ref, args->n);
+  op.src_key = xport->key_find_ref(xport, ref, args->n);
   op.lop = Command();                          // set in _get_reply_continuation
   op.rop = remote;
   dbg_assert_str(op.src_key, "LCO reference must point to registered memory\n");
@@ -147,9 +150,8 @@ _get_reply_getref(_pwc_lco_get_request_args_t *args, hpx_addr_t lco)
   hpx_lco_release(lco, ref);
 
   // Wake the remote getter up.
-  e = pwc_cmd(&PWCNetwork::Impl(), args->rank, Command(), Command::ResumeParcel(args->p));
-  dbg_check(e, "Failed to start resume command during remote lco get.\n");
-  return e;
+  PWCNetwork::Cmd(args->rank, Command(), Command::ResumeParcel(args->p));
+  return HPX_SUCCESS;
 }
 
 /// This action is sent to execute the request half of a two-sided LCO get
@@ -217,8 +219,7 @@ _pwc_lco_get_continuation(struct hpx_parcel *p, void *env)
 /// This operation is synchronous and will block until the operation has
 /// completed.
 int
-libhpx::network::pwc::pwc_lco_get(void *obj, hpx_addr_t lco, size_t n,
-                                  void *out, int reset)
+PWCNetwork::get(hpx_addr_t lco, size_t n, void *out, int reset)
 {
   _pwc_lco_get_continuation_env_t env;
   env.request.p = nullptr;                   // set in _pwc_lco_get_continuation
@@ -230,12 +231,12 @@ libhpx::network::pwc::pwc_lco_get(void *obj, hpx_addr_t lco, size_t n,
 
   // If the output buffer is already registered, then we just need to copy the
   // key into the args structure, otherwise we need to register the region.
-  const void *key = PWCNetwork::Impl().xport->key_find_ref(PWCNetwork::Impl().xport, out, n);
+  const void *key = xport_->key_find_ref(xport_, out, n);
   if (key) {
-    PWCNetwork::Impl().xport->key_copy(&env.request.key, key);
+    xport_->key_copy(&env.request.key, key);
   }
   else {
-    PWCNetwork::Impl().xport->pin(out, n, &env.request.key);
+    xport_->pin(out, n, &env.request.key);
   }
 
   // Perform the get operation synchronously.
@@ -244,7 +245,7 @@ libhpx::network::pwc::pwc_lco_get(void *obj, hpx_addr_t lco, size_t n,
   // If we registered the output buffer dynamically, then we need to de-register
   // it now.
   if (!key) {
-    PWCNetwork::Impl().xport->unpin(out, n);
+    xport_->unpin(out, n);
   }
   return HPX_SUCCESS;
 }

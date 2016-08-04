@@ -37,7 +37,7 @@ Command::lcoSet(unsigned src) const
 inline void
 Command::lcoSetAtSource(unsigned src) const
 {
-  dbg_check( pwc_cmd(&PWCNetwork::Impl(), src, Command(), Command(LCO_SET, arg_)) );
+  PWCNetwork::Cmd(src, Command(), Command(LCO_SET, arg_));
 }
 
 inline void
@@ -64,7 +64,7 @@ Command::resumeParcel(unsigned src) const
 inline void
 Command::resumeParcelAtSource(unsigned src) const
 {
-  dbg_check( pwc_cmd(&PWCNetwork::Impl(), src, Command(), Command(RESUME_PARCEL, arg_)) );
+  PWCNetwork::Cmd(src, Command(), Command(RESUME_PARCEL, arg_));
 }
 
 void

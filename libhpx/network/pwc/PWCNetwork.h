@@ -16,11 +16,18 @@
 
 #include "libhpx/Network.h"
 #include "commands.h"
+#include "xport.h"
 
 namespace libhpx {
 namespace network {
 namespace pwc {
 class pwc_network_t;
+
+struct heap_segment_t {
+  size_t        n;
+  char      *base;
+  xport_key_t key;
+};
 
 class PWCNetwork final : public Network, public CollectiveOps, public LCOOps,
                          public MemoryOps, public ParcelOps {
@@ -63,6 +70,10 @@ class PWCNetwork final : public Network, public CollectiveOps, public LCOOps,
   /// @param         rcmd The remote command, run when @p to has be written.
   void put(hpx_addr_t to, const void *lva, size_t n, const Command& lcmd,
            const Command& rcmd);
+  static void Put(hpx_addr_t to, const void *lva, size_t n, const Command& lcmd,
+                  const Command& rcmd) {
+    Instance().put(to, lva, n, lcmd, rcmd);
+  }
 
   /// Initiate an rDMA get operation.
   ///
@@ -78,6 +89,11 @@ class PWCNetwork final : public Network, public CollectiveOps, public LCOOps,
   void get(void *lva, hpx_addr_t from, size_t n, const Command& lcmd,
            const Command& rcmd);
 
+  static void Get(void *lva, hpx_addr_t from, size_t n, const Command& lcmd,
+                  const Command& rcmd) {
+    Instance().get(lva, from, n, lcmd, rcmd);
+  }
+
   /// Perform a PWC network command.
   ///
   /// This sends a "pure" command to the scheduler at a different rank, without
@@ -90,11 +106,33 @@ class PWCNetwork final : public Network, public CollectiveOps, public LCOOps,
   /// @param         rcmd A remote command to be run at @p rank.
   void cmd(int rank, const Command& lcmd, const Command& rcmd);
 
+  static void Cmd(int rank, const Command& lcmd, const Command& rcmd) {
+    Instance().cmd(rank, lcmd, rcmd);
+  }
+
+  /// Perform a rendezvous parcel send operation.
+  ///
+  /// For normal size parcels, we use the set of one-to-one pre-allocated eager
+  /// parcel buffers to put the parcel data directly to the target rank. For
+  /// larger parcels that will either always overflow the eager buffer, or that
+  /// will use them up quickly and cause lots of re-allocation synchronization, we
+  /// use this rendezvous protocol.
+  ///
+  /// @param            p The parcel to send.
+  ///
+  /// @returns            The status of the operation.
+  int rendezvousSend(const hpx_parcel_t* p);
+
+  static PWCNetwork& Instance();
   static pwc_network_t& Impl();
 
+  pwc_xport_t *xport_;
+
  private:
-  static pwc_network_t *impl_;
+  static PWCNetwork* Instance_;
+
   StringOps* string_;
+  pwc_network_t *impl_;
 };
 
 
