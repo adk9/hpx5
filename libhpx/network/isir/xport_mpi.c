@@ -22,6 +22,7 @@
 #include <libhpx/gas.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/memory.h>
+#include <libhpx/network.h>
 #include "parcel_utils.h"
 #include "xport.h"
 
@@ -247,24 +248,73 @@ _mpi_allreduce(void *sendbuf, void *out, int count, void *datatype, void *op,
   free(result);
 }
 
+static void _to_mpi_optype(hpx_coll_optype_t optype, MPI_Op *mpi_opt){
+  if(optype == HPX_COLL_SUM){
+    *mpi_opt = MPI_SUM;
+  } else if(optype == HPX_COLL_MIN){
+    *mpi_opt = MPI_MIN;
+  } else if(optype == HPX_COLL_MAX){
+    *mpi_opt = MPI_MAX;
+  } else if(optype == HPX_COLL_AND){
+    *mpi_opt = MPI_LAND;
+  } else if(optype == HPX_COLL_OR){
+    *mpi_opt = MPI_LOR;
+  }else if(optype == HPX_COLL_XOR){
+    *mpi_opt = MPI_LXOR;
+  }  else {
+    log_error("failed to match a correct MPI operation, provided : %d."
+		   " We are defaulting to MPI_SUM\n", optype);
+    *mpi_opt = MPI_SUM;
+  }
+}
+
+static void _to_mpi_dtype(hpx_coll_dtype_t coll_type, MPI_Datatype *mpi_dt, int bytes, int *count){
+  int mpi_dtype_sz;	
+  if(coll_type == HPX_COLL_INT){
+    *mpi_dt = MPI_INT;
+  } else if(coll_type == HPX_COLL_LONG){
+    *mpi_dt = MPI_LONG;
+  } else if(coll_type == HPX_COLL_FLOAT){
+    *mpi_dt = MPI_FLOAT;
+  } else if(coll_type == HPX_COLL_SHORT){
+    *mpi_dt = MPI_SHORT;
+  } else if(coll_type == HPX_COLL_DOUBLE){
+    *mpi_dt = MPI_DOUBLE;
+  }else if(coll_type == HPX_COLL_CHAR){
+    *mpi_dt = MPI_CHAR;
+  }  else {
+    log_error("failed to match a correct MPI type , provided : %d. We are defaulting to MPI_INT type \n", 
+		    coll_type);
+    *mpi_dt = MPI_INT;
+  }
+  MPI_Type_size(*mpi_dt, &mpi_dtype_sz);
+  *count = bytes/mpi_dtype_sz;
+}
+
 static int
-_mpi_iallreduce(void *sendbuf, void *out, int count, void *datatype, void *op,
+_mpi_iallreduce(void *sendbuf, void *out, int bytes, void *datatype, void *op,
                void *c, void *r)
 {
 
   MPI_Comm *comm = c;
-  MPI_Op operation = MPI_SUM;
-  MPI_Datatype dt = MPI_INT;
+  MPI_Op mpi_operation = MPI_SUM;
+  MPI_Datatype mpi_datatype = MPI_INT;
+  int count, mpi_int_sz ;
+  
+  //calculate default size
+  MPI_Type_size(mpi_datatype, &mpi_int_sz);
+  count = bytes/mpi_int_sz;
+
   MPI_Request *req = (MPI_Request*) r;
 
   if(op){
-    operation = *((MPI_Op*)op);
+    _to_mpi_optype(*(hpx_coll_optype_t*) op, &mpi_operation);
   }
   if(datatype){
-    dt = *((MPI_Datatype*) datatype);
+    _to_mpi_dtype(*(hpx_coll_dtype_t*) datatype, &mpi_datatype, bytes, &count);
   }
 
-  int e = MPI_Iallreduce(sendbuf, out, count, dt, operation, *comm, req);
+  int e = MPI_Iallreduce(sendbuf, out, count, mpi_datatype, mpi_operation, *comm, req);
   if (MPI_SUCCESS != e) {
     return log_error("failed MPI_Iallreduce: with count %d \n", count);
   }
