@@ -37,34 +37,34 @@ def print_parcels():
       print ("Buffer address: %s" % data_ptr)
 
       ### Process work queue for current worker thread
-     queues = worker['queues']
-     for m in range(2):
-       queue = queues[m]
-       work_queue = queue['work']
-       bottom = work_queue['bottom']
-       top = work_queue['top']
-       queue_buffer = work_queue['buffer']
-       mask = queue_buffer['mask']
-       queued_actions = queue_buffer['buffer']
-       print("-------------------")
-       print("Parcels in Queue %d" % m)
-       print("-------------------")
-       if top == bottom:
-         print("Queue is empty")
-         continue
-       print("Parcel Address\t\tAction")
-       print("--------------\t\t-----------------------")
-       for j in range(int(top), int(bottom)):
-         k = j&mask
-         parcel_ptr = queued_actions[k]
-         temp_string3 = '*(struct hpx_parcel *)' + str(parcel_ptr)
-         parcel = gdb.parse_and_eval(temp_string3)
-         action_nbr = parcel['action']
-         action_str = str(actions[action_nbr]['key'])
-         temp_index1 = action_str.find("\"") + 1
-         temp_index2 = action_str.find("\"", temp_index1)
-         action_name = action_str[temp_index1:temp_index2]
-         print(str(parcel_ptr) + "\t\t" + action_name)
+      queues = worker['queues']
+      for m in range(2):
+        queue = queues[m]
+        work_queue = queue['work']
+        bottom = work_queue['bottom']
+        top = work_queue['top']
+        queue_buffer = work_queue['buffer']
+        mask = queue_buffer['mask']
+        queued_actions = queue_buffer['buffer']
+        print("-------------------")
+        print("Parcels in Queue %d" % m)
+        print("-------------------")
+        if top == bottom:
+          print("Queue is empty")
+          continue
+        print("Parcel Address\t\tAction")
+        print("--------------\t\t-----------------------")
+        for j in range(int(top), int(bottom)):
+          k = j&mask
+          parcel_ptr = queued_actions[k]
+          temp_string3 = '*(struct hpx_parcel *)' + str(parcel_ptr)
+          parcel = gdb.parse_and_eval(temp_string3)
+          action_nbr = parcel['action']
+          action_str = str(actions[action_nbr]['key'])
+          temp_index1 = action_str.find("\"") + 1
+          temp_index2 = action_str.find("\"", temp_index1)
+          action_name = action_str[temp_index1:temp_index2]
+          print(str(parcel_ptr) + "\t\t" + action_name)
   except:
     print("Unable to retrieve Parcels information.")
 
