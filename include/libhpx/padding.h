@@ -28,4 +28,15 @@
 #define ALIGN(bytes, align)                                 \
   (((align) - ((bytes) & ((align) - 1))) & ((align) - 1))
 
+#ifdef __cplusplus
+#include <cstddef>
+namespace libhpx {
+namespace util {
+inline size_t align(size_t bytes, size_t align) {
+  return ALIGN(bytes, align);
+}
+}
+}
+#endif
+
 #endif // LIBHPX_PADDING_H
