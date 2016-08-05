@@ -46,6 +46,7 @@ PWCNetwork::PWCNetwork(const config_t *cfg, boot_t *boot, gas_t *gas)
     : rank_(boot_rank(boot)),
       ranks_(boot_n_ranks(boot)),
       xport_(pwc_xport_new(cfg, boot, gas)),
+      parcels_(cfg, boot, xport_),
       string_((gas->type == HPX_GAS_AGAS) ?
               static_cast<StringOps*>(new ParcelStringOps()) :
               static_cast<StringOps*>(new DMAStringOps(*this,
@@ -53,7 +54,6 @@ PWCNetwork::PWCNetwork(const config_t *cfg, boot_t *boot, gas_t *gas)
       gas_(gas),
       boot_(boot),
       segments_(new HeapSegment[ranks_]),
-      parcels_(parcel_emulator_new_reload(cfg, boot, xport_)),
   sendBuffers_(new SendBuffer[ranks_]),
   progressLock_(),
   probeLock_()
@@ -123,7 +123,6 @@ PWCNetwork::~PWCNetwork()
   }
 
   delete [] sendBuffers_;
-  parcel_emulator_deallocate(parcels_);
   delete string_;
   xport_->dealloc(xport_);
   Instance_ = nullptr;

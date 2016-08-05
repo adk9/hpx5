@@ -16,7 +16,7 @@
 
 
 #include "CircularBuffer.h"
-#include "parcel_emulation.h"
+#include "ReloadParcelEmulator.h"
 #include "xport.h"
 #include "libhpx/parcel.h"
 #include <mutex>
@@ -31,7 +31,7 @@ class SendBuffer {
 
 
   /// Initialize a send buffer.
-  void init(unsigned rank, parcel_emulator_t *emul, pwc_xport_t *xport);
+  void init(unsigned rank, ReloadParcelEmulator& emul, pwc_xport_t *xport);
 
   /// Finalize a send buffer.
   void fini();
@@ -90,12 +90,12 @@ class SendBuffer {
   ///        LIBHPX_ERROR A pending record could not be allocated.
   int append(const hpx_parcel_t *p);
 
-  std::mutex    lock_;
-  unsigned             rank_;
-  const int UNUSED_PADDING_;
-  parcel_emulator_t   *emul_;
-  pwc_xport_t        *xport_;
-  CircularBuffer    pending_;
+  std::mutex            lock_;
+  unsigned              rank_;
+  const int   UNUSED_PADDING_;
+  ReloadParcelEmulator *emul_;
+  pwc_xport_t         *xport_;
+  CircularBuffer     pending_;
 };
 
 } // namespace pwc

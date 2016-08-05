@@ -37,28 +37,6 @@ parcel_emulator_t *
 parcel_emulator_new_reload(const struct config *cfg, struct boot *boot,
                            pwc_xport_t *xport);
 
-static inline void
-parcel_emulator_deallocate(void *obj)
-{
-  parcel_emulator_t *emulator = (parcel_emulator_t *)obj;
-  emulator->deallocate(obj);
-}
-
-static inline int
-parcel_emulator_send(void *obj, pwc_xport_t *xport, unsigned rank,
-                     const struct hpx_parcel *p)
-{
-  parcel_emulator_t *emulator = (parcel_emulator_t *)obj;
-  return emulator->send(obj, xport, rank, p);
-}
-
-static inline struct hpx_parcel *
-parcel_emulator_recv(void *obj, unsigned rank)
-{
-  parcel_emulator_t *emulator = (parcel_emulator_t *)obj;
-  return emulator->recv(obj, rank);
-}
-
 } // namespace pwc
 } // namespace network
 } // namespace libhpx

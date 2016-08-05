@@ -16,7 +16,6 @@
 #endif
 
 #include "SendBuffer.h"
-#include "parcel_emulation.h"
 #include "libhpx/debug.h"
 #include "libhpx/libhpx.h"
 
@@ -31,7 +30,7 @@ struct Record {
 SendBuffer::SendBuffer()
     : rank_(),
       UNUSED_PADDING_(),
-      emul_(),
+      emul_(nullptr),
       xport_(),
       pending_()
 {
@@ -49,7 +48,7 @@ SendBuffer::append(const hpx_parcel_t *p)
 int
 SendBuffer::start(const hpx_parcel_t *p)
 {
-  return parcel_emulator_send(emul_, xport_, rank_, p);
+  return emul_->send(xport_, rank_, p);
 }
 
 /// Wrap the eager_buffer_tx() operation in an interface that matches the
@@ -75,10 +74,10 @@ SendBuffer::progress()
 }
 
 void
-SendBuffer::init(unsigned rank, parcel_emulator_t *emul, pwc_xport_t *xport)
+SendBuffer::init(unsigned rank, ReloadParcelEmulator& emul, pwc_xport_t *xport)
 {
   rank_ = rank;
-  emul_ = emul;
+  emul_ = &emul;
   xport_ = xport;
   pending_.init(sizeof(Record), 8);
 }

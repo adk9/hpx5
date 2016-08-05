@@ -16,6 +16,7 @@
 
 #include "libhpx/Network.h"
 #include "Commands.h"
+#include "ReloadParcelEmulator.h"
 #include "SendBuffer.h"
 #include "parcel_emulation.h"
 #include "xport.h"
@@ -133,23 +134,20 @@ class PWCNetwork final : public Network, public CollectiveOps, public LCOOps,
     char      *base;
     xport_key_t key;
   };
+  static PWCNetwork* Instance_;
 
   const unsigned rank_;
   const unsigned ranks_;
 
  public:
   pwc_xport_t *xport_;
+  ReloadParcelEmulator parcels_;
 
  private:
-  static PWCNetwork* Instance_;
-
   StringOps*          string_;
   gas_t* const           gas_;
   boot_t* const         boot_;
   HeapSegment*      segments_;                //<! Array of remote heap segments
-
- public:
-  parcel_emulator_t* parcels_;
 
  private:
   SendBuffer*    sendBuffers_;

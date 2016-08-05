@@ -257,7 +257,7 @@ libhpx::network::pwc::parcel_emulator_new_reload(const config_t *cfg,
 void
 Command::reloadRequest(unsigned src) const {
   pwc_xport_t *xport = PWCNetwork::Instance().xport_;
-  Reload *reload = reinterpret_cast<Reload*>(PWCNetwork::Instance().parcels_);
+  Reload *reload = reinterpret_cast<Reload*>(PWCNetwork::Instance().parcels_.impl());
   Buffer *recv = &reload->recv[src];
   size_t n = arg_;
   if (n) {
