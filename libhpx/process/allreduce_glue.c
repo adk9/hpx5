@@ -23,12 +23,26 @@
 
 static const size_t BSIZE = sizeof(allreduce_t);
 
-hpx_addr_t hpx_process_collective_allreduce_new(size_t bytes,
+hpx_addr_t _hpx_process_collective_allreduce_new(size_t bytes,
                                                 hpx_action_t reset,
-                                                hpx_action_t op) {
-  //TODO - moidfy allreduce interface	
+                                                hpx_action_t op, int nargs, ...) {
+  int i;	
+  va_list vargs;
   hpx_coll_optype_t netop = HPX_COLL_SUM;	
   hpx_coll_dtype_t netdt = HPX_COLL_INT;	
+  
+  // keep default network operation|type to sum|int 
+  // parse variable args 
+  va_start(vargs, nargs);
+  for (i = 0; i < nargs; ++i) {
+    if(i == 0){
+      netop = (hpx_coll_optype_t)va_arg(vargs, int);		  
+    } else if (i == 1){
+      netdt = (hpx_coll_dtype_t)va_arg(vargs, int);		  
+    }		
+  }
+  va_end(vargs);
+  
   // allocate and initialize a root node
   hpx_addr_t root = hpx_gas_alloc_local(1, BSIZE, 0);
   dbg_assert(root);

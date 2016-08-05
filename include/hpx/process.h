@@ -153,10 +153,13 @@ int _hpx_process_broadcast_rsync(hpx_pid_t pid, hpx_action_t action, int nargs,
 ///
 /// @returns            The global address to use for the allreduce, or HPX_NULL
 ///                     if there was an allocation problem.
-hpx_addr_t hpx_process_collective_allreduce_new(size_t bytes,
+hpx_addr_t _hpx_process_collective_allreduce_new(size_t bytes,
                                                 hpx_action_t reset,
-                                                hpx_action_t op)
+                                                hpx_action_t op, int nargs, ...)
   HPX_PUBLIC;
+
+#define hpx_process_collective_allreduce_new(bytes, reset, op, ...)                   \
+  _hpx_process_collective_allreduce_new(bytes, reset, op,__HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
 /// Delete a process allreduce.
 ///
