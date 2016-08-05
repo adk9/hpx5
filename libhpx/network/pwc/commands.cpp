@@ -17,7 +17,6 @@
 
 #include "PWCNetwork.h"
 #include "commands.h"
-#include "pwc.h"
 #include "xport.h"
 #include <libhpx/action.h>
 #include <libhpx/debug.h>
@@ -65,6 +64,12 @@ inline void
 Command::resumeParcelAtSource(unsigned src) const
 {
   PWCNetwork::Cmd(src, Command(), Command(RESUME_PARCEL, arg_));
+}
+
+inline void
+Command::reloadReply(unsigned src) const
+{
+  PWCNetwork::ProgressSends(src);
 }
 
 void

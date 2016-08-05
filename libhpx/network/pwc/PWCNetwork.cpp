@@ -17,7 +17,6 @@
 
 #include "PWCNetwork.h"
 #include "DMAStringOps.h"
-#include "pwc.h"
 #include "libhpx/collective.h"
 #include "libhpx/gpa.h"
 #include "libhpx/libhpx.h"
@@ -33,41 +32,103 @@ using libhpx::StringOps;
 using libhpx::network::ParcelStringOps;
 using libhpx::network::pwc::PWCNetwork;
 using libhpx::network::pwc::DMAStringOps;
-
-using libhpx::network::pwc::pwc_network_t;
-using libhpx::network::pwc::pwc_xport_t;
 }
 
 PWCNetwork* PWCNetwork::Instance_ = nullptr;
 
-PWCNetwork& PWCNetwork::Instance() {
+PWCNetwork& PWCNetwork::Instance()
+{
   assert(Instance_);
   return *Instance_;
 }
 
-pwc_network_t&
-PWCNetwork::Impl() {
-  return *Instance().impl_;
-}
-
 PWCNetwork::PWCNetwork(const config_t *cfg, boot_t *boot, gas_t *gas)
-    : xport_(pwc_xport_new(cfg, boot, gas)),
+    : rank_(boot_rank(boot)),
+      ranks_(boot_n_ranks(boot)),
+      xport_(pwc_xport_new(cfg, boot, gas)),
       string_((gas->type == HPX_GAS_AGAS) ?
               static_cast<StringOps*>(new ParcelStringOps()) :
               static_cast<StringOps*>(new DMAStringOps(*this,
                                                        boot_rank(boot)))),
-      impl_(network_pwc_funneled_new(cfg, boot, gas, xport_))
+      gas_(gas),
+      boot_(boot),
+      segments_(new HeapSegment[ranks_]),
+      parcels_(parcel_emulator_new_reload(cfg, boot, xport_)),
+  sendBuffers_(new send_buffer_t[ranks_]),
+  progressLock_(),
+  probeLock_()
 {
   assert(!Instance_);
   Instance_ = this;
+
+  // Validate parameters.
+  if (boot->type == HPX_BOOT_SMP) {
+    log_net("will not instantiate PWC for the SMP boot network\n");
+    throw std::exception();
+  }
+
+  // Validate configuration.
+  if (popcountl(cfg->pwc_parcelbuffersize) != 1) {
+    dbg_error("--hpx-pwc-parcelbuffersize must 2^k (given %zu)\n",
+              cfg->pwc_parcelbuffersize);
+  }
+
+  if (cfg->pwc_parceleagerlimit > cfg->pwc_parcelbuffersize) {
+    dbg_error(" --hpx-pwc-parceleagerlimit (%zu) must be less than "
+              "--hpx-pwc-parcelbuffersize (%zu)\n",
+              cfg->pwc_parceleagerlimit, cfg->pwc_parcelbuffersize);
+  }
+
+  if (gas->type == HPX_GAS_PGAS) {
+    // All-to-all the heap segments
+    HeapSegment local;
+    local.n = gas_local_size(gas);
+    local.base = (char*)gas_local_base(gas);
+    xport_->pin(local.base, local.n, local.key);
+    boot_allgather(boot, &local, segments_, sizeof(HeapSegment));
+  }
+
+  // Initialize the send buffers.
+  for (int i = 0, e = ranks_; i < e; ++i) {
+    send_buffer_t *send = sendBuffers_ + i;
+    int rc = send_buffer_init(send, i, parcels_, xport_, 8);
+    dbg_check(rc, "failed to initialize send buffer %d of %u\n", i, e);
+  }
 }
 
 PWCNetwork::~PWCNetwork()
 {
-  assert(Instance_);
-  pwc_deallocate(impl_);
+  // Cleanup any remaining local work---this can leak memory and stuff, because
+  // we aren't actually running the commands that we cleanup.
+  {
+    std::lock_guard<std::mutex> _(progressLock_);
+    int remaining, src;
+    Command command;
+    do {
+      xport_->test(&command, &remaining, XPORT_ANY_SOURCE, &src);
+    } while (remaining > 0);
+  }
+
+  // Network deletion is effectively a collective, so this enforces that
+  // everyone is done with rdma before we go and deregister anything.
+  boot_barrier(boot_);
+
+  // Finalize the send buffers.
+  for (int i = 0, e = ranks_; i < e; ++i) {
+    send_buffer_fini(sendBuffers_ + i);
+  }
+
+  // If we registered the heap segments then remove them.
+  if (segments_) {
+    xport_->unpin(gas_local_base(gas_), gas_local_size(gas_));
+    delete [] segments_;
+  }
+
+  delete [] sendBuffers_;
+  parcel_emulator_deallocate(parcels_);
   delete string_;
   xport_->dealloc(xport_);
+  Instance_ = nullptr;
 }
 
 int
@@ -79,7 +140,13 @@ PWCNetwork::type() const
 void
 PWCNetwork::progress(int n)
 {
-  pwc_progress(impl_, n);
+  if (auto _ = std::unique_lock<std::mutex>(progressLock_, std::try_to_lock)) {
+    Command command;
+    int src;
+    while (xport_->test(&command, nullptr, XPORT_ANY_SOURCE, &src)) {
+      command(rank_);
+    }
+  }
 }
 
 void
@@ -90,8 +157,14 @@ PWCNetwork::flush()
 hpx_parcel_t*
 PWCNetwork::probe(int n)
 {
-
-  return pwc_probe(impl_, n);
+  if (auto _ = std::unique_lock<std::mutex>(probeLock_, std::try_to_lock)) {
+    Command command;
+    int src;
+    while (xport_->probe(&command, nullptr, XPORT_ANY_SOURCE, &src)) {
+      command(src);
+    }
+  }
+  return nullptr;
 }
 
 CollectiveOps&
@@ -138,7 +211,16 @@ PWCNetwork::send(hpx_parcel_t *p, hpx_parcel_t *ssync)
     return rendezvousSend(p);
   }
   else {
-    return pwc_send(impl_, p, ssync);
+    int rank = gas_owner_of(gas_, p->target);
+    return send_buffer_send(sendBuffers_ + rank, p);
+  }
+}
+
+void
+PWCNetwork::progressSends(unsigned rank)
+{
+  if (send_buffer_progress(sendBuffers_ + rank)) {
+    throw std::exception();
   }
 }
 
@@ -187,8 +269,8 @@ PWCNetwork::put(hpx_addr_t to, const void *lva, size_t n, const Command& lcmd,
   xport_op_t op;
   op.rank = rank;
   op.n = n;
-  op.dest = impl_->heap_segments[rank].base + gpa_to_offset(to);
-  op.dest_key = &impl_->heap_segments[rank].key;
+  op.dest = segments_[rank].base + gpa_to_offset(to);
+  op.dest_key = &segments_[rank].key;
   op.src = lva;
   op.src_key = xport_->key_find_ref(xport_, lva, n);
   op.lop = lcmd;
@@ -209,8 +291,8 @@ PWCNetwork::get(void *lva, hpx_addr_t from, size_t n, const Command& lcmd,
   op.n = n;
   op.dest = lva;
   op.dest_key = xport_->key_find_ref(xport_, lva, n);
-  op.src = impl_->heap_segments[rank].base + gpa_to_offset(from);
-  op.src_key = &impl_->heap_segments[rank].key;
+  op.src = segments_[rank].base + gpa_to_offset(from);
+  op.src_key = &segments_[rank].key;
   op.lop = lcmd;
   op.rop = rcmd;
   if (xport_->gwc(&op)) {

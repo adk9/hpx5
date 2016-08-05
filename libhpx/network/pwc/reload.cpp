@@ -17,7 +17,6 @@
 
 #include "parcel_emulation.h"
 #include "commands.h"
-#include "pwc.h"
 #include "send_buffer.h"
 #include "xport.h"
 #include "PWCNetwork.h"
@@ -257,15 +256,9 @@ libhpx::network::pwc::parcel_emulator_new_reload(const config_t *cfg,
 }
 
 void
-Command::reloadReply(unsigned src) const {
-  send_buffer_t *sends = &PWCNetwork::Impl().send_buffers[src];
-  dbg_check( send_buffer_progress(sends) );
-}
-
-void
 Command::reloadRequest(unsigned src) const {
-  pwc_xport_t *xport = PWCNetwork::Impl().xport;
-  Reload *reload = reinterpret_cast<Reload*>(PWCNetwork::Impl().parcels);
+  pwc_xport_t *xport = PWCNetwork::Instance().xport_;
+  Reload *reload = reinterpret_cast<Reload*>(PWCNetwork::Instance().parcels_);
   Buffer *recv = &reload->recv[src];
   size_t n = arg_;
   if (n) {

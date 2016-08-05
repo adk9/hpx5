@@ -1,12 +1,11 @@
 # The isend-irecv network implementations
 noinst_LTLIBRARIES = libpwc.la
-noinst_HEADERS     = CircularBuffer.h commands.h parcel_emulation.h pwc.h \
+noinst_HEADERS     = CircularBuffer.h commands.h parcel_emulation.h \
                      registered.h send_buffer.h xport.h 
 
 libpwc_la_CPPFLAGS = -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
 libpwc_la_CXXFLAGS = $(LIBHPX_CXXFLAGS)
-libpwc_la_SOURCES  = pwc.cpp \
-                     reload.cpp \
+libpwc_la_SOURCES  = reload.cpp \
                      xport.cpp \
                      send_buffer.cpp \
                      CircularBuffer.cpp \

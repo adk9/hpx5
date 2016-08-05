@@ -16,19 +16,14 @@
 
 #include "libhpx/Network.h"
 #include "commands.h"
+#include "send_buffer.h"
+#include "parcel_emulation.h"
 #include "xport.h"
+#include <mutex>
 
 namespace libhpx {
 namespace network {
 namespace pwc {
-class pwc_network_t;
-
-struct heap_segment_t {
-  size_t        n;
-  char      *base;
-  xport_key_t key;
-};
-
 class PWCNetwork final : public Network, public CollectiveOps, public LCOOps,
                          public MemoryOps, public ParcelOps {
  public:
@@ -123,16 +118,42 @@ class PWCNetwork final : public Network, public CollectiveOps, public LCOOps,
   /// @returns            The status of the operation.
   int rendezvousSend(const hpx_parcel_t* p);
 
-  static PWCNetwork& Instance();
-  static pwc_network_t& Impl();
+  /// Progress the send buffer for a particular rank.
+  void progressSends(unsigned rank);
+  static void ProgressSends(unsigned rank) {
+    Instance().progressSends(rank);
+  }
 
+  static PWCNetwork& Instance();
+
+ private:
+  struct HeapSegment {
+    size_t        n;
+    char      *base;
+    xport_key_t key;
+  };
+
+  const unsigned rank_;
+  const unsigned ranks_;
+
+ public:
   pwc_xport_t *xport_;
 
  private:
   static PWCNetwork* Instance_;
 
-  StringOps* string_;
-  pwc_network_t *impl_;
+  StringOps*          string_;
+  gas_t* const           gas_;
+  boot_t* const         boot_;
+  HeapSegment*      segments_;                //<! Array of remote heap segments
+
+ public:
+  parcel_emulator_t* parcels_;
+
+ private:
+  send_buffer_t* sendBuffers_;
+  std::mutex    progressLock_;
+  std::mutex       probeLock_;
 };
 
 

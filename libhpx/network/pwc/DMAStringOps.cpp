@@ -18,7 +18,6 @@
 #include "PWCNetwork.h"
 #include "DMAStringOps.h"
 #include "commands.h"
-#include "pwc.h"
 #include "libhpx/action.h"
 #include "libhpx/gpa.h"
 #include "libhpx/libhpx.h"
@@ -27,7 +26,7 @@
 #include "libhpx/scheduler.h"
 
 namespace {
-using namespace libhpx::network::pwc;
+using libhpx::network::pwc::Command;
 using libhpx::network::pwc::DMAStringOps;
 using libhpx::network::pwc::PWCNetwork;
 }
