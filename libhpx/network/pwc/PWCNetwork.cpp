@@ -54,7 +54,7 @@ PWCNetwork::PWCNetwork(const config_t *cfg, boot_t *boot, gas_t *gas)
       boot_(boot),
       segments_(new HeapSegment[ranks_]),
       parcels_(parcel_emulator_new_reload(cfg, boot, xport_)),
-  sendBuffers_(new send_buffer_t[ranks_]),
+  sendBuffers_(new SendBuffer[ranks_]),
   progressLock_(),
   probeLock_()
 {
@@ -90,9 +90,7 @@ PWCNetwork::PWCNetwork(const config_t *cfg, boot_t *boot, gas_t *gas)
 
   // Initialize the send buffers.
   for (int i = 0, e = ranks_; i < e; ++i) {
-    send_buffer_t *send = sendBuffers_ + i;
-    int rc = send_buffer_init(send, i, parcels_, xport_, 8);
-    dbg_check(rc, "failed to initialize send buffer %d of %u\n", i, e);
+    sendBuffers_[i].init(i, parcels_, xport_);
   }
 }
 
@@ -115,7 +113,7 @@ PWCNetwork::~PWCNetwork()
 
   // Finalize the send buffers.
   for (int i = 0, e = ranks_; i < e; ++i) {
-    send_buffer_fini(sendBuffers_ + i);
+    sendBuffers_[i].fini();
   }
 
   // If we registered the heap segments then remove them.
@@ -212,14 +210,14 @@ PWCNetwork::send(hpx_parcel_t *p, hpx_parcel_t *ssync)
   }
   else {
     int rank = gas_owner_of(gas_, p->target);
-    return send_buffer_send(sendBuffers_ + rank, p);
+    return sendBuffers_[rank].send(p);
   }
 }
 
 void
 PWCNetwork::progressSends(unsigned rank)
 {
-  if (send_buffer_progress(sendBuffers_ + rank)) {
+  if (sendBuffers_[rank].progress()) {
     throw std::exception();
   }
 }

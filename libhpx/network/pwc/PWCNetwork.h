@@ -16,7 +16,7 @@
 
 #include "libhpx/Network.h"
 #include "Commands.h"
-#include "send_buffer.h"
+#include "SendBuffer.h"
 #include "parcel_emulation.h"
 #include "xport.h"
 #include "libhpx/parcel.h"
@@ -152,7 +152,7 @@ class PWCNetwork final : public Network, public CollectiveOps, public LCOOps,
   parcel_emulator_t* parcels_;
 
  private:
-  send_buffer_t* sendBuffers_;
+  SendBuffer*    sendBuffers_;
   std::mutex    progressLock_;
   std::mutex       probeLock_;
 };

@@ -17,7 +17,6 @@
 
 #include "parcel_emulation.h"
 #include "Commands.h"
-#include "send_buffer.h"
 #include "xport.h"
 #include "PWCNetwork.h"
 #include <libhpx/action.h>
