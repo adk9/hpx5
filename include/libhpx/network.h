@@ -32,28 +32,6 @@ struct gas;
 struct transport;
 /// @}
 
-/// collective interface predefined data types
-typedef enum {
-  HPX_COLL_DEFAULT_TYPE = 10,
-  HPX_COLL_INT ,
-  HPX_COLL_LONG ,
-  HPX_COLL_SHORT,
-  HPX_COLL_FLOAT,
-  HPX_COLL_DOUBLE,
-  HPX_COLL_CHAR
-} hpx_coll_dtype_t;
-
-/// collective interface predefined functions
-typedef enum{
-  HPX_COLL_DEFAULT_OP = 100,
-  HPX_COLL_SUM,
-  HPX_COLL_MIN,
-  HPX_COLL_MAX,
-  HPX_COLL_AND,
-  HPX_COLL_OR,
-  HPX_COLL_XOR
-} hpx_coll_optype_t;
-
 /// collective definitions/interfaces
 typedef enum {
   DIRECT = 10001,

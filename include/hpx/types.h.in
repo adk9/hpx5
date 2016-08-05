@@ -92,6 +92,29 @@ typedef ffi_type* hpx_type_t;
 #define HPX_ACTION_T           HPX_UINT16
 /// @}
 
+typedef short hpx_coll_dtype_t ;
+typedef short hpx_coll_optype_t;
+
+/// collective interface predefined data types
+#define    HPX_COLL_DEFAULT_TYPE ((hpx_coll_dtype_t)10)
+#define    HPX_COLL_INT 	 ((hpx_coll_dtype_t)11)
+#define    HPX_COLL_LONG 	 ((hpx_coll_dtype_t)12)
+#define    HPX_COLL_SHORT 	 ((hpx_coll_dtype_t)13)
+#define    HPX_COLL_FLOAT 	 ((hpx_coll_dtype_t)14)
+#define    HPX_COLL_DOUBLE 	 ((hpx_coll_dtype_t)15)
+#define    HPX_COLL_CHAR 	 ((hpx_coll_dtype_t)16)
+
+
+/// collective interface predefined functions
+#define    HPX_COLL_DEFAULT_OP  ((hpx_coll_optype_t)50)
+#define    HPX_COLL_SUM 	((hpx_coll_optype_t)51)
+#define    HPX_COLL_MIN 	((hpx_coll_optype_t)52)
+#define    HPX_COLL_MAX		((hpx_coll_optype_t)53)
+#define    HPX_COLL_AND 	((hpx_coll_optype_t)54)
+#define    HPX_COLL_OR 		((hpx_coll_optype_t)55)
+#define    HPX_COLL_XOR 	((hpx_coll_optype_t)56)
+
+
 #ifdef __cplusplus
 }
 #endif
