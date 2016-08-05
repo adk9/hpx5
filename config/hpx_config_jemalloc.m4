@@ -11,7 +11,7 @@
 #   LIBHPX_CPPFLAGS
 #   LIBHPX_LDFLAGS
 #   LIBHPX_LIBADD
-#   LIBHPX_LIBS
+#   HPX_APPS_LDADD
 #   HPX_APPS_LDFLAGS
 #   HPX_PC_PRIVATE_PKGS
 #   HPX_PC_PRIVATE_LIBS
@@ -56,7 +56,7 @@ AC_DEFUN([_HPX_CONTRIB_JEMALLOC], [
  # every case.
  LIBHPX_LDFLAGS="-L\$(abs_top_builddir)/$contrib/lib $LIBHPX_LDFLAGS"
  LIBHPX_LDFLAGS="-Wl,-rpath,\$(abs_top_builddir)/$contrib/lib $LIBHPX_LDFLAGS"
- LIBHPX_LIBS="$LIBHPX_LIBS -ljemalloc" 
+ HPX_APPS_LDADD="$HPX_APPS_LDADD -ljemalloc" 
 
  # libtool does not correctly propagate rpaths for linking---external users use
  # pkg-config which doesn't have this problem, but we need to do it manually for
@@ -81,7 +81,7 @@ AC_DEFUN([_HPX_PKG_JEMALLOC], [
  PKG_CHECK_MODULES([JEMALLOC], [$pkg],
    [_HAVE_JEMALLOC
     LIBHPX_CFLAGS="$LIBHPX_CFLAGS $JEMALLOC_CFLAGS"
-    LIBHPX_LIBS="$JEMALLOC_LIBS $LIBHPX_LIBS"
+    HPX_APPS_LDADD="$JEMALLOC_LIBS $HPX_APPS_LDADD"
     HPX_PC_PRIVATE_PKGS="$HPX_PC_PRIVATE_PKGS $pkg"])
 ])
 
@@ -90,7 +90,7 @@ AC_DEFUN([_HPX_CC_JEMALLOC], [
  AC_CHECK_HEADER([jemalloc.h],
    [AC_CHECK_LIB([jemalloc], [jemalloc_init],
      [_HAVE_JEMALLOC
-      LIBHPX_LIBS="-ljemalloc $LIBHPX_LIBS"
+      HPX_APPS_LDADD="-ljemalloc $HPX_APPS_LDADD"
       HPX_PC_PRIVATE_LIBS="$HPX_PC_PRIVATE_LIBS -ljemalloc"])])
 ])
 

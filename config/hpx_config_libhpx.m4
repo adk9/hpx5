@@ -3,11 +3,14 @@
 #
 # ------------------------------------------------------------------------------
 AC_DEFUN([HPX_CONFIG_LIBHPX], [
-  HPX_PC_PRIVATE_LIBS="$HPX_PC_PRIVATE_LIBS -lstdc++"
-  LIBHPX_CPPFLAGS="$LIBHPX_CPPFLAGS"
+  # do substitution for the test and example makefiles
+  HPX_APPS_LDADD="$HPX_APPS_LDADD \$(top_builddir)/libhpx/libhpx.la"
+  HPX_APPS_DEPS="$HPX_APPS_DEPS \$(top_builddir)/libsync/libsync.la \$(top_builddir)/libhpx/libhpx.la"
+
+  # export the things requires for our C++ build
   LIBHPX_CXXFLAGS="-D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS $LIBHPX_CXXFLAGS -fno-rtti"
-  LIBHPX_LIBS="$LIBHPX_LIBS -lstdc++"
-  HPX_APPS_LIBS="$HPX_APPS_LIBS -lstdc++"
+  HPX_PC_PUBLIC_LIBS="$HPX_PC_PUBLIC_LIBS -lstdc++"
+  HPX_APPS_LDADD="$HPX_APPS_LDADD -lstdc++"
 
   # lz4 configuration
   LIBHPX_CPPFLAGS="$LIBHPX_CPPFLAGS -I\$(top_srcdir)/contrib/lz4/"
@@ -22,8 +25,4 @@ AC_DEFUN([HPX_CONFIG_LIBHPX], [
   AS_IF([test "x$enable_shared" != xyes],
     [HPX_PC_PUBLIC_LIBS="$HPX_PC_PUBLIC_LIBS $HPX_PC_PRIVATE_LIBS"
      HPX_PC_REQUIRES_PKGS="$HPX_PC_REQUIRES_PKGS $HPX_PC_PRIVATE_PKGS"])
-
-  # do substitution for the test and example makefiles
-  HPX_APPS_LDADD="\$(top_builddir)/libhpx/libhpx.la"
-  HPX_APPS_DEPS="\$(top_builddir)/libsync/libsync.la \$(top_builddir)/libhpx/libhpx.la"
 ])

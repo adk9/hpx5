@@ -7,7 +7,7 @@
 #
 # Appends
 #   LIBHPX_CFLAGS
-#   LIBHPX_LIBS
+#   HPX_APPS_LDADD
 #   HPX_PC_CFLAGS
 #   HPX_PC_PRIVATE_PKGS
 #   HPX_PC_PRIVATE_LIBS
@@ -29,7 +29,7 @@ AC_DEFUN([_HPX_CC_METIS], [
   [AC_CHECK_LIB([m], [log,ceil])
    AC_CHECK_LIB([metis], [METIS_PartGraphRecursive],
      [_HAVE_METIS
-      LIBHPX_LIBS="$LIBHPX_LIBS -lm -lmetis"
+      HPX_APPS_LDADD="$HPX_APPS_LDADD -lm -lmetis"
       HPX_PC_PRIVATE_LIBS="$HPX_PC_PRIVATE_LIBS -lm -lmetis"])])
 ])
 
@@ -40,7 +40,7 @@ AC_DEFUN([_HPX_PKG_METIS], [
  PKG_CHECK_MODULES([METIS], [$pkg],
    [_HAVE_METIS
     LIBHPX_CFLAGS="$LIBHPX_CFLAGS $METIS_CFLAGS"
-    LIBHPX_LIBS="$LIBHPX_LIBS $METIS_LIBS"
+    HPX_APPS_LDADD="$HPX_APPS_LDADD $METIS_LIBS"
     HPX_PC_PRIVATE_PKGS="$HPX_PC_PRIVATE_PKGS $pkg"],
    [have_metis=no])
 ])

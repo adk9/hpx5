@@ -14,7 +14,7 @@
 # Appends
 #   LIBHPX_CPPFLAGS
 #   LIBHPX_LIBADD
-#   LIBHPX_LIBS
+#   HPX_APPS_LDADD
 #   HPX_PC_REQUIRES_PKGS
 #   HPX_PC_PUBLIC_LIBS
 #
@@ -67,7 +67,7 @@ AC_DEFUN([_HPX_LIB_LIBFFI], [
  AC_CHECK_HEADER([ffi.h], [
    AC_CHECK_LIB([ffi], [ffi_raw_size],
      [_HAVE_LIBFFI
-      LIBHPX_LIBS="$LIBHPX_LIBS -lffi"
+      HPX_APPS_LDADD="$HPX_APPS_LDADD -lffi"
       HPX_PC_PUBLIC_LIBS="$HPX_PC_PUBLIC_LIBS -lffi"])])
 ])
 
@@ -113,7 +113,7 @@ AC_DEFUN([_HPX_PKG_LIBFFI], [
     # the libffi library.
     LIBHPX_CFLAGS="$LIBHPX_CFLAGS $LIBFFI_CFLAGS"
     LIBHPX_CXXFLAGS="$LIBHPX_CXXFLAGS $LIBFFI_CFLAGS"
-    LIBHPX_LIBS="$LIBHPX_LIBS $LIBFFI_LIBS"
+    HPX_APPS_LDADD="$HPX_APPS_LDADD $LIBFFI_LIBS"
 
     # Ensure that the included apps can find the ffi.h header (we don't use
     # pkg-config locally. They get the lib dependency through libhpx.la.

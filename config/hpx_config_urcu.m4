@@ -4,7 +4,7 @@
 #
 # Appends
 #   LIBHPX_CPPFLAGS
-#   LIBHPX_LIBS
+#   HPX_APPS_LDADD
 #   HPX_PC_REQUIRES_PKGS
 #
 # Defines
@@ -40,7 +40,7 @@ AC_DEFUN([_LIB_URCU], [
    AC_CHECK_LIB([urcu-qsbr], [rcu_register_thread], [
      AC_CHECK_LIB([urcu-cds], [cds_lfht_new],
       [_HAVE_URCU
-       LIBHPX_LIBS="$LIBHPX_LIBS -lurcu-qsbr -lurcu-cds"
+       HPX_APPS_LDADD="$HPX_APPS_LDADD -lurcu-qsbr -lurcu-cds"
        HPX_PC_PUBLIC_LIBS="$HPX_PC_PUBLIC_LIBS -lurcu-qsbr -lurcu-cds"])])])
 ])
 
@@ -51,7 +51,7 @@ AC_DEFUN([_PKG_URCU], [
  PKG_CHECK_MODULES([URCU], [$pkgs],
    [_HAVE_URCU
     LIBHPX_CPPFLAGS="$LIBHPX_CPPFLAGS $URCU_CFLAGS"
-    LIBHPX_LIBS="$LIBHPX_LIBS $URCU_LIBS"
+    HPX_APPS_LDADD="$HPX_APPS_LDADD $URCU_LIBS"
     HPX_PC_PRIVATE_PKGS="$HPX_PC_PRIVATE_PKGS $pkgs"],
    [have_urcu=no])
 ])

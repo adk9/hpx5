@@ -14,7 +14,7 @@ libhpx_la_SOURCES  = libhpx.c hpx.c call.c par.c debug.c version.c \
                      Interfaces.cpp
 
 libhpx_la_LDFLAGS  = $(LIBHPX_LDFLAGS)
-libhpx_la_LIBADD   = $(LIBHPX_LIBS) $(LIBHPX_LIBADD) \
+libhpx_la_LIBADD   = $(LIBHPX_LIBADD) \
                      $(top_builddir)/libsync/libsync.la \
                      system/libsystem.la \
                      util/libutil.la \
@@ -41,3 +41,4 @@ libhpx_la_DEPENDENCIES = $(LIBHPX_LIBADD) \
                          process/libprocess.la \
                          instrumentation/libinstrumentation.la \
                          percolation/libpercolation.la
+

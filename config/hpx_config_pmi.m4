@@ -11,7 +11,7 @@ O# HPX_CONFIG_PMI([pkg-config])
 #
 # Appends
 #   LIBHPX_CFLAGS
-#   LIBHPX_LIBS
+#   HPX_APPS_LDADD
 #   HPX_PC_PRIVATE_PKGS
 #   HPX_PC_PRIVATE_LIBS
 #
@@ -33,7 +33,7 @@ AC_DEFUN([_HPX_CC_PMI], [
  # check if the compiler just supports PMI without a package
  AC_CHECK_HEADER([pmi.h],
    [AC_CHECK_LIB([pmi], [PMI_Init],
-     [LIBHPX_LIBS="$LIBHPX_LIBS -lpmi"
+     [HPX_APPS_LDADD="$HPX_APPS_LDADD -lpmi"
       HPX_PC_PRIVATE_LIBS="$HPX_PC_PRIVATE_LIBS -lpmi"])])
 
  AC_CHECK_HEADER([pmi_cray_ext.h], [_HAVE_PMI_CRAY_EXT])
@@ -46,7 +46,7 @@ AC_DEFUN([_HPX_PKG_PMI], [
  PKG_CHECK_MODULES([PMI], [$pkg],
    [_HAVE_PMI
     LIBHPX_CFLAGS="$LIBHPX_CFLAGS $PMI_CFLAGS"
-    LIBHPX_LIBS="$LIBHPX_LIBS $PMI_LIBS"
+    HPX_APPS_LDADD="$HPX_APPS_LDADD $PMI_LIBS"
     HPX_PC_PRIVATE_PKGS="$HPX_PC_PRIVATE_PKGS $pkg"])
 
  # check for cray extensions

@@ -64,12 +64,11 @@ LT_INIT([disable-shared])
 # LIBHPX_CXXFLAGS: CXXFLAGS required to build libhpx.la
 # LIBHPX_LIBADD: .la dependencies required to build libhpx.la
 # LIBHPX_LDFLAGS: -L and -Wl flags needed to link installed libhpx
-# LIBHPX_LIBS: -l dependencies required to link installed libhpx
 #
 # HPX_APPS_CPPFLAGS: CPPFLAGS required to link to build-tree libhpx.la
 # HPX_APPS_CFLAGS: CFLAGS required to link to build-tree libhpx.la
 # HPX_APPS_LDFLAGS: LDFLAGS required to link to build-tree libhpx.la
-# HPX_APPS_LDADD: .la libraries require to link build-tree libhpx.la
+# HPX_APPS_LDADD: .la and -l libraries require to link build-tree libhpx.la
 # HPX_APPS_DEPS: .la library dependendencies for apps
 #
 # HPX_PC_CFLAGS: C and CPP flags (typically just -D) for installed libhps.so
@@ -92,7 +91,7 @@ HPX_PE_ENV
 # be on the link line too, so add them for pkg-config static linking.
 AX_PTHREAD(
  [LIBHPX_CFLAGS="$LIBHPX_CFLAGS $PTHREAD_CFLAGS"
-  LIBHPX_LIBS="$LIBHPX_LIBS $PTHREAD_LIBS"
+  LIBHPX_APPS_LDADD="LIBHPX_APPS_LDADD $PTHREAD_LIBS"
   HPX_PC_PRIVATE_LIBS="$PTHREAD_CFLAGS $HPX_PC_PRIVATE_LIBS $PTHREAD_LIBS"],
  [AC_MSG_ERROR([Could not find pthread implementation])])
 
@@ -137,7 +136,6 @@ AS_IF([test "x$enable_parallel_config" != xno],
 #   LIBHPX_CXXFLAGS
 #   LIBHPX_LIBADD
 #   LIBHPX_LDFLAGS
-#   LIBHPX_LIBS
 #
 #   HPX_APPS_CPPFLAGS
 #   HPX_APPS_CFLAGS
@@ -217,7 +215,6 @@ AC_SUBST(LIBHPX_CXXFLAGS)
 AC_SUBST(LIBHPX_CCASFLAGS)
 AC_SUBST(LIBHPX_LDFLAGS)
 AC_SUBST(LIBHPX_LIBADD)
-AC_SUBST(LIBHPX_LIBS)
 
 AC_SUBST(HPX_PC_CFLAGS)
 AC_SUBST(HPX_PC_PUBLIC_LIBS)

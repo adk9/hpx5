@@ -24,7 +24,7 @@ AC_DEFUN([_HPX_CC_TBBMALLOC], [
  AC_CHECK_HEADER([tbb/scalable_allocator.h],
    [AC_CHECK_LIB([tbbmalloc], [scalable_malloc],
      [_HAVE_TBBMALLOC
-      LIBHPX_LIBS="$LIBHPX_LIBS -ltbbmalloc_proxy -ltbbmalloc"
+      HPX_APPS_LDADD="$HPX_APPS_LDADD -ltbbmalloc_proxy -ltbbmalloc"
       HPX_PC_PUBLIC_LIBS="$HPX_PC_PUBLIC_LIBS -ltbbmalloc_proxy"
       HPX_PC_PRIVATE_LIBS="$HPX_PC_PRIVATE_LIBS -ltbbmalloc"])])
 ])
@@ -45,7 +45,7 @@ AC_DEFUN([_HPX_LIB_TBBMALLOC], [
     [LIBHPX_CPPFLAGS="$LIBHPX_CPPFLAGS -I$tbbinclude"
      LIBHPX_LDFLAGS="-L$tbblib -R$tbblib $LIBHPX_LDFLAGS"
      HPX_APPS_LDFLAGS="-L$tbblib -R$tbblib $HPX_APPS_LDFLAGS"
-     LIBHPX_LIBS="$LIBHPX_LIBS $TBBMALLOC_LIBS"
+     HPX_APPS_LDADD="$HPX_APPS_LDADD $TBBMALLOC_LIBS"
      HPX_PC_PUBLIC_LIBS="-L$tbblib -Wl,-rpath,$tbblib $HPX_PC_PUBLIC_LIBS"
      HPX_PC_PRIVATE_LIBS="-L$tbblib -Wl,-rpath,$tbblib $HPX_PC_PRIVATE_LIBS"])
 ])
