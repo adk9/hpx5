@@ -1,6 +1,6 @@
 # The isend-irecv network implementations
 noinst_LTLIBRARIES = libpwc.la
-noinst_HEADERS     = CircularBuffer.h commands.h parcel_emulation.h \
+noinst_HEADERS     = CircularBuffer.h Commands.h parcel_emulation.h \
                      registered.h send_buffer.h xport.h 
 
 libpwc_la_CPPFLAGS = -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
@@ -11,7 +11,7 @@ libpwc_la_SOURCES  = reload.cpp \
                      CircularBuffer.cpp \
                      lco_get.cpp \
                      lco_wait.cpp \
-                     commands.cpp \
+                     Commands.cpp \
                      rendezvous_send.cpp \
                      DMAStringOps.cpp \
                      PWCNetwork.cpp

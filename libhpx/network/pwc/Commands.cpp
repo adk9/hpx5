@@ -16,7 +16,7 @@
 #endif
 
 #include "PWCNetwork.h"
-#include "commands.h"
+#include "Commands.h"
 #include "xport.h"
 #include <libhpx/action.h>
 #include <libhpx/debug.h>

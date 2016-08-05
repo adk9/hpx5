@@ -15,10 +15,11 @@
 #define LIBHPX_NETWORK_PWC_PWC_NETWORK_H
 
 #include "libhpx/Network.h"
-#include "commands.h"
+#include "Commands.h"
 #include "send_buffer.h"
 #include "parcel_emulation.h"
 #include "xport.h"
+#include "libhpx/parcel.h"
 #include <mutex>
 
 namespace libhpx {

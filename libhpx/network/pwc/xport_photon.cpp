@@ -16,7 +16,7 @@
 #endif
 
 #include "xport.h"
-#include "commands.h"
+#include "Commands.h"
 #include "registered.h"
 #include <libhpx/action.h>
 #include <libhpx/boot.h>
@@ -30,11 +30,9 @@
 #include <libhpx/padding.h>
 #include <libhpx/system.h>
 #include <libsync/locks.h>
-extern "C" {
 #include <photon.h>
-}
-#include <stdlib.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstring>
 
 using namespace libhpx::network::pwc;
 

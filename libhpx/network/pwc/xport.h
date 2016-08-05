@@ -14,9 +14,8 @@
 #ifndef LIBHPX_NETWORK_PWC_XPORT_H
 #define LIBHPX_NETWORK_PWC_XPORT_H
 
-#include "commands.h"
-#include <libhpx/config.h>
-#include <libhpx/memory.h>
+#include "Commands.h"
+#include "libhpx/config.h"
 
 extern "C" {
 struct boot;

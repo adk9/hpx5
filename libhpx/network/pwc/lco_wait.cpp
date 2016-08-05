@@ -16,10 +16,9 @@
 #endif
 
 #include "PWCNetwork.h"
-#include "commands.h"
+#include "Commands.h"
 #include "libhpx/debug.h"
-// #include <libhpx/locality.h>
-// #include <libhpx/parcel.h>
+#include "libhpx/memory.h"
 #include "libhpx/scheduler.h"
 
 namespace {

@@ -17,7 +17,7 @@
 
 #include "PWCNetwork.h"
 #include "DMAStringOps.h"
-#include "commands.h"
+#include "Commands.h"
 #include "libhpx/action.h"
 #include "libhpx/gpa.h"
 #include "libhpx/libhpx.h"

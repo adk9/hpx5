@@ -25,10 +25,10 @@
 /// will schedule the parcel once the get has completed.
 
 #include "PWCNetwork.h"
-#include "commands.h"
+#include "Commands.h"
 #include "xport.h"
 #include "libhpx/debug.h"
-// #include <libhpx/parcel.h>
+#include "libhpx/events.h"
 #include "libhpx/scheduler.h"
 
 namespace {
