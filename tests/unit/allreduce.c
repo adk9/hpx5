@@ -85,7 +85,8 @@ static HPX_ACTION(HPX_DEFAULT, 0, _reduce_block, _reduce_block_handler,
 static int _test_handler(void) {
   hpx_addr_t base = hpx_gas_alloc_cyclic(HPX_LOCALITIES, BSIZE, 0);
   hpx_addr_t allreduce = hpx_process_collective_allreduce_new(sizeof(int),
-                                                              _init, _sum);
+                                                              _init, _sum, 
+							      HPX_COLL_SUM, HPX_COLL_INT);
 
   hpx_addr_t and = hpx_lco_and_new(HPX_LOCALITIES);
   for (int i = 0, e =  HPX_LOCALITIES; i < e; ++i) {
@@ -117,8 +118,7 @@ static int _test_handler(void) {
     int total = (N * (N - 1) / 2) * HPX_LOCALITIES;
     int expected = leaves * total;
     test_assert(result == expected);
-    if(i % 2000 == 0)
-      printf("expected = %d  result = %d  i = [%d] \n", expected, result, i);
+    printf("expected = %d  result = %d  i = [%d] \n", expected, result, i);
 
   }
   hpx_lco_delete_sync(reduce);
