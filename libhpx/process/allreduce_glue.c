@@ -32,6 +32,10 @@ hpx_addr_t _hpx_process_collective_allreduce_new(size_t bytes,
   hpx_coll_dtype_t netdt = HPX_COLL_INT;	
   
   // keep default network operation|type to sum|int 
+  if (here->config->coll_network && nargs == 0 ) {
+    log_error("failed to find network collective paramters !!" 
+		    " defaulting to operation: [HPX_COLL_SUM] data tpye: [HPX_COLL_INT]\n");
+  }
   // parse variable args 
   va_start(vargs, nargs);
   for (i = 0; i < nargs; ++i) {
