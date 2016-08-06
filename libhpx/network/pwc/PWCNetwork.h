@@ -18,7 +18,6 @@
 #include "Commands.h"
 #include "ReloadParcelEmulator.h"
 #include "SendBuffer.h"
-#include "parcel_emulation.h"
 #include "xport.h"
 #include "libhpx/parcel.h"
 #include <mutex>

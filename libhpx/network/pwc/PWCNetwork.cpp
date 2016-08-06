@@ -46,7 +46,7 @@ PWCNetwork::PWCNetwork(const config_t *cfg, boot_t *boot, gas_t *gas)
     : rank_(boot_rank(boot)),
       ranks_(boot_n_ranks(boot)),
       xport_(pwc_xport_new(cfg, boot, gas)),
-      parcels_(cfg, boot, xport_),
+      parcels_(cfg, boot, *xport_),
       string_((gas->type == HPX_GAS_AGAS) ?
               static_cast<StringOps*>(new ParcelStringOps()) :
               static_cast<StringOps*>(new DMAStringOps(*this,

@@ -17,14 +17,19 @@
 
 #include "PWCNetwork.h"
 #include "Commands.h"
+#include "ReloadParcelEmulator.h"
 #include "xport.h"
-#include <libhpx/action.h>
-#include <libhpx/debug.h>
-#include <libhpx/gpa.h>
-#include <libhpx/locality.h>
-#include <libhpx/parcel.h>
+#include "libhpx/action.h"
+#include "libhpx/debug.h"
+#include "libhpx/events.h"
+#include "libhpx/gpa.h"
+#include "libhpx/locality.h"
+#include "libhpx/parcel.h"
 
-using namespace libhpx::network::pwc;
+namespace {
+using libhpx::network::pwc::Command;
+using libhpx::network::pwc::PWCNetwork;
+}
 
 inline void
 Command::lcoSet(unsigned src) const
@@ -70,6 +75,26 @@ inline void
 Command::reloadReply(unsigned src) const
 {
   PWCNetwork::ProgressSends(src);
+}
+
+inline void
+Command::recvParcel(unsigned src) const
+{
+#ifdef __LP64__
+  auto p = reinterpret_cast<hpx_parcel_t*>(arg_);
+#else
+  dbg_assert((arg_ & 0xffffffff) == arg_);
+  auto p = reinterpret_cast<hpx_parcel_t*>((uintptr_t)arg_);
+#endif
+  p->src = src;
+  parcel_set_state(p, PARCEL_SERIALIZED | PARCEL_BLOCK_ALLOCATED);
+  EVENT_PARCEL_RECV(p->id, p->action, p->size, p->src, p->target);
+  parcel_launch(p);
+}
+
+inline void
+Command::reloadRequest(unsigned src) const {
+  PWCNetwork::Instance().parcels_.reload(src, arg_);
 }
 
 void

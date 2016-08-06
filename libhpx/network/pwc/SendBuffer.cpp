@@ -48,7 +48,7 @@ SendBuffer::append(const hpx_parcel_t *p)
 int
 SendBuffer::start(const hpx_parcel_t *p)
 {
-  return emul_->send(xport_, rank_, p);
+  return emul_->send(rank_, p);
 }
 
 /// Wrap the eager_buffer_tx() operation in an interface that matches the

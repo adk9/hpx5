@@ -18,38 +18,52 @@
 #include "libhpx/boot.h"
 #include "libhpx/config.h"
 #include "libhpx/parcel.h"
-#include "parcel_emulation.h"
+#include "libhpx/parcel_block.h"
+#include <memory>
 
 namespace libhpx {
 namespace network {
 namespace pwc {
 class ReloadParcelEmulator {
  public:
-  ReloadParcelEmulator(const config_t *cfg, boot_t *boot, pwc_xport_t *xport)
-      : impl_(parcel_emulator_new_reload(cfg, boot, xport))
-  {
-  }
+  ReloadParcelEmulator(const config_t *cfg, boot_t *boot, pwc_xport_t& xport);
+  ~ReloadParcelEmulator();
 
-  ~ReloadParcelEmulator()
-  {
-    if (impl_) {
-      impl_->deallocate(impl_);
-    }
-  }
-
-  int send(pwc_xport_t *xport, unsigned rank, const hpx_parcel_t *p)
-  {
-    return impl_->send(impl_, xport, rank, p);
-  }
-
-  parcel_emulator_t * const impl()
-  {
-    return impl_;
-  }
+  int send(unsigned rank, const hpx_parcel_t *p);
+  void reload(unsigned src, size_t n);
 
  private:
-  parcel_emulator_t *impl_;
+  /// An individual eager buffer representation.
+  class EagerBuffer {
+   public:
+    void init(size_t n, pwc_xport_t& xport);
+    void fini();
+    void reload(size_t n, pwc_xport_t& xport);
+    int send(pwc_xport_t& xport, xport_op_t& op);
+
+   private:
+    size_t capacity_;
+    size_t next_;
+    parcel_block_t* block_;
+    xport_key_t key_;
+  };
+
+  /// An rdma-able remote address.
+  struct Remote {
+    void      *addr;
+    xport_key_t key;
+  };
+
+  unsigned rank_;                              //<! our rank here
+  unsigned ranks_;                             //<! number of ranks
+  pwc_xport_t& xport_;                         //<! the transport
+  std::unique_ptr<EagerBuffer[]> recvBuffers_; //<!
+  xport_key_t recvBuffersKey_;                 //<!
+  std::unique_ptr<EagerBuffer[]> sendBuffers_; //<!
+  xport_key_t sendBuffersKey_;                 //<!
+  std::unique_ptr<Remote[]> remotes_;          //<!
 };
+
 }
 } // namespace network
 } // namespace libhpx
