@@ -25,19 +25,16 @@
 /// will schedule the parcel once the get has completed.
 
 #include "PWCNetwork.h"
-#include "Commands.h"
-#include "xport.h"
 #include "libhpx/debug.h"
 #include "libhpx/events.h"
 #include "libhpx/scheduler.h"
 
 namespace {
 using libhpx::network::pwc::Command;
+using libhpx::network::pwc::PhotonTransport;
 using libhpx::network::pwc::PWCNetwork;
-
-using libhpx::network::pwc::pwc_xport_t;
-using libhpx::network::pwc::xport_op_t;
-using libhpx::network::pwc::xport_key_t;
+using Op = libhpx::network::pwc::PhotonTransport::Op;
+using Key = libhpx::network::pwc::PhotonTransport::Key;
 }
 
 /// The local event handler for the get-with-completion operation.
@@ -58,7 +55,7 @@ struct _rendezvous_get_args_t {
   unsigned         rank;
   const hpx_parcel_t *p;
   size_t              n;
-  xport_key_t       key;
+  Key               key;
 };
 }
 
@@ -74,19 +71,18 @@ struct _rendezvous_get_args_t {
 static int
 _rendezvous_get_handler(_rendezvous_get_args_t *args, size_t size)
 {
-  pwc_xport_t *xport = PWCNetwork::Instance().xport_;
   hpx_parcel_t *p = parcel_alloc(args->n - sizeof(*p));
   dbg_assert(p);
-  xport_op_t op;
+  Op op;
   op.rank = args->rank;
   op.n = args->n;
   op.dest = p;
-  op.dest_key = xport->key_find_ref(xport, p, args->n);
+  op.dest_key = PhotonTransport::FindKeyRef(p, args->n);
   op.src = args->p;
   op.src_key = &args->key;
   op.lop = Command::RendezvousLaunch(p);
   op.rop = Command::DeleteParcel(args->p);
-  int e = xport->gwc(&op);
+  int e = op.get();
   dbg_check(e, "could not issue get during rendezvous parcel\n");
   return HPX_SUCCESS;
 }
@@ -102,6 +98,6 @@ PWCNetwork::rendezvousSend(const hpx_parcel_t *p)
     .p = p,
     .n = n
   };
-  xport_->key_find(xport_, p, n, &args.key);
+  PhotonTransport::FindKey(p, n, &args.key);
   return hpx_call(p->target, _rendezvous_get, HPX_NULL, &args, sizeof(args));
 }

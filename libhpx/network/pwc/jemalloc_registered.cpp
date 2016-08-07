@@ -16,19 +16,15 @@
 #endif
 
 #include "registered.h"
-#include "xport.h"
-#include <libhpx/debug.h>
-#include <libhpx/memory.h>
-#include <libhpx/system.h>
+#include "PhotonTransport.h"
+#include "libhpx/debug.h"
+#include "libhpx/memory.h"
+#include "libhpx/system.h"
 #include <cstring>
 
-using namespace libhpx::network::pwc;
-
-/// The transport we'll use for pinning. It's not ideal to stick it here, but we
-/// need to pin before the network has been exposed through the
-/// self->network. We can simply capture the transport since we know we'll need
-/// it anyway.
-static pwc_xport_t *_xport = nullptr;
+namespace {
+using libhpx::network::pwc::PhotonTransport;
+}
 
 /// @file  libhpx/gas/pgas/registered.c
 /// @brief This file implements the address-space allocator interface for
@@ -55,7 +51,7 @@ _registered_chunk_alloc(void *addr, size_t n, size_t align, bool *zero,
   }
 
   // Pin the memory.
-  _xport->pin(chunk, n, nullptr);
+  PhotonTransport::Pin(chunk, n, nullptr);
 
   // If we are asked to zero a chunk, then we do so.
   if (*zero) {
@@ -70,13 +66,13 @@ _registered_chunk_alloc(void *addr, size_t n, size_t align, bool *zero,
 static bool
 _registered_chunk_free(void *chunk, size_t n, bool committed, unsigned arena)
 {
-  _xport->unpin(chunk, n);
+  PhotonTransport::Unpin(chunk, n);
   system_munmap_huge_pages(nullptr, chunk, n);
   return 0;
 }
 
 void
-libhpx::network::pwc::registered_allocator_init(pwc_xport_t *xport)
+libhpx::network::pwc::registered_allocator_init(void)
 {
   static const chunk_hooks_t _registered_hooks = {
     .alloc    = _registered_chunk_alloc,
@@ -87,7 +83,5 @@ libhpx::network::pwc::registered_allocator_init(pwc_xport_t *xport)
     .split    = as_null_split,
     .merge    = as_null_merge
   };
-
-  _xport = xport;
   as_set_allocator(AS_REGISTERED, &_registered_hooks);
 }

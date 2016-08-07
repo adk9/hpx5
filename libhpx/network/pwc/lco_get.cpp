@@ -17,18 +17,16 @@
 
 #include "PWCNetwork.h"
 #include "Commands.h"
-#include "xport.h"
 #include "libhpx/debug.h"
 #include "libhpx/memory.h"
 #include "libhpx/scheduler.h"
 
 namespace {
 using libhpx::network::pwc::Command;
+using libhpx::network::pwc::PhotonTransport;
 using libhpx::network::pwc::PWCNetwork;
-
-using libhpx::network::pwc::pwc_xport_t;
-using libhpx::network::pwc::xport_op_t;
-using libhpx::network::pwc::xport_key_t;
+using Op = libhpx::network::pwc::PhotonTransport::Op;
+using Key = libhpx::network::pwc::PhotonTransport::Key;
 }
 
 /// This acts as a parcel_suspend transfer to allow _pwc_lco_get_request_handler
@@ -36,9 +34,9 @@ using libhpx::network::pwc::xport_key_t;
 static void
 _get_reply_continuation(struct hpx_parcel *p, void *env)
 {
-  xport_op_t *op = static_cast<xport_op_t*>(env);
+  Op *op = static_cast<Op*>(env);
   op->lop  = Command::ResumeParcel(p);
-  dbg_check( PWCNetwork::Instance().xport_->pwc(op) );
+  dbg_check( op->put() );
 }
 
 namespace {
@@ -47,7 +45,7 @@ struct _pwc_lco_get_request_args_t {
   size_t n;
   void *out;
   int reset;
-  xport_key_t key;
+  Key key;
   unsigned rank;
 };
 }
@@ -56,21 +54,20 @@ struct _pwc_lco_get_request_args_t {
 /// synchronous get reply via put-with-completion using the scheduler_suspend
 /// interface.
 ///
-/// We could actually do the xport_op_t construction in the reply transfer
-/// continuation, but we'd need an environment to pass down there anyway, so we
-/// use the xport_op_t for that.
+/// We could actually do the Op construction in the reply transfer continuation,
+/// but we'd need an environment to pass down there anyway, so we use the Op for
+/// that.
 static int
 _get_reply(_pwc_lco_get_request_args_t *args, const void *ref, Command remote)
 {
-  pwc_xport_t *xport = PWCNetwork::Instance().xport_;
   // Create the transport operation to perform the rdma put operation
-  xport_op_t op;
+  Op op;
   op.rank = args->rank;
   op.n = args->n;
   op.dest = args->out;
-  op.dest_key = args->key;
+  op.dest_key = &args->key;
   op.src = ref;
-  op.src_key = xport->key_find_ref(xport, ref, args->n);
+  op.src_key = PhotonTransport::FindKeyRef(ref, args->n);
   op.lop = Command();                          // set in _get_reply_continuation
   op.rop = remote;
   dbg_assert_str(op.src_key, "LCO reference must point to registered memory\n");
@@ -232,12 +229,12 @@ PWCNetwork::get(hpx_addr_t lco, size_t n, void *out, int reset)
 
   // If the output buffer is already registered, then we just need to copy the
   // key into the args structure, otherwise we need to register the region.
-  const void *key = xport_->key_find_ref(xport_, out, n);
+  auto *key = PhotonTransport::FindKeyRef(out, n);
   if (key) {
-    xport_->key_copy(&env.request.key, key);
+    env.request.key = *key;
   }
   else {
-    xport_->pin(out, n, &env.request.key);
+    PhotonTransport::Pin(out, n, &env.request.key);
   }
 
   // Perform the get operation synchronously.
@@ -246,7 +243,7 @@ PWCNetwork::get(hpx_addr_t lco, size_t n, void *out, int reset)
   // If we registered the output buffer dynamically, then we need to de-register
   // it now.
   if (!key) {
-    xport_->unpin(out, n);
+    PhotonTransport::Unpin(out, n);
   }
   return HPX_SUCCESS;
 }

@@ -15,36 +15,35 @@
 # include "config.h"
 #endif
 
-#include <string.h>
-#include <libhpx/debug.h>
-#include <libhpx/memory.h>
-#include <libhpx/system.h>
 #include "registered.h"
-#include "xport.h"
+#include "PhotonTransport.h"
+#include "libhpx/debug.h"
+#include "libhpx/memory.h"
+#include "libhpx/system.h"
 
-static pwc_xport_t *_xport = NULL;
+namespace {
+using libhpx::network::pwc::PhotonTransport;
+}
 
 void *dl_mmap_wrapper(size_t length) {
-  void *base = system_mmap_huge_pages(NULL, NULL, length, 1);
-  if (!base) {
-    dbg_error("failed to mmap %zu bytes anywhere in memory\n", length);
+  if (void *base = system_mmap_huge_pages(NULL, NULL, length, 1)) {
+    PhotonTransport::Pin(base, length, NULL);
+    log_mem("mapped %zu registered bytes at %p\n", length, base);
+    return base;
   }
-  _xport->pin(base, length, NULL);
-  log_mem("mapped %zu registered bytes at %p\n", length, base);
-  return base;
+
+  dbg_error("failed to mmap %zu bytes anywhere in memory\n", length);
+  return NULL;
 }
 
 void dl_munmap_wrapper(void *ptr, size_t length) {
-  if (!length) {
-    return;
+  if (length) {
+    _PhotonTransport::Unpin(ptr, length);
+    system_munmap_huge_pages(NULL, ptr, length);
   }
-  _xport->unpin(ptr, length);
-  system_munmap_huge_pages(NULL, ptr, length);
 }
 
 void
-registered_allocator_init(pwc_xport_t *xport) {
-  dbg_assert_str(!_xport, "registered allocator already initialized\n");
-  _xport = xport;
+libhpx::network::pwc::registered_allocator_init(void) {
   mspaces[AS_REGISTERED] = create_mspace(0, 1);
 }

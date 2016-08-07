@@ -16,9 +16,9 @@
 
 #include "libhpx/Network.h"
 #include "Commands.h"
+#include "PhotonTransport.h"
 #include "ReloadParcelEmulator.h"
 #include "SendBuffer.h"
-#include "xport.h"
 #include "libhpx/parcel.h"
 #include <mutex>
 
@@ -30,6 +30,9 @@ class PWCNetwork final : public Network, public CollectiveOps, public LCOOps,
  public:
   PWCNetwork(const config_t *cfg, boot_t *boot, gas_t *gas);
   ~PWCNetwork();
+
+  static void* operator new (size_t size);
+  static void operator delete (void *p);
 
   int type() const;
   void progress(int);
@@ -129,9 +132,9 @@ class PWCNetwork final : public Network, public CollectiveOps, public LCOOps,
 
  private:
   struct HeapSegment {
-    size_t        n;
-    char      *base;
-    xport_key_t key;
+    size_t                 n;
+    char*               base;
+    PhotonTransport::Key key;
   };
   static PWCNetwork* Instance_;
 
@@ -139,7 +142,6 @@ class PWCNetwork final : public Network, public CollectiveOps, public LCOOps,
   const unsigned ranks_;
 
  public:
-  pwc_xport_t *xport_;
   ReloadParcelEmulator parcels_;
 
  private:

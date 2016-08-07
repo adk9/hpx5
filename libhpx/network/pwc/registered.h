@@ -16,13 +16,11 @@
 
 /// @file  libhpx/network/pwc/registered.h
 
-#include "xport.h"
-
 namespace libhpx {
 namespace network {
 namespace pwc {
 
-void registered_allocator_init(pwc_xport_t *xport);
+void registered_allocator_init();
 
 } // namespace pwc
 } // namespace network

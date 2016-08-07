@@ -31,7 +31,6 @@ SendBuffer::SendBuffer()
     : rank_(),
       UNUSED_PADDING_(),
       emul_(nullptr),
-      xport_(),
       pending_()
 {
 }
@@ -74,11 +73,10 @@ SendBuffer::progress()
 }
 
 void
-SendBuffer::init(unsigned rank, ReloadParcelEmulator& emul, pwc_xport_t *xport)
+SendBuffer::init(unsigned rank, ReloadParcelEmulator& emul)
 {
   rank_ = rank;
   emul_ = &emul;
-  xport_ = xport;
   pending_.init(sizeof(Record), 8);
 }
 

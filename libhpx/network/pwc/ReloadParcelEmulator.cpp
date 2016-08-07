@@ -22,7 +22,9 @@
 
 namespace {
 using libhpx::network::pwc::Command;
+using libhpx::network::pwc::PhotonTransport;
 using libhpx::network::pwc::ReloadParcelEmulator;
+using Op = libhpx::network::pwc::PhotonTransport::Op;
 }
 
 void
@@ -34,24 +36,24 @@ ReloadParcelEmulator::EagerBuffer::fini()
 }
 
 void
-ReloadParcelEmulator::EagerBuffer::reload(size_t n, pwc_xport_t& xport)
+ReloadParcelEmulator::EagerBuffer::reload(size_t n)
 {
   if (n) {
     parcel_block_deduct(block_, n);
   }
   block_ = parcel_block_new(capacity_, capacity_, &next_);
-  xport.key_find(&xport, block_, capacity_, &key_);
+  PhotonTransport::FindKey(block_, capacity_, &key_);
 }
 
 void
-ReloadParcelEmulator::EagerBuffer::init(size_t n, pwc_xport_t& xport)
+ReloadParcelEmulator::EagerBuffer::init(size_t n)
 {
   capacity_ = n;
-  reload(0, xport);
+  reload(0);
 }
 
 int
-ReloadParcelEmulator::EagerBuffer::send(pwc_xport_t& xport, xport_op_t& op)
+ReloadParcelEmulator::EagerBuffer::send(Op& op)
 {
   int i = next_;
   dbg_assert(!(i & 7));
@@ -65,7 +67,7 @@ ReloadParcelEmulator::EagerBuffer::send(pwc_xport_t& xport, xport_op_t& op)
     op.dest_key = &key_;
     op.dest = parcel_block_at(block_, i);
     op.rop = Command::RecvParcel(static_cast<hpx_parcel_t*>(op.dest));
-    return xport.pwc(&op);
+    return op.put();
   }
 
   op.n = 0;
@@ -73,7 +75,7 @@ ReloadParcelEmulator::EagerBuffer::send(pwc_xport_t& xport, xport_op_t& op)
   op.src_key = nullptr;
   op.lop = Command::Nop();
   op.rop = Command::ReloadRequest(r);
-  int e = xport.cmd(op.rank, op.lop, op.rop);
+  int e = op.cmd();
   if (LIBHPX_OK == e) {
     return LIBHPX_RETRY;
   }
@@ -85,13 +87,13 @@ int
 ReloadParcelEmulator::send(unsigned rank, const hpx_parcel_t *p)
 {
   size_t n = parcel_size(p);
-  xport_op_t op;
+  Op op;
   op.rank = rank;
   op.n = n;
   op.dest = nullptr;
   op.dest_key = nullptr;
   op.src = p;
-  op.src_key = xport_.key_find_ref(&xport_, p, n);
+  op.src_key = PhotonTransport::FindKeyRef(p, n);
   op.lop = Command::DeleteParcel(p);
   op.rop = Command::Nop();
 
@@ -99,7 +101,7 @@ ReloadParcelEmulator::send(unsigned rank, const hpx_parcel_t *p)
     dbg_error("no rdma key for local parcel (%p, %zu)\n", (void*)p, n);
   }
 
-  return sendBuffers_[rank].send(xport_, op);
+  return sendBuffers_[rank].send(op);
 }
 
 ReloadParcelEmulator::~ReloadParcelEmulator()
@@ -107,34 +109,33 @@ ReloadParcelEmulator::~ReloadParcelEmulator()
   for (int i = 0, e = ranks_; i < e; ++i) {
     recvBuffers_[i].fini();
   }
-  xport_.unpin(recvBuffers_.get(), ranks_ * sizeof(EagerBuffer));
-  xport_.unpin(sendBuffers_.get(), ranks_ * sizeof(EagerBuffer));
+  PhotonTransport::Unpin(recvBuffers_.get(), ranks_ * sizeof(EagerBuffer));
+  PhotonTransport::Unpin(sendBuffers_.get(), ranks_ * sizeof(EagerBuffer));
 }
 
-ReloadParcelEmulator::ReloadParcelEmulator(const config_t *cfg, boot_t *boot,
-                                           pwc_xport_t& xport)
+ReloadParcelEmulator::ReloadParcelEmulator(const config_t *cfg, boot_t *boot)
     : rank_(boot_rank(boot)),
       ranks_(boot_n_ranks(boot)),
-      xport_(xport),
       recvBuffers_(new EagerBuffer[ranks_]),
       recvBuffersKey_(),
       sendBuffers_(new EagerBuffer[ranks_]),
       sendBuffersKey_(),
       remotes_(new Remote[ranks_])
 {
-  xport_.pin(recvBuffers_.get(), ranks_ * sizeof(EagerBuffer), recvBuffersKey_);
-  xport_.pin(sendBuffers_.get(), ranks_ * sizeof(EagerBuffer), sendBuffersKey_);
+  size_t eagerBytes = ranks_ * sizeof(EagerBuffer);
+  PhotonTransport::Pin(recvBuffers_.get(), eagerBytes, &recvBuffersKey_);
+  PhotonTransport::Pin(sendBuffers_.get(), eagerBytes, &sendBuffersKey_);
 
   // Initialize the recv buffers for this rank.
   for (int i = 0, e = ranks_; i < e; ++i) {
-    recvBuffers_[i].init(cfg->pwc_parcelbuffersize, xport_);
+    recvBuffers_[i].init(cfg->pwc_parcelbuffersize);
   }
 
   // Initialize a temporary array of remote pointers for this rank's sends.
   std::unique_ptr<Remote[]> temp(new Remote[ranks_]);
   for (int i = 0, e = ranks_; i < e; ++i) {
     temp[i].addr = &sendBuffers_[i];
-    xport_.key_copy(&temp[i].key, &sendBuffersKey_);
+    temp[i].key = sendBuffersKey_;
   }
 
   // exchange all of the recv buffers, and all of the remote send pointers
@@ -147,17 +148,17 @@ ReloadParcelEmulator::ReloadParcelEmulator(const config_t *cfg, boot_t *boot,
 void
 ReloadParcelEmulator::reload(unsigned src, size_t n)
 {
-  recvBuffers_[src].reload(n, xport_);
+  recvBuffers_[src].reload(n);
 
-  xport_op_t op;
+  Op op;
   op.rank = src;
   op.n = sizeof(EagerBuffer);
   op.dest = remotes_[src].addr;
-  op.dest_key = remotes_[src].key;
+  op.dest_key = &remotes_[src].key;
   op.src = &recvBuffers_[src];
-  op.src_key = recvBuffersKey_;
+  op.src_key = &recvBuffersKey_;
   op.lop = Command::Nop();
   op.rop = Command::ReloadReply();
 
-  dbg_check( xport_.pwc(&op) );
+  dbg_check( op.put() );
 }

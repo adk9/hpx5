@@ -32,6 +32,9 @@ using libhpx::StringOps;
 using libhpx::network::ParcelStringOps;
 using libhpx::network::pwc::PWCNetwork;
 using libhpx::network::pwc::DMAStringOps;
+using Op = libhpx::network::pwc::PhotonTransport::Op;
+using Key = libhpx::network::pwc::PhotonTransport::Key;
+constexpr int ANY_SOURCE = libhpx::network::pwc::PhotonTransport::ANY_SOURCE;
 }
 
 PWCNetwork* PWCNetwork::Instance_ = nullptr;
@@ -45,8 +48,7 @@ PWCNetwork& PWCNetwork::Instance()
 PWCNetwork::PWCNetwork(const config_t *cfg, boot_t *boot, gas_t *gas)
     : rank_(boot_rank(boot)),
       ranks_(boot_n_ranks(boot)),
-      xport_(pwc_xport_new(cfg, boot, gas)),
-      parcels_(cfg, boot, *xport_),
+      parcels_(cfg, boot),
       string_((gas->type == HPX_GAS_AGAS) ?
               static_cast<StringOps*>(new ParcelStringOps()) :
               static_cast<StringOps*>(new DMAStringOps(*this,
@@ -84,13 +86,13 @@ PWCNetwork::PWCNetwork(const config_t *cfg, boot_t *boot, gas_t *gas)
     HeapSegment local;
     local.n = gas_local_size(gas);
     local.base = (char*)gas_local_base(gas);
-    xport_->pin(local.base, local.n, local.key);
+    PhotonTransport::Pin(local.base, local.n, &local.key);
     boot_allgather(boot, &local, segments_, sizeof(HeapSegment));
   }
 
   // Initialize the send buffers.
   for (int i = 0, e = ranks_; i < e; ++i) {
-    sendBuffers_[i].init(i, parcels_, xport_);
+    sendBuffers_[i].init(i, parcels_);
   }
 }
 
@@ -103,7 +105,7 @@ PWCNetwork::~PWCNetwork()
     int remaining, src;
     Command command;
     do {
-      xport_->test(&command, &remaining, XPORT_ANY_SOURCE, &src);
+      PhotonTransport::Test(&command, &remaining, ANY_SOURCE, &src);
     } while (remaining > 0);
   }
 
@@ -118,13 +120,12 @@ PWCNetwork::~PWCNetwork()
 
   // If we registered the heap segments then remove them.
   if (segments_) {
-    xport_->unpin(gas_local_base(gas_), gas_local_size(gas_));
+    PhotonTransport::Unpin(gas_local_base(gas_), gas_local_size(gas_));
     delete [] segments_;
   }
 
   delete [] sendBuffers_;
   delete string_;
-  xport_->dealloc(xport_);
   Instance_ = nullptr;
 }
 
@@ -140,7 +141,7 @@ PWCNetwork::progress(int n)
   if (auto _ = std::unique_lock<std::mutex>(progressLock_, std::try_to_lock)) {
     Command command;
     int src;
-    while (xport_->test(&command, nullptr, XPORT_ANY_SOURCE, &src)) {
+    while (PhotonTransport::Test(&command, nullptr, ANY_SOURCE, &src)) {
       command(rank_);
     }
   }
@@ -157,7 +158,7 @@ PWCNetwork::probe(int n)
   if (auto _ = std::unique_lock<std::mutex>(probeLock_, std::try_to_lock)) {
     Command command;
     int src;
-    while (xport_->probe(&command, nullptr, XPORT_ANY_SOURCE, &src)) {
+    while (PhotonTransport::Probe(&command, nullptr, ANY_SOURCE, &src)) {
       command(src);
     }
   }
@@ -224,13 +225,13 @@ PWCNetwork::progressSends(unsigned rank)
 void
 PWCNetwork::pin(const void *base, size_t bytes, void *key)
 {
-  xport_->pin(base, bytes, key);
+  PhotonTransport::Pin(base, bytes, static_cast<Key*>(key));
 }
 
 void
 PWCNetwork::unpin(const void *base, size_t bytes)
 {
-  xport_->unpin(base, bytes);
+  PhotonTransport::Unpin(base, bytes);
 }
 
 int
@@ -242,18 +243,6 @@ PWCNetwork::init(void **collective)
 int
 PWCNetwork::sync(void *in, size_t in_size, void* out, void *collective)
 {
-  coll_t *c = (coll_t*)collective;
-  void *sendbuf = in;
-  int count = in_size;
-  char *comm = c->data + c->group_bytes;
-
-  // flushing network is necessary (sufficient ?) to execute any packets
-  // destined for collective operation
-  flush();
-
-  if (c->type == ALL_REDUCE) {
-    xport_->allreduce(sendbuf, out, count, NULL, &c->op, comm);
-  }
   return LIBHPX_OK;
 }
 
@@ -263,16 +252,16 @@ PWCNetwork::put(hpx_addr_t to, const void *lva, size_t n, const Command& lcmd,
 {
   int rank = gpa_to_rank(to);
 
-  xport_op_t op;
+  Op op;
   op.rank = rank;
   op.n = n;
   op.dest = segments_[rank].base + gpa_to_offset(to);
   op.dest_key = &segments_[rank].key;
   op.src = lva;
-  op.src_key = xport_->key_find_ref(xport_, lva, n);
+  op.src_key = PhotonTransport::FindKeyRef(lva, n);
   op.lop = lcmd;
   op.rop = rcmd;
-  if (xport_->pwc(&op)) {
+  if (op.put()) {
     throw std::exception();
   }
 }
@@ -283,16 +272,16 @@ PWCNetwork::get(void *lva, hpx_addr_t from, size_t n, const Command& lcmd,
 {
   int rank = gpa_to_rank(from);
 
-  xport_op_t op;
+  Op op;
   op.rank = rank;
   op.n = n;
   op.dest = lva;
-  op.dest_key = xport_->key_find_ref(xport_, lva, n);
+  op.dest_key = PhotonTransport::FindKeyRef(lva, n);
   op.src = segments_[rank].base + gpa_to_offset(from);
   op.src_key = &segments_[rank].key;
   op.lop = lcmd;
   op.rop = rcmd;
-  if (xport_->gwc(&op)) {
+  if (op.get()) {
     throw std::exception();
   }
 }
@@ -300,8 +289,29 @@ PWCNetwork::get(void *lva, hpx_addr_t from, size_t n, const Command& lcmd,
 void
 PWCNetwork::cmd(int rank, const Command& lcmd, const Command& rcmd)
 {
-  if (xport_->cmd(rank, lcmd, rcmd)) {
+  Op op;
+  op.rank = rank;
+  op.lop = lcmd;
+  op.rop = rcmd;
+  if (op.cmd()) {
     throw std::exception();
   }
 }
 
+void*
+PWCNetwork::operator new (size_t size)
+{
+  PhotonTransport::Initialize(here->config, here->boot);
+  void *memory;
+  if (posix_memalign(&memory, HPX_CACHELINE_SIZE, size)) {
+    dbg_error("Could not allocate aligned memory for the PWCNetwork\n");
+    throw std::bad_alloc();
+  }
+  return memory;
+}
+
+void
+PWCNetwork::operator delete (void *p)
+{
+  free(p);
+}

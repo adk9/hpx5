@@ -17,7 +17,6 @@
 
 #include "CircularBuffer.h"
 #include "ReloadParcelEmulator.h"
-#include "xport.h"
 #include "libhpx/parcel.h"
 #include <mutex>
 
@@ -31,7 +30,7 @@ class SendBuffer {
 
 
   /// Initialize a send buffer.
-  void init(unsigned rank, ReloadParcelEmulator& emul, pwc_xport_t *xport);
+  void init(unsigned rank, ReloadParcelEmulator& emul);
 
   /// Finalize a send buffer.
   void fini();
@@ -94,7 +93,6 @@ class SendBuffer {
   unsigned              rank_;
   const int   UNUSED_PADDING_;
   ReloadParcelEmulator *emul_;
-  pwc_xport_t         *xport_;
   CircularBuffer     pending_;
 };
 

@@ -14,7 +14,7 @@
 #ifndef LIBHPX_NETWORK_PWC_RELOAD_PARCEL_EMULATOR_H
 #define LIBHPX_NETWORK_PWC_RELOAD_PARCEL_EMULATOR_H
 
-#include "xport.h"
+#include "PhotonTransport.h"
 #include "libhpx/boot.h"
 #include "libhpx/config.h"
 #include "libhpx/parcel.h"
@@ -26,7 +26,7 @@ namespace network {
 namespace pwc {
 class ReloadParcelEmulator {
  public:
-  ReloadParcelEmulator(const config_t *cfg, boot_t *boot, pwc_xport_t& xport);
+  ReloadParcelEmulator(const config_t *cfg, boot_t *boot);
   ~ReloadParcelEmulator();
 
   int send(unsigned rank, const hpx_parcel_t *p);
@@ -36,31 +36,30 @@ class ReloadParcelEmulator {
   /// An individual eager buffer representation.
   class EagerBuffer {
    public:
-    void init(size_t n, pwc_xport_t& xport);
+    void init(size_t n);
     void fini();
-    void reload(size_t n, pwc_xport_t& xport);
-    int send(pwc_xport_t& xport, xport_op_t& op);
+    void reload(size_t n);
+    int send(PhotonTransport::Op& op);
 
    private:
     size_t capacity_;
     size_t next_;
     parcel_block_t* block_;
-    xport_key_t key_;
+    PhotonTransport::Key key_;
   };
 
   /// An rdma-able remote address.
   struct Remote {
-    void      *addr;
-    xport_key_t key;
+    void *addr;
+    PhotonTransport::Key key;
   };
 
   unsigned rank_;                              //<! our rank here
   unsigned ranks_;                             //<! number of ranks
-  pwc_xport_t& xport_;                         //<! the transport
   std::unique_ptr<EagerBuffer[]> recvBuffers_; //<!
-  xport_key_t recvBuffersKey_;                 //<!
+  PhotonTransport::Key recvBuffersKey_;        //<!
   std::unique_ptr<EagerBuffer[]> sendBuffers_; //<!
-  xport_key_t sendBuffersKey_;                 //<!
+  PhotonTransport::Key sendBuffersKey_;        //<!
   std::unique_ptr<Remote[]> remotes_;          //<!
 };
 

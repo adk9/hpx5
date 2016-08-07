@@ -18,7 +18,6 @@
 #include "PWCNetwork.h"
 #include "Commands.h"
 #include "ReloadParcelEmulator.h"
-#include "xport.h"
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/events.h"
