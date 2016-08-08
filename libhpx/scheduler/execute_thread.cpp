@@ -40,7 +40,7 @@ namespace {
 
 void HPX_NORETURN worker_execute_thread(hpx_parcel_t *p) {
   EVENT_THREAD_RUN(p, self);
-  EVENT_SCHED_END(0, 0);
+//  EVENT_SCHED_END(0, 0);
   int status = HPX_SUCCESS;
   try {
     status = action_exec_parcel(p->action, p);

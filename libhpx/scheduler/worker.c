@@ -193,7 +193,7 @@ static void _checkpoint(hpx_parcel_t *to, void *sp, void *env) {
 static void _transfer(hpx_parcel_t *p, void (*f)(hpx_parcel_t *, void *),
                       void *e, worker_t *w) {
   _bind_stack(p, w);
-
+  EVENT_SCHED_TRANSFER();
   if (!w->current->ustack->masked) {
     thread_transfer(p, _checkpoint, &(_checkpoint_env_t) { .f = f, .env = e });
   }
@@ -253,10 +253,12 @@ static chase_lev_ws_deque_t *_yielded(worker_t *this) {
 static hpx_parcel_t *_pop_lifo(worker_t *this) {
   chase_lev_ws_deque_t *work = _work(this);
   hpx_parcel_t *p = sync_chase_lev_ws_deque_pop(work);
+/*
   INST_IF (p) {
     EVENT_SCHED_POP_LIFO(p->id);
     EVENT_SCHED_WQSIZE(sync_chase_lev_ws_deque_size(work));
   }
+*/
   return p;
 }
 
@@ -265,7 +267,7 @@ static hpx_parcel_t *_steal_from(worker_t *this, int id) {
   worker_t *victim = scheduler_get_worker(this->sched, id);
   hpx_parcel_t *p = sync_chase_lev_ws_deque_steal(_work(victim));
   this->last_victim = (p) ? id : -1;
-  EVENT_SCHED_STEAL(p ? p->id : 0, victim->id);
+//  EVENT_SCHED_STEAL(p ? p->id : 0, victim->id);
   return p;
 }
 
@@ -323,7 +325,7 @@ static int _push_half_handler(int src) {
   if (parcels) {
     scheduler_spawn_at(parcels, src);
   }
-  EVENT_SCHED_STEAL(parcels ? parcels->id : 0, this->id);
+//  EVENT_SCHED_STEAL(parcels ? parcels->id : 0, this->id);
   return HPX_SUCCESS;
 }
 static LIBHPX_ACTION(HPX_INTERRUPT, 0, _push_half, _push_half_handler, HPX_INT);
@@ -402,6 +404,7 @@ static hpx_parcel_t *_handle_steal(worker_t *this) {
     return NULL;
   }
 
+  EVENT_SCHED_STEAL_BEGIN();
   hpx_parcel_t *p;
   libhpx_sched_policy_t policy = here->config->sched_policy;
   switch (policy) {
@@ -415,6 +418,7 @@ static hpx_parcel_t *_handle_steal(worker_t *this) {
       p = _steal_hier(this);
       break;
   }
+  EVENT_SCHED_STEAL_END();
   return p;
 }
 
@@ -488,7 +492,7 @@ static void _yield(hpx_parcel_t *p, void *worker) {
 static void _push_lifo(hpx_parcel_t *p, void *worker) {
   dbg_assert(p->target != HPX_NULL);
   dbg_assert(actions[p->action].handler != NULL);
-  EVENT_SCHED_PUSH_LIFO(p->id);
+//  EVENT_SCHED_PUSH_LIFO(p->id);
   GAS_TRACE_ACCESS(p->src, here->rank, p->target, p->size);
   worker_t *this = worker;
   uint64_t size = sync_chase_lev_ws_deque_push(_work(this), p);
@@ -516,7 +520,7 @@ static hpx_parcel_t *_handle_mail(worker_t *this) {
   do {
     hpx_parcel_t *next = NULL;
     while ((next = parcel_stack_pop(&parcels))) {
-      EVENT_SCHED_MAIL(prev->id);
+//      EVENT_SCHED_MAIL(prev->id);
       log_sched("got mail %p\n", prev);
       _push_lifo(prev, this);
       prev = next;
@@ -578,7 +582,7 @@ static int _is_state(const worker_t *w, int state) {
 /// @param          env The continuation environment.
 static void _schedule_nb(worker_t *this, void (*f)(hpx_parcel_t *, void*),
                          void *env) {
-  EVENT_SCHED_BEGIN();
+//  EVENT_SCHED_BEGIN();
   hpx_parcel_t *p = NULL;
   if (!_is_state(this, SCHED_RUN)) {
     p = this->system;
@@ -592,7 +596,7 @@ static void _schedule_nb(worker_t *this, void (*f)(hpx_parcel_t *, void*),
   }
   dbg_assert(p != this->current);
   _transfer(p, f, env, this);
-  EVENT_SCHED_END(0, 0);
+//  EVENT_SCHED_END(0, 0);
 }
 
 /// The primary schedule loop.
@@ -657,7 +661,7 @@ static void _stop(worker_t *this) {
 
 static void *_run(void *worker) {
   worker_t *this = worker;
-  EVENT_SCHED_BEGIN();
+//  EVENT_SCHED_BEGIN();
   dbg_assert(here && here->config && here->gas && here->net);
   dbg_assert(this);
   dbg_assert(((uintptr_t)this & (HPX_CACHELINE_SIZE - 1)) == 0);
@@ -736,7 +740,7 @@ static void *_run(void *worker) {
   // leave the global address space
   as_leave();
 
-  EVENT_SCHED_END(0, 0);
+//  EVENT_SCHED_END(0, 0);
   return NULL;
 }
 
@@ -914,7 +918,7 @@ void scheduler_spawn(hpx_parcel_t *p) {
 void scheduler_yield(void) {
   worker_t *w = self;
   dbg_assert(action_is_default(w->current->action));
-  EVENT_SCHED_YIELD();
+//  EVENT_SCHED_YIELD();
   self->yielded = true;
   EVENT_THREAD_SUSPEND(w->current, w);
   _schedule_nb(w, _yield, w);
