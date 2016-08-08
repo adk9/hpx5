@@ -39,6 +39,7 @@ void
 ReloadParcelEmulator::EagerBuffer::reload(size_t n)
 {
   if (n) {
+    dbg_assert(block_);
     parcel_block_deduct(block_, n);
   }
   block_ = parcel_block_new(capacity_, capacity_, &next_);
@@ -49,7 +50,7 @@ void
 ReloadParcelEmulator::EagerBuffer::init(size_t n)
 {
   capacity_ = n;
-  reload(0);
+  next_ = n;
 }
 
 int
