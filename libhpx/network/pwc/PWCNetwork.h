@@ -16,8 +16,8 @@
 
 #include "libhpx/Network.h"
 #include "Commands.h"
+#include "Peer.h"
 #include "PhotonTransport.h"
-#include "ReloadParcelEmulator.h"
 #include "libhpx/parcel.h"
 #include <mutex>
 
@@ -25,8 +25,7 @@ namespace libhpx {
 namespace network {
 namespace pwc {
 class PWCNetwork final : public Network, public CollectiveOps, public LCOOps,
-                         public MemoryOps, public ParcelOps,
-                         public ReloadParcelEmulator
+                         public MemoryOps, public ParcelOps
 {
  public:
   /// Allocate a PWCNetwork instance.
@@ -66,43 +65,21 @@ class PWCNetwork final : public Network, public CollectiveOps, public LCOOps,
   int init(void **collective);
   int sync(void *in, size_t in_size, void* out, void *collective);
 
-  /// Initiate an rDMA put operation with a remote continuation.
-  ///
-  /// This will copy @p n bytes between the @p lca and the @p to buffer, running
-  /// the @p lcmd when the local buffer can be modified or deleted and the @p rcmd
-  /// when the remote write has completed.
-  ///
-  /// @param           to The global target for the put.
-  /// @param          lva The local source for the put.
-  /// @param            n The number of bytes to put.
-  /// @param         lcmd The local command, run when @p lva can be reused.
-  /// @param         rcmd The remote command, run when @p to has be written.
   void put(hpx_addr_t to, const void *lva, size_t n, const Command& lcmd,
            const Command& rcmd);
-  static void Put(hpx_addr_t to, const void *lva, size_t n, const Command& lcmd,
-                  const Command& rcmd) {
-    Instance().put(to, lva, n, lcmd, rcmd);
-  }
 
-  /// Initiate an rDMA get operation.
-  ///
-  /// This will copy @p n bytes between the @p from buffer and the @p lva, running
-  /// the @p rcmd when the read completes remotely and running the @p lcmd when
-  /// the local write is complete.
-  ///
-  /// @param          lva The local target for the get.
-  /// @param         from The global source for the get.
-  /// @param            n The number of bytes to get.
-  /// @param         lcmd A local command, run when @p lva is written.
-  /// @param         rcmd A remote command, run when @p from has been read.
   void get(void *lva, hpx_addr_t from, size_t n, const Command& lcmd,
            const Command& rcmd);
 
-  static void Get(void *lva, hpx_addr_t from, size_t n, const Command& lcmd,
-                  const Command& rcmd) {
-    Instance().get(lva, from, n, lcmd, rcmd);
-  }
+  /// Reload an eager buffer.
+  void reload(unsigned src, size_t n);
 
+  /// Progress the send buffer for a particular rank.
+  void progressSends(unsigned rank);
+
+  static PWCNetwork& Instance();
+
+ private:
   /// Perform a rendezvous parcel send operation.
   ///
   /// For normal size parcels, we use the set of one-to-one pre-allocated eager
@@ -116,24 +93,17 @@ class PWCNetwork final : public Network, public CollectiveOps, public LCOOps,
   /// @returns            The status of the operation.
   int rendezvousSend(const hpx_parcel_t* p);
 
-  /// Progress the send buffer for a particular rank.
-  void progressSends(unsigned rank);
-  static void ProgressSends(unsigned rank) {
-    Instance().progressSends(rank);
-  }
-
-  static PWCNetwork& Instance();
-
- private:
   static PWCNetwork* Instance_;
 
-  const unsigned        rank_;
-  const unsigned       ranks_;
-  StringOps*          string_;
-  gas_t* const           gas_;
-  boot_t* const         boot_;
-  std::mutex    progressLock_;
-  std::mutex       probeLock_;
+  const unsigned     rank_;
+  const unsigned    ranks_;
+  const size_t  eagerSize_;
+  StringOps*       string_;
+  gas_t* const        gas_;
+  boot_t* const      boot_;
+  std::mutex progressLock_;
+  std::mutex    probeLock_;
+  std::unique_ptr<Peer[]> peers_;
 };
 
 } // namespace pwc

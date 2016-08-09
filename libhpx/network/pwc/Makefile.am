@@ -1,6 +1,6 @@
 # The isend-irecv network implementations
 noinst_LTLIBRARIES = libpwc.la
-noinst_HEADERS     = CircularBuffer.h Commands.h ReloadParcelEmulator.h \
+noinst_HEADERS     = CircularBuffer.h Commands.h \
                      registered.h PhotonTransport.h ParcelBlock.h Peer.h
 
 libpwc_la_CPPFLAGS = -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
@@ -14,7 +14,6 @@ libpwc_la_SOURCES  = Peer.cpp \
                      rendezvous_send.cpp \
                      DMAStringOps.cpp \
                      PWCNetwork.cpp \
-                     ReloadParcelEmulator.cpp \
                      PhotonTransport.cpp
 
 if HAVE_JEMALLOC

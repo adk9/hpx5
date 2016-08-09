@@ -32,7 +32,6 @@ using libhpx::StringOps;
 using libhpx::network::ParcelStringOps;
 using libhpx::network::pwc::PWCNetwork;
 using libhpx::network::pwc::DMAStringOps;
-using libhpx::network::pwc::ReloadParcelEmulator;
 using Op = libhpx::network::pwc::PhotonTransport::Op;
 using Key = libhpx::network::pwc::PhotonTransport::Key;
 constexpr int ANY_SOURCE = libhpx::network::pwc::PhotonTransport::ANY_SOURCE;
@@ -47,17 +46,17 @@ PWCNetwork& PWCNetwork::Instance()
 }
 
 PWCNetwork::PWCNetwork(const config_t *cfg, boot_t *boot, gas_t *gas)
-    : ReloadParcelEmulator(cfg, boot, gas),
-      rank_(boot_rank(boot)),
+    : rank_(boot_rank(boot)),
       ranks_(boot_n_ranks(boot)),
+      eagerSize_(cfg->pwc_parcelbuffersize),
       string_((gas->type == HPX_GAS_AGAS) ?
               static_cast<StringOps*>(new ParcelStringOps()) :
-              static_cast<StringOps*>(new DMAStringOps(*this,
-                                                       boot_rank(boot)))),
+              static_cast<StringOps*>(new DMAStringOps(*this, rank_))),
       gas_(gas),
       boot_(boot),
       progressLock_(),
-      probeLock_()
+      probeLock_(),
+      peers_(new Peer[ranks_]())
 {
   assert(!Instance_);
   Instance_ = this;
@@ -74,10 +73,34 @@ PWCNetwork::PWCNetwork(const config_t *cfg, boot_t *boot, gas_t *gas)
               cfg->pwc_parcelbuffersize);
   }
 
+  // Validate eager parcel limits.
   if (cfg->pwc_parceleagerlimit > cfg->pwc_parcelbuffersize) {
     dbg_error(" --hpx-pwc-parceleagerlimit (%zu) must be less than "
               "--hpx-pwc-parcelbuffersize (%zu)\n",
               cfg->pwc_parceleagerlimit, cfg->pwc_parcelbuffersize);
+  }
+
+  // Exchange the local Peer and Heap information.
+  struct Exchange {
+    Remote<Peer> peer;
+    Remote<char> heap;
+  } local;
+
+  local.peer.addr = peers_.get();
+  local.peer.key = PhotonTransport::FindKey(peers_.get(), ranks_*sizeof(Peer));
+
+  if (gas->type == HPX_GAS_PGAS) {
+    size_t n = gas_local_size(gas);
+    local.heap.addr = static_cast<char*>(gas_local_base(gas));
+    PhotonTransport::Pin(local.heap.addr, n, &local.heap.key);
+  }
+
+  std::unique_ptr<Exchange[]> remotes(new Exchange[ranks_]);
+  boot_allgather(boot, &local, &remotes[0], sizeof(Exchange));
+
+  // And initialize the peers.
+  for (int i = 0, e = ranks_; i < e; ++i) {
+    peers_[i].init(i, rank_, remotes[i].peer, remotes[i].heap);
   }
 }
 
@@ -97,6 +120,9 @@ PWCNetwork::~PWCNetwork()
   // Network deletion is effectively a collective, so this enforces that
   // everyone is done with rdma before we go and deregister anything.
   boot_barrier(boot_);
+
+  // Unpin my heap.
+  PhotonTransport::Unpin(gas_local_base(gas_), gas_local_size(gas_));
   delete string_;
   Instance_ = nullptr;
 }
@@ -188,7 +214,7 @@ PWCNetwork::send(hpx_parcel_t *p, hpx_parcel_t *ssync)
   }
   else {
     int rank = gas_owner_of(gas_, p->target);
-    ends_[rank].send(p);
+    peers_[rank].send(p);
     return HPX_SUCCESS;
   }
 }
@@ -196,7 +222,7 @@ PWCNetwork::send(hpx_parcel_t *p, hpx_parcel_t *ssync)
 void
 PWCNetwork::progressSends(unsigned rank)
 {
-  ends_[rank].progress();
+  peers_[rank].progress();
 }
 
 void
@@ -228,7 +254,7 @@ PWCNetwork::put(hpx_addr_t dest, const void *src, size_t n, const Command& lcmd,
                 const Command& rcmd)
 {
   int rank = gpa_to_rank(dest);
-  ends_[rank].put(dest, src, n, lcmd, rcmd);
+  peers_[rank].put(dest, src, n, lcmd, rcmd);
 }
 
 void
@@ -236,7 +262,7 @@ PWCNetwork::get(void *dest, hpx_addr_t src, size_t n, const Command& lcmd,
                 const Command& rcmd)
 {
   int rank = gpa_to_rank(src);
-  ends_[rank].get(dest, src, n, lcmd, rcmd);
+  peers_[rank].get(dest, src, n, lcmd, rcmd);
 }
 
 void*
@@ -255,4 +281,10 @@ void
 PWCNetwork::operator delete (void *p)
 {
   free(p);
+}
+
+void
+PWCNetwork::reload(unsigned src, size_t n)
+{
+  peers_[src].reload(n, eagerSize_);
 }

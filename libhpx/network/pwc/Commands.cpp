@@ -17,7 +17,6 @@
 
 #include "PWCNetwork.h"
 #include "Commands.h"
-#include "ReloadParcelEmulator.h"
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/events.h"
@@ -82,7 +81,7 @@ Command::resumeParcelAtSource(unsigned src) const
 inline void
 Command::reloadReply(unsigned src) const
 {
-  PWCNetwork::ProgressSends(src);
+  PWCNetwork::Instance().progressSends(src);
 }
 
 inline void

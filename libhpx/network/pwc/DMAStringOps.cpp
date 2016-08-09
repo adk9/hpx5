@@ -108,7 +108,7 @@ _pwc_memget_rsync_continuation(hpx_parcel_t *p, void *env)
     }
   }
 
-  PWCNetwork::Get(e->to, e->from, e->n, lcmd, rcmd);
+  PWCNetwork::Instance().get(e->to, e->from, e->n, lcmd, rcmd);
 }
 
 void
@@ -142,7 +142,7 @@ _pwc_memget_lsync_continuation(hpx_parcel_t *p, void *env)
   auto e = static_cast<_pwc_memget_lsync_env_t*>(env);
   auto lcmd = Command::ResumeParcel(p);
   auto rcmd = Command();
-  PWCNetwork::Get(e->to, e->from, e->n, lcmd, rcmd);
+  PWCNetwork::Instance().get(e->to, e->from, e->n, lcmd, rcmd);
 }
 
 void
@@ -249,7 +249,7 @@ _pwc_memput_lsync_continuation(hpx_parcel_t *p, void *env)
   }
 
   auto lcmd = Command::ResumeParcel(p);
-  PWCNetwork::Put(e->to, e->from, e->n, lcmd, rcmd);
+  PWCNetwork::Instance().put(e->to, e->from, e->n, lcmd, rcmd);
 }
 
 void
@@ -285,7 +285,7 @@ _pwc_memput_rsync_continuation(hpx_parcel_t *p, void *env)
   auto e = static_cast<_pwc_memput_rsync_continuation_env_t*>(env);
   auto lcmd = Command::Nop();
   auto rcmd = Command::ResumeParcelAtSource(p);
-  PWCNetwork::Put(e->to, e->from, e->n, lcmd, rcmd);
+  PWCNetwork::Instance().put(e->to, e->from, e->n, lcmd, rcmd);
 }
 
 void

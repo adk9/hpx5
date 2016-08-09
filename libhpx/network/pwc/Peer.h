@@ -68,11 +68,31 @@ class Peer {
   /// Reload the eager buffer.
   void reload(size_t n, size_t eagerSize);
 
-  /// Perform a DMA put to the heap.
+  /// Initiate an rDMA put operation with a remote continuation to the heap.
+  ///
+  /// This will copy @p n bytes between the @p lca and the @p to buffer, running
+  /// the @p lcmd when the local buffer can be modified or deleted and the @p rcmd
+  /// when the remote write has completed.
+  ///
+  /// @param           to The global target for the put.
+  /// @param          lva The local source for the put.
+  /// @param            n The number of bytes to put.
+  /// @param         lcmd The local command, run when @p lva can be reused.
+  /// @param         rcmd The remote command, run when @p to has be written.
   void put(hpx_addr_t to, const void *lva, size_t n, const Command& lcmd,
            const Command& rcmd);
 
-  /// Perform a DMA get from the heap.
+  /// Initiate an rDMA get operation.
+  ///
+  /// This will copy @p n bytes between the @p from buffer and the @p lva, running
+  /// the @p rcmd when the read completes remotely and running the @p lcmd when
+  /// the local write is complete.
+  ///
+  /// @param          lva The local target for the get.
+  /// @param         from The global source for the get.
+  /// @param            n The number of bytes to get.
+  /// @param         lcmd A local command, run when @p lva is written.
+  /// @param         rcmd A remote command, run when @p from has been read.
   void get(void *lva, hpx_addr_t from, size_t n, const Command& lcmd,
            const Command& rcmd);
 
