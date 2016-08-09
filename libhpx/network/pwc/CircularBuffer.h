@@ -14,29 +14,30 @@
 #ifndef LIBHPX_NETWORK_PWC_CIRCULAR_BUFFER_H
 #define LIBHPX_NETWORK_PWC_CIRCULAR_BUFFER_H
 
+#include "libhpx/debug.h"
+#include "libhpx/libhpx.h"
 #include <cstdint>
+#include <utility>
 
 namespace libhpx {
 namespace network {
 namespace pwc {
 
-class CircularBuffer {
+class CircularBufferBase {
  public:
+  /// Compute the number of elements in the buffer.
+  unsigned size() const {
+    uint64_t size = max_ - min_;
+    dbg_assert_str(size < UINT32_MAX, "circular buffer size invalid\n");
+    return (unsigned)size;
+  }
+
+ protected:
   /// Allocate a circular buffer.
-  CircularBuffer();
-  CircularBuffer(unsigned esize, unsigned cap);
+  CircularBufferBase(unsigned esize, unsigned cap);
 
   /// Delete a circular buffer.
-  ~CircularBuffer();
-
-  /// Initialize a circular buffer.
-  ///
-  /// @param        esize The size of a buffer element.
-  /// @param          cap The initial buffer capacity.
-  void init(unsigned esize, unsigned cap);
-
-  /// Finalize a circular buffer.
-  void fini();
+  ~CircularBufferBase();
 
   /// Append an element to the circular buffer.
   ///
@@ -46,19 +47,6 @@ class CircularBuffer {
   ///            NON-NULL The address of the start of the next record in the
   ///                       buffer.
   void *append();
-
-  /// Compute the number of elements in the buffer.
-  unsigned size() const;
-
-  /// Apply the callback closure to each element in the buffer, in a FIFO order.
-  ///
-  ///
-  /// @returns            The number of elements left in the buffer.
-  int progress(int (*progress_callback)(void *env, void *record),
-               void *progress_env);
-
- private:
-
 
   /// Compute the index into the buffer for an abstract index.
   ///
@@ -103,6 +91,47 @@ class CircularBuffer {
   uint64_t         max_;
   uint64_t         min_;
   void        *records_;
+};
+
+template <typename Record>
+class CircularBuffer : public CircularBufferBase
+{
+ public:
+  CircularBuffer(unsigned n) : CircularBufferBase(sizeof(Record), n) {
+  }
+
+  ~CircularBuffer() {
+  }
+
+  void push(Record&& record) {
+    Record* r = static_cast<Record*>(append());
+    *r = std::move(record);
+  }
+
+  void push(const Record& record) {
+    Record* r = static_cast<Record*>(append());
+    *r = record;
+  }
+
+  template <typename F>
+  int progress(F f) {
+    while (min_ < max_) {
+      void *record = getAddressOf(getIndexOf(min_));
+      int e = f(*reinterpret_cast<Record*>(record));
+      switch (e) {
+       default:
+        dbg_error("circular buffer could not progress\n");
+
+       case LIBHPX_RETRY:
+        return size();
+
+       case LIBHPX_OK:
+        ++min_;
+        continue;
+      }
+    }
+    return 0;
+  }
 };
 
 } // namespace pwc

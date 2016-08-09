@@ -136,7 +136,6 @@ class PWCNetwork final : public Network, public CollectiveOps, public LCOOps,
   std::mutex       probeLock_;
 };
 
-
 } // namespace pwc
 } // namespace network
 } // namespace libhpx

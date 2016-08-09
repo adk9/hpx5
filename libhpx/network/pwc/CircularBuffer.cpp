@@ -16,9 +16,7 @@
 #endif
 
 #include "CircularBuffer.h"
-#include <libhpx/debug.h>
-#include <libhpx/libhpx.h>
-#include <hpx/builtins.h>
+#include "hpx/builtins.h"
 #include <cassert>
 #include <cstdlib>
 #include <cstring>
@@ -26,7 +24,7 @@
 using namespace libhpx::network::pwc;
 
 unsigned
-CircularBuffer::getIndexOf(unsigned i, unsigned capacity)
+CircularBufferBase::getIndexOf(unsigned i, unsigned capacity)
 {
   DEBUG_IF(capacity != (1u << ceil_log2_32(capacity))) {
     dbg_error("capacity %u is not 2^k\n", capacity);
@@ -36,20 +34,20 @@ CircularBuffer::getIndexOf(unsigned i, unsigned capacity)
 }
 
 unsigned
-CircularBuffer::getIndexOf(unsigned i) const
+CircularBufferBase::getIndexOf(unsigned i) const
 {
   return getIndexOf(i, capacity_);
 }
 
 void *
-CircularBuffer::getAddressOf(unsigned i) const
+CircularBufferBase::getAddressOf(unsigned i) const
 {
   size_t bytes = i * elementSize_;
   return reinterpret_cast<char*>(records_) + bytes;
 }
 
 void
-CircularBuffer::reflow(unsigned oldCapacity)
+CircularBufferBase::reflow(unsigned oldCapacity)
 {
   if (!oldCapacity) {
     return;
@@ -102,7 +100,7 @@ CircularBuffer::reflow(unsigned oldCapacity)
 }
 
 void
-CircularBuffer::expand(unsigned capacity)
+CircularBufferBase::expand(unsigned capacity)
 {
   assert(capacity != 0);
 
@@ -128,74 +126,27 @@ CircularBuffer::expand(unsigned capacity)
   reflow(oldCapacity);
 }
 
-CircularBuffer::CircularBuffer() : capacity_(0), elementSize_(0), max_(0),
-                                   min_(0), records_(nullptr)
-{
-}
-
-CircularBuffer::CircularBuffer(unsigned elementSize, unsigned capacity)
-    : capacity_(0), elementSize_(0), max_(0),
+CircularBufferBase::CircularBufferBase(unsigned elementSize, unsigned capacity)
+    : capacity_(0), elementSize_(elementSize), max_(0),
       min_(0), records_(nullptr)
 {
-  init(elementSize, capacity);
-}
-
-CircularBuffer::~CircularBuffer()
-{
-}
-
-void
-CircularBuffer::init(unsigned elementSize, unsigned capacity)
-{
-  elementSize_ = elementSize;
   capacity = 1 << ceil_log2_32(capacity);
   expand(capacity);
 }
 
-void
-CircularBuffer::fini()
+CircularBufferBase::~CircularBufferBase()
 {
   if (records_) {
     free(records_);
   }
 }
 
-unsigned
-CircularBuffer::size() const
-{
-  uint64_t size = max_ - min_;
-  dbg_assert_str(size < UINT32_MAX, "circular buffer size invalid\n");
-  return (unsigned)size;
-}
-
 void *
-CircularBuffer::append()
+CircularBufferBase::append()
 {
   uint64_t next = max_++;
   if (size() >= capacity_) {
     expand(capacity_ * 2);
   }
   return getAddressOf(getIndexOf(next));
-}
-
-int
-CircularBuffer::progress(int (*progress_callback)(void *env, void *record),
-                         void *progress_env)
-{
-  while (min_ < max_) {
-    void *record = getAddressOf(getIndexOf(min_));
-    int e = progress_callback(progress_env, record);
-    switch (e) {
-     default:
-      dbg_error("circular buffer could not progress\n");
-
-     case LIBHPX_RETRY:
-      return size();
-
-     case LIBHPX_OK:
-      ++min_;
-      continue;
-    }
-  }
-  return 0;
 }

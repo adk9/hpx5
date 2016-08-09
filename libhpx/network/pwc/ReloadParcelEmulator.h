@@ -14,9 +14,7 @@
 #ifndef LIBHPX_NETWORK_PWC_RELOAD_PARCEL_EMULATOR_H
 #define LIBHPX_NETWORK_PWC_RELOAD_PARCEL_EMULATOR_H
 
-#include "CircularBuffer.h"
-#include "ParcelBlock.h"
-#include "PhotonTransport.h"
+#include "Peer.h"
 #include "libhpx/boot.h"
 #include "libhpx/gas.h"
 #include "libhpx/config.h"
@@ -27,71 +25,6 @@
 namespace libhpx {
 namespace network {
 namespace pwc {
-
-/// An rdma-able remote address.
-///
-/// We use an array of these remote addresses to keep track of the
-/// backpointers that we need during the reload operation. During reload we
-/// allocate a new InplaceBuffer and then rdma its data back to the remote
-/// address that we have stored for the requesting rank.
-template <typename T>
-struct Remote {
-  T                  *addr;
-  PhotonTransport::Key key;
-};
-
-class P2P {
- public:
-  P2P();
-  ~P2P();
-
-  /// Initialize the P2P data.
-  ///
-  /// @param       rank The rank this P2P data represents.
-  /// @param       here The rank of this locality.
-  /// @param     remote The remote buffer for the P2P data at @p rank.
-  /// @param       heap The remote heap segment at @p rank.
-  void init(unsigned rank, unsigned here, const Remote<P2P>& remote,
-            const Remote<char>& heap);
-
-  /// Perform progress on this point-to-point link.
-  void progress();
-
-  /// Send the designated parcel.
-  void send(const hpx_parcel_t* p);
-
-  /// Reload the eager buffer.
-  void reload(size_t n, size_t eagerSize);
-
-  /// Perform a DMA put to the heap.
-  void put(hpx_addr_t to, const void *lva, size_t n, const Command& lcmd,
-           const Command& rcmd);
-
-  /// Perform a DMA get from the heap.
-  void get(void *lva, hpx_addr_t from, size_t n, const Command& lcmd,
-           const Command& rcmd);
-
- private:
-  /// Append a parcel send operation to the sendBuffer.
-  void append(const hpx_parcel_t *p);
-
-  /// Start a parcel send operation.
-  ///
-  /// If the send finishes eagerly then the
-  int start(const hpx_parcel_t* p);
-
-  /// Operator for the sendBuffer progress.
-  static int Start(P2P* p2p, const hpx_parcel_t** parcel);
-
- private:
-  std::mutex lock_;
-  unsigned rank_;
-  Remote<char> heapSegment_;
-  Remote<EagerBlock> remoteSend_;
-  EagerBlock sendEager_;
-  CircularBuffer sendBuffer_;
-  InplaceBlock* recv_;
-};
 
 class ReloadParcelEmulator {
  public:
@@ -130,7 +63,7 @@ class ReloadParcelEmulator {
   size_t eagerSize_;                             //<! size of the buffers
 
  protected:
-  std::unique_ptr<P2P[]> ends_;
+  std::unique_ptr<Peer[]> ends_;
 };
 } // namespace pwc
 } // namespace network
