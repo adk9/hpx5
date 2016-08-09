@@ -15,17 +15,17 @@
 # include "config.h"
 #endif
 
-#include <inttypes.h>
-#include <stdlib.h>
-#include <hpx/hpx.h>
-#include <libhpx/action.h>
-#include <libhpx/debug.h>
-#include <libhpx/gas.h>
-#include <libhpx/gpa.h>
-#include <libhpx/locality.h>
-#include <libhpx/network.h>
-#include <libhpx/rebalancer.h>
-#include <libhpx/worker.h>
+#include "libhpx/action.h"
+#include "libhpx/debug.h"
+#include "libhpx/gas.h"
+#include "libhpx/gpa.h"
+#include "libhpx/locality.h"
+#include "libhpx/network.h"
+#include "libhpx/rebalancer.h"
+#include "libhpx/worker.h"
+#include "hpx/hpx.h"
+#include <cinttypes>
+#include <cstdlib>
 
 uint64_t HPX_GAS_BLOCK_BYTES_MAX;
 
