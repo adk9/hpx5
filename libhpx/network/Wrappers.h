@@ -91,6 +91,7 @@ class InstrumentationWrapper final : public NetworkWrapper, public ParcelOps {
 
   void progress(int n);
   hpx_parcel_t* probe(int);
+  void deallocate(const hpx_parcel_t* p);
   int send(hpx_parcel_t* p, hpx_parcel_t* ssync);
   ParcelOps& parcelOpsProvider();
 
@@ -101,6 +102,7 @@ class InstrumentationWrapper final : public NetworkWrapper, public ParcelOps {
 class CompressionWrapper final : public NetworkWrapper, public ParcelOps {
  public:
   CompressionWrapper(Network* impl);
+  void deallocate(const hpx_parcel_t* p);
   int send(hpx_parcel_t* p, hpx_parcel_t* ssync);
   ParcelOps& parcelOpsProvider();
 
@@ -113,6 +115,7 @@ class CoalescingWrapper final : public NetworkWrapper, public ParcelOps {
   CoalescingWrapper(Network* impl, const config_t *cfg, gas_t *gas);
   void progress(int n);
   void flush();
+  void deallocate(const hpx_parcel_t* p);
   int send(hpx_parcel_t* p, hpx_parcel_t* ssync);
   ParcelOps& parcelOpsProvider();
 

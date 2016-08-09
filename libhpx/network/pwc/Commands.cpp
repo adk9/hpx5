@@ -93,7 +93,7 @@ Command::recvParcel(unsigned src) const
 
 inline void
 Command::reloadRequest(unsigned src) const {
-  PWCNetwork::Instance().parcels_.reload(src, arg_);
+  PWCNetwork::Instance().reload(src, arg_);
 }
 
 void

@@ -38,7 +38,6 @@ extern "C" {
 /// @{
 struct boot;
 struct config;
-struct network;
 struct scheduler;
 struct topology;
 struct tracer;
@@ -55,7 +54,7 @@ typedef struct locality {
   void                   *gas; //!< The global address space object. This
                                //!< provides global memory allocation and
                                //!< address space functionality.
-  struct network         *net; //!< The network layer. This provides an active
+  void                  *net; //!< The network layer. This provides an active
                                //!< message interface targeting global
                                //!< addresses.
   struct scheduler     *sched; //!< The lightweight thread scheduler. This

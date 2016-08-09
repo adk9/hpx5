@@ -55,6 +55,7 @@ class PhotonTransport {
 
   static const Key* FindKeyRef(const void *addr, size_t n);
   static void FindKey(const void *addr, size_t n, Key *key);
+  static Key FindKey(const void *addr, size_t n);
 
  private:
   static int Poll(Command* op, int* remaining, int rank, int* src, int type);

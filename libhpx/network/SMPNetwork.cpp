@@ -125,6 +125,12 @@ SMPNetwork::progress(int)
 {
 }
 
+void
+SMPNetwork::deallocate(const hpx_parcel_t* p)
+{
+  dbg_error("The SMP network has not network-managed parcels\n");
+}
+
 int
 SMPNetwork::send(hpx_parcel_t *p, hpx_parcel_t *ssync)
 {

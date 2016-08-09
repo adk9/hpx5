@@ -30,9 +30,9 @@
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
 #include <libhpx/network.h>
+#include "libhpx/Network.h"
 #include <libhpx/padding.h>
 #include <libhpx/parcel.h>
-#include <libhpx/parcel_block.h>
 #include <libhpx/scheduler.h>
 #include <libhpx/topology.h>
 #include <libsync/sync.h>
@@ -271,7 +271,8 @@ void parcel_delete(hpx_parcel_t *p) {
 
   if (parcel_block_allocated(state)) {
     dbg_assert(parcel_serialized(state));
-    parcel_block_delete_parcel(p);
+    libhpx::Network* network = static_cast<libhpx::Network*>(here->net);
+    network->parcelOpsProvider().deallocate(p);
     return;
   }
 

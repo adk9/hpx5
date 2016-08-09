@@ -21,6 +21,7 @@ class ParcelOps {
  public:
   virtual ~ParcelOps();
   virtual int send(hpx_parcel_t* p, hpx_parcel_t* ssync) = 0;
+  virtual void deallocate(const hpx_parcel_t* p) = 0;
 };
 }
 

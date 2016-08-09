@@ -61,6 +61,12 @@ CompressionWrapper::CompressionWrapper(Network* impl)
 {
 }
 
+void
+CompressionWrapper::deallocate(const hpx_parcel_t* p)
+{
+  next_.deallocate(p);
+}
+
 int
 CompressionWrapper::send(hpx_parcel_t *p, hpx_parcel_t *ssync)
 {

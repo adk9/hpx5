@@ -36,6 +36,7 @@ class SMPNetwork final : public Network, public CollectiveOps, public LCOOps,
   ParcelOps& parcelOpsProvider();
   StringOps& stringOpsProvider();
 
+  void deallocate(const hpx_parcel_t* p);
   int send(hpx_parcel_t* p, hpx_parcel_t* ssync);
 
   void pin(const void *base, size_t bytes, void *key);

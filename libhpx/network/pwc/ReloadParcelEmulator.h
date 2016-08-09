@@ -14,11 +14,11 @@
 #ifndef LIBHPX_NETWORK_PWC_RELOAD_PARCEL_EMULATOR_H
 #define LIBHPX_NETWORK_PWC_RELOAD_PARCEL_EMULATOR_H
 
+#include "ParcelBlock.h"
 #include "PhotonTransport.h"
 #include "libhpx/boot.h"
 #include "libhpx/config.h"
 #include "libhpx/parcel.h"
-#include "libhpx/parcel_block.h"
 #include <memory>
 
 namespace libhpx {
@@ -29,41 +29,56 @@ class ReloadParcelEmulator {
   ReloadParcelEmulator(const config_t *cfg, boot_t *boot);
   ~ReloadParcelEmulator();
 
+  /// Send a parcel to the associated rank.
+  ///
+  /// This operation will try and initiate an eager put of the parcel data into
+  /// the receive buffer for the given rank. It will return LIBHPX_OK if it
+  /// succeeds, or LIBHPX_RETRY if there is not enough space in the buffer. If
+  /// there is not enough space it will initiate an asynchronous reload
+  /// operation to the target rank.
+  ///
+  /// @param       rank The target rank.
+  /// @param          p The serialized parcel data to send.
+  ///
+  /// @returns          LIBHPX_OK if it the send succeeds, or LIBHPX_RETRY if
+  ///                   there was not enough space and a reload operation has
+  ///                   been started.
   int send(unsigned rank, const hpx_parcel_t *p);
+
+  /// Reload the designated rank.
+  ///
+  /// This handles a reload request. It will deduct @n bytes from the current
+  /// InplaceBlock and allocate a new one, sending the new buffer information
+  /// back to the source using the bakcpointers stored in the remotes_ array.
+  ///
+  /// @param        src The source of the reload request.
+  /// @param          n A number of bytes to consume from the current block
+  ///                   before replacing it.
   void reload(unsigned src, size_t n);
 
+  /// Deallocate a block-allocated parcel.
+  void deallocate(const hpx_parcel_t* p);
+
  private:
-  /// An individual eager buffer representation.
-  class EagerBuffer {
-   public:
-    void init(size_t n);
-    void fini();
-    void reload(size_t n);
-    int send(PhotonTransport::Op& op);
-
-   private:
-    size_t capacity_;
-    size_t next_;
-    parcel_block_t* block_;
-    PhotonTransport::Key key_;
-  };
-
   /// An rdma-able remote address.
+  ///
+  /// We use an array of these remote addresses to keep track of the
+  /// backpointers that we need during the reload operation. During reload we
+  /// allocate a new InplaceBuffer and then rdma its data back to the remote
+  /// address that we have stored for the requesting rank.
   struct Remote {
-    void *addr;
+    EagerBlock         *addr;
     PhotonTransport::Key key;
   };
 
-  unsigned rank_;                              //<! our rank here
-  unsigned ranks_;                             //<! number of ranks
-  std::unique_ptr<EagerBuffer[]> recvBuffers_; //<!
-  PhotonTransport::Key recvBuffersKey_;        //<!
-  std::unique_ptr<EagerBuffer[]> sendBuffers_; //<!
-  PhotonTransport::Key sendBuffersKey_;        //<!
-  std::unique_ptr<Remote[]> remotes_;          //<!
+  unsigned rank_;                                //<! our rank
+  unsigned ranks_;                               //<! number of ranks
+  size_t eagerSize_;                             //<! size of the buffers
+  std::unique_ptr<InplaceBlock*[]> recvBuffers_; //<! receive buffers
+  std::unique_ptr<EagerBlock[]> sendBuffers_;    //<! send allocation metadata
+  std::unique_ptr<Remote[]> remotes_;            //<! send backpointers
 };
-
-}
+} // namespace pwc
 } // namespace network
 } // namespace libhpx
 

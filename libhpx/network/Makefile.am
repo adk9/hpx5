@@ -22,7 +22,6 @@ libnetwork_la_SOURCES  = locality.cpp \
                          Network.cpp \
                          Wrappers.cpp \
                          parcel.cpp \
-                         parcel_block.cpp \
                          hpx_parcel_glue.cpp \
                          ParcelStringOps.cpp \
                          SMPNetwork.cpp \

@@ -26,12 +26,22 @@ namespace libhpx {
 namespace network {
 namespace pwc {
 class PWCNetwork final : public Network, public CollectiveOps, public LCOOps,
-                         public MemoryOps, public ParcelOps {
+                         public MemoryOps, public ParcelOps,
+                         public ReloadParcelEmulator
+{
  public:
+  /// Allocate a PWCNetwork instance.
   PWCNetwork(const config_t *cfg, boot_t *boot, gas_t *gas);
+
+  /// Delete a PWNetwork instace.
   ~PWCNetwork();
 
+  /// A new operator that makes sure that the network instance is aligned to a
+  /// cacheline boundary. A side effect of this operator is to initialize
+  /// the Photon transport.
   static void* operator new (size_t size);
+
+  /// The delete operator matches the new operator.
   static void operator delete (void *p);
 
   int type() const;
@@ -45,6 +55,7 @@ class PWCNetwork final : public Network, public CollectiveOps, public LCOOps,
   ParcelOps& parcelOpsProvider();
   StringOps& stringOpsProvider();
 
+  void deallocate(const hpx_parcel_t* p);
   int send(hpx_parcel_t* p, hpx_parcel_t* ssync);
 
   void pin(const void *base, size_t bytes, void *key);
@@ -138,19 +149,12 @@ class PWCNetwork final : public Network, public CollectiveOps, public LCOOps,
   };
   static PWCNetwork* Instance_;
 
-  const unsigned rank_;
-  const unsigned ranks_;
-
- public:
-  ReloadParcelEmulator parcels_;
-
- private:
+  const unsigned        rank_;
+  const unsigned       ranks_;
   StringOps*          string_;
   gas_t* const           gas_;
   boot_t* const         boot_;
   HeapSegment*      segments_;                //<! Array of remote heap segments
-
- private:
   SendBuffer*    sendBuffers_;
   std::mutex    progressLock_;
   std::mutex       probeLock_;

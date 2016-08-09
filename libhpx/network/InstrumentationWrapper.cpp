@@ -38,6 +38,12 @@ InstrumentationWrapper::progress(int n)
   EVENT_NETWORK_PROGRESS_END();
 }
 
+void
+InstrumentationWrapper::deallocate(const hpx_parcel_t* p)
+{
+  next_.deallocate(p);
+}
+
 int
 InstrumentationWrapper::send(hpx_parcel_t *p, hpx_parcel_t *ssync)
 {

@@ -128,6 +128,16 @@ PhotonTransport::FindKey(const void *addr, size_t n, Key *key) {
   }
 }
 
+Key
+PhotonTransport::FindKey(const void *addr, size_t n) {
+  if (const Key *found = PhotonTransport::FindKeyRef(addr, n)) {
+    return *found;
+  }
+  else {
+    dbg_error("failed to find rdma key for (%p, %zu)\n", addr, n);
+  }
+}
+
 void
 PhotonTransport::Pin(const void *base, size_t n, Key *key)
 {

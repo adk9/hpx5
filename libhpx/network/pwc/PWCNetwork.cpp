@@ -32,6 +32,7 @@ using libhpx::StringOps;
 using libhpx::network::ParcelStringOps;
 using libhpx::network::pwc::PWCNetwork;
 using libhpx::network::pwc::DMAStringOps;
+using libhpx::network::pwc::ReloadParcelEmulator;
 using Op = libhpx::network::pwc::PhotonTransport::Op;
 using Key = libhpx::network::pwc::PhotonTransport::Key;
 constexpr int ANY_SOURCE = libhpx::network::pwc::PhotonTransport::ANY_SOURCE;
@@ -46,9 +47,9 @@ PWCNetwork& PWCNetwork::Instance()
 }
 
 PWCNetwork::PWCNetwork(const config_t *cfg, boot_t *boot, gas_t *gas)
-    : rank_(boot_rank(boot)),
+    : ReloadParcelEmulator(cfg, boot),
+      rank_(boot_rank(boot)),
       ranks_(boot_n_ranks(boot)),
-      parcels_(cfg, boot),
       string_((gas->type == HPX_GAS_AGAS) ?
               static_cast<StringOps*>(new ParcelStringOps()) :
               static_cast<StringOps*>(new DMAStringOps(*this,
@@ -92,7 +93,7 @@ PWCNetwork::PWCNetwork(const config_t *cfg, boot_t *boot, gas_t *gas)
 
   // Initialize the send buffers.
   for (int i = 0, e = ranks_; i < e; ++i) {
-    sendBuffers_[i].init(i, parcels_);
+    sendBuffers_[i].init(i, *this);
   }
 }
 
@@ -193,6 +194,12 @@ StringOps&
 PWCNetwork::stringOpsProvider()
 {
   return *string_;
+}
+
+void
+PWCNetwork::deallocate(const hpx_parcel_t* p)
+{
+  ReloadParcelEmulator::deallocate(p);
 }
 
 int

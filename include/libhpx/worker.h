@@ -29,7 +29,6 @@ extern "C" {
 /// Forward declarations.
 /// @{
 struct ustack;
-struct network;
 struct scheduler;
 /// @}
 
@@ -58,7 +57,7 @@ struct worker {
   int           numa_node;                      //!< this worker's numa node
   void          *profiler;                      //!< reference to the profiler
   void               *bst;                      //!< the block statistics table
-  struct network *network;                      //!< reference to the network
+  void           *network;                      //!< reference to the network
   struct logtable   *logs;                      //!< reference to tracer data
   uint64_t         *stats;                      //!< reference to statistics data
   struct scheduler *sched;                      //!< pointer to the scheduler

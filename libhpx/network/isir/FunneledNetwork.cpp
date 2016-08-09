@@ -119,6 +119,12 @@ FunneledNetwork::sync(void *in, size_t count, void *out, void *ctx)
   return 0;
 }
 
+void
+FunneledNetwork::deallocate(const hpx_parcel_t* p)
+{
+  dbg_error("ISIR network has not network-managed parcels\n");
+}
+
 int
 FunneledNetwork::send(hpx_parcel_t *p, hpx_parcel_t *ssync) {
   // Use the unused parcel-next pointer to get the ssync continuation parcels

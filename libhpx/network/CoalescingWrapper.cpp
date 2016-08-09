@@ -90,6 +90,12 @@ class Coalescing {
 };
 }
 
+void
+CoalescingWrapper::deallocate(const hpx_parcel_t* p)
+{
+  next_.deallocate(p);
+}
+
 /// Send parcels from the coalesced network.
 void
 CoalescingWrapper::send(unsigned n) {
