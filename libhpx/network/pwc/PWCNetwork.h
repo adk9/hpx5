@@ -18,7 +18,6 @@
 #include "Commands.h"
 #include "PhotonTransport.h"
 #include "ReloadParcelEmulator.h"
-#include "SendBuffer.h"
 #include "libhpx/parcel.h"
 #include <mutex>
 
@@ -104,22 +103,6 @@ class PWCNetwork final : public Network, public CollectiveOps, public LCOOps,
     Instance().get(lva, from, n, lcmd, rcmd);
   }
 
-  /// Perform a PWC network command.
-  ///
-  /// This sends a "pure" command to the scheduler at a different rank, without
-  /// any additional argument data. This can avoid using any additional eager
-  /// parcel buffer space, and can always be satisfied with one low-level "put"
-  /// operation.
-  ///
-  /// @param         rank The rank id to send the remote command to.
-  /// @param         lcmd A command to be run for local completion.
-  /// @param         rcmd A remote command to be run at @p rank.
-  void cmd(int rank, const Command& lcmd, const Command& rcmd);
-
-  static void Cmd(int rank, const Command& lcmd, const Command& rcmd) {
-    Instance().cmd(rank, lcmd, rcmd);
-  }
-
   /// Perform a rendezvous parcel send operation.
   ///
   /// For normal size parcels, we use the set of one-to-one pre-allocated eager
@@ -142,11 +125,6 @@ class PWCNetwork final : public Network, public CollectiveOps, public LCOOps,
   static PWCNetwork& Instance();
 
  private:
-  struct HeapSegment {
-    size_t                 n;
-    char*               base;
-    PhotonTransport::Key key;
-  };
   static PWCNetwork* Instance_;
 
   const unsigned        rank_;
@@ -154,8 +132,6 @@ class PWCNetwork final : public Network, public CollectiveOps, public LCOOps,
   StringOps*          string_;
   gas_t* const           gas_;
   boot_t* const         boot_;
-  HeapSegment*      segments_;                //<! Array of remote heap segments
-  SendBuffer*    sendBuffers_;
   std::mutex    progressLock_;
   std::mutex       probeLock_;
 };

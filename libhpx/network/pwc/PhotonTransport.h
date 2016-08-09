@@ -31,7 +31,7 @@ class PhotonTransport {
 
   struct alignas(HPX_CACHELINE_SIZE) Op {
     unsigned                        rank;
-    int                          PADDING;
+    const unsigned               PADDING;
     Command                          lop;
     Command                          rop;
     size_t                             n;
@@ -39,6 +39,10 @@ class PhotonTransport {
     const PhotonTransport::Key* dest_key;
     const void*                      src;
     const PhotonTransport::Key*  src_key;
+
+    Op() : rank(), PADDING(), lop(), rop(), n(), dest(nullptr),
+           dest_key(nullptr), src(nullptr), src_key(nullptr) {
+    }
 
     int cmd();
     int put();

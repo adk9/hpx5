@@ -27,6 +27,7 @@
 
 namespace {
 using libhpx::network::pwc::Command;
+using libhpx::network::pwc::PhotonTransport;
 using libhpx::network::pwc::PWCNetwork;
 }
 
@@ -40,7 +41,11 @@ Command::lcoSet(unsigned src) const
 inline void
 Command::lcoSetAtSource(unsigned src) const
 {
-  PWCNetwork::Cmd(src, Command(), Command(LCO_SET, arg_));
+  PhotonTransport::Op op;
+  op.rank = src;
+  op.lop = Command::Nop();
+  op.rop = Command(LCO_SET, arg_);
+  dbg_check( op.cmd() );
 }
 
 inline void
@@ -67,7 +72,11 @@ Command::resumeParcel(unsigned src) const
 inline void
 Command::resumeParcelAtSource(unsigned src) const
 {
-  PWCNetwork::Cmd(src, Command(), Command(RESUME_PARCEL, arg_));
+  PhotonTransport::Op op;
+  op.rank = src;
+  op.lop = Command::Nop();
+  op.rop = Command(RESUME_PARCEL, arg_);
+  dbg_check( op.cmd() );
 }
 
 inline void

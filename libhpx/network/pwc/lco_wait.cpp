@@ -23,6 +23,7 @@
 
 namespace {
 using libhpx::network::pwc::Command;
+using libhpx::network::pwc::PhotonTransport;
 using libhpx::network::pwc::PWCNetwork;
 }
 
@@ -41,8 +42,11 @@ _pwc_lco_wait_handler(struct hpx_parcel *p, int reset)
     dbg_error("Cannot yet return an error from a remote wait operation\n");
   }
 
-  PWCNetwork::Cmd(curr->src, Command(), Command::ResumeParcel(p));
-  return HPX_SUCCESS;
+  PhotonTransport::Op op;
+  op.rank = curr->src;
+  op.lop = Command::Nop();
+  op.rop = Command::ResumeParcel(p);
+  return op.cmd();
 }
 static LIBHPX_ACTION(HPX_DEFAULT, 0, _pwc_lco_wait, _pwc_lco_wait_handler,
                      HPX_POINTER, HPX_INT);

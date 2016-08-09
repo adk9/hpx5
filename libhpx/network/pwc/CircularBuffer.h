@@ -24,6 +24,7 @@ class CircularBuffer {
  public:
   /// Allocate a circular buffer.
   CircularBuffer();
+  CircularBuffer(unsigned esize, unsigned cap);
 
   /// Delete a circular buffer.
   ~CircularBuffer();

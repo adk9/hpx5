@@ -47,7 +47,7 @@ PWCNetwork& PWCNetwork::Instance()
 }
 
 PWCNetwork::PWCNetwork(const config_t *cfg, boot_t *boot, gas_t *gas)
-    : ReloadParcelEmulator(cfg, boot),
+    : ReloadParcelEmulator(cfg, boot, gas),
       rank_(boot_rank(boot)),
       ranks_(boot_n_ranks(boot)),
       string_((gas->type == HPX_GAS_AGAS) ?
@@ -56,10 +56,8 @@ PWCNetwork::PWCNetwork(const config_t *cfg, boot_t *boot, gas_t *gas)
                                                        boot_rank(boot)))),
       gas_(gas),
       boot_(boot),
-      segments_(new HeapSegment[ranks_]),
-  sendBuffers_(new SendBuffer[ranks_]),
-  progressLock_(),
-  probeLock_()
+      progressLock_(),
+      probeLock_()
 {
   assert(!Instance_);
   Instance_ = this;
@@ -81,20 +79,6 @@ PWCNetwork::PWCNetwork(const config_t *cfg, boot_t *boot, gas_t *gas)
               "--hpx-pwc-parcelbuffersize (%zu)\n",
               cfg->pwc_parceleagerlimit, cfg->pwc_parcelbuffersize);
   }
-
-  if (gas->type == HPX_GAS_PGAS) {
-    // All-to-all the heap segments
-    HeapSegment local;
-    local.n = gas_local_size(gas);
-    local.base = (char*)gas_local_base(gas);
-    PhotonTransport::Pin(local.base, local.n, &local.key);
-    boot_allgather(boot, &local, segments_, sizeof(HeapSegment));
-  }
-
-  // Initialize the send buffers.
-  for (int i = 0, e = ranks_; i < e; ++i) {
-    sendBuffers_[i].init(i, *this);
-  }
 }
 
 PWCNetwork::~PWCNetwork()
@@ -113,19 +97,6 @@ PWCNetwork::~PWCNetwork()
   // Network deletion is effectively a collective, so this enforces that
   // everyone is done with rdma before we go and deregister anything.
   boot_barrier(boot_);
-
-  // Finalize the send buffers.
-  for (int i = 0, e = ranks_; i < e; ++i) {
-    sendBuffers_[i].fini();
-  }
-
-  // If we registered the heap segments then remove them.
-  if (segments_) {
-    PhotonTransport::Unpin(gas_local_base(gas_), gas_local_size(gas_));
-    delete [] segments_;
-  }
-
-  delete [] sendBuffers_;
   delete string_;
   Instance_ = nullptr;
 }
@@ -199,7 +170,7 @@ PWCNetwork::stringOpsProvider()
 void
 PWCNetwork::deallocate(const hpx_parcel_t* p)
 {
-  ReloadParcelEmulator::deallocate(p);
+  InplaceBlock::DeleteParcel(p);
 }
 
 int
@@ -217,16 +188,15 @@ PWCNetwork::send(hpx_parcel_t *p, hpx_parcel_t *ssync)
   }
   else {
     int rank = gas_owner_of(gas_, p->target);
-    return sendBuffers_[rank].send(p);
+    ends_[rank].send(p);
+    return HPX_SUCCESS;
   }
 }
 
 void
 PWCNetwork::progressSends(unsigned rank)
 {
-  if (sendBuffers_[rank].progress()) {
-    throw std::exception();
-  }
+  ends_[rank].progress();
 }
 
 void
@@ -254,55 +224,19 @@ PWCNetwork::sync(void *in, size_t in_size, void* out, void *collective)
 }
 
 void
-PWCNetwork::put(hpx_addr_t to, const void *lva, size_t n, const Command& lcmd,
+PWCNetwork::put(hpx_addr_t dest, const void *src, size_t n, const Command& lcmd,
                 const Command& rcmd)
 {
-  int rank = gpa_to_rank(to);
-
-  Op op;
-  op.rank = rank;
-  op.n = n;
-  op.dest = segments_[rank].base + gpa_to_offset(to);
-  op.dest_key = &segments_[rank].key;
-  op.src = lva;
-  op.src_key = PhotonTransport::FindKeyRef(lva, n);
-  op.lop = lcmd;
-  op.rop = rcmd;
-  if (op.put()) {
-    throw std::exception();
-  }
+  int rank = gpa_to_rank(dest);
+  ends_[rank].put(dest, src, n, lcmd, rcmd);
 }
 
 void
-PWCNetwork::get(void *lva, hpx_addr_t from, size_t n, const Command& lcmd,
+PWCNetwork::get(void *dest, hpx_addr_t src, size_t n, const Command& lcmd,
                 const Command& rcmd)
 {
-  int rank = gpa_to_rank(from);
-
-  Op op;
-  op.rank = rank;
-  op.n = n;
-  op.dest = lva;
-  op.dest_key = PhotonTransport::FindKeyRef(lva, n);
-  op.src = segments_[rank].base + gpa_to_offset(from);
-  op.src_key = &segments_[rank].key;
-  op.lop = lcmd;
-  op.rop = rcmd;
-  if (op.get()) {
-    throw std::exception();
-  }
-}
-
-void
-PWCNetwork::cmd(int rank, const Command& lcmd, const Command& rcmd)
-{
-  Op op;
-  op.rank = rank;
-  op.lop = lcmd;
-  op.rop = rcmd;
-  if (op.cmd()) {
-    throw std::exception();
-  }
+  int rank = gpa_to_rank(src);
+  ends_[rank].get(dest, src, n, lcmd, rcmd);
 }
 
 void*

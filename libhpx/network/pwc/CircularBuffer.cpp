@@ -133,6 +133,13 @@ CircularBuffer::CircularBuffer() : capacity_(0), elementSize_(0), max_(0),
 {
 }
 
+CircularBuffer::CircularBuffer(unsigned elementSize, unsigned capacity)
+    : capacity_(0), elementSize_(0), max_(0),
+      min_(0), records_(nullptr)
+{
+  init(elementSize, capacity);
+}
+
 CircularBuffer::~CircularBuffer()
 {
 }

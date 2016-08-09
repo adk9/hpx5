@@ -148,8 +148,11 @@ _get_reply_getref(_pwc_lco_get_request_args_t *args, hpx_addr_t lco)
   hpx_lco_release(lco, ref);
 
   // Wake the remote getter up.
-  PWCNetwork::Cmd(args->rank, Command(), Command::ResumeParcel(args->p));
-  return HPX_SUCCESS;
+  PhotonTransport::Op op;
+  op.rank = args->rank;
+  op.lop = Command::Nop();
+  op.rop = Command::ResumeParcel(args->p);
+  return op.cmd();
 }
 
 /// This action is sent to execute the request half of a two-sided LCO get
