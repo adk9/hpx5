@@ -66,17 +66,32 @@ class ReloadParcelEmulator {
   /// backpointers that we need during the reload operation. During reload we
   /// allocate a new InplaceBuffer and then rdma its data back to the remote
   /// address that we have stored for the requesting rank.
+  template <typename T>
   struct Remote {
-    EagerBlock         *addr;
+    T                  *addr;
     PhotonTransport::Key key;
+  };
+
+  class P2P {
+   public:
+    P2P();
+    ~P2P();
+
+    void init(unsigned rank, const Remote<P2P>& remote);
+
+    int send(unsigned rank, const hpx_parcel_t* p);
+    void reload(unsigned rank, size_t n, size_t eagerSize);
+
+   private:
+    Remote<EagerBlock> remote_;
+    EagerBlock send_;
+    InplaceBlock* recv_;
   };
 
   unsigned rank_;                                //<! our rank
   unsigned ranks_;                               //<! number of ranks
   size_t eagerSize_;                             //<! size of the buffers
-  std::unique_ptr<InplaceBlock*[]> recvBuffers_; //<! receive buffers
-  std::unique_ptr<EagerBlock[]> sendBuffers_;    //<! send allocation metadata
-  std::unique_ptr<Remote[]> remotes_;            //<! send backpointers
+  std::unique_ptr<P2P[]> ends_;
 };
 } // namespace pwc
 } // namespace network

@@ -27,11 +27,23 @@ using libhpx::network::pwc::ReloadParcelEmulator;
 using Op = libhpx::network::pwc::PhotonTransport::Op;
 }
 
+ReloadParcelEmulator::P2P::P2P()
+    : remote_(),
+      send_(),
+      recv_(nullptr)
+{
+}
+
+ReloadParcelEmulator::P2P::~P2P()
+{
+  delete recv_;
+}
+
 int
-ReloadParcelEmulator::send(unsigned rank, const hpx_parcel_t *p)
+ReloadParcelEmulator::P2P::send(unsigned rank, const hpx_parcel_t *p)
 {
   size_t n = parcel_size(p);
-  if (sendBuffers_[rank].put(rank, p, n)) {
+  if (send_.put(rank, p, n)) {
     return LIBHPX_OK;                           // all bytes fit
   }
 
@@ -49,6 +61,41 @@ ReloadParcelEmulator::send(unsigned rank, const hpx_parcel_t *p)
 }
 
 void
+ReloadParcelEmulator::P2P::reload(unsigned rank, size_t n, size_t eagerSize)
+{
+  if (recv_ && n) {
+    recv_->deallocate(n);
+  }
+
+  recv_ = new(eagerSize) InplaceBlock(eagerSize);
+
+  Op op;
+  op.rank = rank;
+  op.n = sizeof(EagerBlock);                    // only copy EeagerBlock data
+  op.dest = remote_.addr;
+  op.dest_key = &remote_.key;
+  op.src = recv_;
+  op.src_key = PhotonTransport::FindKeyRef(recv_, eagerSize);
+  op.lop = Command::Nop();
+  op.rop = Command::ReloadReply();
+
+  dbg_check( op.put() );
+}
+
+void
+ReloadParcelEmulator::P2P::init(unsigned rank, const Remote<P2P>& remote)
+{
+  remote_.addr = &remote.addr[rank].send_;
+  remote_.key = remote.key;
+}
+
+int
+ReloadParcelEmulator::send(unsigned rank, const hpx_parcel_t *p)
+{
+  return ends_[rank].send(rank, p);
+}
+
+void
 ReloadParcelEmulator::deallocate(const hpx_parcel_t* p)
 {
   InplaceBlock::DeleteParcel(p);
@@ -56,48 +103,28 @@ ReloadParcelEmulator::deallocate(const hpx_parcel_t* p)
 
 ReloadParcelEmulator::~ReloadParcelEmulator()
 {
-  for (int i = 0, e = ranks_; i < e; ++i) {
-    delete recvBuffers_[i];
-  }
+  PhotonTransport::Unpin(&ends_[0], ranks_ * sizeof(P2P));
 }
 
 ReloadParcelEmulator::ReloadParcelEmulator(const config_t *cfg, boot_t *boot)
     : rank_(boot_rank(boot)),
       ranks_(boot_n_ranks(boot)),
       eagerSize_(cfg->pwc_parcelbuffersize),
-      recvBuffers_(new InplaceBlock*[ranks_]()),
-      sendBuffers_(new EagerBlock[ranks_]),
-      remotes_(new Remote[ranks_])
+      ends_(new P2P[ranks_]())
 {
-  // Initialize a temporary array of remote pointers for this rank's sends.
-  auto extent = ranks_ * sizeof(Remote);
-  auto key = PhotonTransport::FindKey(&sendBuffers_[0], extent);
-  std::unique_ptr<Remote[]> temp(new Remote[ranks_]);
+  Remote<P2P> local;
+  PhotonTransport::Pin(&ends_[0], ranks_ * sizeof(P2P), &local.key);
+  local.addr = &ends_[0];
+
+  std::unique_ptr<Remote<P2P>[]> remotes(new Remote<P2P>[ranks_]);
+  boot_allgather(boot, &local, &remotes[0], sizeof(Remote<P2P>));
   for (int i = 0, e = ranks_; i < e; ++i) {
-    temp[i].addr = &sendBuffers_[i];
-    temp[i].key = key;
+    ends_[i].init(rank_, remotes[i]);
   }
-  boot_alltoall(boot, &remotes_[0], &temp[0], sizeof(Remote), sizeof(Remote));
 }
 
 void
 ReloadParcelEmulator::reload(unsigned src, size_t n)
 {
-  if (n && recvBuffers_[src]) {
-    recvBuffers_[src]->deallocate(n);
-  }
-
-  recvBuffers_[src] = new(eagerSize_) InplaceBlock(eagerSize_);
-
-  Op op;
-  op.rank = src;
-  op.n = sizeof(EagerBlock);                    // only copy EeagerBlock data
-  op.dest = remotes_[src].addr;
-  op.dest_key = &remotes_[src].key;
-  op.src = recvBuffers_[src];
-  op.src_key = PhotonTransport::FindKeyRef(recvBuffers_[src], eagerSize_);
-  op.lop = Command::Nop();
-  op.rop = Command::ReloadReply();
-
-  dbg_check( op.put() );
+  ends_[src].reload(src, n, eagerSize_);
 }

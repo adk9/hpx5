@@ -37,19 +37,6 @@ using Op = libhpx::network::pwc::PhotonTransport::Op;
 using Key = libhpx::network::pwc::PhotonTransport::Key;
 }
 
-/// The local event handler for the get-with-completion operation.
-///
-/// This is used to schedule the transferred parcel once the get operation has
-/// completed. The command encodes the local address of the parcel to schedule.
-void
-Command::rendezvousLaunch(unsigned src) const
-{
-  hpx_parcel_t *p = reinterpret_cast<hpx_parcel_t*>(arg_);
-  parcel_set_state(p, PARCEL_SERIALIZED);
-  EVENT_PARCEL_RECV(p->id, p->action, p->size, p->src, p->target);
-  scheduler_spawn(p);
-}
-
 namespace {
 struct _rendezvous_get_args_t {
   unsigned         rank;
@@ -96,8 +83,8 @@ PWCNetwork::rendezvousSend(const hpx_parcel_t *p)
   _rendezvous_get_args_t args = {
     .rank = here->rank,
     .p = p,
-    .n = n
+    .n = n,
+    .key = PhotonTransport::FindKey(p, n)
   };
-  PhotonTransport::FindKey(p, n, &args.key);
   return hpx_call(p->target, _rendezvous_get, HPX_NULL, &args, sizeof(args));
 }

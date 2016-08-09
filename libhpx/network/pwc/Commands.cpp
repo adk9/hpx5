@@ -96,6 +96,19 @@ Command::reloadRequest(unsigned src) const {
   PWCNetwork::Instance().reload(src, arg_);
 }
 
+/// The local event handler for the get-with-completion operation.
+///
+/// This is used to schedule the transferred parcel once the get operation has
+/// completed. The command encodes the local address of the parcel to schedule.
+inline void
+Command::rendezvousLaunch(unsigned src) const
+{
+  hpx_parcel_t *p = reinterpret_cast<hpx_parcel_t*>(arg_);
+  parcel_set_state(p, PARCEL_SERIALIZED);
+  EVENT_PARCEL_RECV(p->id, p->action, p->size, p->src, p->target);
+  parcel_launch(p);
+}
+
 void
 Command::operator()(unsigned src) const
 {
