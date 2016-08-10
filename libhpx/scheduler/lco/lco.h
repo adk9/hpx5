@@ -19,9 +19,9 @@
 #include <libhpx/lco.h>
 #include "cvar.h"
 
-#define LCO_LOG_NEW(gva, lva) do {                              \
-    dbg_assert_str(gva, "Could not malloc global memory\n");    \
-    log_lco("allocated lco %"PRIu64" (%p)\n", gva, (void*)lva); \
+#define LCO_LOG_NEW(gva, lva) do {                                \
+    dbg_assert_str(gva, "Could not malloc global memory\n");      \
+    log_lco("allocated lco %" PRIu64 " (%p)\n", gva, (void*)lva); \
   } while (0)
 
 /// This constant is used to determine when a set should be performed
@@ -98,8 +98,8 @@ void lco_unlock(lco_t* lco)
 /// Initialize an LCO vtable pointer.
 ///
 /// @param           lco The pointer to initialize
-/// @param         class The class pointer for this LCO instance
-void lco_init(lco_t *lco, const lco_class_t *class)
+/// @param          type The class pointer for this LCO instance
+void lco_init(lco_t *lco, const lco_class_t *type)
   HPX_NON_NULL(1,2);
 
 /// Finalize an LCO vtable pointer.

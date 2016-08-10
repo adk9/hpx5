@@ -199,17 +199,17 @@ typedef struct {
   char buffer[];
 } _gather_set_offset_t;
 
-static HPX_ACTION_DECL(_gather_setid_proxy);
-static int _gather_setid_proxy_handler(_gather_t *g, void *args, size_t n) {
-  // otherwise we pinned the LCO, extract the arguments from @p args and use the
-  // local setid routine
-  _gather_set_offset_t *a = args;
-  size_t size = n - sizeof(_gather_set_offset_t);
-  return _gather_setid(g, a->offset, size, &a->buffer);
-}
+static int _gather_setid_proxy_handler(_gather_t *g, void *args, size_t n);
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _gather_setid_proxy,
                      _gather_setid_proxy_handler, HPX_POINTER,
                      HPX_POINTER, HPX_SIZE_T);
+static int _gather_setid_proxy_handler(_gather_t *g, void *args, size_t n) {
+  // otherwise we pinned the LCO, extract the arguments from @p args and use the
+  // local setid routine
+  auto a = static_cast<_gather_set_offset_t *>(args);
+  size_t size = n - sizeof(_gather_set_offset_t);
+  return _gather_setid(g, a->offset, size, &a->buffer);
+}
 
 /// Set the ID for gather. This is global setid for the user to use.
 ///
@@ -238,7 +238,8 @@ hpx_status_t hpx_lco_gather_setid(hpx_addr_t gather, unsigned id,
     hpx_parcel_set_cont_target(p, rsync);
     hpx_parcel_set_cont_action(p, hpx_lco_set_action);
 
-    _gather_set_offset_t *args = hpx_parcel_get_data(p);
+    void* buffer = hpx_parcel_get_data(p);
+    auto* args = static_cast<_gather_set_offset_t *>(buffer);
     args->offset = id;
     memcpy(&args->buffer, value, size);
     hpx_parcel_send(p, lsync);
@@ -315,7 +316,7 @@ hpx_addr_t hpx_lco_gather_new(size_t inputs, size_t outputs, size_t size) {
   dbg_assert_str(gva, "Could not malloc global memory\n");
   if (!hpx_gas_try_pin(gva, (void**)&g)) {
     int e = hpx_call_sync(gva, _gather_init_async, NULL, 0, &inputs, &outputs, &size);
-    dbg_check(e, "couldn't initialize gather at %"PRIu64"\n", gva);
+    dbg_check(e, "couldn't initialize gather at %" PRIu64 "\n", gva);
   }
   else {
     _gather_init_handler(g, inputs, outputs, size);
@@ -327,8 +328,8 @@ hpx_addr_t hpx_lco_gather_new(size_t inputs, size_t outputs, size_t size) {
 /// Initialize a block of array of lco.
 static int _block_init_handler(void *lco, uint32_t n, uint32_t inputs,
                                uint32_t outputs, uint32_t size) {
-  for (int i = 0; i < n; i++) {
-    void *addr = (void*)((uintptr_t)lco + i * (sizeof(_gather_t) + size));
+  for (uint32_t i = 0; i < n; i++) {
+    auto *addr = reinterpret_cast<_gather_t*>((char*)lco + i * (sizeof(_gather_t) + size));
     _gather_init_handler(addr, inputs, outputs, size);
   }
   return HPX_SUCCESS;

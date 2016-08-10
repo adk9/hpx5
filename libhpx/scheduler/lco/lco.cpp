@@ -52,10 +52,10 @@ const lco_class_t *lco_vtables[LCO_MAX];
 /// return the class pointer, masking out the state.
 static const lco_class_t *_class(lco_t *lco) {
   dbg_assert(lco);
-  const lco_class_t *class = (lco_class_t*)lco_vtables[lco->type];
-  dbg_assert_str(class, "LCO vtable pointer is null, "
+  const lco_class_t *type = (lco_class_t*)lco_vtables[lco->type];
+  dbg_assert_str(type, "LCO vtable pointer is null, "
                  "this is often an LCO use-after-free\n");
-  return class;
+  return type;
 }
 
 static hpx_status_t _fini(lco_t *lco) {
@@ -67,64 +67,64 @@ static hpx_status_t _fini(lco_t *lco) {
 
 static hpx_status_t _set(lco_t *lco, size_t size, const void *data) {
   EVENT_LCO(lco, TRACE_EVENT_LCO_SET);
-  const lco_class_t *class = _class(lco);
-  dbg_assert_str(class->on_set, "LCO has no on_set handler\n");
-  int e = class->on_set(lco, size, data);
+  const lco_class_t *type = _class(lco);
+  dbg_assert_str(type->on_set, "LCO has no on_set handler\n");
+  int e = type->on_set(lco, size, data);
   return e;
 }
 
 static size_t _size(lco_t *lco) {
-  const lco_class_t *class = _class(lco);
-  dbg_assert_str(class->on_size, "LCO has no on_size handler\n");
-  return class->on_size(lco);
+  const lco_class_t *type = _class(lco);
+  dbg_assert_str(type->on_size, "LCO has no on_size handler\n");
+  return type->on_size(lco);
 }
 
 static hpx_status_t _error(lco_t *lco, hpx_status_t code) {
-  const lco_class_t *class = _class(lco);
-  dbg_assert_str(class->on_error, "LCO has no on_error handler\n");
-  class->on_error(lco, code);
+  const lco_class_t *type = _class(lco);
+  dbg_assert_str(type->on_error, "LCO has no on_error handler\n");
+  type->on_error(lco, code);
   return HPX_SUCCESS;
 }
 
 static hpx_status_t _reset(lco_t *lco) {
   EVENT_LCO(lco, TRACE_EVENT_LCO_RESET);
-  const lco_class_t *class = _class(lco);
-  dbg_assert_str(class->on_reset, "LCO has no on_reset handler\n");
-  class->on_reset(lco);
+  const lco_class_t *type = _class(lco);
+  dbg_assert_str(type->on_reset, "LCO has no on_reset handler\n");
+  type->on_reset(lco);
   return HPX_SUCCESS;
 }
 
 static hpx_status_t _get(lco_t *lco, size_t bytes, void *out, int reset) {
-  const lco_class_t *class = _class(lco);
-  dbg_assert_str(class->on_get, "LCO has no on_get handler\n");
-  return class->on_get(lco, bytes, out, reset);
+  const lco_class_t *type = _class(lco);
+  dbg_assert_str(type->on_get, "LCO has no on_get handler\n");
+  return type->on_get(lco, bytes, out, reset);
 }
 
 static hpx_status_t _getref(lco_t *lco, size_t bytes, void **out, int *unpin) {
-  const lco_class_t *class = _class(lco);
-  dbg_assert_str(class->on_getref, "LCO has no on_getref handler\n");
-  return class->on_getref(lco, bytes, out, unpin);
+  const lco_class_t *type = _class(lco);
+  dbg_assert_str(type->on_getref, "LCO has no on_getref handler\n");
+  return type->on_getref(lco, bytes, out, unpin);
 }
 
 static hpx_status_t _release(lco_t *lco, void *out) {
-  const lco_class_t *class = _class(lco);
-  dbg_assert_str(class->on_release, "LCO has no on_release handler\n");
-  class->on_release(lco, out);
+  const lco_class_t *type = _class(lco);
+  dbg_assert_str(type->on_release, "LCO has no on_release handler\n");
+  type->on_release(lco, out);
   return HPX_SUCCESS;
 }
 
 static hpx_status_t _wait(lco_t *lco, int reset) {
   EVENT_LCO(lco, TRACE_EVENT_LCO_WAIT);
-  const lco_class_t *class = _class(lco);
-  dbg_assert_str(class->on_wait, "LCO has no on_wait handler\n");
-  return class->on_wait(lco, reset);
+  const lco_class_t *type = _class(lco);
+  dbg_assert_str(type->on_wait, "LCO has no on_wait handler\n");
+  return type->on_wait(lco, reset);
 }
 
 static hpx_status_t _attach(lco_t *lco, hpx_parcel_t *p) {
   EVENT_LCO(lco, TRACE_EVENT_LCO_ATTACH_PARCEL);
-  const lco_class_t *class = _class(lco);
-  dbg_assert_str(class->on_attach, "LCO has no on_attach handler\n");
-  return class->on_attach(lco, p);
+  const lco_class_t *type = _class(lco);
+  dbg_assert_str(type->on_attach, "LCO has no on_attach handler\n");
+  return type->on_attach(lco, p);
 }
 
 /// Action LCO event handler wrappers.
@@ -151,7 +151,7 @@ LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, hpx_lco_set_action,
               HPX_SIZE_T);
 
 static int _lco_error_handler(lco_t *lco, void *args, size_t n) {
-  hpx_status_t *code = args;
+  hpx_status_t *code = static_cast<hpx_status_t*>(args);
   return _error(lco, *code);
 }
 LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, lco_error,
@@ -224,13 +224,13 @@ void lco_unlock(lco_t *lco) {
   self->current->ustack->lco_depth = 0;
 }
 
-void lco_init(lco_t *lco, const lco_class_t *class) {
+void lco_init(lco_t *lco, const lco_class_t *vtable) {
   EVENT_LCO(lco, TRACE_EVENT_LCO_INIT);
-  uint8_t type = class->type;
+  uint8_t type = vtable->type;
   lco->type = type;
   lco->state = 0;
   sync_tatas_init(&lco->lock);
-  dbg_assert(lco_vtables[type] == class);
+  dbg_assert(lco_vtables[type] == vtable);
 }
 
 void lco_fini(lco_t *lco) {
@@ -267,7 +267,7 @@ void hpx_lco_delete(hpx_addr_t target, hpx_addr_t rsync) {
     dbg_check(e, "Could not forward lco_delete\n");
   }
   else {
-    log_lco("deleting lco %"PRIu64" (%p)\n", target, (void*)lco);
+    log_lco("deleting lco %" PRIu64 " (%p)\n", target, (void*)lco);
     int e = _fini(lco);
     hpx_gas_unpin(target);
     hpx_gas_free(target, HPX_NULL);
@@ -550,9 +550,9 @@ int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[]) {
   // space here, since, for each lco in lcos, we either have a local mapping or
   // a remote address. We don't use the stack because we can't control how big
   // @p n gets.
-  lco_t **locals = calloc(n, sizeof(*locals));
+  lco_t **locals = static_cast<lco_t **>(calloc(n, sizeof(*locals)));
   dbg_assert_str(locals, "failed to allocate array for %d elements", n);
-  hpx_addr_t *remotes = calloc(n, sizeof(*remotes));
+  hpx_addr_t *remotes = static_cast<hpx_addr_t *>(calloc(n, sizeof(*remotes)));
   dbg_assert_str(remotes, "failed to allocate array for %d elements", n);
 
   int zero = 0;
@@ -618,9 +618,9 @@ int hpx_lco_get_all(int n, hpx_addr_t lcos[], size_t sizes[], void *values[],
   // space here, since, for each lco in lcos, we either have a local mapping or
   // a remote address. We don't use the stack because we can't control how big
   // @p n gets.
-  lco_t **locals = calloc(n, sizeof(*locals));
+  lco_t **locals = static_cast<lco_t **>(calloc(n, sizeof(*locals)));
   dbg_assert_str(locals, "failed to allocate array for %d elements", n);
-  hpx_addr_t *remotes = calloc(n, sizeof(*remotes));
+  hpx_addr_t *remotes = static_cast<hpx_addr_t *>(calloc(n, sizeof(*remotes)));
   dbg_assert_str(remotes, "failed to allocate array for %d elements", n);
 
   // Try and translate (and pin) all of the lcos, for any of the lcos that
@@ -675,17 +675,17 @@ int hpx_lco_get_all(int n, hpx_addr_t lcos[], size_t sizes[], void *values[],
 }
 
 int hpx_lco_delete_all(int n, hpx_addr_t *lcos, hpx_addr_t rsync) {
-  hpx_addr_t and = HPX_NULL;
+  hpx_addr_t cand = HPX_NULL;
   if (rsync) {
-    and = hpx_lco_and_new(n);
+    cand = hpx_lco_and_new(n);
     int e;
-    e = hpx_call_when_with_continuation(and, rsync, hpx_lco_set_action, and, hpx_lco_delete_action, NULL, 0);
+    e = hpx_call_when_with_continuation(cand, rsync, hpx_lco_set_action, cand, hpx_lco_delete_action, NULL, 0);
     dbg_check(e, "failed to enqueue delete action\n");
   }
 
   for (int i = 0, e = n; i < e; ++i) {
     if (lcos[i]) {
-      hpx_lco_delete(lcos[i], and);
+      hpx_lco_delete(lcos[i], cand);
     }
   }
 

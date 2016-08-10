@@ -78,7 +78,7 @@ struct hpx_parcel {
   uint64_t         credit;  //!< Credit held by the parcel.
 #ifdef ENABLE_INSTRUMENTATION
   uint64_t             id;  //!< A unique identifier for parcel tracing.
-  const uint64_t  padding;  //!< Ensure consistent buffer alignment with
+  uint64_t        padding;  //!< Ensure consistent buffer alignment with
                             //!< instrumentation.
 #endif
   char           buffer[];  //!< Either an in-place payload, or a pointer.

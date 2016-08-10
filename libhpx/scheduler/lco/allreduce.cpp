@@ -282,7 +282,7 @@ hpx_addr_t hpx_lco_allreduce_new(size_t inputs, size_t outputs, size_t size,
   if (!hpx_gas_try_pin(gva, (void**)&r)) {
     int e = hpx_call_sync(gva, _allreduce_init_async, NULL, 0, &inputs,
                           &outputs, &size, &id, &op);
-    dbg_check(e, "could not initialize an allreduce at %"PRIu64"\n", gva);
+    dbg_check(e, "could not initialize an allreduce at %" PRIu64 "\n", gva);
   }
   else {
     LCO_LOG_NEW(gva, r);
@@ -298,7 +298,7 @@ static int
 _block_init_handler(void *lco, int n, size_t participants, size_t readers,
                     size_t size, hpx_action_t id, hpx_action_t op) {
   for (int i = 0; i < n; i++) {
-    void *addr = (void *)((uintptr_t)lco + i * (sizeof(_allreduce_t) + size));
+    auto *addr = reinterpret_cast<_allreduce_t*>((char*)lco + i * (sizeof(_allreduce_t) + size));
     _allreduce_init_handler(addr, participants, readers, size, id, op);
   }
   return HPX_SUCCESS;
@@ -432,7 +432,8 @@ hpx_lco_allreduce_join_async(hpx_addr_t lco, int id, size_t n,
     uint64_t pid = self->current->pid;
     hpx_parcel_t *p = parcel_new(lco, _join_async_request, HPX_HERE,
                                  _join_async_reply, pid, NULL, bytes);
-    _join_async_args_t *args = hpx_parcel_get_data(p);
+    void *buffer = hpx_parcel_get_data(p);
+    auto args = static_cast<_join_async_args_t *>(buffer);
     args->out = out;
     args->done = done;
     memcpy(args->data, value, n);

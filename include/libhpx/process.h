@@ -16,8 +16,16 @@
 
 #include <hpx/hpx.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /// Recover any credit associated with a parcel.
 int process_recover_credit(hpx_parcel_t *p)
   HPX_NON_NULL(1);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIBHPX_PROCESS_H

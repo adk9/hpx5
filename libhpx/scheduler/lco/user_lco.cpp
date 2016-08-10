@@ -112,6 +112,10 @@ static int _user_lco_set(lco_t *lco, int size, const void *from) {
   int set = 0;
   lco_lock(lco);
   _user_lco_t *u = (_user_lco_t *)lco;
+  handler_t f = actions[u->op].handler;
+  hpx_monoid_op_t op = (hpx_monoid_op_t)f;
+  void *buffer = hpx_lco_user_get_user_data(lco);
+  _hpx_predicate_t predicate = (_hpx_predicate_t)f;
 
   if (lco_get_triggered(&u->lco)) {
     dbg_error("cannot set an already set user_lco.\n");
@@ -119,13 +123,13 @@ static int _user_lco_set(lco_t *lco, int size, const void *from) {
   }
 
   // perform the op()
-  handler_t f = actions[u->op].handler;
-  hpx_monoid_op_t op = (hpx_monoid_op_t)f;
-  void *buffer = hpx_lco_user_get_user_data(lco);
+  f = actions[u->op].handler;
+  op = (hpx_monoid_op_t)f;
+  buffer = hpx_lco_user_get_user_data(lco);
   op(buffer, from, size);
 
   f = actions[u->predicate].handler;
-  _hpx_predicate_t predicate = (_hpx_predicate_t)f;
+  predicate = (_hpx_predicate_t)f;
   if (predicate(buffer, u->size)) {
     lco_set_triggered(&u->lco);
     scheduler_signal_all(&u->cvar);
@@ -310,7 +314,8 @@ hpx_addr_t hpx_lco_user_new(size_t size, hpx_action_t id, hpx_action_t op,
 
   if (!hpx_gas_try_pin(gva, (void**)&u)) {
     size_t args_size = sizeof(_user_lco_t) + init_size;
-    _user_lco_init_args_t *args = calloc(1, args_size);
+    void *buffer = calloc(1, args_size);
+    _user_lco_init_args_t *args = static_cast<_user_lco_init_args_t *>(buffer);
     args->size = size;
     args->id = id;
     args->op = op;
@@ -319,7 +324,7 @@ hpx_addr_t hpx_lco_user_new(size_t size, hpx_action_t id, hpx_action_t op,
     memcpy(args->data, init, init_size);
 
     int e = hpx_call_sync(gva, _user_lco_init_action, NULL, 0, args, args_size);
-    dbg_check(e, "could not initialize an allreduce at %"PRIu64"\n", gva);
+    dbg_check(e, "could not initialize an allreduce at %" PRIu64 "\n", gva);
     free(args);
   } else {
     LCO_LOG_NEW(gva, u);
@@ -337,7 +342,7 @@ _block_init_handler(_user_lco_t *lco, _user_lco_init_args_t *args) {
   int n = args->n;
   int lco_bytes = sizeof(_user_lco_t) + args->size + args->init_size;
   for (int i = 0; i < n; i++) {
-    void *addr = (void *)((uintptr_t)lco + (i * lco_bytes));
+    auto* addr = reinterpret_cast<_user_lco_t*>((char*)lco + (i * lco_bytes));
     int e = _user_lco_init_handler(addr, args);
     dbg_check(e, "_block_init_handler failed\n");
   }
@@ -368,7 +373,8 @@ hpx_addr_t hpx_lco_user_local_array_new(int n, size_t size, hpx_action_t id,
   hpx_addr_t base = lco_alloc_local(n, lco_bytes, 0);
 
   size_t args_size = sizeof(_user_lco_t) + init_size;
-  _user_lco_init_args_t *args = calloc(1, args_size);
+  void* buffer = calloc(1, args_size);
+  _user_lco_init_args_t *args = reinterpret_cast<_user_lco_init_args_t *>(buffer);
   args->n = n;
   args->size = size;
   args->id = id;
@@ -388,6 +394,6 @@ hpx_addr_t hpx_lco_user_local_array_new(int n, size_t size, hpx_action_t id,
 /// Get the user-defined LCO's user data. This allows to access the buffer
 /// portion of the user-defined LCO regardless the LCO has been set or not.
 void *hpx_lco_user_get_user_data(void *lco) {
-  _user_lco_t *u = lco;
+  _user_lco_t *u = static_cast<_user_lco_t*>(lco);
   return (char*)u->data + u->init_size;
 }

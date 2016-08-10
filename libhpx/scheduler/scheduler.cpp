@@ -112,7 +112,7 @@ scheduler_get_worker(scheduler_t *sched, int id)
 static void
 _wait(void * const scheduler)
 {
-  scheduler_t * const csched = scheduler;
+  auto* csched = static_cast<scheduler_t * const>(scheduler);
 #ifdef HAVE_APEX
   int prev = csched->n_target;
   int n = min_int(apex_get_thread_cap(), csched->n_workers);
@@ -254,7 +254,7 @@ static void
 _scheduler_exit_diffuse(scheduler_t *sched, size_t size, const void *out)
 {
   hpx_addr_t sync = hpx_lco_and_new(here->ranks - 1);
-  for (int i = 0, e = here->ranks; i < e; ++i) {
+  for (auto i = 0u, e = here->ranks; i < e; ++i) {
     if (i == here->rank) continue;
 
     hpx_parcel_t *p = action_new_parcel(_scheduler_set_output_async, // action
@@ -284,11 +284,11 @@ _scheduler_exit_diffuse(scheduler_t *sched, size_t size, const void *out)
 static int
 _scheduler_terminate_spmd_handler(void)
 {
-  static volatile int _count = 0;
+  static volatile unsigned _count = 0;
   if (sync_addf(&_count, 1, SYNC_RELAXED) != here->ranks) return HPX_SUCCESS;
 
   hpx_addr_t sync = hpx_lco_and_new(here->ranks - 1);
-  for (int i = 0, e = here->ranks; i < e; ++i) {
+  for (auto i = 0u, e = here->ranks; i < e; ++i) {
     if (i == here->rank) continue;
 
     hpx_parcel_t *p = action_new_parcel(_scheduler_stop_async, // action

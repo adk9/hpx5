@@ -94,17 +94,25 @@ static const int GATHERING = 0;
 static const int READING = 1;
 
 typedef struct {
-  int offset;
+  unsigned offset;
   char buffer[];
 } _alltoall_set_offset_t;
 
 typedef struct {
   int size;
-  int offset;
+  unsigned offset;
 } _alltoall_get_offset_t;
 
-static HPX_ACTION_DECL(_alltoall_setid_proxy);
-static HPX_ACTION_DECL(_alltoall_getid_proxy);
+static int
+_alltoall_getid_proxy_handler(_alltoall_get_offset_t *args, size_t n);
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _alltoall_getid_proxy,
+                     _alltoall_getid_proxy_handler, HPX_POINTER, HPX_SIZE_T);
+
+static int
+_alltoall_setid_proxy_handler(_alltoall_t *g, void *args, size_t n);
+static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _alltoall_setid_proxy,
+                     _alltoall_setid_proxy_handler,
+                     HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
 
 static size_t _alltoall_size(lco_t *lco) {
   _alltoall_t *alltoall = (_alltoall_t *)lco;
@@ -169,8 +177,9 @@ static hpx_status_t _alltoall_attach(lco_t *lco, hpx_parcel_t *p) {
 }
 
 /// Get the value of the gathering, will wait if the phase is gathering.
-static hpx_status_t _alltoall_getid(_alltoall_t *g, unsigned offset, int size,
-                                    void *out) {
+static hpx_status_t
+_alltoall_getid(_alltoall_t *g, unsigned offset, int size, void *out)
+{
   hpx_status_t status = HPX_SUCCESS;
   lco_lock(&g->lco);
 
@@ -221,7 +230,7 @@ hpx_status_t hpx_lco_alltoall_getid(hpx_addr_t alltoall, unsigned id, int size,
   _alltoall_t *local;
 
   if (!hpx_gas_try_pin(alltoall, (void**)&local)) {
-    _alltoall_get_offset_t args = {.size = size, .offset = id};
+    _alltoall_get_offset_t args = {.size = size, .offset = id };
     hpx_action_t act = _alltoall_getid_proxy;
     return hpx_call_sync(alltoall, act, value, size, &args, sizeof(args));
   }
@@ -231,7 +240,9 @@ hpx_status_t hpx_lco_alltoall_getid(hpx_addr_t alltoall, unsigned id, int size,
   return status;
 }
 
-static int _alltoall_getid_proxy_handler(_alltoall_get_offset_t *args, size_t n) {
+static int
+_alltoall_getid_proxy_handler(_alltoall_get_offset_t *args, size_t n)
+{
   // try and pin the alltoall LCO, if we fail, we need to resend the underlying
   // parcel to "catch up" to the moving LCO
   hpx_addr_t target = hpx_thread_current_target();
@@ -254,9 +265,6 @@ static int _alltoall_getid_proxy_handler(_alltoall_get_offset_t *args, size_t n)
 
   return status;
 }
-static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _alltoall_getid_proxy,
-                     _alltoall_getid_proxy_handler, HPX_POINTER, HPX_SIZE_T);
-
 
 // Wait for the gathering, loses the value of the gathering for this round.
 static hpx_status_t _alltoall_wait(lco_t *lco, int reset) {
@@ -265,8 +273,9 @@ static hpx_status_t _alltoall_wait(lco_t *lco, int reset) {
 }
 
 // Local set id function.
-static hpx_status_t _alltoall_setid(_alltoall_t *g, unsigned offset, int size,
-                                    const void* buffer) {
+static hpx_status_t
+_alltoall_setid(_alltoall_t *g, unsigned offset, int size, const void* buffer)
+{
   int nDoms;
   int elementSize;
   int columnOffset;
@@ -333,7 +342,8 @@ hpx_status_t hpx_lco_alltoall_setid(hpx_addr_t alltoall, unsigned id, int size,
     hpx_parcel_set_cont_target(p, rsync);
     hpx_parcel_set_cont_action(p, hpx_lco_set_action);
 
-    _alltoall_set_offset_t *args = hpx_parcel_get_data(p);
+    void* buffer = hpx_parcel_get_data(p);
+    auto* args = static_cast<_alltoall_set_offset_t *>(buffer);
     args->offset = id;
     memcpy(&args->buffer, value, size);
     hpx_parcel_send(p, lsync);
@@ -348,18 +358,15 @@ hpx_status_t hpx_lco_alltoall_setid(hpx_addr_t alltoall, unsigned id, int size,
   return status;
 }
 
-
-static int _alltoall_setid_proxy_handler(_alltoall_t *g, void *args, size_t n) {
+static int
+_alltoall_setid_proxy_handler(_alltoall_t *g, void *args, size_t n)
+{
   // otherwise we pinned the LCO, extract the arguments from @p args and use the
   // local setid routine
-  _alltoall_set_offset_t *a = args;
+  auto* a = static_cast<_alltoall_set_offset_t *>(args);
   size_t size = n - sizeof(_alltoall_set_offset_t);
   return _alltoall_setid(g, a->offset, size, &a->buffer);
 }
-static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _alltoall_setid_proxy,
-                     _alltoall_setid_proxy_handler,
-                     HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
-
 
 static int _alltoall_set(lco_t *lco, int size, const void *from) {
   dbg_assert_str(false, "can't call set on an alltoall LCO.\n");
@@ -387,17 +394,17 @@ static int _alltoall_release(lco_t *lco, void *out) {
 }
 
 static const lco_class_t _alltoall_vtable = {
-  .type        = LCO_ALLTOALL,
-  .on_fini     = _alltoall_fini,
-  .on_error    = _alltoall_error,
-  .on_set      = _alltoall_set,
-  .on_get      = _alltoall_get,
-  .on_getref   = _alltoall_getref,
-  .on_release  = _alltoall_release,
-  .on_wait     = _alltoall_wait,
-  .on_attach   = _alltoall_attach,
-  .on_reset    = _alltoall_reset,
-  .on_size     = _alltoall_size
+  LCO_ALLTOALL,
+  _alltoall_fini,
+  _alltoall_error,
+  _alltoall_set,
+  _alltoall_attach,
+  _alltoall_get,
+  _alltoall_getref,
+  _alltoall_release,
+  _alltoall_wait,
+  _alltoall_reset,
+  _alltoall_size
 };
 
 static void HPX_CONSTRUCTOR _register_vtable(void) {
@@ -439,7 +446,7 @@ hpx_addr_t hpx_lco_alltoall_new(size_t inputs, size_t size) {
 
   if (!hpx_gas_try_pin(gva, (void**)&g)) {
     int e = hpx_call_sync(gva, _alltoall_init_async, NULL, 0, &inputs, &size);
-    dbg_check(e, "could not initialize an allreduce at %"PRIu64"\n", gva);
+    dbg_check(e, "could not initialize an allreduce at %" PRIu64 "\n", gva);
   }
   else {
     LCO_LOG_NEW(gva, g);
@@ -452,8 +459,8 @@ hpx_addr_t hpx_lco_alltoall_new(size_t inputs, size_t size) {
 /// Initialize a block of alltoall LCOs.
 static int _block_init_handler(void *lco, uint32_t n, uint32_t inputs,
                                uint32_t size) {
-  for (int i = 0; i < n; i++) {
-    void *addr = (void *)((uintptr_t)lco + i * (sizeof(_alltoall_t) + size));
+  for (uint32_t i = 0; i < n; i++) {
+    auto *addr = reinterpret_cast<_alltoall_t*>((char*)lco + i * (sizeof(_alltoall_t) + size));
     _alltoall_init_handler(addr, inputs, size);
   }
   return HPX_SUCCESS;

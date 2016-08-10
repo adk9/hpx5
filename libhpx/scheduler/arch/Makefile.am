@@ -7,7 +7,7 @@ libarch_la_CFLAGS   	= $(LIBHPX_CFLAGS)
 libarch_la_CCASFLAGS	= $(LIBHPX_CCASFLAGS)
 
 if CPU_X86_64
-libarch_la_SOURCES = x86_64/transfer.S x86_64/asm.S x86_64/frame.c
+libarch_la_SOURCES = x86_64/transfer.S x86_64/asm.S x86_64/frame.cpp
 endif
 
 if CPU_ARM

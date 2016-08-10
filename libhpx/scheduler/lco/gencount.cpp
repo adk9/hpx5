@@ -148,11 +148,11 @@ static const lco_class_t _gencount_vtable = {
   .on_fini     = _gencount_fini,
   .on_error    = _gencount_error,
   .on_set      = _gencount_set,
+  .on_attach   = NULL,
   .on_get      = _gencount_get,
   .on_getref   = NULL,
   .on_release  = NULL,
   .on_wait     = _gencount_wait,
-  .on_attach   = NULL,
   .on_reset    = _gencount_reset,
   .on_size     = _gencount_size
 };
@@ -188,7 +188,7 @@ hpx_addr_t hpx_lco_gencount_new(unsigned long ninplace) {
 
   if (!hpx_gas_try_pin(gva, (void**)&cnt)) {
     int e = hpx_call_sync(gva, _gencount_init_async, NULL, 0, &ninplace);
-    dbg_check(e, "could not initialize a generation counter at %"PRIu64"\n", gva);
+    dbg_check(e, "could not initialize a generation counter at %" PRIu64 "\n", gva);
   }
   else {
     LCO_LOG_NEW(gva, cnt);

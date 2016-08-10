@@ -20,6 +20,6 @@
 /// functions. These are all implemented in an architecture-dependent way. These
 /// are suitable for gcc inline assembly, but are done as asm to support
 /// compilers that do not support inline asm.
-void align_stack_trampoline(void);
+extern "C" void align_stack_trampoline(void);
 
 #endif // LIBHPX_ASM_H

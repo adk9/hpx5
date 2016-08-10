@@ -38,48 +38,48 @@ typedef struct {
   intptr_t value;                               // the threshold
 } _and_t;
 
-static void _reset(_and_t *and) {
-  dbg_assert_str(cvar_empty(&and->barrier), "Reset on AND LCO that has waiting threads.\n");
-  log_lco("%p resetting lco %p\n", (void*)self->current, (void*)and);
-  sync_store(&and->count, and->value, SYNC_RELEASE);
-  cvar_reset(&and->barrier);
-  lco_reset_triggered(&and->lco);
-  if (!and->value) {
-    lco_set_triggered(&and->lco);
+static void _reset(_and_t *cand) {
+  dbg_assert_str(cvar_empty(&cand->barrier), "Reset on AND LCO that has waiting threads.\n");
+  log_lco("%p resetting lco %p\n", (void*)self->current, (void*)cand);
+  sync_store(&cand->count, cand->value, SYNC_RELEASE);
+  cvar_reset(&cand->barrier);
+  lco_reset_triggered(&cand->lco);
+  if (!cand->value) {
+    lco_set_triggered(&cand->lco);
   }
 }
 
-static hpx_status_t _wait(_and_t *and, int reset) {
-  hpx_status_t status = cvar_get_error(&and->barrier);
+static hpx_status_t _wait(_and_t *cand, int reset) {
+  hpx_status_t status = cvar_get_error(&cand->barrier);
   if (status != HPX_SUCCESS) {
     return status;
   }
 
   // wait for the lco if its not triggered
-  if (!lco_get_triggered(&and->lco)) {
-    log_lco("%p waiting for lco %p (reset=%d)\n", (void*)self->current, (void*)and, reset);
-    status = scheduler_wait(&and->lco.lock, &and->barrier);
-    log_lco("%p resuming in lco %p (reset=%d)\n", (void*)self->current, (void*)and, reset);
+  if (!lco_get_triggered(&cand->lco)) {
+    log_lco("%p waiting for lco %p (reset=%d)\n", (void*)self->current, (void*)cand, reset);
+    status = scheduler_wait(&cand->lco.lock, &cand->barrier);
+    log_lco("%p resuming in lco %p (reset=%d)\n", (void*)self->current, (void*)cand, reset);
   }
 
   if (reset && status == HPX_SUCCESS) {
-    _reset(and);
+    _reset(cand);
   }
 
   return status;
 }
 
-static hpx_status_t _attach(_and_t *and, hpx_parcel_t *p) {
-  hpx_status_t status = cvar_get_error(&and->barrier);
+static hpx_status_t _attach(_and_t *cand, hpx_parcel_t *p) {
+  hpx_status_t status = cvar_get_error(&cand->barrier);
   if (status != HPX_SUCCESS) {
     return status;
   }
 
-  if (lco_get_triggered(&and->lco)) {
+  if (lco_get_triggered(&cand->lco)) {
     return hpx_parcel_send(p, HPX_NULL);
   }
 
-  return cvar_attach(&and->barrier, p);
+  return cvar_attach(&cand->barrier, p);
 }
 
 static void _and_fini(lco_t *lco) {
@@ -90,17 +90,17 @@ static void _and_fini(lco_t *lco) {
 }
 
 static void _and_error(lco_t *lco, hpx_status_t code) {
-  _and_t *and = (_and_t *)lco;
-  lco_lock(&and->lco);
-  scheduler_signal_error(&and->barrier, code);
-  lco_unlock(&and->lco);
+  _and_t *cand = (_and_t *)lco;
+  lco_lock(&cand->lco);
+  scheduler_signal_error(&cand->barrier, code);
+  lco_unlock(&cand->lco);
 }
 
 static void _and_reset(lco_t *lco) {
-  _and_t *and = (_and_t *)lco;
-  lco_lock(&and->lco);
-  _reset(and);
-  lco_unlock(&and->lco);
+  _and_t *cand = (_and_t *)lco;
+  lco_lock(&cand->lco);
+  _reset(cand);
+  lco_unlock(&cand->lco);
 }
 
 /// Fast set decrements the count, and sets triggered and signals when it gets
@@ -109,10 +109,10 @@ static int _and_set(lco_t *lco, int size, const void *from) {
   dbg_assert(lco);
   dbg_assert(!size || from);
 
-  _and_t *and = (_and_t *)lco;
+  _and_t *cand = (_and_t *)lco;
 
   int num = (from) ? *(const int*)from : 1;
-  intptr_t count = sync_fadd(&and->count, (0 - num), SYNC_ACQ_REL);
+  intptr_t count = sync_fadd(&cand->count, (0 - num), SYNC_ACQ_REL);
   log_lco("%p reduced count to %" PRIdPTR " lco %p\n", (void*)self->current, count - num, (void*)lco);
 
   if (count > num) {
@@ -124,13 +124,13 @@ static int _and_set(lco_t *lco, int size, const void *from) {
     log_lco("%p triggering lco %p\n", (void*)self->current, (void*)lco);
     dbg_assert(!lco_get_triggered(lco));
     lco_set_triggered(lco);
-    scheduler_signal_all(&and->barrier);
+    scheduler_signal_all(&cand->barrier);
     lco_unlock(lco);
     return 1;
   }
 
   dbg_assert_str(count > num,
-                 "too many threads joined (%"PRIdPTR").\n", count - num);
+                 "too many threads joined (%" PRIdPTR ").\n", count - num);
   return 0;
 }
 
@@ -140,21 +140,21 @@ static size_t _and_size(lco_t *lco) {
 
 static hpx_status_t _and_wait(lco_t *lco, int reset) {
   lco_lock(lco);
-  hpx_status_t status = _wait((void*)lco, reset);
+  hpx_status_t status = _wait(reinterpret_cast<_and_t*>(lco), reset);
   lco_unlock(lco);
   return status;
 }
 
 static hpx_status_t _and_attach(lco_t *lco, hpx_parcel_t *p) {
   lco_lock(lco);
-  hpx_status_t status = _attach((void*)lco, p);
+  hpx_status_t status = _attach(reinterpret_cast<_and_t*>(lco), p);
   lco_unlock(lco);
   return status;
 }
 
 static hpx_status_t _and_get(lco_t *lco, int size, void *out, int reset) {
   lco_lock(lco);
-  hpx_status_t status = _wait((void*)lco, reset);
+  hpx_status_t status = _wait(reinterpret_cast<_and_t*>(lco), reset);
   lco_unlock(lco);
   return status;
 }
@@ -168,8 +168,8 @@ static hpx_status_t _and_getref(lco_t *lco, int size, void **out, int *unpin) {
     return status;
   }
 
-  _and_t *and = (void*)lco;
-  *out = &and->count;
+  _and_t *cand = reinterpret_cast<_and_t*>(lco);
+  *out = &cand->count;
   *unpin = 0;
   return HPX_SUCCESS;
 }
@@ -184,34 +184,34 @@ static int _and_release(lco_t *lco, void *out) {
 }
 
 static const lco_class_t _and_vtable = {
-  .type        = LCO_AND,
-  .on_fini     = _and_fini,
-  .on_error    = _and_error,
-  .on_set      = _and_set,
-  .on_get      = _and_get,
-  .on_getref   = _and_getref,
-  .on_release  = _and_release,
-  .on_wait     = _and_wait,
-  .on_attach   = _and_attach,
-  .on_reset    = _and_reset,
-  .on_size     = _and_size
+  LCO_AND,
+  _and_fini,
+  _and_error,
+  _and_set,
+  _and_attach,
+  _and_get,
+  _and_getref,
+  _and_release,
+  _and_wait,
+  _and_reset,
+  _and_size
 };
 
 static void HPX_CONSTRUCTOR _register_vtable(void) {
   lco_vtables[LCO_AND] = &_and_vtable;
 }
 
-static int _and_init_handler(_and_t *and, int64_t count) {
+static int _and_init_handler(_and_t *cand, int64_t count) {
   dbg_assert(count >= 0);
-  lco_init(&and->lco, &_and_vtable);
-  cvar_reset(&and->barrier);
-  sync_store(&and->count, count, SYNC_RELEASE);
-  and->value = count;
-  log_lco("initialized with %" PRId64 " inputs lco %p\n", (int64_t)and->count,
-          (void*)and);
+  lco_init(&cand->lco, &_and_vtable);
+  cvar_reset(&cand->barrier);
+  sync_store(&cand->count, count, SYNC_RELEASE);
+  cand->value = count;
+  log_lco("initialized with %" PRId64 " inputs lco %p\n", (int64_t)cand->count,
+          (void*)cand);
 
   if (!count) {
-    lco_set_triggered(&and->lco);
+    lco_set_triggered(&cand->lco);
   }
   return HPX_SUCCESS;
 }
@@ -222,36 +222,36 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _and_init, _and_init_handler,
 
 /// Allocate an "and" LCO. This is synchronous.
 hpx_addr_t hpx_lco_and_new(int64_t limit) {
-  _and_t *and = NULL;
-  hpx_addr_t gva = lco_alloc_local(1, sizeof(*and), 0);
+  _and_t *cand = NULL;
+  hpx_addr_t gva = lco_alloc_local(1, sizeof(*cand), 0);
 
-  if (!hpx_gas_try_pin(gva, (void**)&and)) {
+  if (!hpx_gas_try_pin(gva, (void**)&cand)) {
     int e = hpx_call_sync(gva, _and_init, NULL, 0, &limit);
-    dbg_check(e, "could not initialize an and gate at %"PRIu64"\n", gva);
+    dbg_check(e, "could not initialize an and gate at %" PRIu64 "\n", gva);
   }
   else {
-    LCO_LOG_NEW(gva, and);
-    _and_init_handler(and, limit);
+    LCO_LOG_NEW(gva, cand);
+    _and_init_handler(cand, limit);
     hpx_gas_unpin(gva);
   }
   return gva;
 }
 
 /// Join the and.
-void hpx_lco_and_set(hpx_addr_t and, hpx_addr_t rsync) {
-  hpx_lco_set(and, 0, NULL, HPX_NULL, rsync);
+void hpx_lco_and_set(hpx_addr_t cand, hpx_addr_t rsync) {
+  hpx_lco_set(cand, 0, NULL, HPX_NULL, rsync);
 }
 
 /// Set an "and" @p num times.
-void hpx_lco_and_set_num(hpx_addr_t and, int sum, hpx_addr_t rsync) {
+void hpx_lco_and_set_num(hpx_addr_t cand, int sum, hpx_addr_t rsync) {
   hpx_addr_t lsync = hpx_lco_future_new(0);
-  hpx_lco_set(and, sizeof(sum), &sum, lsync, rsync);
+  hpx_lco_set(cand, sizeof(sum), &sum, lsync, rsync);
   hpx_lco_wait(lsync);
   hpx_lco_delete(lsync, HPX_NULL);
 }
 
 static int _block_init_handler(_and_t *ands, uint32_t n, int64_t limit) {
-  for (int i = 0; i < n; ++i) {
+  for (uint32_t i = 0; i < n; ++i) {
     _and_init_handler(&ands[i], limit);
   }
   return HPX_SUCCESS;

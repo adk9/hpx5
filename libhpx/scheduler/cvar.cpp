@@ -42,7 +42,7 @@ hpx_parcel_t *cvar_set_error(cvar_t *cvar, hpx_status_t code) {
   }
 
   hpx_parcel_t *top = cvar->top;
-  cvar->top = (void*)((((uintptr_t)code) << _CODE_OFFSET) | _ERROR_MASK);
+  cvar->top = (hpx_parcel_t*)((((uintptr_t)code) << _CODE_OFFSET) | _ERROR_MASK);
   return top;
 }
 

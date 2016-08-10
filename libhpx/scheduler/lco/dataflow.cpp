@@ -173,7 +173,7 @@ hpx_addr_t hpx_lco_dataflow_new(void) {
 
   if (!hpx_gas_try_pin(gva, (void**)&d)) {
     int e = hpx_call_sync(gva, _dataflow_init_action, NULL, 0);
-    dbg_check(e, "could not initialize the dataflow LCO at %"PRIu64"\n", gva);
+    dbg_check(e, "could not initialize the dataflow LCO at %" PRIu64 "\n", gva);
   } else {
     LCO_LOG_NEW(gva, d);
     _dataflow_init_handler(d);
@@ -191,7 +191,7 @@ typedef struct {
 static int _run_dataflow_handler(_dataflow_handler_args_t *args, size_t size) {
   int n = args->n;
   hpx_addr_t *inputs = args->data;
-  size_t *sizes = (void*)((char*)inputs + (n * sizeof(hpx_addr_t)));
+  size_t *sizes = reinterpret_cast<size_t*>((char*)inputs + (n * sizeof(hpx_addr_t)));
   void *values[n];
   for (int i = 0; i < n; ++i) {
     values[i] = malloc(sizes[i]);
@@ -220,10 +220,11 @@ int _hpx_lco_dataflow_add(hpx_addr_t lco, hpx_action_t action,
   int nargs = n >> 1;
   size_t size = sizeof(_dataflow_handler_args_t) + nargs * sizeof(hpx_addr_t) + nargs * sizeof(size_t);
   hpx_parcel_t *p = hpx_parcel_acquire(NULL, size);
-  _dataflow_handler_args_t *args = hpx_parcel_get_data(p);
+  void* buffer = hpx_parcel_get_data(p);
+  _dataflow_handler_args_t *args = static_cast<_dataflow_handler_args_t *>(buffer);
   hpx_addr_t *inputs = args->data;
-  size_t *sizes = (void*)((char*)inputs + (nargs * sizeof(hpx_addr_t)));
-  
+  size_t *sizes = reinterpret_cast<size_t*>((char*)inputs + (nargs * sizeof(hpx_addr_t)));
+
   va_list vargs;
   va_start(vargs, n);
 

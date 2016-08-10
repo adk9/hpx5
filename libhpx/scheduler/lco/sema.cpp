@@ -64,11 +64,11 @@ static const lco_class_t _sema_vtable = {
   .on_fini     = _sema_fini,
   .on_error    = _sema_error,
   .on_set      = _sema_set,
+  .on_attach   = NULL,
   .on_get      = _sema_get,
   .on_getref   = NULL,
   .on_release  = NULL,
   .on_wait     = _sema_wait,
-  .on_attach   = NULL,
   .on_reset    = _sema_reset,
   .on_size     = _sema_size
 };
@@ -94,7 +94,7 @@ hpx_addr_t hpx_lco_sema_new(unsigned count) {
 
   if (!hpx_gas_try_pin(gva, (void**)&sema)) {
     int e = hpx_call_sync(gva, _sema_init_async, NULL, 0, &count);
-    dbg_check(e, "could not initialize a future at %"PRIu64"\n", gva);
+    dbg_check(e, "could not initialize a future at %" PRIu64 "\n", gva);
   }
   else {
     LCO_LOG_NEW(gva, sema);

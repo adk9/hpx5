@@ -41,13 +41,13 @@ typedef struct HPX_PACKED {
 
 void *transfer_frame_init(void *top, hpx_parcel_t *p, thread_entry_t f) {
   // arm wants 8 byte alignment, so we adjust the top pointer if necessary
-  top = (void*)((uintptr_t)top & ~(7));
+  top = reinterpret_cast<void*>((uintptr_t)top & ~(7));
 
   // Stack frame addresses go "down" while C struct addresses go "up, so compute
   // the frame base from the top of the frame using the size of the frame
   // structure. After this, we can just write values to the frame structure and
   // they'll be in the right place for the initial return from transfer.
-  _frame_t *frame = (void*)((char*)top - sizeof(*frame));
+  _frame_t *frame = reinterpret_cast<_frame_t*>((char*)top - sizeof(*frame));
   assert((uintptr_t)frame % 8 == 0);
 
   // register must be the same as the one used in align_stack_trampoline

@@ -222,11 +222,11 @@ static const lco_class_t _future_vtable = {
   .on_fini     = _future_fini,
   .on_error    = _future_error,
   .on_set      = _future_set,
+  .on_attach   = _future_attach,
   .on_get      = _future_get,
   .on_getref   = _future_getref,
   .on_release  = _future_release,
   .on_wait     = _future_wait,
-  .on_attach   = _future_attach,
   .on_reset    = _future_reset,
   .on_size     = _future_size
 };
@@ -257,7 +257,7 @@ hpx_addr_t hpx_lco_future_new(int size) {
 
   if (!hpx_gas_try_pin(gva, (void**)&future)) {
     int e = hpx_call_sync(gva, _future_init_async, NULL, 0, &size);
-    dbg_check(e, "could not initialize a future at %"PRIu64"\n", gva);
+    dbg_check(e, "could not initialize a future at %" PRIu64 "\n", gva);
   }
   else {
     LCO_LOG_NEW(gva, future);
@@ -272,7 +272,7 @@ static int _block_init_handler(void *lco, const uint32_t n,
                                const uint32_t size) {
   // sequentially initialize each future
   for (uint32_t i = 0; i < n; ++i) {
-    void *addr = (void *)((uintptr_t)lco + i * (sizeof(_future_t) + size));
+    auto* addr = reinterpret_cast<_future_t*>((char*)lco + i * (sizeof(_future_t) + size));
     _future_init_handler(addr, size);
   }
   return HPX_SUCCESS;
@@ -290,14 +290,14 @@ hpx_addr_t hpx_lco_future_array_new(int n, int size, int futures_per_block) {
   hpx_addr_t       base = lco_alloc_cyclic(blocks, block_bytes, 0);
 
   // for each block, initialize the future
-  hpx_addr_t and = hpx_lco_and_new(blocks);
-  for (int i = 0; i < blocks; ++i) {
+  hpx_addr_t cand = hpx_lco_and_new(blocks);
+  for (uint32_t i = 0; i < blocks; ++i) {
     hpx_addr_t there = hpx_addr_add(base, i * block_bytes, block_bytes);
-    int e = hpx_call(there, _block_init, and, &futures_per_block, &size);
+    int e = hpx_call(there, _block_init, cand, &futures_per_block, &size);
     dbg_check(e, "call of _block_init_action failed\n");
   }
-  hpx_lco_wait(and);
-  hpx_lco_delete(and, HPX_NULL);
+  hpx_lco_wait(cand);
+  hpx_lco_delete(cand, HPX_NULL);
 
   // return the base address of the allocation
   return base;

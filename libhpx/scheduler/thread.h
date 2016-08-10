@@ -95,7 +95,8 @@ typedef void (*thread_transfer_cont_t)(hpx_parcel_t *p, void *sp, void *env);
 /// @param          p The parcel to transfer to.
 /// @param       cont A continuation function to handle the old stack pointer.
 /// @param        env The environment for the continuation.
-void thread_transfer(hpx_parcel_t *p, thread_transfer_cont_t cont, void *env)
+extern "C" void thread_transfer(hpx_parcel_t *p, thread_transfer_cont_t cont,
+                                void *env)
   HPX_NON_NULL(1, 2);
 
 #endif  // LIBHPX_THREAD_H
