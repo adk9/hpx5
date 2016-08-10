@@ -18,6 +18,7 @@
 #include "IRecvBuffer.h"
 #include "parcel_utils.h"
 #include "libhpx/events.h"
+#include "libhpx/parcel.h"
 #include <memory>
 
 namespace {
@@ -54,6 +55,7 @@ IRecvBuffer::progress(hpx_parcel_t** stack)
   if (e) log_net("detected completed irecvs: %u\n", e);
   for (int i = 0; i < e; ++i) {
     auto p = finish(out[i], statuses[i]);
+    EVENT_PARCEL_RECV(p->id, p->action, p->size, p->src, p->target);
     parcel_stack_push(stack, p);
     start(out[i]);
   }
