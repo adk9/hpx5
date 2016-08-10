@@ -123,7 +123,9 @@ PWCNetwork::~PWCNetwork()
   boot_barrier(boot_);
 
   // Unpin my heap.
-  PhotonTransport::Unpin(gas_local_base(gas_), gas_local_size(gas_));
+  if (gas_->type == HPX_GAS_PGAS) {
+    PhotonTransport::Unpin(gas_local_base(gas_), gas_local_size(gas_));
+  }
   delete string_;
   Instance_ = nullptr;
 }
