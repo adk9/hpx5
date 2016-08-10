@@ -3,8 +3,9 @@
 #
 # ------------------------------------------------------------------------------
 AC_DEFUN([HPX_CONFIG_LIBHPX], [
-  # do substitution for the test and example makefiles
-  HPX_APPS_LDADD="$HPX_APPS_LDADD \$(top_builddir)/libhpx/libhpx.la"
+  # do substitution for the test and example makefiles---make sure libhpx
+  # appears first here
+  HPX_APPS_LDADD="\$(top_builddir)/libhpx/libhpx.la $HPX_APPS_LDADD"
   HPX_APPS_DEPS="$HPX_APPS_DEPS \$(top_builddir)/libsync/libsync.la \$(top_builddir)/libhpx/libhpx.la"
 
   # export the things requires for our C++ build
