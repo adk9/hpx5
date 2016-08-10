@@ -114,6 +114,7 @@ PWCNetwork::~PWCNetwork()
     Command command;
     do {
       PhotonTransport::Test(&command, &remaining, ANY_SOURCE, &src);
+      // @todo: what do we do with these commands, other than ignoring them?
     } while (remaining > 0);
   }
 
@@ -136,13 +137,17 @@ PWCNetwork::type() const
 void
 PWCNetwork::progress(int n)
 {
+  hpx_parcel_t* stack = nullptr;
   if (auto _ = std::unique_lock<std::mutex>(progressLock_, std::try_to_lock)) {
     Command command;
     int src;
     while (PhotonTransport::Test(&command, nullptr, ANY_SOURCE, &src)) {
-      command(rank_);
+      if (hpx_parcel_t* p = command(rank_)) {
+        parcel_stack_push(&stack, p);
+      }
     }
   }
+  parcel_launch_all(stack);
 }
 
 void
@@ -153,14 +158,17 @@ PWCNetwork::flush()
 hpx_parcel_t*
 PWCNetwork::probe(int n)
 {
+  hpx_parcel_t* stack = nullptr;
   if (auto _ = std::unique_lock<std::mutex>(probeLock_, std::try_to_lock)) {
     Command command;
     int src;
     while (PhotonTransport::Probe(&command, nullptr, ANY_SOURCE, &src)) {
-      command(src);
+      if (hpx_parcel_t* p = command(src)) {
+        parcel_stack_push(&stack, p);
+      }
     }
   }
-  return nullptr;
+  return stack;
 }
 
 CollectiveOps&

@@ -70,7 +70,15 @@ class Command {
     return (op_ != NOP);
   }
 
-  void operator()(unsigned src) const;
+  /// The command operator() will run the command.
+  ///
+  /// The command is expected to do some quick operation, and optionally return
+  /// a parcel for further processing. A simple example is the RecvParcel
+  /// handler, which simply returns the received parcel. The returned parcel
+  /// MUST NOT be ignored, but may be NULL.
+  ///
+  /// @param        src The source of the command.
+  [[ gnu::warn_unused_result ]] hpx_parcel_t* operator()(unsigned src) const;
 
   static uint64_t Pack(const Command& command) {
     union {
@@ -112,15 +120,15 @@ class Command {
       arg_(reinterpret_cast<uintptr_t>(p)), op_(op) {
   }
 
-  void resumeParcel(unsigned src) const;
-  void resumeParcelAtSource(unsigned src) const;
-  void deleteParcel(unsigned src) const;
-  void lcoSet(unsigned src) const;
-  void lcoSetAtSource(unsigned src) const;
-  void recvParcel(unsigned src) const;
-  void rendezvousLaunch(unsigned src) const;
-  void reloadRequest(unsigned src) const;
-  void reloadReply(unsigned src) const;
+  hpx_parcel_t* resumeParcel(unsigned src) const;
+  hpx_parcel_t* resumeParcelAtSource(unsigned src) const;
+  hpx_parcel_t* deleteParcel(unsigned src) const;
+  hpx_parcel_t* lcoSet(unsigned src) const;
+  hpx_parcel_t* lcoSetAtSource(unsigned src) const;
+  hpx_parcel_t* recvParcel(unsigned src) const;
+  hpx_parcel_t* rendezvousLaunch(unsigned src) const;
+  hpx_parcel_t* reloadRequest(unsigned src) const;
+  hpx_parcel_t* reloadReply(unsigned src) const;
 
   uint64_t arg_ : 48;
   uint64_t  op_ : 16;

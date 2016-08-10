@@ -128,6 +128,9 @@ struct ustack *parcel_swap_stack(hpx_parcel_t *p, struct ustack *stack);
 /// pid set.
 void parcel_launch(hpx_parcel_t *p);
 
+/// This will launch all of the parcel in the stack of parcels.
+void parcel_launch_all(hpx_parcel_t *stack);
+
 void parcel_launch_error(hpx_parcel_t *p, int error);
 
 void parcel_launch_through(hpx_parcel_t *p, hpx_addr_t gate);

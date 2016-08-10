@@ -148,6 +148,14 @@ void parcel_launch(hpx_parcel_t *p) {
   }
 }
 
+void
+parcel_launch_all(hpx_parcel_t* stack)
+{
+  while (auto p = parcel_stack_pop(&stack)) {
+    parcel_launch(p);
+  }
+}
+
 void parcel_launch_error(hpx_parcel_t *p, int error) {
   if (error != HPX_SUCCESS) {
     dbg_error("Launching en error is not yet implemented");

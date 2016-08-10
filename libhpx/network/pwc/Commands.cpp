@@ -21,8 +21,6 @@
 #include "libhpx/debug.h"
 #include "libhpx/events.h"
 #include "libhpx/gpa.h"
-#include "libhpx/locality.h"
-#include "libhpx/parcel.h"
 
 namespace {
 using libhpx::network::pwc::Command;
@@ -30,14 +28,15 @@ using libhpx::network::pwc::PhotonTransport;
 using libhpx::network::pwc::PWCNetwork;
 }
 
-inline void
+inline hpx_parcel_t*
 Command::lcoSet(unsigned src) const
 {
   hpx_addr_t lco = offset_to_gpa(here->rank, arg_);
   hpx_lco_set(lco, 0, nullptr, HPX_NULL, HPX_NULL);
+  return nullptr;
 }
 
-inline void
+inline hpx_parcel_t*
 Command::lcoSetAtSource(unsigned src) const
 {
   PhotonTransport::Op op;
@@ -45,9 +44,10 @@ Command::lcoSetAtSource(unsigned src) const
   op.lop = Command::Nop();
   op.rop = Command(LCO_SET, arg_);
   dbg_check( op.cmd() );
+  return nullptr;
 }
 
-inline void
+inline hpx_parcel_t*
 Command::deleteParcel(unsigned src) const
 {
   auto p = reinterpret_cast<hpx_parcel_t*>(arg_);
@@ -55,20 +55,18 @@ Command::deleteParcel(unsigned src) const
   hpx_parcel_t *ssync = p->next;
   p->next = nullptr;
   parcel_delete(p);
-  if (ssync) {
-    parcel_launch(ssync);
-  }
+  return ssync;
 }
 
-inline void
+inline hpx_parcel_t*
 Command::resumeParcel(unsigned src) const
 {
   auto p = reinterpret_cast<hpx_parcel_t*>(arg_);
   log_net("resuming %s, (%p)\n", actions[p->action].key, static_cast<void*>(p));
-  parcel_launch(p);
+  return p;
 }
 
-inline void
+inline hpx_parcel_t*
 Command::resumeParcelAtSource(unsigned src) const
 {
   PhotonTransport::Op op;
@@ -76,15 +74,17 @@ Command::resumeParcelAtSource(unsigned src) const
   op.lop = Command::Nop();
   op.rop = Command(RESUME_PARCEL, arg_);
   dbg_check( op.cmd() );
+  return nullptr;
 }
 
-inline void
+inline hpx_parcel_t*
 Command::reloadReply(unsigned src) const
 {
   PWCNetwork::Instance().progressSends(src);
+  return nullptr;
 }
 
-inline void
+inline hpx_parcel_t*
 Command::recvParcel(unsigned src) const
 {
 #ifdef __LP64__
@@ -96,59 +96,51 @@ Command::recvParcel(unsigned src) const
   p->src = src;
   parcel_set_state(p, PARCEL_SERIALIZED | PARCEL_BLOCK_ALLOCATED);
   EVENT_PARCEL_RECV(p->id, p->action, p->size, p->src, p->target);
-  parcel_launch(p);
+  return p;
 }
 
-inline void
+inline hpx_parcel_t*
 Command::reloadRequest(unsigned src) const {
   PWCNetwork::Instance().reload(src, arg_);
+  return nullptr;
 }
 
 /// The local event handler for the get-with-completion operation.
 ///
 /// This is used to schedule the transferred parcel once the get operation has
 /// completed. The command encodes the local address of the parcel to schedule.
-inline void
+inline hpx_parcel_t*
 Command::rendezvousLaunch(unsigned src) const
 {
   hpx_parcel_t *p = reinterpret_cast<hpx_parcel_t*>(arg_);
   parcel_set_state(p, PARCEL_SERIALIZED);
   EVENT_PARCEL_RECV(p->id, p->action, p->size, p->src, p->target);
-  parcel_launch(p);
+  return p;
 }
 
-void
+hpx_parcel_t*
 Command::operator()(unsigned src) const
 {
   switch (op_) {
    case NOP: abort();
    case RESUME_PARCEL:
-    resumeParcel(src);
-    return;
+    return resumeParcel(src);
    case RESUME_PARCEL_SOURCE:
-    resumeParcelAtSource(src);
-    return;
+    return resumeParcelAtSource(src);
    case DELETE_PARCEL:
-    deleteParcel(src);
-    return;
+    return deleteParcel(src);
    case LCO_SET:
-    lcoSet(src);
-    return;
+    return lcoSet(src);
    case LCO_SET_SOURCE:
-    lcoSetAtSource(src);
-    return;
+    return lcoSetAtSource(src);
    case RECV_PARCEL:
-    recvParcel(src);
-    return;
+    return recvParcel(src);
    case RENDEZVOUS_LAUNCH:
-    rendezvousLaunch(src);
-    return;
+    return rendezvousLaunch(src);
    case RELOAD_REQUEST:
-    reloadRequest(src);
-    return;
+    return reloadRequest(src);
    case RELOAD_REPLY:
-    reloadReply(src);
-    return;
+    return reloadReply(src);
   }
   unreachable();
 }

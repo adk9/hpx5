@@ -21,6 +21,7 @@
 #include "libhpx/debug.h"
 #include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
+#include "libhpx/parcel.h"
 #include <cstdlib>
 
 namespace {
@@ -169,7 +170,9 @@ PhotonTransport::Unpin(const void *base, size_t n)
 static int
 _photon_unpin_async(const void *base, size_t n, int src, uint64_t op) {
   PhotonTransport::Unpin(base, n);
-  Command::Unpack(op)(src);
+  if (hpx_parcel_t* p = Command::Unpack(op)(src)) {
+    parcel_launch(p);
+  }
   return HPX_SUCCESS;
 }
 static LIBHPX_ACTION(HPX_INTERRUPT, 0, _unpin_async, _photon_unpin_async,
