@@ -260,14 +260,6 @@ static void _pgas_move(void *gas, hpx_addr_t src, hpx_addr_t dst,
   hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
 }
 
-static size_t _pgas_local_size(const void *UNUSED) {
-  return global_heap->nbytes;
-}
-
-static void *_pgas_local_base(const void *UNUSED) {
-  return global_heap->base;
-}
-
 static uint32_t _pgas_owner_of(const void *pgas, hpx_addr_t addr) {
   return gpa_to_rank(addr);
 }
@@ -286,8 +278,8 @@ static gas_t _pgas = {
   },
   .max_block_size = _pgas_max_block_size,
   .dealloc        = _pgas_dealloc,
-  .local_size     = _pgas_local_size,
-  .local_base     = _pgas_local_base,
+  .pinHeap        = pgas_pinHeap,
+  .unpinHeap      = pgas_unpinHeap,
   .sub            = _pgas_sub,
   .add            = _pgas_add,
   .there          = _pgas_there,

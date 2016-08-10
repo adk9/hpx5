@@ -252,14 +252,15 @@ _smp_move(void *gas, hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {
   hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
 }
 
-/// Return the size of the global heap stored locally.
-static size_t
-_smp_local_size(const void *gas) {
+static void*
+_smp_pinHeap(void *gas, void *memory_ops, void *key)
+{
   dbg_error("SMP execution should not call this function\n");
 }
 
-static void *
-_smp_local_base(const void *gas) {
+static void
+_smp_unpinHeap(void *gas, void *memory_ops)
+{
   dbg_error("SMP execution should not call this function\n");
 }
 
@@ -281,8 +282,8 @@ static gas_t _smp = {
   },
   .max_block_size = _smp_max_block_size,
   .dealloc        = _smp_dealloc,
-  .local_size     = _smp_local_size,
-  .local_base     = _smp_local_base,
+  .pinHeap        = _smp_pinHeap,
+  .unpinHeap      = _smp_unpinHeap,
   .sub            = _smp_sub,
   .add            = _smp_add,
   .there          = _smp_there,

@@ -16,6 +16,10 @@
 
 #include <hpx/hpx.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct config;
 struct gas;
 
@@ -217,5 +221,24 @@ int pgas_memcpy(void *obj, hpx_addr_t to, hpx_addr_t from, size_t size,
 /// @returns            HPX_SUCCESS;
 int pgas_memcpy_sync(void *obj, hpx_addr_t to, hpx_addr_t from, size_t size);
 
+
+/// Use the memory ops provider to pin the heap.
+///
+/// @param          gas The gas object.
+/// @param   memory_ops The memory ops provider.
+/// @param[out]     key The heap's key.
+///
+/// @returns            A pointer to the pinned heap.
+void* pgas_pinHeap(void *gas, void *memory_ops, void *key);
+
+/// Unpin the heap.
+///
+/// @param          gas The gas object.
+/// @param   memory_ops The memory ops provider.
+void pgas_unpinHeap(void *gas, void *memory_ops);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIBHPX_GAS_PGAS_H

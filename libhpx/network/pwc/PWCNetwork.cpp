@@ -88,12 +88,7 @@ PWCNetwork::PWCNetwork(const config_t *cfg, boot_t *boot, gas_t *gas)
 
   local.peer.addr = peers_.get();
   local.peer.key = PhotonTransport::FindKey(peers_.get(), ranks_*sizeof(Peer));
-
-  if (gas->type == HPX_GAS_PGAS) {
-    size_t n = gas_local_size(gas);
-    local.heap.addr = static_cast<char*>(gas_local_base(gas));
-    PhotonTransport::Pin(local.heap.addr, n, &local.heap.key);
-  }
+  local.heap.addr = static_cast<char*>(gas->pinHeap(gas_, this, &local.heap.key));
 
   std::unique_ptr<Exchange[]> remotes(new Exchange[ranks_]);
   boot_allgather(boot, &local, &remotes[0], sizeof(Exchange));
@@ -123,9 +118,7 @@ PWCNetwork::~PWCNetwork()
   boot_barrier(boot_);
 
   // Unpin my heap.
-  if (gas_->type == HPX_GAS_PGAS) {
-    PhotonTransport::Unpin(gas_local_base(gas_), gas_local_size(gas_));
-  }
+  gas_->unpinHeap(gas_, this);
   delete string_;
   Instance_ = nullptr;
 }

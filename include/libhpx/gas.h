@@ -53,8 +53,8 @@ typedef struct gas {
   uint64_t max_block_size;
 
   void (*dealloc)(void *gas);
-  size_t (*local_size)(const void *gas);
-  void *(*local_base)(const void *gas);
+  void* (*pinHeap)(void *gas, void *memory_ops, void *key);
+  void (*unpinHeap)(void *gas, void *memory_ops);
 
   hpx_gas_ptrdiff_t (*sub)(const void *gas, hpx_addr_t lhs, hpx_addr_t rhs,
                  size_t bsize);
@@ -121,16 +121,6 @@ inline static void gas_clear_affinity(void *obj, hpx_addr_t gva) {
 #else
   affinity_clear(gas->affinity, gva);
 #endif
-}
-
-static inline size_t gas_local_size(void *obj) {
-  gas_t *gas = (gas_t*)obj;
-  return gas->local_size(gas);
-}
-
-inline static void *gas_local_base(void *obj) {
-  gas_t *gas = (gas_t*)obj;
-  return gas->local_base(gas);
 }
 
 static const char* const HPX_GAS_ATTR_TO_STRING[] = {

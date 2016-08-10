@@ -182,6 +182,17 @@ static hpx_addr_t _agas_calloc_blocked(size_t n, size_t bsize,
   return agas_calloc_user(n, bsize, boundary, _blocked_dist, attr);
 }
 
+static void*
+_agas_pinHeap(void *gas, void *memory_ops, void *key)
+{
+  return NULL;
+}
+
+static void
+_agas_unpinHeap(void *gas, void *memory_ops)
+{
+}
+
 static gas_t _agas = {
   .type           = HPX_GAS_AGAS,
   .string = {
@@ -196,8 +207,8 @@ static gas_t _agas = {
   },
   .max_block_size = _agas_max_block_size,
   .dealloc        = _agas_dealloc,
-  .local_size     = NULL,
-  .local_base     = NULL,
+  .pinHeap        = _agas_pinHeap,
+  .unpinHeap      = _agas_unpinHeap,
   .sub            = _agas_sub,
   .add            = _agas_add,
   .there          = _agas_there,
