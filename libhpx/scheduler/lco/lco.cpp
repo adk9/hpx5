@@ -15,31 +15,35 @@
 # include "config.h"
 #endif
 
-/// @file libhpx/scheduler/lco.c
-#include <assert.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
+/// @file libhpx/scheduler/lco.cpp
 
-#include <libsync/sync.h>
-#include <libsync/locks.h>
-#include <libhpx/action.h>
-#include <libhpx/attach.h>
-#include <libhpx/config.h>
-#include <libhpx/debug.h>
-#include <libhpx/instrumentation.h>
-#include <libhpx/lco.h>
-#include <libhpx/locality.h>
-#include <libhpx/memory.h>
-#include <libhpx/c_network.h>
-#include <libhpx/scheduler.h>
-#include <libhpx/worker.h>
-#include <libhpx/parcel.h>
 #include "lco.h"
 #include "thread.h"
+#include "libhpx/action.h"
+#include "libhpx/attach.h"
+#include "libhpx/config.h"
+#include "libhpx/debug.h"
+#include "libhpx/instrumentation.h"
+#include "libhpx/lco.h"
+#include "libhpx/locality.h"
+#include "libhpx/memory.h"
+#include "libhpx/network.h"
+#include "libhpx/scheduler.h"
+#include "libhpx/worker.h"
+#include "libhpx/parcel.h"
+#include "libsync/sync.h"
+#include "libsync/locks.h"
+#include <cassert>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
+
+namespace {
+using namespace libhpx::scheduler::lco;
+}
 
 /// LCO dynamic dispatch table
-const lco_class_t *lco_vtables[LCO_MAX];
+const lco_class_t *libhpx::scheduler::lco::lco_vtables[LCO_MAX];
 
 /// LCO states
 #define _TRIGGERED_MASK    (0x2)
@@ -134,42 +138,57 @@ static hpx_status_t _attach(lco_t *lco, hpx_parcel_t *p) {
 /// resent.
 ///
 /// @{
-static int _lco_delete_action_handler(lco_t *lco) {
+static int
+_lco_delete_action_handler(lco_t *lco)
+{
   _fini(lco);
   hpx_addr_t target = hpx_thread_current_target();
   return hpx_call_cc(target, hpx_gas_free_action);
 }
-LIBHPX_ACTION(HPX_INTERRUPT, HPX_PINNED, hpx_lco_delete_action,
+LIBHPX_ACTION(HPX_INTERRUPT, HPX_PINNED,
+              hpx_lco_delete_action,
               _lco_delete_action_handler, HPX_POINTER);
 
-int hpx_lco_set_action_handler(lco_t *lco, void *data, size_t n) {
+int
+hpx_lco_set_action_handler(lco_t *lco, void *data, size_t n)
+{
   int i = _set(lco, n, data);
   return HPX_THREAD_CONTINUE(i);
 }
-LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, hpx_lco_set_action,
-              hpx_lco_set_action_handler, HPX_POINTER, HPX_POINTER,
-              HPX_SIZE_T);
+LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED,
+              hpx_lco_set_action,
+              hpx_lco_set_action_handler,
+              HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
 
 static int _lco_error_handler(lco_t *lco, void *args, size_t n) {
   hpx_status_t *code = static_cast<hpx_status_t*>(args);
   return _error(lco, *code);
 }
-LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, lco_error,
-              _lco_error_handler, HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
+LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED,
+              lco_error, _lco_error_handler,
+              HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
 
-int hpx_lco_reset_action_handler(lco_t *lco) {
+int
+hpx_lco_reset_action_handler(lco_t *lco)
+{
   return _reset(lco);
 }
-LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, hpx_lco_reset_action,
-              hpx_lco_reset_action_handler, HPX_POINTER);
+LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED,
+              hpx_lco_reset_action,
+              hpx_lco_reset_action_handler,
+              HPX_POINTER);
 
-static int _lco_size_handler(lco_t *lco, void *UNUSED) {
+static int
+_lco_size_handler(lco_t *lco, void *UNUSED)
+{
   return _size(lco);
 }
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_size,
                      _lco_size_handler, HPX_POINTER);
 
-static int _lco_get_handler(lco_t *lco, int n) {
+static int
+_lco_get_handler(lco_t *lco, int n)
+{
   dbg_assert(n > 0);
 
   // Use the getref handler, no need to worry about pinning here because we
@@ -187,13 +206,17 @@ static int _lco_get_handler(lco_t *lco, int n) {
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_get,
                      _lco_get_handler, HPX_POINTER, HPX_INT);
 
-static int _lco_wait_handler(lco_t *lco, int reset) {
+static int
+_lco_wait_handler(lco_t *lco, int reset)
+{
   return _wait(lco, reset);
 }
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_wait, _lco_wait_handler,
                      HPX_POINTER, HPX_INT);
 
-int lco_attach_handler(lco_t *lco, hpx_parcel_t *p, size_t size) {
+static int
+_lco_attach_handler(lco_t *lco, hpx_parcel_t *p, size_t size)
+{
   hpx_parcel_t *parent = self->current;
   dbg_assert(hpx_parcel_get_data(parent) == p);
   log_lco("pinning %p, nesting %p\n", (void*)parent, (void*)p);
@@ -201,14 +224,16 @@ int lco_attach_handler(lco_t *lco, hpx_parcel_t *p, size_t size) {
   parcel_nest(p);
   return _attach(lco, p);
 }
-LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, lco_attach,
-              lco_attach_handler, HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
+LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED,
+              lco_attach, _lco_attach_handler, HPX_POINTER,
+              HPX_POINTER, HPX_SIZE_T);
 
 /// @}
 
 /// LCO bit packing and manipulation
 /// @{
-void lco_lock(lco_t *lco) {
+void
+libhpx::scheduler::lco::lco_lock(lco_t *lco) {
   dbg_assert(lco);
   dbg_assert(self->current->ustack->lco_depth == 0);
   self->current->ustack->lco_depth = 1;
@@ -216,7 +241,9 @@ void lco_lock(lco_t *lco) {
   log_lco("%p acquired lco %p\n", (void*)self->current, (void*)lco);
 }
 
-void lco_unlock(lco_t *lco) {
+void
+libhpx::scheduler::lco::lco_unlock(lco_t *lco)
+{
   dbg_assert(lco);
   log_lco("%p released lco %p\n", (void*)self->current, (void*)lco);
   sync_tatas_release(&lco->lock);
@@ -224,7 +251,9 @@ void lco_unlock(lco_t *lco) {
   self->current->ustack->lco_depth = 0;
 }
 
-void lco_init(lco_t *lco, const lco_class_t *vtable) {
+void
+libhpx::scheduler::lco::lco_init(lco_t *lco, const lco_class_t *vtable)
+{
   EVENT_LCO(lco, TRACE_EVENT_LCO_INIT);
   uint8_t type = vtable->type;
   lco->type = type;
@@ -233,34 +262,48 @@ void lco_init(lco_t *lco, const lco_class_t *vtable) {
   dbg_assert(lco_vtables[type] == vtable);
 }
 
-void lco_fini(lco_t *lco) {
+void
+libhpx::scheduler::lco::lco_fini(lco_t *lco)
+{
   lco_unlock(lco);
 }
 
-void lco_set_triggered(lco_t *lco) {
+void
+libhpx::scheduler::lco::lco_set_triggered(lco_t *lco)
+{
   EVENT_LCO(lco, TRACE_EVENT_LCO_TRIGGER);
   lco->state |= _TRIGGERED_MASK;
 }
 
-void lco_reset_triggered(lco_t *lco) {
+void
+libhpx::scheduler::lco::lco_reset_triggered(lco_t *lco)
+{
   lco->state &= ~_TRIGGERED_MASK;
 }
 
-uintptr_t lco_get_triggered(const lco_t *lco) {
+uintptr_t
+libhpx::scheduler::lco::lco_get_triggered(const lco_t *lco)
+{
   return lco->state & _TRIGGERED_MASK;
 }
 
-void lco_set_user(lco_t *lco) {
+void
+libhpx::scheduler::lco::lco_set_user(lco_t *lco)
+{
   lco->state |= _USER_MASK;
 }
 
-uintptr_t lco_get_user(const lco_t *lco) {
+uintptr_t
+libhpx::scheduler::lco::lco_get_user(const lco_t *lco)
+{
   return lco->state & _USER_MASK;
 }
 
 /// @}
 
-void hpx_lco_delete(hpx_addr_t target, hpx_addr_t rsync) {
+void
+hpx_lco_delete(hpx_addr_t target, hpx_addr_t rsync)
+{
   lco_t *lco = NULL;
   if (!hpx_gas_try_pin(target, (void**)&lco)) {
     int e = hpx_call(target, hpx_lco_delete_action, rsync);
@@ -275,14 +318,18 @@ void hpx_lco_delete(hpx_addr_t target, hpx_addr_t rsync) {
   }
 }
 
-void hpx_lco_delete_sync(hpx_addr_t target) {
+void
+hpx_lco_delete_sync(hpx_addr_t target)
+{
   hpx_addr_t sync = hpx_lco_future_new(0);
   hpx_lco_delete(target, sync);
   hpx_lco_wait(sync);
   hpx_lco_delete(sync, HPX_NULL);
 }
 
-void hpx_lco_error(hpx_addr_t target, hpx_status_t code, hpx_addr_t rsync) {
+void
+hpx_lco_error(hpx_addr_t target, hpx_status_t code, hpx_addr_t rsync)
+{
   if (code == HPX_SUCCESS) {
     hpx_lco_set(target, 0, NULL, HPX_NULL, rsync);
     return;
@@ -305,14 +352,18 @@ void hpx_lco_error(hpx_addr_t target, hpx_status_t code, hpx_addr_t rsync) {
   dbg_check(e, "Could not forward lco_error\n");
 }
 
-void hpx_lco_error_sync(hpx_addr_t addr, hpx_status_t code) {
+void
+hpx_lco_error_sync(hpx_addr_t addr, hpx_status_t code)
+{
   hpx_addr_t sync = hpx_lco_future_new(0);
   hpx_lco_error(addr, code, sync);
   hpx_lco_wait(sync);
   hpx_lco_delete(sync, HPX_NULL);
 }
 
-void hpx_lco_reset(hpx_addr_t addr, hpx_addr_t rsync) {
+void
+hpx_lco_reset(hpx_addr_t addr, hpx_addr_t rsync)
+{
   if (addr == HPX_NULL) {
     return;
   }
@@ -329,18 +380,21 @@ void hpx_lco_reset(hpx_addr_t addr, hpx_addr_t rsync) {
   dbg_check(e, "Could not forward lco_reset\n");
 }
 
-void hpx_lco_reset_sync(hpx_addr_t addr) {
+void
+hpx_lco_reset_sync(hpx_addr_t addr)
+{
   hpx_addr_t sync = hpx_lco_future_new(0);
   hpx_lco_reset(addr, sync);
   hpx_lco_wait(sync);
   hpx_lco_delete(sync, HPX_NULL);
 }
 
-void hpx_lco_set_with_continuation(hpx_addr_t target,
-                                   size_t size, const void *value,
-                                   hpx_addr_t lsync,
-                                   hpx_addr_t raddr, hpx_action_t rop) {
-
+void
+hpx_lco_set_with_continuation(hpx_addr_t target,
+                              size_t size, const void *value,
+                              hpx_addr_t lsync,
+                              hpx_addr_t raddr, hpx_action_t rop)
+{
   if (target == HPX_NULL) {
     if (lsync != HPX_NULL) {
       hpx_lco_set_with_continuation(lsync, 0, NULL, HPX_NULL, HPX_NULL,
@@ -377,14 +431,18 @@ void hpx_lco_set_with_continuation(hpx_addr_t target,
   dbg_check(e, "Could not forward lco_set\n");
 }
 
-void hpx_lco_set(hpx_addr_t target, size_t size, const void *value,
-                 hpx_addr_t lsync, hpx_addr_t rsync) {
+void
+hpx_lco_set(hpx_addr_t target, size_t size, const void *value,
+            hpx_addr_t lsync, hpx_addr_t rsync)
+{
   hpx_lco_set_with_continuation(target, size, value, lsync, rsync,
                                 hpx_lco_set_action);
 }
 
-void hpx_lco_set_lsync(hpx_addr_t target, size_t size, const void *value,
-                       hpx_addr_t rsync) {
+void
+hpx_lco_set_lsync(hpx_addr_t target, size_t size, const void *value,
+                  hpx_addr_t rsync)
+{
   if (target == HPX_NULL) {
     if (rsync) {
       int zero = 0;
@@ -414,7 +472,9 @@ void hpx_lco_set_lsync(hpx_addr_t target, size_t size, const void *value,
   hpx_lco_delete(lsync, HPX_NULL);
 }
 
-int hpx_lco_set_rsync(hpx_addr_t target, size_t size, const void *value) {
+int
+hpx_lco_set_rsync(hpx_addr_t target, size_t size, const void *value)
+{
   if (target == HPX_NULL) {
     return 0;
   }
@@ -441,7 +501,9 @@ int hpx_lco_set_rsync(hpx_addr_t target, size_t size, const void *value) {
   return set;
 }
 
-hpx_status_t hpx_lco_wait(hpx_addr_t target) {
+hpx_status_t
+hpx_lco_wait(hpx_addr_t target)
+{
   lco_t *lco;
   if (hpx_gas_try_pin(target, (void**)&lco)) {
     hpx_status_t status = _wait(lco, 0);
@@ -453,7 +515,9 @@ hpx_status_t hpx_lco_wait(hpx_addr_t target) {
   return hpx_call_sync(target, _lco_wait, NULL, 0, &zero);
 }
 
-hpx_status_t hpx_lco_wait_reset(hpx_addr_t target) {
+hpx_status_t
+hpx_lco_wait_reset(hpx_addr_t target)
+{
   lco_t *lco;
   if (hpx_gas_try_pin(target, (void**)&lco)) {
     hpx_status_t status = _wait(lco, 1);
@@ -465,7 +529,9 @@ hpx_status_t hpx_lco_wait_reset(hpx_addr_t target) {
   return hpx_call_sync(target, _lco_wait, NULL, 0, &one);
 }
 
-size_t hpx_lco_size(hpx_addr_t target) {
+size_t
+hpx_lco_size(hpx_addr_t target)
+{
   lco_t *lco;
   size_t size = 0;
   if (hpx_gas_try_pin(target, (void**)&lco)) {
@@ -476,7 +542,9 @@ size_t hpx_lco_size(hpx_addr_t target) {
   return hpx_call_sync(target, _lco_size, &size, size, NULL, 0);
 }
 
-hpx_status_t hpx_lco_get(hpx_addr_t target, size_t size, void *value) {
+hpx_status_t
+hpx_lco_get(hpx_addr_t target, size_t size, void *value)
+{
   if (size == 0) {
     return hpx_lco_wait(target);
   }
@@ -492,7 +560,9 @@ hpx_status_t hpx_lco_get(hpx_addr_t target, size_t size, void *value) {
   return status;
 }
 
-hpx_status_t hpx_lco_get_reset(hpx_addr_t target, size_t size, void *value) {
+hpx_status_t
+hpx_lco_get_reset(hpx_addr_t target, size_t size, void *value)
+{
   if (size == 0) {
     return hpx_lco_wait_reset(target);
   }
@@ -508,7 +578,9 @@ hpx_status_t hpx_lco_get_reset(hpx_addr_t target, size_t size, void *value) {
   return status;
 }
 
-hpx_status_t hpx_lco_getref(hpx_addr_t target, size_t size, void **out) {
+hpx_status_t
+hpx_lco_getref(hpx_addr_t target, size_t size, void **out)
+{
   if (size == 0) {
     return hpx_lco_wait(target);
   }
@@ -529,7 +601,9 @@ hpx_status_t hpx_lco_getref(hpx_addr_t target, size_t size, void **out) {
   return e;
 }
 
-void hpx_lco_release(hpx_addr_t target, void *out) {
+void
+hpx_lco_release(hpx_addr_t target, void *out)
+{
   dbg_assert(out);
   lco_t *lco;
   if (!hpx_gas_try_pin(target, (void**)&lco)) {
@@ -543,7 +617,9 @@ void hpx_lco_release(hpx_addr_t target, void *out) {
   hpx_gas_unpin(target);
 }
 
-int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[]) {
+int
+hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[])
+{
   dbg_assert(n > 0);
 
   // Will partition the lcos up into local and remote LCOs. We waste some
@@ -610,8 +686,10 @@ int hpx_lco_wait_all(int n, hpx_addr_t lcos[], hpx_status_t statuses[]) {
   return errors;
 }
 
-int hpx_lco_get_all(int n, hpx_addr_t lcos[], size_t sizes[], void *values[],
-                    hpx_status_t statuses[]) {
+int
+hpx_lco_get_all(int n, hpx_addr_t lcos[], size_t sizes[], void *values[],
+                hpx_status_t statuses[])
+{
   dbg_assert(n > 0);
 
   // Will partition the lcos up into local and remote LCOs. We waste some
@@ -674,7 +752,9 @@ int hpx_lco_get_all(int n, hpx_addr_t lcos[], size_t sizes[], void *values[],
   return errors;
 }
 
-int hpx_lco_delete_all(int n, hpx_addr_t *lcos, hpx_addr_t rsync) {
+int
+hpx_lco_delete_all(int n, hpx_addr_t *lcos, hpx_addr_t rsync)
+{
   hpx_addr_t cand = HPX_NULL;
   if (rsync) {
     cand = hpx_lco_and_new(n);
@@ -693,7 +773,9 @@ int hpx_lco_delete_all(int n, hpx_addr_t *lcos, hpx_addr_t rsync) {
 }
 
 // Generic array indexer API.
-hpx_addr_t hpx_lco_array_at(hpx_addr_t array, int i, int arg) {
+hpx_addr_t
+hpx_lco_array_at(hpx_addr_t array, int i, int arg)
+{
   uint32_t lco_bytes = hpx_lco_size(array) + arg;
   return hpx_addr_add(array, i * lco_bytes, UINT32_MAX);
 }

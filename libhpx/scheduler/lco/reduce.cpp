@@ -18,25 +18,29 @@
 /// @file libhpx/scheduler/reduce.c
 /// @brief Defines the reduction LCO.
 
-#include <assert.h>
-#include <inttypes.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-
+#include "lco.h"
+#include "cvar.h"
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
 #include "libhpx/memory.h"
 #include "libhpx/scheduler.h"
-#include "cvar.h"
-#include "lco.h"
+#include <cassert>
+#include <cinttypes>
+#include <cstdlib>
+#include <cstring>
+#include <cstdio>
+
+namespace {
+using libhpx::scheduler::Condition;
+using namespace libhpx::scheduler::lco;
+}
 
 /// Local reduce interface.
 /// @{
 typedef struct {
   lco_t              lco;
-  cvar_t         barrier;
+  Condition      barrier;
   hpx_action_t        id;
   hpx_action_t        op;
   size_t            size;
@@ -46,9 +50,9 @@ typedef struct {
 } _reduce_t;
 
 static void _reset(_reduce_t *r) {
-  dbg_assert_str(cvar_empty(&r->barrier),
+  dbg_assert_str(r->barrier.empty(),
                  "Reset on allreduce LCO that has waiting threads.\n");
-  cvar_reset(&r->barrier);
+  r->barrier.reset();
   r->remaining = r->inputs;
 
   handler_t f = actions[r->id].handler;
@@ -82,7 +86,7 @@ static hpx_status_t _reduce_attach(lco_t *lco, hpx_parcel_t *p) {
 
   // if the reduce is still waiting
   if (r->remaining) {
-    status = cvar_attach(&r->barrier, p);
+    status = r->barrier.attach(p);
     goto unlock;
   }
 
@@ -90,7 +94,7 @@ static hpx_status_t _reduce_attach(lco_t *lco, hpx_parcel_t *p) {
   // parcel
   //
   // NB: should we actually send some sort of error condition?
-  status = cvar_get_error(&r->barrier);
+  status = r->barrier.getError();
   if (status != HPX_SUCCESS) {
     goto unlock;
   }
@@ -233,7 +237,7 @@ static int _reduce_init_handler(_reduce_t *r, int inputs, size_t size,
   assert(op);
 
   lco_init(&r->lco, &_reduce_vtable);
-  cvar_reset(&r->barrier);
+  r->barrier.reset();
   r->op = op;
   r->id = id;
   r->size = size;

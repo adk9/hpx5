@@ -18,25 +18,29 @@
 /// @file libhpx/scheduler/allreduce.c
 /// @brief Defines the all-reduction LCO.
 
-#include <assert.h>
-#include <inttypes.h>
-#include <stdlib.h>
-#include <string.h>
-
+#include "lco.h"
+#include "cvar.h"
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
 #include "libhpx/memory.h"
 #include "libhpx/parcel.h"
 #include "libhpx/scheduler.h"
-#include "cvar.h"
-#include "lco.h"
+#include <cassert>
+#include <cinttypes>
+#include <cstdlib>
+#include <cstring>
+
+namespace {
+using libhpx::scheduler::Condition;
+using namespace libhpx::scheduler::lco;
+}
 
 /// Local reduce interface.
 /// @{
 typedef struct {
   lco_t          lco;
-  cvar_t        wait;
+  Condition     wait;
   size_t     readers;
   size_t     writers;
   hpx_action_t    id;
@@ -152,9 +156,9 @@ static void _allreduce_error(lco_t *lco, hpx_status_t code) {
 static void _allreduce_reset(lco_t *lco) {
   _allreduce_t *r = (_allreduce_t *)lco;
   lco_lock(&r->lco);
-  dbg_assert_str(cvar_empty(&r->wait),
+  dbg_assert_str(r->wait.empty(),
                  "Reset on allreduce LCO that has waiting threads.\n");
-  cvar_reset(&r->wait);
+  r->wait.reset();
   lco_unlock(&r->lco);
 }
 
@@ -175,13 +179,13 @@ static hpx_status_t _allreduce_attach(lco_t *lco, hpx_parcel_t *p) {
   // Pick attach to mean "set" for allreduce. We have to wait for reducing to
   // complete before sending the parcel.
   if (r->phase != REDUCING) {
-    status = cvar_attach(&r->wait, p);
+    status = r->wait.attach(p);
     goto unlock;
   }
 
   // If the allreduce has an error, then return that error without sending the
   // parcel.
-  status = cvar_get_error(&r->wait);
+  status = r->wait.getError();
   if (status != HPX_SUCCESS) {
     goto unlock;
   }
@@ -252,7 +256,7 @@ _allreduce_init_handler(_allreduce_t *r, size_t writers, size_t readers,
   }
 
   lco_init(&r->lco, &_allreduce_vtable);
-  cvar_reset(&r->wait);
+  r->wait.reset();
   r->readers = readers;
   r->op = op;
   r->id = id;

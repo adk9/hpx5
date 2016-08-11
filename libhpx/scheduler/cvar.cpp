@@ -24,84 +24,109 @@
 #include "cvar.h"
 #include "thread.h"
 
-static const int _CODE_OFFSET = ((sizeof(uintptr_t) / 2) * 8);
-static const uintptr_t _ERROR_MASK = 0x1;
+
+namespace {
+using libhpx::scheduler::Condition;
+constexpr int CODE_OFFSET = ((sizeof(uintptr_t) / 2) * 8);
+constexpr uintptr_t ERROR_MASK = 0x1;
+}
 
 // static check to make sure the error code is related to the cvar size in the
 // way that we expect---if this fails we're probably on a 32-bit platform, and
 // we need a different error code size
-static HPX_UNUSED int check[sizeof(cvar_t) - (2 * sizeof(hpx_status_t)) + 1];
+static_assert(sizeof(Condition) - (2 * sizeof(hpx_status_t)) + 1 > 0,
+             "Condition instances have unexpected size.");
 
-static uintptr_t _has_error(const cvar_t *cvar) {
-  return (uintptr_t)cvar->top & _ERROR_MASK;
+uintptr_t
+Condition::hasError() const
+{
+  return (uintptr_t)top_ & ERROR_MASK;
 }
 
-hpx_parcel_t *cvar_set_error(cvar_t *cvar, hpx_status_t code) {
-  if (_has_error(cvar)) {
-    return NULL;
+hpx_parcel_t *
+Condition::setError(hpx_status_t code)
+{
+  if (hasError()) {
+    return nullptr;
   }
 
-  hpx_parcel_t *top = cvar->top;
-  cvar->top = (hpx_parcel_t*)((((uintptr_t)code) << _CODE_OFFSET) | _ERROR_MASK);
+  hpx_parcel_t *top = top_;
+  top_ = (hpx_parcel_t*)((((uintptr_t)code) << CODE_OFFSET) | ERROR_MASK);
   return top;
 }
 
-hpx_status_t cvar_get_error(const cvar_t *cvar) {
-  if (_has_error(cvar)) {
-    return (hpx_status_t)((uintptr_t)(cvar->top) >> _CODE_OFFSET);
+hpx_status_t
+Condition::getError() const
+{
+  if (hasError()) {
+    return (hpx_status_t)((uintptr_t)(top_) >> CODE_OFFSET);
   }
   else {
     return HPX_SUCCESS;
   }
 }
 
-void cvar_clear_error(cvar_t *cvar) {
-  if (_has_error(cvar)) {
-    cvar->top = NULL;
+void
+Condition::clearError()
+{
+  if (hasError()) {
+    top_ = nullptr;
   }
 }
 
-hpx_status_t cvar_attach(cvar_t *cvar, struct hpx_parcel *parcel) {
-  if (_has_error(cvar)) {
-    return cvar_get_error(cvar);
+hpx_status_t
+Condition::attach(struct hpx_parcel *parcel)
+{
+  if (hasError()) {
+    return getError();
   }
 
-  parcel->next = cvar->top;
-  cvar->top = parcel;
+  parcel->next = top_;
+  top_ = parcel;
   return HPX_SUCCESS;
 }
 
-hpx_status_t cvar_push_thread(cvar_t *cvar, struct ustack *thread) {
-  return cvar_attach(cvar, thread->parcel);
+hpx_status_t
+Condition::pushThread(struct ustack *thread)
+{
+  return attach(thread->parcel);
 }
 
-hpx_parcel_t *cvar_pop(cvar_t *cvar) {
-  if (_has_error(cvar)) {
-    return NULL;
+hpx_parcel_t *
+Condition::pop()
+{
+  if (hasError()) {
+    return nullptr;
   }
 
-  hpx_parcel_t *top = cvar->top;
+  hpx_parcel_t *top = top_;
   if (top) {
-    cvar->top = top->next;
-    top->next = NULL;
+    top_ = top->next;
+    top->next = nullptr;
   }
   return top;
 }
 
-hpx_parcel_t *cvar_pop_all(cvar_t *cvar) {
-  if (_has_error(cvar)) {
-    return NULL;
+hpx_parcel_t *
+Condition::popAll()
+{
+  if (hasError()) {
+    return nullptr;
   }
 
-  hpx_parcel_t *top = cvar->top;
-  cvar->top = NULL;
+  hpx_parcel_t *top = top_;
+  top_ = nullptr;
   return top;
 }
 
-void cvar_reset(cvar_t *cvar) {
-  cvar->top = NULL;
+void
+Condition::reset()
+{
+  top_ = nullptr;
 }
 
-bool cvar_empty(cvar_t *cvar) {
-  return (cvar->top == NULL);
+bool
+Condition::empty() const
+{
+  return (top_ == nullptr);
 }

@@ -18,31 +18,36 @@
 /// @file libhpx/scheduler/and.c
 /// Defines the AND LCO.
 
-#include <assert.h>
-#include <inttypes.h>
-#include <stdint.h>
+#include "lco.h"
+#include "cvar.h"
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/gpa.h"
 #include "libhpx/locality.h"
 #include "libhpx/scheduler.h"
-#include "cvar.h"
-#include "lco.h"
+#include <cassert>
+#include <cinttypes>
+#include <cstdint>
+
+namespace {
+using libhpx::scheduler::Condition;
+using namespace libhpx::scheduler::lco;
+}
 
 /// And LCO class interface.
 /// @{
 typedef struct {
-  lco_t      lco;
-  cvar_t barrier;
-  intptr_t count;
-  intptr_t value;                               // the threshold
+  lco_t         lco;
+  Condition barrier;
+  intptr_t    count;
+  intptr_t    value;                            // the threshold
 } _and_t;
 
 static void _reset(_and_t *cand) {
-  dbg_assert_str(cvar_empty(&cand->barrier), "Reset on AND LCO that has waiting threads.\n");
+  dbg_assert_str(cand->barrier.empty(), "Reset on AND LCO that has waiting threads.\n");
   log_lco("%p resetting lco %p\n", (void*)self->current, (void*)cand);
   sync_store(&cand->count, cand->value, SYNC_RELEASE);
-  cvar_reset(&cand->barrier);
+  cand->barrier.reset();
   lco_reset_triggered(&cand->lco);
   if (!cand->value) {
     lco_set_triggered(&cand->lco);
@@ -50,7 +55,7 @@ static void _reset(_and_t *cand) {
 }
 
 static hpx_status_t _wait(_and_t *cand, int reset) {
-  hpx_status_t status = cvar_get_error(&cand->barrier);
+  hpx_status_t status = cand->barrier.getError();
   if (status != HPX_SUCCESS) {
     return status;
   }
@@ -70,7 +75,7 @@ static hpx_status_t _wait(_and_t *cand, int reset) {
 }
 
 static hpx_status_t _attach(_and_t *cand, hpx_parcel_t *p) {
-  hpx_status_t status = cvar_get_error(&cand->barrier);
+  hpx_status_t status = cand->barrier.getError();
   if (status != HPX_SUCCESS) {
     return status;
   }
@@ -79,7 +84,7 @@ static hpx_status_t _attach(_and_t *cand, hpx_parcel_t *p) {
     return hpx_parcel_send(p, HPX_NULL);
   }
 
-  return cvar_attach(&cand->barrier, p);
+  return cand->barrier.attach(p);
 }
 
 static void _and_fini(lco_t *lco) {
@@ -204,7 +209,7 @@ static void HPX_CONSTRUCTOR _register_vtable(void) {
 static int _and_init_handler(_and_t *cand, int64_t count) {
   dbg_assert(count >= 0);
   lco_init(&cand->lco, &_and_vtable);
-  cvar_reset(&cand->barrier);
+  cand->barrier.reset();
   sync_store(&cand->count, count, SYNC_RELEASE);
   cand->value = count;
   log_lco("initialized with %" PRId64 " inputs lco %p\n", (int64_t)cand->count,

@@ -51,6 +51,10 @@
 #include "thread.h"
 #include "lco/lco.h"
 
+namespace {
+using libhpx::scheduler::Condition;
+}
+
 /// Storage for the thread-local worker pointer.
 __thread worker_t * volatile self = NULL;
 
@@ -919,7 +923,10 @@ void scheduler_yield(void) {
   EVENT_THREAD_RESUME(w->current, self);
 }
 
-hpx_status_t scheduler_wait(void *lock, cvar_t *condition) {
+hpx_status_t
+scheduler_wait(void *lock, void *cond)
+{
+  Condition* condition = static_cast<Condition*>(cond);
   // push the current thread onto the condition variable---no lost-update
   // problem here because we're holing the @p lock
   worker_t *w = self;
@@ -929,7 +936,7 @@ hpx_status_t scheduler_wait(void *lock, cvar_t *condition) {
   // we had better be holding a lock here
   dbg_assert(thread->lco_depth > 0);
 
-  hpx_status_t status = cvar_push_thread(condition, thread);
+  hpx_status_t status = condition->pushThread(thread);
   if (status != HPX_SUCCESS) {
     return status;
   }
@@ -940,7 +947,7 @@ hpx_status_t scheduler_wait(void *lock, cvar_t *condition) {
 
   // reacquire the lco lock before returning
   sync_tatas_acquire(static_cast<tatas_lock_t*>(lock));
-  return cvar_get_error(condition);
+  return condition->getError();
 }
 
 /// Resume list of parcels.
@@ -959,16 +966,19 @@ static void _resume_parcels(hpx_parcel_t *parcels) {
   }
 }
 
-void scheduler_signal(cvar_t *cvar) {
-  _resume_parcels(cvar_pop(cvar));
+void scheduler_signal(void *cond) {
+  Condition* condition = static_cast<Condition*>(cond);
+  _resume_parcels(condition->pop());
 }
 
-void scheduler_signal_all(struct cvar *cvar) {
-  _resume_parcels(cvar_pop_all(cvar));
+void scheduler_signal_all(void *cond) {
+  Condition* condition = static_cast<Condition*>(cond);
+  _resume_parcels(condition->popAll());
 }
 
-void scheduler_signal_error(struct cvar *cvar, hpx_status_t code) {
-  _resume_parcels(cvar_set_error(cvar, code));
+void scheduler_signal_error(void* cond, hpx_status_t code) {
+  Condition* condition = static_cast<Condition*>(cond);
+  _resume_parcels(condition->setError(code));
 }
 
 void HPX_NORETURN worker_finish_thread(hpx_parcel_t *p, int status) {

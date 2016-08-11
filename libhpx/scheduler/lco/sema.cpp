@@ -17,24 +17,29 @@
 
 /// @file libhpx/scheduler/sema.c
 /// @brief Implements the semaphore LCO.
-#include <assert.h>
-#include <inttypes.h>
 
+#include "lco.h"
+#include "cvar.h"
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
 #include "libhpx/memory.h"
 #include "libhpx/scheduler.h"
-#include "cvar.h"
-#include "lco.h"
+#include <cassert>
+#include <cinttypes>
+
+namespace {
+using libhpx::scheduler::Condition;
+using namespace libhpx::scheduler::lco;
+}
 
 /// Local sema interface.
 /// @{
 typedef struct {
-  lco_t       lco;
-  cvar_t    avail;
+  lco_t                lco;
+  Condition          avail;
   volatile uintptr_t count;
-  uintptr_t init;
+  uintptr_t           init;
 } _sema_t;
 
 static void _sema_fini(lco_t *lco);
@@ -46,9 +51,9 @@ static hpx_status_t _sema_get(lco_t *lco, int size, void *out, int reset);
 
 static void _reset(_sema_t *sema, int reset) {
   if (reset) {
-    dbg_assert_str(cvar_empty(&sema->avail),
+    dbg_assert_str(sema->avail.empty(),
                    "Reset on a sema that has waiting threads.\n");
-    cvar_reset(&sema->avail);
+    sema->avail.reset();
     sync_store(&sema->count, sema->init, SYNC_RELEASE);
   }
 }
@@ -79,7 +84,7 @@ static void HPX_CONSTRUCTOR _register_vtable(void) {
 
 static int _sema_init_handler(_sema_t *sema, unsigned count) {
   lco_init(&sema->lco, &_sema_vtable);
-  cvar_reset(&sema->avail);
+  sema->avail.reset();
   sema->count = count;
   sema->init = count;
   return HPX_SUCCESS;

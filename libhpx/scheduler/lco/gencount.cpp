@@ -15,31 +15,34 @@
 #include "config.h"
 #endif
 
-
 /// @file libhpx/scheduler/sema.c
 /// @brief Implements the semaphore LCO.
 
-#include <assert.h>
-#include <inttypes.h>
-#include <stdlib.h>
-#include <string.h>
-
+#include "lco.h"
+#include "cvar.h"
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
 #include "libhpx/memory.h"
 #include "libhpx/scheduler.h"
-#include "cvar.h"
-#include "lco.h"
+#include <cassert>
+#include <cinttypes>
+#include <cstdlib>
+#include <cstring>
+
+namespace {
+using libhpx::scheduler::Condition;
+using namespace libhpx::scheduler::lco;
+}
 
 /// Local gencount interface.
 /// @{
 typedef struct {
   lco_t              lco;
-  cvar_t           oflow;
+  Condition        oflow;
   unsigned long      gen;
   unsigned long ninplace;
-  cvar_t       inplace[];
+  Condition      inplace[];
 } _gencount_t;
 
 
@@ -71,13 +74,13 @@ void _gencount_reset(lco_t *lco) {
   lco_lock(&gen->lco);
 
   for (unsigned i = 0, e = gen->ninplace; i < e; ++i) {
-    dbg_assert_str(cvar_empty(&gen->inplace[i]),
+    dbg_assert_str(gen->inplace[i].empty(),
                    "Reset on gencount LCO that has waiting threads.\n");
-    cvar_reset(&gen->inplace[i]);
+    gen->inplace[i].reset();
   }
-  dbg_assert_str(cvar_empty(&gen->oflow),
+  dbg_assert_str(gen->oflow.empty(),
                  "Reset on gencount LCO that has waiting threads.\n");
-  cvar_reset(&gen->oflow);
+  gen->oflow.reset();
   lco_unlock(&gen->lco);
 }
 
@@ -89,7 +92,7 @@ static int _gencount_set(lco_t *lco, int size, const void *from) {
   scheduler_signal_all(&gencnt->oflow);
 
   if (gencnt->ninplace > 0) {
-    cvar_t *cvar = &gencnt->inplace[gen % gencnt->ninplace];
+    Condition *cvar = &gencnt->inplace[gen % gencnt->ninplace];
     scheduler_signal_all(cvar);
   }
   lco_unlock(lco);
@@ -127,7 +130,7 @@ static hpx_status_t _gencount_wait_gen(_gencount_t *gencnt, unsigned long gen) {
   // while this generation is in the future, wait on the appropriate condition
   unsigned long current = gencnt->gen;
   while (current < gen && status == HPX_SUCCESS) {
-    cvar_t *cond;
+    Condition *cond;
     if (gen < current + gencnt->ninplace) {
       cond = &gencnt->inplace[gen % gencnt->ninplace];
     }
@@ -163,11 +166,11 @@ static void HPX_CONSTRUCTOR _register_vtable(void) {
 
 static int _gencount_init_handler(_gencount_t *gencnt, unsigned long ninplace) {
   lco_init(&gencnt->lco, &_gencount_vtable);
-  cvar_reset(&gencnt->oflow);
+  gencnt->oflow.reset();
   gencnt->gen = 0;
   gencnt->ninplace = ninplace;
   for (unsigned long i = 0, e = ninplace; i < e; ++i) {
-    cvar_reset(&gencnt->inplace[i]);
+    gencnt->inplace[i].reset();
   }
   return HPX_SUCCESS;
 }
@@ -183,7 +186,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, 0, _gencount_wait_gen_proxy,
 
 hpx_addr_t hpx_lco_gencount_new(unsigned long ninplace) {
   _gencount_t *cnt = NULL;
-  size_t bytes = sizeof(_gencount_t) + ninplace * sizeof(cvar_t);
+  size_t bytes = sizeof(_gencount_t) + ninplace * sizeof(Condition);
   hpx_addr_t gva = lco_alloc_local(1, bytes, 0);
 
   if (!hpx_gas_try_pin(gva, (void**)&cnt)) {

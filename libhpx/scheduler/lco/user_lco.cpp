@@ -17,18 +17,23 @@
 
 /// @file libhpx/scheduler/user_lco.c
 /// @brief A user-defined LCO.
-#include <assert.h>
-#include <inttypes.h>
-#include <string.h>
-#include <stdlib.h>
 
+#include "lco.h"
+#include "cvar.h"
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
 #include "libhpx/memory.h"
 #include "libhpx/scheduler.h"
-#include "cvar.h"
-#include "lco.h"
+#include <cassert>
+#include <cinttypes>
+#include <cstring>
+#include <cstdlib>
+
+namespace {
+using libhpx::scheduler::Condition;
+using namespace libhpx::scheduler::lco;
+}
 
 /// A predicate that "guards" the LCO.
 ///
@@ -45,7 +50,7 @@ typedef void (*_hpx_user_lco_id_t)(void *i, size_t size,
 /// @{
 typedef struct {
   lco_t              lco;
-  cvar_t            cvar;
+  Condition         cvar;
   size_t            size;
   hpx_action_t        id;
   hpx_action_t        op;
@@ -60,8 +65,8 @@ static int _user_lco_init(_user_lco_t *u, size_t size, hpx_action_t id,
                           void *init, size_t init_size);
 
 static void _reset(_user_lco_t *u) {
-  cvar_clear_error(&u->cvar);
-  dbg_assert_str(cvar_empty(&u->cvar),
+  u->cvar.clearError();
+  dbg_assert_str(u->cvar.empty(),
                  "Reset on an LCO that has waiting threads.\n");
   lco_reset_triggered(&u->lco);
   _user_lco_init(u, u->size, u->id, u->op, u->predicate, u->data, u->init_size);
@@ -147,12 +152,12 @@ static hpx_status_t _user_lco_attach(lco_t *lco, hpx_parcel_t *p) {
   _user_lco_t *u = (_user_lco_t *)lco;
 
   if (!lco_get_triggered(lco)) {
-    status = cvar_attach(&u->cvar, p);
+    status = u->cvar.attach(p);
     goto unlock;
   }
 
   // If there was an error, then return that error without sending the parcel
-  status = cvar_get_error(&u->cvar);
+  status = u->cvar.getError();
   if (status != HPX_SUCCESS) {
     goto unlock;
   }
@@ -169,7 +174,7 @@ static hpx_status_t _wait(_user_lco_t *u) {
   if (!lco_get_triggered(&u->lco))
     return scheduler_wait(&u->lco.lock, &u->cvar);
 
-  return cvar_get_error(&u->cvar);
+  return u->cvar.getError();
 }
 
 /// Get the user-defined LCO's buffer.
@@ -266,7 +271,7 @@ _user_lco_init(_user_lco_t *u, size_t size, hpx_action_t id,
   dbg_assert(predicate);
 
   lco_init(&u->lco, &_user_lco_vtable);
-  cvar_reset(&u->cvar);
+  u->cvar.reset();
   u->size = size;
   u->id = id;
   u->op = op;

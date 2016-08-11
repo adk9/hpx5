@@ -18,9 +18,9 @@
 /// @file libhpx/scheduler/lco/monoid.c
 /// @brief Implements reductions for "reduce" LCOs.
 
-#include <stdlib.h>
+#include <cstdlib>
 #include <float.h>
-#include <limits.h>
+#include <climits>
 
 #define _HPX_REDUCTION_SUM_DEF(TYPE, dtype, initializer)  \
   void HPX_##TYPE##_SUM_ID(dtype *i, size_t UNUSED) {     \

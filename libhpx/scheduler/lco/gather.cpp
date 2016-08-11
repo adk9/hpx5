@@ -19,24 +19,28 @@
 # include "config.h"
 #endif
 
-#include <assert.h>
-#include <inttypes.h>
-#include <stdlib.h>
-#include <string.h>
-
+#include "lco.h"
+#include "cvar.h"
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
 #include "libhpx/memory.h"
 #include "libhpx/scheduler.h"
-#include "cvar.h"
-#include "lco.h"
+#include <cassert>
+#include <cinttypes>
+#include <cstdlib>
+#include <cstring>
+
+namespace {
+using libhpx::scheduler::Condition;
+using namespace libhpx::scheduler::lco;
+}
 
 /// Local gather interface.
 /// @{
 typedef struct {
   lco_t           lco;
-  cvar_t         cvar;
+  Condition      cvar;
   int         writers;
   int         readers;
   volatile int wcount;
@@ -73,9 +77,9 @@ static void _gather_error(lco_t *lco, hpx_status_t code) {
 static void _gather_reset(lco_t *lco) {
   _gather_t *g = (_gather_t*)lco;
   lco_lock(&g->lco);
-  dbg_assert_str(cvar_empty(&g->cvar),
+  dbg_assert_str(g->cvar.empty(),
                  "Reset on gather LCO that has waiting threads.\n");
-  cvar_reset(&g->cvar);
+  g->cvar.reset();
   lco_unlock(&g->lco);
 }
 
@@ -87,13 +91,13 @@ static hpx_status_t _gather_attach(lco_t *lco, hpx_parcel_t *p) {
   // Pick attach to mean "set" for gather. We have to wait for gathering to
   // complete before sending the parcel.
   if (g->wcount == g->writers) {
-    status = cvar_attach(&g->cvar, p);
+    status = g->cvar.attach(p);
     goto unlock;
   }
 
   // If the gather has an error, then return that error without sending the
   // parcel.
-  status = cvar_get_error(&g->cvar);
+  status = g->cvar.getError();
   if (status != HPX_SUCCESS) {
     goto unlock;
   }
@@ -282,7 +286,7 @@ static void HPX_CONSTRUCTOR _register_vtable(void) {
 static int _gather_init_handler(_gather_t *g, int writers, int readers,
                                 size_t size) {
   lco_init(&g->lco, &_gather_vtable);
-  cvar_reset(&g->cvar);
+  g->cvar.reset();
   g->writers = writers;
   g->readers = readers;
   g->wcount = 0;

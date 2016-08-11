@@ -18,34 +18,38 @@
 /// @file libhpx/scheduler/future.c
 /// Defines the future structure.
 
-#include <assert.h>
-#include <inttypes.h>
-#include <stdlib.h>
-#include <string.h>
-
+#include "lco.h"
+#include "cvar.h"
 #include "hpx/builtins.h"
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
 #include "libhpx/memory.h"
 #include "libhpx/scheduler.h"
-#include "lco.h"
-#include "cvar.h"
+#include <cassert>
+#include <cinttypes>
+#include <cstdlib>
+#include <cstring>
+
+namespace {
+using libhpx::scheduler::Condition;
+using namespace libhpx::scheduler::lco;
+}
 
 /// Local future interface.
 /// @{
 typedef struct {
-  lco_t     lco;
-  cvar_t   full;
-  char  value[];
+  lco_t      lco;
+  Condition full;
+  char     value[];
 } _future_t;
 
 static void _reset(_future_t *f) {
-  dbg_assert_str(cvar_empty(&f->full),
+  dbg_assert_str(f->full.empty(),
                  "Reset on a future that has waiting threads.\n");
   log_lco("resetting future %p\n", (void*)f);
   lco_reset_triggered(&f->lco);
-  cvar_reset(&f->full);
+  f->full.reset();
 }
 
 static size_t _future_size(lco_t *lco) {
@@ -56,7 +60,7 @@ static size_t _future_size(lco_t *lco) {
 static hpx_status_t _wait(_future_t *f) {
   lco_t *lco = &f->lco;
   if (lco_get_triggered(lco)) {
-    return cvar_get_error(&f->full);
+    return f->full.getError();
   }
   else {
     return scheduler_wait(&lco->lock, &f->full);
@@ -130,7 +134,7 @@ static hpx_status_t _future_attach(lco_t *lco, hpx_parcel_t *p) {
   // if the future isn't triggered, then attach this parcel to the full
   // condition
   if (!lco_get_triggered(lco)) {
-    status = cvar_attach(&f->full, p);
+    status = f->full.attach(p);
     goto unlock;
   }
 
@@ -138,7 +142,7 @@ static hpx_status_t _future_attach(lco_t *lco, hpx_parcel_t *p) {
   // parcel
   //
   // NB: should we actually send some sort of error condition?
-  status = cvar_get_error(&f->full);
+  status = f->full.getError();
   if (status != HPX_SUCCESS) {
     goto unlock;
   }
@@ -239,7 +243,7 @@ static void HPX_CONSTRUCTOR _register_vtable(void) {
 static int _future_init_handler(_future_t *f, int size) {
   log_lco("initializing future %p\n", (void*)f);
   lco_init(&f->lco, &_future_vtable);
-  cvar_reset(&f->full);
+  f->full.reset();
   if (size) {
     if (DEBUG) {
       lco_set_user(&f->lco);

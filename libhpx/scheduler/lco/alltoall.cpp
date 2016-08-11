@@ -66,24 +66,28 @@
 # include "config.h"
 #endif
 
-#include <assert.h>
-#include <inttypes.h>
-#include <string.h>
-#include <stdlib.h>
-
+#include "lco.h"
+#include "cvar.h"
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
 #include "libhpx/memory.h"
 #include "libhpx/scheduler.h"
-#include "cvar.h"
-#include "lco.h"
+#include <cassert>
+#include <cinttypes>
+#include <cstring>
+#include <cstdlib>
+
+namespace {
+using libhpx::scheduler::Condition;
+using namespace libhpx::scheduler::lco;
+}
 
 /// Local alltoall interface.
 /// @{
 typedef struct {
   lco_t           lco;
-  cvar_t         wait;
+  Condition      wait;
   size_t participants;
   size_t        count;
   volatile int  phase;
@@ -144,9 +148,9 @@ static void _alltoall_error(lco_t *lco, hpx_status_t code) {
 static void _alltoall_reset(lco_t *lco) {
   _alltoall_t *g = (_alltoall_t *)lco;
   lco_lock(&g->lco);
-  dbg_assert_str(cvar_empty(&g->wait),
+  dbg_assert_str(g->wait.empty(),
                  "Reset on alltoall LCO that has waiting threads.\n");
-  cvar_reset(&g->wait);
+  g->wait.reset();
   lco_unlock(&g->lco);
 }
 
@@ -157,13 +161,13 @@ static hpx_status_t _alltoall_attach(lco_t *lco, hpx_parcel_t *p) {
 
   // We have to wait for gathering to complete before sending the parcel.
   if (g->phase != GATHERING) {
-    status = cvar_attach(&g->wait, p);
+    status = g->wait.attach(p);
     goto unlock;
   }
 
   // If the alltoall has an error, then return that error without sending the
   // parcel.
-  status = cvar_get_error(&g->wait);
+  status = g->wait.getError();
   if (status != HPX_SUCCESS) {
     goto unlock;
   }
@@ -413,7 +417,7 @@ static void HPX_CONSTRUCTOR _register_vtable(void) {
 
 static int _alltoall_init_handler(_alltoall_t *g, size_t participants, size_t size) {
   lco_init(&g->lco, &_alltoall_vtable);
-  cvar_reset(&g->wait);
+  g->wait.reset();
   g->participants = participants;
   g->count = participants;
   g->phase = GATHERING;

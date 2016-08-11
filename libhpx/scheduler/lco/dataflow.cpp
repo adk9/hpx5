@@ -17,38 +17,42 @@
 
 /// @file libhpx/scheduler/dataflow.c
 /// @brief A dataflow LCO.
-#include <assert.h>
-#include <inttypes.h>
-#include <string.h>
-#include <stdlib.h>
-
+#include "lco.h"
+#include "cvar.h"
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/locality.h"
 #include "libhpx/memory.h"
 #include "libhpx/scheduler.h"
-#include "cvar.h"
-#include "lco.h"
+#include <cassert>
+#include <cinttypes>
+#include <cstring>
+#include <cstdlib>
+
+namespace {
+using libhpx::scheduler::Condition;
+using namespace libhpx::scheduler::lco;
+}
 
 /// Generic LCO interface.
 /// @{
 typedef struct {
   lco_t         lco;
-  cvar_t       cvar;
+  Condition    cvar;
 } _dataflow_t;
 
 static void _reset(_dataflow_t *d) {
-  dbg_assert_str(cvar_empty(&d->cvar),
+  dbg_assert_str(d->cvar.empty(),
                  "Reset on LCO that has waiting threads.\n");
   log_lco("resetting dataflow LCO %p\n", (void*)d);
   lco_reset_triggered(&d->lco);
-  cvar_reset(&d->cvar);
+  d->cvar.reset();
 }
 
 static hpx_status_t _wait(_dataflow_t *d) {
   lco_t *lco = &d->lco;
   if (lco_get_triggered(lco)) {
-    return cvar_get_error(&d->cvar);
+    return d->cvar.getError();
   }
   else {
     return scheduler_wait(&lco->lock, &d->cvar);
@@ -160,7 +164,7 @@ static int
 _dataflow_init_handler(_dataflow_t *d) {
   log_lco("initializing dataflow LCO %p\n", (void*)d);
   lco_init(&d->lco, &_dataflow_vtable);
-  cvar_reset(&d->cvar);
+  d->cvar.reset();
   return HPX_SUCCESS;
 }
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED,
