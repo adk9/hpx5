@@ -265,9 +265,11 @@ static void logtable_fini(logtable_t *log) {
 }
 
 static void _create_logtable(worker_t *w, int class, int id, size_t size) {
+  //TODO: Pass w->id into logtable_init and include in in-file metadata; remove from per-record entries
+    
   char filename[256];
-  snprintf(filename, 256, "event.%03d.%03d.%05d.%s.log",
-           w->id, id, hpx_get_my_rank(),
+  snprintf(filename, 256, "%05d.%03d.event.%03d.%s.log",
+           hpx_get_my_rank(), w->id, id, 
            TRACE_EVENT_TO_STRING[id]);
 
   char *path = _concat_path(_log_path, filename);
