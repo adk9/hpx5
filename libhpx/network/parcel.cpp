@@ -29,7 +29,7 @@
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
-#include <libhpx/network.h>
+#include <libhpx/c_network.h>
 #include "libhpx/Network.h"
 #include <libhpx/padding.h>
 #include <libhpx/parcel.h>

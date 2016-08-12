@@ -20,7 +20,7 @@
 #include "libhpx/gas.h"
 #include "libhpx/gpa.h"
 #include "libhpx/locality.h"
-#include "libhpx/network.h"
+#include "libhpx/c_network.h"
 #include "libhpx/rebalancer.h"
 #include "libhpx/worker.h"
 #include "hpx/hpx.h"

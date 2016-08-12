@@ -21,7 +21,7 @@
 #include <libhpx/debug.h>
 #include <libhpx/parcel.h>
 #include <libhpx/gas.h>
-#include <libhpx/network.h>
+#include <libhpx/c_network.h>
 #include "allreduce.h"
 
 

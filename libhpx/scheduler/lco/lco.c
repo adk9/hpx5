@@ -31,7 +31,7 @@
 #include <libhpx/lco.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
-#include <libhpx/network.h>
+#include <libhpx/c_network.h>
 #include <libhpx/scheduler.h>
 #include <libhpx/worker.h>
 #include <libhpx/parcel.h>

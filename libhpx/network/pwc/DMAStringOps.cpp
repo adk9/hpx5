@@ -22,7 +22,7 @@
 #include "libhpx/gpa.h"
 #include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
-#include "libhpx/network.h"
+#include "libhpx/c_network.h"
 #include "libhpx/scheduler.h"
 
 namespace {

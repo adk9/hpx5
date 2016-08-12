@@ -34,7 +34,7 @@
 #include <libhpx/locality.h>
 #include <libhpx/instrumentation.h>
 #include <libhpx/memory.h>
-#include <libhpx/network.h>
+#include <libhpx/c_network.h>
 #include <libhpx/percolation.h>
 #include <libhpx/process.h>
 #include <libhpx/scheduler.h>

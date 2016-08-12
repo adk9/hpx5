@@ -19,7 +19,7 @@
 #include <hpx/hpx.h>
 #include <libhpx/gpa.h>
 #include <libhpx/locality.h>
-#include <libhpx/network.h>
+#include <libhpx/c_network.h>
 #include <libhpx/worker.h>
 #include "pgas.h"
 

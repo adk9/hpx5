@@ -24,7 +24,7 @@
 #include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
 #include "libhpx/memory.h"
-#include "libhpx/network.h"
+#include "libhpx/c_network.h"
 #include "libhpx/process.h"
 #include "libhpx/rebalancer.h"
 #include "hpx/builtins.h"

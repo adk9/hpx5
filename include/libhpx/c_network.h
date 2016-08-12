@@ -14,7 +14,7 @@
 #ifndef LIBHPX_NETWORK_H
 #define LIBHPX_NETWORK_H
 
-/// @file include/libhpx/network.h
+/// @file include/libhpx/c_network.h
 /// @brief Declare the network_t interface.
 ///
 /// This file declares the interface to the parcel network subsystem in HPX. The

@@ -27,7 +27,7 @@
 #endif
 #include "libhpx/debug.h"
 #include "libhpx/instrumentation.h"
-#include "libhpx/network.h"
+#include "libhpx/c_network.h"
 
 static const int LEVEL = HPX_LOG_CONFIG | HPX_LOG_NET | HPX_LOG_DEFAULT;
 

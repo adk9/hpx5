@@ -37,7 +37,7 @@
 #include <libhpx/locality.h>
 #include <libhpx/instrumentation.h>
 #include <libhpx/memory.h>
-#include <libhpx/network.h>
+#include <libhpx/c_network.h>
 #include <libhpx/parcel.h>                      // used as thread-control block
 #include <libhpx/process.h>
 #include <libhpx/rebalancer.h>
