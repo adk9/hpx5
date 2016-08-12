@@ -21,7 +21,6 @@
 
 // Event data
 typedef struct record {
-  int32_t worker;
   uint64_t ns;
   uint64_t user[];
 } record_t;
@@ -53,11 +52,6 @@ typedef struct inst_event_col_metadata {
   const unsigned int offset; 
   const char name[256];
 } inst_event_col_metadata_t;
-
-#define METADATA_WORKER                       \
-  { .data_type   = METADATA_TYPE_INT32,       \
-    .offset      = offsetof(record_t, worker),\
-    .name        = "worker"}
 
 #define METADATA_NS                           \
   { .data_type   = METADATA_TYPE_INT64,       \
@@ -92,7 +86,6 @@ typedef struct inst_event_metadata {
   .num_cols = __HPX_NARGS(__VA_ARGS__)+2,                           \
   .col_metadata =                                                   \
     (const inst_event_col_metadata_t[__HPX_NARGS(__VA_ARGS__)+2]) { \
-    METADATA_WORKER,                                                \
     METADATA_NS,                                                    \
     __VA_ARGS__                                                     \
   }                                                                 \

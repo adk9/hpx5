@@ -304,7 +304,6 @@ static void _vappend(int UNUSED, int n, int id, ...) {
   log->next = next;
 
   record_t *r = (record_t*)next;
-  r->worker = self->id;
   r->ns = time;
   for (int i = 0, e = n; i < e; ++i) {
     r->user[i] = va_arg(vargs, uint64_t);
