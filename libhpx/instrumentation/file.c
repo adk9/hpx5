@@ -207,9 +207,10 @@ static void _dump_actions(void) {
 /// @param     filename The name of the file to create and map.
 /// @param         size The number of bytes to allocate.
 /// @param        class The event class.
-/// @param        event The event type.
+/// @param     event_id The event type.
+/// @param    worker_id ID of the current worker
 static void logtable_init(logtable_t *log, const char* filename, size_t size,
-                   int class, int event_id) {
+                   int class, int event_id, int worker_id) {
   log->fd = -1;
   log->event_id = event_id;
   log->record_bytes = 0;
@@ -238,7 +239,7 @@ static void logtable_init(logtable_t *log, const char* filename, size_t size,
   log->next = log->buffer - log->record_bytes;
 
   char *buffer = calloc(1, 32768);
-  log->header_size = write_trace_header(buffer, class, event_id);
+  log->header_size = write_trace_header(buffer, class, event_id, worker_id);
   if (write(log->fd, buffer, log->header_size) != log->header_size) {
     log_error("failed to write header to file\n");
   }
@@ -265,15 +266,13 @@ static void logtable_fini(logtable_t *log) {
 }
 
 static void _create_logtable(worker_t *w, int class, int event_id, size_t size) {
-  //TODO: Pass w->id into logtable_init and include in in-file metadata; remove from per-record entries
-    
   char filename[256];
   snprintf(filename, 256, "%05d.%03d.event.%03d.%s.log",
            hpx_get_my_rank(), w->id, event_id, 
            TRACE_EVENT_TO_STRING[event_id]);
 
   char *path = _concat_path(_log_path, filename);
-  logtable_init(&w->logs[event_id], path, size, class, event_id);
+  logtable_init(&w->logs[event_id], path, size, class, event_id, w->id);
   free(path);
 }
 
