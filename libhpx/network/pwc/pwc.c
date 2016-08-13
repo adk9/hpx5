@@ -97,7 +97,30 @@ static int _pwc_coll_init(void *network, coll_t **_c) {
   return LIBHPX_OK;
 }
 
+static int _pwc_coll_async(void *network, coll_data_t *d, coll_t *c, 
+		hpx_addr_t lsync, hpx_addr_t rsync) {	
+  char *comm = c->data + c->group_bytes;
+  pwc_network_t *pwc = network;
+
+  //do a copy of args for persistant use in completion handler
+  coll_data_t *data = (coll_data_t*)calloc(1, sizeof(coll_data_t));
+  memcpy(data, d, sizeof(*d));
+  data->comm = comm;
+
+  hpx_parcel_t *ssync_local = action_new_parcel(hpx_lco_set_action, lsync, 0, 0, 0);
+  data->ssync = ssync_local;
+  
+  command_t command = (command_t){ .op = COLL_LOCAL_COMP, .arg = (uintptr_t)data };
+  if(c->type == COLL_ALLRED) {
+    pwc->xport->allreduce(&command, data);
+  } else {
+    log_error("async coll type : %d is not supported currently!\n", c->type);
+  }
+  return LIBHPX_OK;
+}
+
 int _pwc_coll_sync(void *network, void *in, size_t in_size, void *out, coll_t *c) {
+  /*
   void *sendbuf = in;
   int count = in_size;
   char *comm = c->data + c->group_bytes;
@@ -110,6 +133,7 @@ int _pwc_coll_sync(void *network, void *in, size_t in_size, void *out, coll_t *c
   if (c->type == COLL_ALLRED) {
     pwc->xport->allreduce(sendbuf, out, count, NULL, &c->op, comm);
   }
+  */
   return LIBHPX_OK;
 }
 
@@ -241,6 +265,7 @@ network_pwc_funneled_new(const config_t *cfg, boot_t *boot, gas_t *gas) {
   pwc->vtable.send         = _pwc_send;
   pwc->vtable.coll_init    = _pwc_coll_init;
   pwc->vtable.coll_sync    = _pwc_coll_sync;
+  pwc->vtable.coll_async   = _pwc_coll_async;
   pwc->vtable.probe        = _pwc_probe;
   pwc->vtable.flush        = _pwc_flush;
   pwc->vtable.register_dma = _pwc_register_dma;
