@@ -42,6 +42,7 @@ void handle_recv_parcel(int src, command_t cmd);
 void handle_rendezvous_launch(int src, command_t cmd);
 void handle_reload_request(int src, command_t cmd);
 void handle_reload_reply(int src, command_t cmd);
+void handle_collective_completion(int src, command_t cmd);
 
 enum {
   NOP = 0,
@@ -54,6 +55,7 @@ enum {
   RENDEZVOUS_LAUNCH,
   RELOAD_REQUEST,
   RELOAD_REPLY,
+  COLL_LOCAL_COMP,
   COMMAND_COUNT
 };
 

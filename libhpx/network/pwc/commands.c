@@ -57,6 +57,17 @@ void handle_resume_parcel_source(int src, command_t cmd) {
   dbg_check( pwc_cmd(pwc_network, src, (command_t){0}, cmd) );
 }
 
+void handle_collective_completion(int src, command_t cmd){
+  coll_data_t *data = (coll_data_t*)(uintptr_t)cmd.arg;
+  log_net("releasing sent collective data parcel %p\n", (void*)data);
+  hpx_parcel_t *ssync = data->ssync;
+  data->ssync = NULL;
+  free(data);
+  if (ssync) {
+    parcel_launch(ssync);
+  }
+}
+
 static HPX_USED const char *_straction(hpx_action_t id) {
   dbg_assert(here);
   CHECK_ACTION(id);
@@ -76,7 +87,8 @@ void command_run(int src, command_t cmd) {
     handle_recv_parcel,
     handle_rendezvous_launch,
     handle_reload_request,
-    handle_reload_reply
+    handle_reload_reply,
+    handle_collective_completion
   };
 
   commands[cmd.op](src, cmd);
