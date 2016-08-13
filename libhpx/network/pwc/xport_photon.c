@@ -362,8 +362,82 @@ static void _photon_create_comm(void *c, int rank, void *active_ranks,
                                 int num_active, int total) {
 }
 
-static void _photon_allreduce(void *sendbuf, void *out, int count,
-                              void *datatype, void *op, void *c) {
+
+static void _to_photon_optype(hpx_coll_optype_t optype, photon_coll_op *photon_op){
+  if(optype == HPX_COLL_SUM){
+    *photon_op = PHOTON_COLL_OP_SUM;
+  } else if(optype == HPX_COLL_MIN){
+    *photon_op = PHOTON_COLL_OP_MIN;
+  } else if(optype == HPX_COLL_MAX){
+    *photon_op = PHOTON_COLL_OP_MAX;
+  }  else {
+    log_error("failed to match a correct photon collective operation, provided : %d."
+		   " We are defaulting to PHOTON_COLL_OP_SUM\n", optype);
+    *photon_op = PHOTON_COLL_OP_SUM;
+  }
+}
+
+static void _to_photon_dtype(hpx_coll_dtype_t coll_type, photon_datatype *photon_dt, long bytes, int *count){
+  int ph_dtype_sz;	
+  if(coll_type == HPX_COLL_INT){
+    *photon_dt = PHOTON_INT32;
+    ph_dtype_sz = 4 ; 	
+  } else if(coll_type == HPX_COLL_LONG){
+    *photon_dt = PHOTON_INT64;
+    ph_dtype_sz = 8 ; 	
+  } else if(coll_type == HPX_COLL_FLOAT){
+    *photon_dt = PHOTON_FLOAT;
+    ph_dtype_sz = 4 ; 	
+  } else if(coll_type == HPX_COLL_SHORT){
+    *photon_dt = PHOTON_INT16;
+    ph_dtype_sz = 2 ; 	
+  } else if(coll_type == HPX_COLL_DOUBLE){
+    *photon_dt = PHOTON_DOUBLE;
+    ph_dtype_sz = 8 ; 	
+  }else if(coll_type == HPX_COLL_CHAR){
+    *photon_dt = PHOTON_UINT8;
+    ph_dtype_sz = 1 ; 	
+  }  else {
+    log_error("failed to match a correct photon collective data type , provided : %d." 
+		    "We are defaulting to PHOTON_INT32 type \n", 
+		    coll_type);
+    *photon_dt = PHOTON_INT32;
+    ph_dtype_sz = 4 ; 	
+  }
+  *count = bytes/ph_dtype_sz;
+}
+
+
+static void _photon_collective_allreduce(command_t *cmd, coll_data_t *args) {
+
+  photon_rid req;
+  photon_cid lid = {
+    .u64 = cmd->packed,
+    .size = 0
+  };
+  photon_collective_init(PHOTON_COLL_IALLREDUCE, lid, &req, PHOTON_REQ_NIL);	
+
+  // initialize data
+  photon_coll_params_t p;
+  int op = PHOTON_COLL_OP_SUM;
+  p.sendbuf = args->in;
+  p.recvbuf = args->out;
+  p.count = 1;
+  p.operation = &op;
+  p.datatype = PHOTON_INT32;
+
+  if(args->op){
+    _to_photon_optype(args->op, (photon_coll_op*) p.operation);
+  }
+
+  if(args->data_type){
+    _to_photon_dtype(args->data_type, &p.datatype , args->bytes, &p.count);
+  }
+
+  int rc = photon_collective_run(req, &p);
+  if (rc != PHOTON_OK) {
+    dbg_error("photon collective join error\n");
+  }
 }
 
 pwc_xport_t *
@@ -386,7 +460,7 @@ pwc_xport_new_photon(const config_t *cfg, boot_t *boot, gas_t *gas) {
   photon->vtable.test         = _photon_test;
   photon->vtable.probe        = _photon_probe;
   photon->vtable.create_comm  = _photon_create_comm;
-  photon->vtable.allreduce    = _photon_allreduce;
+  photon->vtable.allreduce    = _photon_collective_allreduce;
 
   // initialize the registered memory allocator
   registered_allocator_init(&photon->vtable);
