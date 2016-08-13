@@ -16,6 +16,7 @@
 
 #include <libhpx/config.h>
 #include <libhpx/memory.h>
+#include <libhpx/network.h>
 #include "commands.h"
 
 #ifdef __cplusplus
@@ -59,7 +60,7 @@ typedef struct pwc_xport {
   void (*pin)(const void *base, size_t bytes, void *key);
   void (*unpin)(const void *base, size_t bytes);
   void (*create_comm)(void *comm, int rank, void* active_ranks, int num_active, int total);
-  void (*allreduce)(void *sendbuf, void* out, int count, void* datatype, void* op, void* comm);
+  void (*allreduce)(command_t *op, coll_data_t *args);
 } pwc_xport_t;
 
 pwc_xport_t *pwc_xport_new_photon(const config_t *config, struct boot *boot,
