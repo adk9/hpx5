@@ -223,19 +223,19 @@ LCO::AttachHandler(LCO *lco, hpx_parcel_t *p, size_t size)
 void
 LCO::lock(hpx_parcel_t* p)
 {
-  dbg_assert(p->ustack->lco_depth == 0);
-  p->ustack->lco_depth = 1;
   lock_.lock();
   log_lco("%p acquired lco %p\n", p, this);
+  dbg_assert(p->ustack->lco_depth == 0);
+  p->ustack->lco_depth = 1;
 }
 
 void
 LCO::unlock(hpx_parcel_t* p)
 {
-  log_lco("%p released lco %p\n", p, this);
-  lock_.unlock();
   dbg_assert(p->ustack->lco_depth == 1);
   p->ustack->lco_depth = 0;
+  log_lco("%p released lco %p\n", p, this);
+  lock_.unlock();
 }
 
 void
