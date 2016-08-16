@@ -23,342 +23,289 @@
 #include "cvar.h"
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
-#include "libhpx/locality.h"
 #include "libhpx/memory.h"
-#include "libhpx/scheduler.h"
-#include <cassert>
-#include <cinttypes>
-#include <cstdlib>
 #include <cstring>
+#include <mutex>
 
 namespace {
 using libhpx::scheduler::Condition;
-using namespace libhpx::scheduler::lco;
-}
+using libhpx::scheduler::LCO;
 
-/// Local gather interface.
-/// @{
-typedef struct {
-  lco_t           lco;
-  Condition      cvar;
-  int         writers;
-  int         readers;
-  volatile int wcount;
-  volatile int rcount;
-  void         *value;
-} _gather_t;
+class Gather final : public LCO {
+ public:
+  Gather(unsigned writers, unsigned readers, size_t size);
+  ~Gather();
 
-static size_t _gather_size(lco_t *lco) {
-  _gather_t *gather = (_gather_t *)lco;
-  return sizeof(*gather);
-}
-
-/// Deletes a gather LCO.
-static void _gather_fini(lco_t *lco) {
-  if (!lco)
-    return;
-
-  lco_lock(lco);
-  _gather_t *g = (_gather_t *)lco;
-  if (g->value) {
-    free(g->value);
+  int set(size_t size, const void *value);
+  void error(hpx_status_t code);
+  hpx_status_t get(size_t size, void *value, int reset);
+  hpx_status_t getRef(size_t size, void **out, int *unpin);
+  bool release(void *out);
+  hpx_status_t wait(int reset);
+  hpx_status_t attach(hpx_parcel_t *p);
+  void reset();
+  size_t size(size_t bytes) const {
+    return sizeof(Gather) + writers_ * bytes;
   }
-  lco_fini(lco);
+
+  hpx_status_t setId(unsigned offset, size_t size, const void* buffer);
+
+  struct SetIdArgs {
+    unsigned offset;
+    char     buffer[];
+  };
+  static int SetIdHandler(Gather& lco, const SetIdArgs& args, size_t n);
+  static int NewHandler(void* buffer, unsigned writers, unsigned readers,
+                        size_t size);
+
+ private:
+  Condition           cvar_;
+  const unsigned   writers_;
+  const unsigned   readers_;
+  volatile unsigned wcount_;                    // volatile because read in
+  volatile unsigned rcount_;                    // while() loops
+  char               value_[];
+};
+
+LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, New, Gather::NewHandler, HPX_POINTER,
+              HPX_UINT, HPX_UINT, HPX_SIZE_T);
+LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, SetId,
+              Gather::SetIdHandler, HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
+}
+
+Gather::Gather(unsigned writers, unsigned readers, size_t size)
+    : LCO(LCO_GATHER),
+      cvar_(),
+      writers_(writers),
+      readers_(readers),
+      wcount_(),
+      rcount_(readers)
+{
+  memset(value_, 0, size);
+}
+
+Gather::~Gather()
+{
+  lock();
 }
 
 /// Handle an error condition.
-static void _gather_error(lco_t *lco, hpx_status_t code) {
-  _gather_t *g = (_gather_t*)lco;
-  lco_lock(&g->lco);
-  scheduler_signal_error(&g->cvar, code);
-  lco_unlock(&g->lco);
+void
+Gather::error(hpx_status_t code)
+{
+  std::lock_guard<LCO> _(*this);
+  cvar_.signalError(code);
 }
 
-static void _gather_reset(lco_t *lco) {
-  _gather_t *g = (_gather_t*)lco;
-  lco_lock(&g->lco);
-  dbg_assert_str(g->cvar.empty(),
-                 "Reset on gather LCO that has waiting threads.\n");
-  g->cvar.reset();
-  lco_unlock(&g->lco);
+void
+Gather::reset()
+{
+  std::lock_guard<LCO> _(*this);
+  cvar_.reset();
 }
 
-static hpx_status_t _gather_attach(lco_t *lco, hpx_parcel_t *p) {
-  hpx_status_t status = HPX_SUCCESS;
-  lco_lock(lco);
-  _gather_t *g = (_gather_t*)lco;
+int
+Gather::set(size_t size, const void *from)
+{
+  // nb: is this even an LCO in this case?
+  dbg_error("Gather LCO does not support get\n");
+}
 
+hpx_status_t
+Gather::attach(hpx_parcel_t *p)
+{
+  std::lock_guard<LCO> _(*this);
   // Pick attach to mean "set" for gather. We have to wait for gathering to
   // complete before sending the parcel.
-  if (g->wcount == g->writers) {
-    status = g->cvar.attach(p);
-    goto unlock;
+  if (wcount_ == writers_) {
+    return cvar_.push(p);
   }
 
   // If the gather has an error, then return that error without sending the
   // parcel.
-  status = g->cvar.getError();
-  if (status != HPX_SUCCESS) {
-    goto unlock;
+  if (auto status = cvar_.getError()) {
+    return status;
   }
 
   // Go ahead and send this parcel eagerly.
   hpx_parcel_send(p, HPX_NULL);
-
-  unlock:
-  lco_unlock(lco);
-  return status;
+  return HPX_SUCCESS;
 }
 
 /// Get the value of the gather LCO. This operation will wait if the
 /// writers have not finished gathering.
-static hpx_status_t _gather_get(lco_t *lco, int size, void *out, int reset) {
-  _gather_t *g = (_gather_t*)lco;
-  hpx_status_t status = HPX_SUCCESS;
-  lco_lock(lco);
+hpx_status_t
+Gather::get(size_t size, void *out, int reset)
+{
+  std::lock_guard<LCO> _(*this);
 
-  // wait until we're reading, and watch for errors
-  while ((g->wcount < g->writers) && (status == HPX_SUCCESS)) {
-    status = scheduler_wait(&g->lco.lock, &g->cvar);
+  // Wait until we're reading, and watch for errors.
+  while (wcount_ < writers_) {
+    if (auto status = cvar_.wait(this)) {
+      return status;
+    }
   }
 
-  // if there was an error signal, unlock and return it
-  if (status != HPX_SUCCESS) {
-    goto unlock;
-  }
-
-  // we're in a reading phase, and if the user wants the data, copy it out
+  // We're in a reading phase, and if the user wants the data, copy it out.
   if (size && out) {
-    memcpy(out, g->value, size);
+    memcpy(out, value_, size);
   }
 
-  // update the count, if I'm the last reader to arrive, switch the mode and
+  // Update the count, if I'm the last reader to arrive, switch the mode and
   // release all of the other readers, otherwise wait for the phase to change
   // back to gathering---this blocking behavior prevents gets from one "epoch"
-  // to satisfy earlier READING epochs
-  if (--g->rcount == 0) {
-    g->wcount = 0;
-    scheduler_signal_all(&g->cvar);
-    goto unlock;
+  // to satisfy earlier READING epochs.
+  if (0 == --rcount_) {
+    wcount_ = 0;
+    cvar_.signalAll();
   }
 
- unlock:
-  lco_unlock(lco);
-  return status;
+  return HPX_SUCCESS;
 }
 
-// Wait for the gather LCO. This operation loses the value of the gathering for this round.
-static hpx_status_t _gather_wait(lco_t *lco, int reset) {
-  return _gather_get(lco, 0, NULL, reset);
+// Wait for the gather LCO. This operation loses the value of the gathering for
+// this round.
+hpx_status_t
+Gather::wait(int reset)
+{
+  return get(0, NULL, reset);
 }
 
 // We clone the buffer here because the gather LCO will reset itself
 // so we can't retain a pointer to its buffer.
-static hpx_status_t
-_gather_getref(lco_t *lco, int size, void **out, int *unpin) {
+hpx_status_t
+Gather::getRef(size_t size, void **out, int *unpin)
+{
   *out = registered_malloc(size);
   *unpin = 1;
-  return _gather_get(lco, size, *out, 0);
+  return get(size, *out, 0);
 }
 
 // We know that gather buffer was a copy, so we can just free it here.
-static int
-_gather_release(lco_t *lco, void *out) {
+bool
+Gather::release(void *out)
+{
   registered_free(out);
   return 0;
 }
 
 // Local set id function.
-static hpx_status_t _gather_setid(_gather_t *g, unsigned offset, int size,
-                                  const void* buffer) {
-  hpx_status_t status = HPX_SUCCESS;
-  lco_lock(&g->lco);
-
+hpx_status_t
+Gather::setId(unsigned offset, size_t size, const void* buffer)
+{
+  std::lock_guard<LCO> _(*this);
   // wait until we're gathering
-  while ((g->wcount == g->writers) && (status == HPX_SUCCESS)) {
-    status = scheduler_wait(&g->lco.lock, &g->cvar);
-  }
-
-  if (status != HPX_SUCCESS) {
-    goto unlock;
+  while (wcount_ == writers_) {
+    if (auto status = cvar_.wait(this)) {
+      return status;
+    }
   }
 
   // copy in our chunk of the data
   assert(size && buffer);
-  memcpy((char*)g->value + (offset * size), buffer, size);
+  char* dest = (char*)value_ + (offset * size);
+  memcpy(dest, buffer, size);
 
   // if we're the last one to arrive, switch the phase and signal readers
-  if (++g->wcount == g->writers) {
-    g->rcount = g->readers;
-    scheduler_signal_all(&g->cvar);
-  }
-
- unlock:
-  lco_unlock(&g->lco);
-  return status;
-}
-
-typedef struct {
-  int offset;
-  char buffer[];
-} _gather_set_offset_t;
-
-static int _gather_setid_proxy_handler(_gather_t *g, void *args, size_t n);
-static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _gather_setid_proxy,
-                     _gather_setid_proxy_handler, HPX_POINTER,
-                     HPX_POINTER, HPX_SIZE_T);
-static int _gather_setid_proxy_handler(_gather_t *g, void *args, size_t n) {
-  // otherwise we pinned the LCO, extract the arguments from @p args and use the
-  // local setid routine
-  auto a = static_cast<_gather_set_offset_t *>(args);
-  size_t size = n - sizeof(_gather_set_offset_t);
-  return _gather_setid(g, a->offset, size, &a->buffer);
-}
-
-/// Set the ID for gather. This is global setid for the user to use.
-///
-/// @param   gather  Global address of the altogether LCO
-/// @param   id         ID to be set
-/// @param   size       The size of the data being gathered
-/// @param   value      Address of the value to be set
-/// @param   lsync      An LCO to signal on local completion HPX_NULL if we
-///                     don't care. Local completion indicates that the
-///                     @p value may be freed or reused.
-/// @param   rsync      An LCO to signal remote completion HPX_NULL if we
-///                     don't care.
-/// @returns HPX_SUCCESS or the code passed to hpx_lco_error()
-hpx_status_t hpx_lco_gather_setid(hpx_addr_t gather, unsigned id,
-                                     int size, const void *value,
-                                     hpx_addr_t lsync, hpx_addr_t rsync) {
-  hpx_status_t status = HPX_SUCCESS;
-  _gather_t *local;
-
-  if (!hpx_gas_try_pin(gather, (void**)&local)) {
-    size_t args_size = sizeof(_gather_set_offset_t) + size;
-    hpx_parcel_t *p = hpx_parcel_acquire(NULL, args_size);
-    assert(p);
-    hpx_parcel_set_target(p, gather);
-    hpx_parcel_set_action(p, _gather_setid_proxy);
-    hpx_parcel_set_cont_target(p, rsync);
-    hpx_parcel_set_cont_action(p, hpx_lco_set_action);
-
-    void* buffer = hpx_parcel_get_data(p);
-    auto* args = static_cast<_gather_set_offset_t *>(buffer);
-    args->offset = id;
-    memcpy(&args->buffer, value, size);
-    hpx_parcel_send(p, lsync);
-  }
-  else {
-    status = _gather_setid(local, id, size, value);
-    hpx_gas_unpin(gather);
-    hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
-    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
-  }
-
-  return status;
-}
-
-/// Update the gathering, will wait if the phase is reading.
-static int _gather_set(lco_t *lco, int size, const void *from) {
-  // can't call set on an gather
-  hpx_abort();
-  return 0;
-}
-
-static const lco_class_t _gather_vtable = {
-  .type        = LCO_GATHER,
-  .on_fini     = _gather_fini,
-  .on_error    = _gather_error,
-  .on_set      = _gather_set,
-  .on_attach   = _gather_attach,
-  .on_get      = _gather_get,
-  .on_getref   = _gather_getref,
-  .on_release  = _gather_release,
-  .on_wait     = _gather_wait,
-  .on_reset    = _gather_reset,
-  .on_size     = _gather_size
-};
-
-static void HPX_CONSTRUCTOR _register_vtable(void) {
-  lco_vtables[LCO_GATHER] = &_gather_vtable;
-}
-
-static int _gather_init_handler(_gather_t *g, int writers, int readers,
-                                size_t size) {
-  lco_init(&g->lco, &_gather_vtable);
-  g->cvar.reset();
-  g->writers = writers;
-  g->readers = readers;
-  g->wcount = 0;
-  g->rcount = readers;
-  g->value = NULL;
-
-  if (size) {
-    // Ultimately, g->value points to start of the array containing the
-    // gathered data.
-    g->value = malloc(size * writers);
-    assert(g->value);
+  if (++wcount_ == writers_) {
+    rcount_ = readers_;
+    cvar_.signalAll();
   }
 
   return HPX_SUCCESS;
 }
-static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _gather_init_async,
-                     _gather_init_handler, HPX_POINTER, HPX_INT, HPX_INT, HPX_SIZE_T);
 
-/// Allocate a new gather LCO.
-///
-/// The gathering is allocated in gathering-mode, i.e., it expects @p
-/// participants to call the hpx_lco_gather_setid() operation as the first
-/// phase of operation.
-///
-/// @param  inputs The static number of writers in the gathering.
-/// @param outputs The static number of readers in the gathering.
-/// @param    size The size of the data being gathered.
-hpx_addr_t hpx_lco_gather_new(size_t inputs, size_t outputs, size_t size) {
-  _gather_t *g = NULL;
-  hpx_addr_t gva = lco_alloc_local(1, sizeof(*g), 0);
-  dbg_assert_str(gva, "Could not malloc global memory\n");
-  if (!hpx_gas_try_pin(gva, (void**)&g)) {
-    int e = hpx_call_sync(gva, _gather_init_async, NULL, 0, &inputs, &outputs, &size);
-    dbg_check(e, "couldn't initialize gather at %" PRIu64 "\n", gva);
+int
+Gather::NewHandler(void* buffer, unsigned writers, unsigned readers,
+                   size_t size)
+{
+  if (auto lco = new(buffer) Gather(writers, readers, size)) {
+    LCO_LOG_NEW(hpx_thread_current_target(), lco);
+    return HPX_SUCCESS;
   }
-  else {
-    _gather_init_handler(g, inputs, outputs, size);
+  dbg_error("Could not initialize gather.\n");
+}
+
+int
+Gather::SetIdHandler(Gather& lco, const SetIdArgs& args, size_t n)
+{
+  return lco.setId(args.offset, n - sizeof(args), args.buffer);
+}
+
+hpx_status_t
+hpx_lco_gather_setid(hpx_addr_t gather, unsigned id, int size,
+                     const void *value, hpx_addr_t lsync, hpx_addr_t rsync)
+{
+  Gather* lco = nullptr;
+  if (hpx_gas_try_pin(gather, (void**)&lco)) {
+    auto status = lco->setId(id, size, value);
+    hpx_gas_unpin(gather);
+    hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
+    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+    return status;
+  }
+
+  size_t bytes = sizeof(Gather::SetIdArgs) + size;
+  hpx_parcel_t *p = action_new_parcel(SetId,              // action
+                                      gather,             // target
+                                      rsync,              // continuation target
+                                      hpx_lco_set_action, // continuation action
+                                      2,                  // number of args
+                                      nullptr,            // buffer
+                                      bytes);             // bytes
+
+  void* buffer = hpx_parcel_get_data(p);
+  auto& args = *static_cast<Gather::SetIdArgs*>(buffer);
+  args.offset = id;
+  memcpy(args.buffer, value, size);
+  hpx_parcel_send(p, lsync);
+  return HPX_SUCCESS;
+}
+
+hpx_addr_t
+hpx_lco_gather_new(size_t inputs, size_t outputs, size_t size)
+{
+  dbg_assert(inputs < UINT_MAX);
+  dbg_assert(outputs < UINT_MAX);
+  hpx_addr_t gva = HPX_NULL;
+  unsigned writers(inputs);
+  unsigned readers(outputs);
+  size_t bytes(writers * size);
+  try {
+    Gather* lco = new(bytes, gva) Gather(writers, readers, bytes);
     hpx_gas_unpin(gva);
+    LCO_LOG_NEW(gva, lco);
+  }
+  catch (const LCO::NonLocalMemory&) {
+    hpx_call_sync(gva, New, nullptr, 0, &writers, &readers, &bytes);
   }
   return gva;
 }
 
-/// Initialize a block of array of lco.
-static int _block_init_handler(void *lco, uint32_t n, uint32_t inputs,
-                               uint32_t outputs, uint32_t size) {
-  for (uint32_t i = 0; i < n; i++) {
-    auto *addr = reinterpret_cast<_gather_t*>((char*)lco + i * (sizeof(_gather_t) + size));
-    _gather_init_handler(addr, inputs, outputs, size);
+hpx_addr_t
+hpx_lco_gather_local_array_new(int count, size_t inputs, size_t outputs,
+                               size_t size)
+{
+  dbg_assert(count > 0);
+  dbg_assert(inputs < UINT_MAX);
+  dbg_assert(outputs < UINT_MAX);
+  unsigned n(count);
+  unsigned writers(inputs);
+  unsigned readers(outputs);
+  size_t bytes = writers * size;
+  size_t bsize = sizeof(Gather) + bytes;
+  hpx_addr_t base = lco_alloc_local(n, bsize, 0);
+  if (!base) {
+    throw std::bad_alloc();
   }
-  return HPX_SUCCESS;
-}
-static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_init,
-                     _block_init_handler, HPX_POINTER, HPX_UINT32,
-                     HPX_UINT32, HPX_UINT32, HPX_UINT32);
 
-/// Allocate an array of gather LCO local to the calling locality.
-/// @param          n The (total) number of lcos to allocate
-/// @param     inputs Number of inputs to gather LCO
-/// @param    outputs Number of outputs to gather LCO
-/// @param       size The size of the value for gather LCO
-///
-/// @returns the global address of the allocated array lco.
-hpx_addr_t hpx_lco_gather_local_array_new(int n, size_t inputs, size_t outputs,
-                                          size_t size) {
-  uint32_t lco_bytes = sizeof(_gather_t) + size;
-  dbg_assert(n * lco_bytes < UINT32_MAX);
-  hpx_addr_t base = lco_alloc_local(n, lco_bytes, 0);
-
-  int e = hpx_call_sync(base, _block_init, NULL, 0, &n, &inputs, &outputs,
-                        &size);
-  dbg_check(e, "call of _block_init_action failed\n");
-
-  // return the base address of the allocation
+  hpx_addr_t bcast = hpx_lco_and_new(n);
+  for (int i = 0, e = n; i < e; ++i) {
+    hpx_addr_t addr = hpx_addr_add(base, i * bsize, bsize);
+    dbg_check( hpx_call(addr, New, bcast, &writers, &readers, &bytes) );
+  }
+  hpx_lco_wait(bcast);
+  hpx_lco_delete_sync(bcast);
   return base;
+
 }

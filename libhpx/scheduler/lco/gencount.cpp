@@ -22,197 +22,188 @@
 #include "cvar.h"
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
-#include "libhpx/locality.h"
 #include "libhpx/memory.h"
-#include "libhpx/scheduler.h"
-#include <cassert>
-#include <cinttypes>
-#include <cstdlib>
+#include <mutex>
 #include <cstring>
 
 namespace {
 using libhpx::scheduler::Condition;
-using namespace libhpx::scheduler::lco;
+using libhpx::scheduler::LCO;
+
+struct GenerationCount final : public LCO {
+ public:
+  GenerationCount(unsigned ninplace);
+  ~GenerationCount();
+
+  int set(size_t size, const void *value);
+  void error(hpx_status_t code);
+  hpx_status_t get(size_t size, void *value, int reset);
+  hpx_status_t wait(int reset);
+  hpx_status_t attach(hpx_parcel_t *p);
+  void reset();
+  size_t size(size_t size) const {
+    return sizeof(GenerationCount) + ninplace_ * sizeof(Condition);
+  }
+
+  hpx_status_t waitForGeneration(unsigned long gen);
+
+  static int NewHandler(void* buffer, unsigned ninplace);
+  static int WaitForGenerationHandler(GenerationCount& lco, unsigned long gen);
+
+ private:
+  Condition            oflow_;
+  volatile unsigned long gen_;
+  const unsigned    ninplace_;
+  Condition          inplace_[];
+};
+
+LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, New, GenerationCount::NewHandler,
+              HPX_POINTER, HPX_UINT);
+LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, WaitForGeneration,
+              GenerationCount::WaitForGenerationHandler, HPX_POINTER,
+              HPX_ULONG);
 }
 
-/// Local gencount interface.
-/// @{
-typedef struct {
-  lco_t              lco;
-  Condition        oflow;
-  unsigned long      gen;
-  unsigned long ninplace;
-  Condition      inplace[];
-} _gencount_t;
-
-
-static size_t _gencount_size(lco_t *lco) {
-  _gencount_t *gencount = (_gencount_t *)lco;
-  return sizeof(*gencount);
-}
-
-static void _gencount_fini(lco_t *lco) {
-  if (lco) {
-    lco_lock(lco);
-    lco_fini(lco);
+GenerationCount::GenerationCount(unsigned ninplace)
+    : LCO(LCO_GENCOUNT),
+      gen_(),
+      ninplace_(ninplace),
+      inplace_()
+{
+  for (unsigned i = 0, e = ninplace; i < e; ++i) {
+    new(inplace_ + i) Condition();
   }
 }
 
-
-static void _gencount_error(lco_t *lco, hpx_status_t code) {
-  lco_lock(lco);
-  _gencount_t *gen = (_gencount_t *)lco;
-  for (unsigned i = 0, e = gen->ninplace; i < e; ++i) {
-    scheduler_signal_error(&gen->inplace[i], code);
+GenerationCount::~GenerationCount()
+{
+  lock();
+  for (unsigned i = 0, e = ninplace_; i < e; ++i) {
+    inplace_[i].~Condition();
   }
-  scheduler_signal_error(&gen->oflow, code);
-  lco_unlock(lco);
 }
 
-void _gencount_reset(lco_t *lco) {
-  _gencount_t *gen = (_gencount_t *)lco;
-  lco_lock(&gen->lco);
-
-  for (unsigned i = 0, e = gen->ninplace; i < e; ++i) {
-    dbg_assert_str(gen->inplace[i].empty(),
-                   "Reset on gencount LCO that has waiting threads.\n");
-    gen->inplace[i].reset();
+void
+GenerationCount::error(hpx_status_t code)
+{
+  std::lock_guard<LCO> _(*this);
+  for (unsigned i = 0, e = ninplace_; i < e; ++i) {
+    inplace_[i].signalError(code);
   }
-  dbg_assert_str(gen->oflow.empty(),
-                 "Reset on gencount LCO that has waiting threads.\n");
-  gen->oflow.reset();
-  lco_unlock(&gen->lco);
+  oflow_.signalError(code);
 }
 
-/// Set is equivalent to incrementing the generation count
-static int _gencount_set(lco_t *lco, int size, const void *from) {
-  lco_lock(lco);
-  _gencount_t *gencnt = (_gencount_t *)lco;
-  unsigned long gen = ++gencnt->gen;
-  scheduler_signal_all(&gencnt->oflow);
-
-  if (gencnt->ninplace > 0) {
-    Condition *cvar = &gencnt->inplace[gen % gencnt->ninplace];
-    scheduler_signal_all(cvar);
+void
+GenerationCount::reset()
+{
+  std::lock_guard<LCO> _(*this);
+  for (unsigned i = 0, e = ninplace_; i < e; ++i) {
+    inplace_[i].reset();
   }
-  lco_unlock(lco);
+  oflow_.reset();
+}
+
+int
+GenerationCount::set(size_t size, const void *from)
+{
+  std::lock_guard<LCO> _(*this);
+  unsigned long i = ++gen_;
+  oflow_.signalAll();
+  if (ninplace_) {
+    inplace_[i % ninplace_].signalAll();
+  }
   return 1;
 }
 
-/// Get returns the current generation, it does not block.
-static hpx_status_t _gencount_get(lco_t *lco, int size, void *out, int reset) {
-  lco_lock(lco);
-  _gencount_t *gencnt = (_gencount_t *)lco;
+hpx_status_t
+GenerationCount::get(size_t size, void *out, int reset)
+{
+  // @note No lock here... just a single volatile read is good enough
   if (size && out) {
-    memcpy(out, &gencnt->gen, size);
-  }
-  lco_unlock(lco);
-  return HPX_SUCCESS;
-}
-
-// Wait means to wait for one generation, i.e., wait on the next generation. We
-// actually just wait on oflow since we signal that every time the generation
-// changes.
-static hpx_status_t _gencount_wait(lco_t *lco, int reset) {
-  lco_lock(lco);
-  _gencount_t *gencnt = (_gencount_t *)lco;
-  hpx_status_t status = scheduler_wait(&gencnt->lco.lock, &gencnt->oflow);
-  lco_unlock(lco);
-  return status;
-}
-
-
-// Wait for a specific generation.
-static hpx_status_t _gencount_wait_gen(_gencount_t *gencnt, unsigned long gen) {
-  hpx_status_t status = HPX_SUCCESS;
-  lco_lock(&gencnt->lco);
-
-  // while this generation is in the future, wait on the appropriate condition
-  unsigned long current = gencnt->gen;
-  while (current < gen && status == HPX_SUCCESS) {
-    Condition *cond;
-    if (gen < current + gencnt->ninplace) {
-      cond = &gencnt->inplace[gen % gencnt->ninplace];
-    }
-    else {
-      cond = &gencnt->oflow;
-    }
-
-    status = scheduler_wait(&gencnt->lco.lock, cond);
-    current = gencnt->gen;
-  }
-
-  lco_unlock(&gencnt->lco);
-  return status;
-}
-
-static const lco_class_t _gencount_vtable = {
-  .type        = LCO_GENCOUNT,
-  .on_fini     = _gencount_fini,
-  .on_error    = _gencount_error,
-  .on_set      = _gencount_set,
-  .on_attach   = NULL,
-  .on_get      = _gencount_get,
-  .on_getref   = NULL,
-  .on_release  = NULL,
-  .on_wait     = _gencount_wait,
-  .on_reset    = _gencount_reset,
-  .on_size     = _gencount_size
-};
-
-static void HPX_CONSTRUCTOR _register_vtable(void) {
-  lco_vtables[LCO_GENCOUNT] = &_gencount_vtable;
-}
-
-static int _gencount_init_handler(_gencount_t *gencnt, unsigned long ninplace) {
-  lco_init(&gencnt->lco, &_gencount_vtable);
-  gencnt->oflow.reset();
-  gencnt->gen = 0;
-  gencnt->ninplace = ninplace;
-  for (unsigned long i = 0, e = ninplace; i < e; ++i) {
-    gencnt->inplace[i].reset();
+    unsigned long i = gen_;
+    memcpy(out, &i, size);
   }
   return HPX_SUCCESS;
 }
-static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _gencount_init_async,
-                     _gencount_init_handler, HPX_POINTER, HPX_ULONG);
 
-static int _gencount_wait_gen_proxy_handler(unsigned long gen) {
-  hpx_addr_t target = hpx_thread_current_target();
-  return hpx_lco_gencount_wait(target, gen);
+hpx_status_t
+GenerationCount::wait(int reset)
+{
+  std::lock_guard<LCO> _(*this);
+  return oflow_.wait(this);
 }
-static LIBHPX_ACTION(HPX_DEFAULT, 0, _gencount_wait_gen_proxy,
-                     _gencount_wait_gen_proxy_handler, HPX_ULONG);
 
-hpx_addr_t hpx_lco_gencount_new(unsigned long ninplace) {
-  _gencount_t *cnt = NULL;
-  size_t bytes = sizeof(_gencount_t) + ninplace * sizeof(Condition);
-  hpx_addr_t gva = lco_alloc_local(1, bytes, 0);
-
-  if (!hpx_gas_try_pin(gva, (void**)&cnt)) {
-    int e = hpx_call_sync(gva, _gencount_init_async, NULL, 0, &ninplace);
-    dbg_check(e, "could not initialize a generation counter at %" PRIu64 "\n", gva);
+hpx_status_t
+GenerationCount::attach(hpx_parcel_t *p)
+{
+  std::lock_guard<LCO> _(*this);
+  if (auto status = oflow_.getError()) {
+    return status;
   }
-  else {
-    LCO_LOG_NEW(gva, cnt);
-    _gencount_init_handler(cnt, ninplace);
+  return oflow_.push(p);
+}
+
+
+hpx_status_t
+GenerationCount::waitForGeneration(unsigned long i)
+{
+  std::lock_guard<LCO> _(*this);
+  while (gen_ < i) {
+    bool inplace = i < (gen_ + ninplace_);
+    Condition& cond = (inplace) ? inplace_[i % ninplace_] : oflow_;
+    if (auto status = cond.wait(this)) {
+      return status;
+    }
+  }
+  return oflow_.getError();
+}
+
+int
+GenerationCount::NewHandler(void* buffer, unsigned ninplace)
+{
+  if (auto lco = new(buffer) GenerationCount(ninplace)) {
+    return HPX_THREAD_CONTINUE(lco);
+  }
+  dbg_error("Could not initialize allreduce.\n");
+}
+
+int
+GenerationCount::WaitForGenerationHandler(GenerationCount& lco, unsigned long i)
+{
+  return lco.waitForGeneration(i);
+}
+
+hpx_addr_t
+hpx_lco_gencount_new(unsigned long ninplace)
+{
+  hpx_addr_t gva = HPX_NULL;
+  GenerationCount* lco = nullptr;
+  try {
+    lco = new(ninplace * sizeof(Condition), gva) GenerationCount(ninplace);
     hpx_gas_unpin(gva);
   }
+  catch (const LCO::NonLocalMemory&) {
+    hpx_call_sync(gva, New, &lco, sizeof(lco), &ninplace);
+  }
+  LCO_LOG_NEW(gva, lco);
   return gva;
 }
 
-void hpx_lco_gencount_inc(hpx_addr_t gencnt, hpx_addr_t rsync) {
+void
+hpx_lco_gencount_inc(hpx_addr_t gencnt, hpx_addr_t rsync)
+{
   hpx_lco_set(gencnt, 0, NULL, HPX_NULL, rsync);
 }
 
 
-hpx_status_t hpx_lco_gencount_wait(hpx_addr_t gencnt, unsigned long gen) {
-  _gencount_t *local;
-  if (!hpx_gas_try_pin(gencnt, (void**)&local)) {
-    return hpx_call_sync(gencnt, _gencount_wait_gen_proxy, NULL, 0, &gen);
+hpx_status_t
+hpx_lco_gencount_wait(hpx_addr_t gva, unsigned long i)
+{
+  GenerationCount *lva = nullptr;
+  if (hpx_gas_try_pin(gva, (void**)&lva)) {
+    hpx_status_t status = lva->waitForGeneration(i);
+    hpx_gas_unpin(gva);
+    return status;
   }
-
-  hpx_status_t status = _gencount_wait_gen(local, gen);
-  hpx_gas_unpin(gencnt);
-  return status;
+  return hpx_call_sync(gva, WaitForGeneration, NULL, 0, &i);
 }

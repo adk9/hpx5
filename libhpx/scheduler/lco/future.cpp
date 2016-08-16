@@ -23,188 +23,151 @@
 #include "hpx/builtins.h"
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
-#include "libhpx/locality.h"
 #include "libhpx/memory.h"
-#include "libhpx/scheduler.h"
-#include <cassert>
-#include <cinttypes>
-#include <cstdlib>
 #include <cstring>
+#include <mutex>
+#include <new>
 
 namespace {
 using libhpx::scheduler::Condition;
-using namespace libhpx::scheduler::lco;
-}
+using libhpx::scheduler::LCO;
 
-/// Local future interface.
-/// @{
-typedef struct {
-  lco_t      lco;
-  Condition full;
-  char     value[];
-} _future_t;
+class Future final : public LCO
+{
+ public:
+  Future(size_t size);
+  ~Future();
 
-static void _reset(_future_t *f) {
-  dbg_assert_str(f->full.empty(),
-                 "Reset on a future that has waiting threads.\n");
-  log_lco("resetting future %p\n", (void*)f);
-  lco_reset_triggered(&f->lco);
-  f->full.reset();
-}
-
-static size_t _future_size(lco_t *lco) {
-  _future_t *future = (_future_t *)lco;
-  return sizeof(*future);
-}
-
-static hpx_status_t _wait(_future_t *f) {
-  lco_t *lco = &f->lco;
-  if (lco_get_triggered(lco)) {
-    return f->full.getError();
-  }
-  else {
-    return scheduler_wait(&lco->lock, &f->full);
-  }
-}
-
-static bool _trigger(_future_t *f) {
-  if (lco_get_triggered(&f->lco))
-    return false;
-  lco_set_triggered(&f->lco);
-  return true;
-}
-
-// Nothing extra allocated in the future
-static void _future_fini(lco_t *lco) {
-  if (!lco) {
-    return;
+  int set(size_t size, const void *value);
+  void error(hpx_status_t code);
+  hpx_status_t get(size_t size, void *value, int reset);
+  hpx_status_t getRef(size_t size, void **out, int *unpin);
+  bool release(void *out);
+  hpx_status_t wait(int reset);
+  hpx_status_t attach(hpx_parcel_t *p);
+  void reset();
+  size_t size(size_t bytes) const {
+    return sizeof(Future) + bytes;
   }
 
-  lco_lock(lco);
-  lco_fini(lco);
+  static int NewHandler(void* buffer, size_t size);
+  static int NewBlockHandler(char* blocks, unsigned n, size_t size);
+
+ private:
+  /// Reset the full condition.
+  ///
+  /// This must be called while holding the LCO lock.
+  void resetFull();
+
+  /// Wait until the full condition is true.
+  ///
+  /// This must be called while holding the LCO lock.
+  hpx_status_t waitFull();
+
+  Condition full_;
+  char   value_[];
+};
+
+LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, New, Future::NewHandler, HPX_POINTER,
+              HPX_SIZE_T);
+LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, NewBlock, Future::NewBlockHandler,
+              HPX_POINTER, HPX_UINT, HPX_SIZE_T);
+}
+
+Future::Future(size_t size)
+    : LCO(LCO_FUTURE),
+      full_()
+{
+  log_lco("initializing future %p\n", (void*)this);
+  if (size) {
+    if (DEBUG) {
+      setUser();
+    }
+    memset(value_, 0, size);
+  }
+}
+
+Future::~Future()
+{
+  lock();                                       // release in ~LCO()
 }
 
 /// Copies @p from into the appropriate location.
-static int _future_set(lco_t *lco, int size, const void *from) {
-  DEBUG_IF (size && !lco_get_user(lco)) {
-    dbg_error("setting 0-sized future with %d bytes\n", size);
+int
+Future::set(size_t size, const void *from)
+{
+  std::lock_guard<LCO> _(*this);
+
+  DEBUG_IF (size && !getUser()) {
+    dbg_error("setting 0-sized future with %zu bytes\n", size);
   }
 
-  int set = 0;
-  lco_lock(lco);
-  _future_t *f = (_future_t *)lco;
-  log_lco("setting future %p\n", (void*)f);
+  log_lco("setting future %p\n", (void*)this);
   // futures are write-once
-  if (!_trigger(f)) {
+  if (setTriggered()) {
     dbg_error("cannot set an already set future\n");
-    goto unlock;
+    return 0;
   }
 
   if (from && size) {
-    memcpy(&f->value, from, size);
+    memcpy(value_, from, size);
   }
 
-  scheduler_signal_all(&f->full);
-  set = 1;
- unlock:
-  lco_unlock(lco);
-  return set;
+  full_.signalAll();
+  return 1;
 }
 
-static void _future_error(lco_t *lco, hpx_status_t code) {
-  lco_lock(lco);
-  _future_t *f = (_future_t *)lco;
-  _trigger(f);
-  scheduler_signal_error(&f->full, code);
-  lco_unlock(lco);
-}
-
-static void _future_reset(lco_t *lco) {
-  _future_t *f = (_future_t *)lco;
-  lco_lock(&f->lco);
-  _reset(f);
-  lco_unlock(&f->lco);
-}
-
-static hpx_status_t _future_attach(lco_t *lco, hpx_parcel_t *p) {
-  hpx_status_t status = HPX_SUCCESS;
-  lco_lock(lco);
-  _future_t *f = (_future_t *)lco;
-
-  // if the future isn't triggered, then attach this parcel to the full
-  // condition
-  if (!lco_get_triggered(lco)) {
-    status = f->full.attach(p);
-    goto unlock;
-  }
-
-  // if the future has an error, then return that error without sending the
-  // parcel
-  //
-  // NB: should we actually send some sort of error condition?
-  status = f->full.getError();
-  if (status != HPX_SUCCESS) {
-    goto unlock;
-  }
-
-  // go ahead and send this parcel eagerly
-  hpx_parcel_send(p, HPX_NULL);
-
- unlock:
-  lco_unlock(lco);
-  return status;
+void
+Future::error(hpx_status_t code)
+{
+  std::lock_guard<LCO> _(*this);
+  setTriggered();
+  full_.signalError(code);
 }
 
 /// Copies the appropriate value into @p out, waiting if the lco isn't set yet.
-static hpx_status_t _future_get(lco_t *lco, int size, void *out, int reset) {
-  DEBUG_IF (size && !lco_get_user(lco)) {
-    dbg_error("getting %d bytes from a 0-sized future\n", size);
+hpx_status_t
+Future::get(size_t size, void *out, int reset) {
+  std::lock_guard<LCO> _(*this);
+
+  DEBUG_IF (size && !getUser()) {
+    dbg_error("getting %zu bytes from a 0-sized future\n", size);
   }
 
-  lco_lock(lco);
+  log_lco("getting future %p (%zu bytes)\n", (void*)this, size);
 
-  _future_t *f = (_future_t *)lco;
-  log_lco("getting future %p (%d bytes)\n", (void*)f, size);
-  hpx_status_t status = _wait(f);
-  if (status != HPX_SUCCESS) {
-    lco_unlock(lco);
+  if (hpx_status_t status = waitFull()) {
     return status;
   }
 
   if (size && out) {
-    memcpy(out, &f->value, size);
+    memcpy(out, &value_, size);
   }
   else {
     dbg_assert(!size && !out);
   }
 
   if (reset) {
-    _reset(f);
+    resetFull();
   }
 
-  lco_unlock(lco);
   return HPX_SUCCESS;
-}
-
-static hpx_status_t _future_wait(lco_t *lco, int reset) {
-  return _future_get(lco, 0, NULL, reset);
 }
 
 /// Returns the reference to the future's value in @p out, waiting if the lco
 /// isn't set yet.
-static hpx_status_t _future_getref(lco_t *lco, int size, void **out, int *unpin)
+hpx_status_t
+Future::getRef(size_t size, void **out, int *unpin)
 {
   dbg_assert(size && out);
 
-  hpx_status_t status = _future_wait(lco, 0);
-  if (status != HPX_SUCCESS) {
+  if (hpx_status_t status = wait(0)) {
     return status;
   }
 
   // no need for a lock here, synchronization happened in _wait(), and the LCO
   // is pinned externally
-  _future_t *f = (_future_t *)lco;
-  *out = f->value;
+  *out = value_;
   *unpin = 0;
   return HPX_SUCCESS;
 }
@@ -213,95 +176,130 @@ static hpx_status_t _future_getref(lco_t *lco, int size, void **out, int *unpin)
 // remote reference", the caller knows that if the LCO is not local then it has
 // a temporary buffer---that code path doesn't make it here. Just return '1' to
 // indicate that the caller should unpin the LCO.
-static int _future_release(lco_t *lco, void *out) {
-  _future_t *f = (_future_t *)lco;
-  dbg_assert(lco && out && out == f->value);
-  return 1;
-  (void)f;
+bool
+Future::release(void *out)
+{
+  dbg_assert(out && out == value_);
+  return true;
 }
 
-// the future vtable
-static const lco_class_t _future_vtable = {
-  .type        = LCO_FUTURE,
-  .on_fini     = _future_fini,
-  .on_error    = _future_error,
-  .on_set      = _future_set,
-  .on_attach   = _future_attach,
-  .on_get      = _future_get,
-  .on_getref   = _future_getref,
-  .on_release  = _future_release,
-  .on_wait     = _future_wait,
-  .on_reset    = _future_reset,
-  .on_size     = _future_size
-};
-
-static void HPX_CONSTRUCTOR _register_vtable(void) {
-  lco_vtables[LCO_FUTURE] = &_future_vtable;
+hpx_status_t
+Future::wait(int reset)
+{
+  return get(0, NULL, reset);
 }
 
-/// initialize the future
-static int _future_init_handler(_future_t *f, int size) {
-  log_lco("initializing future %p\n", (void*)f);
-  lco_init(&f->lco, &_future_vtable);
-  f->full.reset();
-  if (size) {
-    if (DEBUG) {
-      lco_set_user(&f->lco);
-    }
-    memset(&f->value, 0, size);
+hpx_status_t
+Future::attach(hpx_parcel_t *p)
+{
+  std::lock_guard<LCO> _(*this);
+
+  if (!getTriggered()) {
+    return full_.push(p);
+  }
+
+  // If we have an error condition, then we release the parcel and return the
+  // error.
+  // NB: should we actually send some sort of error condition?
+  if (hpx_status_t status = full_.getError()) {
+    hpx_parcel_release(p);
+    return status;
+  }
+
+  hpx_parcel_send(p, HPX_NULL);
+  return HPX_SUCCESS;
+}
+
+void
+Future::reset()
+{
+  std::lock_guard<LCO> _(*this);
+  resetFull();
+}
+
+void
+Future::resetFull()
+{
+  log_lco("resetting future %p\n", (void*)this);
+  resetTriggered();
+  full_.reset();
+}
+
+hpx_status_t
+Future::waitFull() {
+  return (getTriggered()) ? full_.getError() : full_.wait(this);
+}
+
+int
+Future::NewHandler(void* buffer, size_t size)
+{
+  if (auto lco = new(buffer) Future(size)) {
+    return HPX_THREAD_CONTINUE(lco);
+  }
+  dbg_error("Could not initialize a Future.\n");
+}
+
+int
+Future::NewBlockHandler(char* blocks, unsigned n, size_t size)
+{
+  hpx_addr_t gva = hpx_thread_current_target();
+  size_t bytes = sizeof(Future) + size;
+  char *i = blocks;
+  char *e = blocks + n * bytes;
+  while (i < e) {
+    auto local = new(i) Future(size);
+    LCO_LOG_NEW(gva, local);
+    gva = hpx_addr_add(gva, bytes, bytes);
+    i += bytes;
   }
   return HPX_SUCCESS;
 }
-static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _future_init_async,
-                     _future_init_handler, HPX_POINTER, HPX_INT);
 
-hpx_addr_t hpx_lco_future_new(int size) {
-  _future_t *future = NULL;
-  hpx_addr_t gva = lco_alloc_local(1, sizeof(*future) + size, 0);
-
-  if (!hpx_gas_try_pin(gva, (void**)&future)) {
-    int e = hpx_call_sync(gva, _future_init_async, NULL, 0, &size);
-    dbg_check(e, "could not initialize a future at %" PRIu64 "\n", gva);
-  }
-  else {
-    LCO_LOG_NEW(gva, future);
-    _future_init_handler(future, size);
+hpx_addr_t
+hpx_lco_future_new(int size)
+{
+  dbg_assert(size >= 0);
+  hpx_addr_t gva = HPX_NULL;
+  Future* lco = nullptr;
+  try {
+    lco = new(size, gva) Future(size);
     hpx_gas_unpin(gva);
   }
+  catch (const LCO::NonLocalMemory&) {
+    size_t n(size);
+    hpx_call_sync(gva, New, &lco, sizeof(lco), &n);
+  }
+  LCO_LOG_NEW(gva, lco);
   return gva;
 }
 
-/// Initialize a block of futures.
-static int _block_init_handler(void *lco, const uint32_t n,
-                               const uint32_t size) {
-  // sequentially initialize each future
-  for (uint32_t i = 0; i < n; ++i) {
-    auto* addr = reinterpret_cast<_future_t*>((char*)lco + i * (sizeof(_future_t) + size));
-    _future_init_handler(addr, size);
-  }
-  return HPX_SUCCESS;
-}
-static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_init,
-                     _block_init_handler, HPX_POINTER, HPX_UINT32,
-                     HPX_UINT32);
-
 // Allocate a global array of futures.
-hpx_addr_t hpx_lco_future_array_new(int n, int size, int futures_per_block) {
+hpx_addr_t
+hpx_lco_future_array_new(int n, int size, int futures_per_block)
+{
+  dbg_assert(n > 0);
+  dbg_assert(size >= 0);
+  dbg_assert(futures_per_block > 0);
+
   // perform the global allocation
-  uint32_t       blocks = ceil_div_32(n, futures_per_block);
-  uint32_t future_bytes = sizeof(_future_t) + size;
-  uint64_t  block_bytes = futures_per_block * future_bytes;
-  hpx_addr_t       base = lco_alloc_cyclic(blocks, block_bytes, 0);
+  const unsigned blocks = ceil_div_32(n, futures_per_block);
+  const size_t future_bytes = sizeof(Future) + size;
+  const size_t block_bytes = futures_per_block * future_bytes;
+  const hpx_addr_t base = lco_alloc_cyclic(blocks, block_bytes, 0);
+
+  // Cast some arguments that we need to pass to NewBlockHandler
+  unsigned fpb = unsigned(futures_per_block);
 
   // for each block, initialize the future
-  hpx_addr_t cand = hpx_lco_and_new(blocks);
-  for (uint32_t i = 0; i < blocks; ++i) {
-    hpx_addr_t there = hpx_addr_add(base, i * block_bytes, block_bytes);
-    int e = hpx_call(there, _block_init, cand, &futures_per_block, &size);
-    dbg_check(e, "call of _block_init_action failed\n");
+  const hpx_addr_t bcast = hpx_lco_and_new(blocks);
+  for (unsigned i = 0; i < blocks; ++i) {
+    size_t unsignedSize(size);
+    hpx_addr_t block = hpx_addr_add(base, i * block_bytes, block_bytes);
+    int e = hpx_call(block, NewBlock, bcast, &fpb, &unsignedSize);
+    dbg_check(e, "call of NewBlock failed\n");
   }
-  hpx_lco_wait(cand);
-  hpx_lco_delete(cand, HPX_NULL);
+  dbg_check( hpx_lco_wait(bcast) );
+  hpx_lco_delete_sync(bcast);
 
   // return the base address of the allocation
   return base;
@@ -309,10 +307,13 @@ hpx_addr_t hpx_lco_future_array_new(int n, int size, int futures_per_block) {
 
 // Application level programmer doesn't know how big the future is, so we
 // provide this array indexer.
-hpx_addr_t hpx_lco_future_array_at(hpx_addr_t array, int i, int size, int bsize)
+hpx_addr_t
+hpx_lco_future_array_at(hpx_addr_t array, int i, int size, int bsize)
 {
-  uint64_t future_bytes = sizeof(_future_t) + size;
-  uint64_t  block_bytes = bsize * future_bytes;
+  dbg_assert(size >= 0);
+  dbg_assert(bsize > 0);
+  size_t future_bytes = sizeof(Future) + size;
+  size_t  block_bytes = bsize * future_bytes;
   return hpx_addr_add(array, i * future_bytes, block_bytes);
 }
 
@@ -321,14 +322,25 @@ hpx_addr_t hpx_lco_future_array_at(hpx_addr_t array, int i, int size, int bsize)
 /// @param       size The size of each future's value
 ///
 /// @returns the global address of the allocated array lco.
-hpx_addr_t hpx_lco_future_local_array_new(int n, int size) {
-  uint32_t lco_bytes = sizeof(_future_t) + size;
-  dbg_assert(n * lco_bytes < UINT32_MAX);
-  hpx_addr_t base = lco_alloc_local(n, lco_bytes, 0);
+hpx_addr_t
+hpx_lco_future_local_array_new(int n, int size)
+{
+  dbg_assert(n > 0);
+  dbg_assert(size > 0);
+  size_t bytes = unsigned(size);
+  size_t bsize = sizeof(Future) + bytes;
+  hpx_addr_t base = lco_alloc_local(n, bsize, 0);
+  if (!base) {
+    throw std::bad_alloc();
+  }
 
-  // for each block, initialize the future.
-  int e = hpx_call_sync(base, _block_init, NULL, 0, &n, &size);
-  dbg_check(e, "call of _block_init_action failed\n");
-
+  unsigned one = 1;
+  hpx_addr_t bcast = hpx_lco_and_new(n);
+  for (int i = 0, e = n; i < e; ++i) {
+    hpx_addr_t addr = hpx_addr_add(base, i * bsize, bsize);
+    dbg_check( hpx_call(addr, NewBlock, bcast, &one, &bytes) );
+  }
+  hpx_lco_wait(bcast);
+  hpx_lco_delete_sync(bcast);
   return base;
 }

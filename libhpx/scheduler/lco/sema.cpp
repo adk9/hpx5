@@ -22,98 +22,153 @@
 #include "cvar.h"
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
-#include "libhpx/locality.h"
 #include "libhpx/memory.h"
-#include "libhpx/scheduler.h"
-#include <cassert>
-#include <cinttypes>
+#include <mutex>
 
 namespace {
 using libhpx::scheduler::Condition;
-using namespace libhpx::scheduler::lco;
-}
+using libhpx::scheduler::LCO;
 
-/// Local sema interface.
-/// @{
-typedef struct {
-  lco_t                lco;
-  Condition          avail;
-  volatile uintptr_t count;
-  uintptr_t           init;
-} _sema_t;
+class Semaphore final : public LCO
+{
+ public:
+  Semaphore(unsigned init);
+  ~Semaphore();
 
-static void _sema_fini(lco_t *lco);
-static void _sema_error(lco_t *lco, hpx_status_t code);
-static void _sema_reset(lco_t *lco);
-static int _sema_set(lco_t *lco, int size, const void *from);
-static hpx_status_t _sema_wait(lco_t *lco, int reset);
-static hpx_status_t _sema_get(lco_t *lco, int size, void *out, int reset);
-
-static void _reset(_sema_t *sema, int reset) {
-  if (reset) {
-    dbg_assert_str(sema->avail.empty(),
-                   "Reset on a sema that has waiting threads.\n");
-    sema->avail.reset();
-    sync_store(&sema->count, sema->init, SYNC_RELEASE);
+  int set(size_t size, const void *value);
+  void error(hpx_status_t code);
+  hpx_status_t get(size_t size, void *value, int reset);
+  hpx_status_t wait(int reset);
+  hpx_status_t attach(hpx_parcel_t *p);
+  void reset();
+  size_t size(size_t) const {
+    return sizeof(*this);
   }
-}
 
-static size_t _sema_size(lco_t *lco) {
-  _sema_t *sema = (_sema_t *)lco;
-  return sizeof(*sema);
-}
+  static int NewHandler(void* buffer, unsigned init);
 
-// the semaphore vtable
-static const lco_class_t _sema_vtable = {
-  .type        = LCO_SEMA,
-  .on_fini     = _sema_fini,
-  .on_error    = _sema_error,
-  .on_set      = _sema_set,
-  .on_attach   = NULL,
-  .on_get      = _sema_get,
-  .on_getref   = NULL,
-  .on_release  = NULL,
-  .on_wait     = _sema_wait,
-  .on_reset    = _sema_reset,
-  .on_size     = _sema_size
+ private:
+  void resetNonZero();
+
+  Condition   nonZero_;
+  unsigned      count_;
+  const unsigned init_;
 };
 
-static void HPX_CONSTRUCTOR _register_vtable(void) {
-  lco_vtables[LCO_SEMA] = &_sema_vtable;
+LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, New, Semaphore::NewHandler,
+              HPX_POINTER, HPX_UINT);
+} // namespace
+
+Semaphore::Semaphore(unsigned count)
+    : LCO(LCO_SEMA),
+      nonZero_(),
+      count_(count),
+      init_(count)
+{
 }
 
-static int _sema_init_handler(_sema_t *sema, unsigned count) {
-  lco_init(&sema->lco, &_sema_vtable);
-  sema->avail.reset();
-  sema->count = count;
-  sema->init = count;
+Semaphore::~Semaphore()
+{
+  lock();                                       // Released in ~LCO()
+}
+
+void
+Semaphore::resetNonZero()
+{
+  nonZero_.signalAll();                         // wake all waiters
+  nonZero_.reset();
+  count_ = init_;
+}
+
+void
+Semaphore::error(hpx_status_t code)
+{
+  std::lock_guard<LCO> _(*this);
+  nonZero_.signalError(code);
+}
+
+void
+Semaphore::reset()
+{
+  std::lock_guard<LCO> _(*this);
+  resetNonZero();
+}
+
+/// Set is equivalent to returning a resource to the semaphore.
+int
+Semaphore::set(size_t size, const void *from)
+{
+  std::lock_guard<LCO> _(*this);
+  if (0 == count_++) {
+    nonZero_.signal();                          // just wake one waiter
+  }
+  return 1;
+}
+
+hpx_status_t
+Semaphore::wait(int reset)
+{
+  std::lock_guard<LCO> _(*this);
+  while (count_ == 0) {
+    if (auto status = nonZero_.wait(this)) {
+      return status;
+    }
+  }
+
+  count_--;
+
+  if (reset) {
+    resetNonZero();
+  }
+
   return HPX_SUCCESS;
 }
-static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _sema_init_async,
-                     _sema_init_handler, HPX_POINTER, HPX_UINT);
+
+hpx_status_t
+Semaphore::get(size_t size, void *out, int reset)
+{
+  dbg_assert(size == 0);
+  return wait(reset);
+}
+
+hpx_status_t
+Semaphore::attach(hpx_parcel_t *p)
+{
+  dbg_error("Attaching to a semaphore is unsupported.\n");
+}
+
+int
+Semaphore::NewHandler(void* buffer, unsigned count)
+{
+  if (auto lco = new(buffer) Semaphore(count)) {
+    return HPX_THREAD_CONTINUE(lco);
+  }
+  dbg_error("Could not initialize a Semaphore.\n");
+}
 
 /// Allocate a semaphore LCO.
-hpx_addr_t hpx_lco_sema_new(unsigned count) {
-  _sema_t *sema = NULL;
-  hpx_addr_t gva = lco_alloc_local(1, sizeof(*sema), 0);
-
-  if (!hpx_gas_try_pin(gva, (void**)&sema)) {
-    int e = hpx_call_sync(gva, _sema_init_async, NULL, 0, &count);
-    dbg_check(e, "could not initialize a future at %" PRIu64 "\n", gva);
-  }
-  else {
-    LCO_LOG_NEW(gva, sema);
-    _sema_init_handler(sema, count);
+hpx_addr_t
+hpx_lco_sema_new(unsigned count)
+{
+  hpx_addr_t gva = HPX_NULL;
+  Semaphore* lco = nullptr;
+  try {
+    lco = new(gva) Semaphore(count);
     hpx_gas_unpin(gva);
   }
-
+  catch (const LCO::NonLocalMemory&) {
+    hpx_call_sync(gva, New, &lco, sizeof(lco), &count);
+  }
+  LCO_LOG_NEW(gva, lco);
   return gva;
 }
 
 /// Decrement a semaphore.
 ///
 /// Just forward to the equivalent lco_wait() operation.
-hpx_status_t hpx_lco_sema_p(hpx_addr_t sema) {
+hpx_status_t
+hpx_lco_sema_p(hpx_addr_t sema)
+{
   return hpx_lco_wait(sema);
 }
 
@@ -122,80 +177,17 @@ hpx_status_t hpx_lco_sema_p(hpx_addr_t sema) {
 /// If the semaphore is local, then we can use the _sema_set operation directly,
 /// otherwise we perform the operation as an asynchronous remote call using the
 /// _sema_v action.
-void hpx_lco_sema_v(hpx_addr_t sema, hpx_addr_t rsync) {
+void
+hpx_lco_sema_v(hpx_addr_t sema, hpx_addr_t rsync)
+{
   hpx_lco_set(sema, 0, NULL, HPX_NULL, rsync);
 }
 
 /// Increment a semaphore synchronously.
 ///
 /// Just forwards on.
-void hpx_lco_sema_v_sync(hpx_addr_t sema) {
+void
+hpx_lco_sema_v_sync(hpx_addr_t sema)
+{
   hpx_lco_set_rsync(sema, 0, NULL);
 }
-
-void _sema_fini(lco_t *lco) {
-  if (!lco) {
-    return;
-  }
-
-  lco_lock(lco);
-  lco_fini(lco);
-}
-
-void _sema_error(lco_t *lco, hpx_status_t code) {
-  lco_lock(lco);
-  _sema_t *sema = (_sema_t *)lco;
-  scheduler_signal_error(&sema->avail, code);
-  lco_unlock(lco);
-}
-
-void _sema_reset(lco_t *lco) {
-  _sema_t *sema = (_sema_t *)lco;
-  lco_lock(&sema->lco);
-  _reset(sema, 1);
-  lco_unlock(&sema->lco);
-}
-
-/// Set is equivalent to returning a resource to the semaphore.
-int _sema_set(lco_t *lco, int size, const void *from) {
-  lco_lock(lco);
-  _sema_t *sema = (_sema_t *)lco;
-  if (sema->count++ == 0) {
-    // only signal one sleeping thread since we're only returning one resource,
-    // waking everyone up is inefficient
-    scheduler_signal(&sema->avail);
-  }
-
-  lco_unlock(lco);
-  return 1;
-}
-
-hpx_status_t _sema_wait(lco_t *lco, int reset) {
-  hpx_status_t status = HPX_SUCCESS;
-  lco_lock(lco);
-  _sema_t *sema = (_sema_t *)lco;
-
-  // wait until the count is non-zero, use while here and re-read count because
-  // our condition variables have MESA semantics
-  unsigned count = sema->count;
-  while (count == 0 && status == HPX_SUCCESS) {
-    status = scheduler_wait(&sema->lco.lock, &sema->avail);
-    count = sema->count;
-  }
-
-  // reduce the count, unless there was an error
-  if (status == HPX_SUCCESS) {
-    sema->count = count - 1;
-    _reset(sema, reset);
-  }
-
-  lco_unlock(lco);
-  return status;
-}
-
-hpx_status_t _sema_get(lco_t *lco, int size, void *out, int reset) {
-  assert(size == 0);
-  return _sema_wait(lco, reset);
-}
-
-/// @}

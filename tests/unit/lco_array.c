@@ -107,9 +107,9 @@ static int lco_reduce_array_handler(void) {
   hpx_time_t t1 = hpx_time_now();
 
   hpx_addr_t domain = hpx_gas_alloc_cyclic(ARRAY_SIZE, sizeof(double), sizeof(double));
-  hpx_addr_t newdt = hpx_lco_reduce_local_array_new(ARRAY_SIZE,
-                                                    ARRAY_SIZE, sizeof(double),
-                                                    _initDouble, _maxDouble);
+  hpx_addr_t newdt = hpx_lco_reduce_local_array_new(ARRAY_SIZE, ARRAY_SIZE,
+                                                    sizeof(double), _initDouble,
+                                                    _maxDouble);
 
   for (int i = 0; i < ARRAY_SIZE; i++) {
     hpx_addr_t other = hpx_lco_array_at(newdt, i, sizeof(double));

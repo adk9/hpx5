@@ -227,11 +227,11 @@ void scheduler_suspend(void (*f)(hpx_parcel_t *, void*), void *env);
 /// scheduler_wait() will call _schedule() and transfer away from the calling
 /// thread.
 ///
-/// @param         lock The tatas lock protecting the condition.
+/// @param          lco The LCO that is executing.
 /// @param          con The condition we'd like to wait for.
 ///
 /// @returns            LIBHPX_OK or an error
-hpx_status_t scheduler_wait(void *lock, void *con)
+hpx_status_t scheduler_wait(void *lco, void *con)
   HPX_NON_NULL(1, 2);
 
 /// Signal a condition.

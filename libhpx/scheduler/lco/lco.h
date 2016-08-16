@@ -14,9 +14,11 @@
 #ifndef LIBHPX_SCHEDULER_LCO_H
 #define LIBHPX_SCHEDULER_LCO_H
 
-#include <inttypes.h>
-#include <hpx/attributes.h>
-#include <libhpx/lco.h>
+#include "TatasLock.h"
+#include "libhpx/events.h"
+#include "hpx/hpx.h"
+#include <cinttypes>
+#include <memory>
 
 /// The action used to propagate an LCO error.
 ///
@@ -26,30 +28,6 @@ extern HPX_ACTION_DECL(lco_error);
 
 namespace libhpx {
 namespace scheduler {
-namespace lco {
-
-#define LCO_LOG_NEW(gva, lva) do {                                \
-    dbg_assert_str(gva, "Could not malloc global memory\n");      \
-    log_lco("allocated lco %" PRIu64 " (%p)\n", gva, (void*)lva); \
-  } while (0)
-
-/// This constant is used to determine when a set should be performed
-/// asynchronously, even if the set is actually local.
-static const int HPX_LCO_SET_ASYNC = 512;
-
-typedef enum {
-  LCO_ALLREDUCE = 0,
-  LCO_ALLTOALL,
-  LCO_AND,
-  LCO_FUTURE,
-  LCO_GATHER,
-  LCO_GENCOUNT,
-  LCO_REDUCE,
-  LCO_SEMA,
-  LCO_USER,
-  LCO_DATAFLOW,
-  LCO_MAX
-} lco_type_t;
 
 /// The LCO abstract class interface.
 ///
@@ -59,109 +37,114 @@ typedef enum {
 ///
 /// This interface is locally synchronous, but will be invoked externally
 /// through the set of hpx_lco_* operations that may use them asynchronously.
-typedef void (*lco_fini_t)(lco_t *lco);
-typedef int (*lco_set_t)(lco_t *lco, int size, const void *value);
-typedef void (*lco_error_t)(lco_t *lco, hpx_status_t code);
-typedef hpx_status_t (*lco_get_t)(lco_t *lco, int size, void *value, int reset);
-typedef hpx_status_t (*lco_getref_t)(lco_t *lco, int size, void **out, int *unpin);
-typedef int (*lco_release_t)(lco_t *lco, void *out);
-typedef hpx_status_t (*lco_wait_t)(lco_t *lco, int reset);
-typedef hpx_status_t (*lco_attach_t)(lco_t *lco, hpx_parcel_t *p);
-typedef void (*lco_reset_t)(lco_t *lco);
-typedef size_t (*lco_size_t)(lco_t *lco);
+class LCO {
+ public:
+  /// Virtual destructor as the LCO is designed as a superclass.
+  virtual ~LCO();
 
-struct alignas(16) lco_class {
-  lco_type_t            type;
-  lco_fini_t         on_fini;
-  lco_error_t       on_error;
-  lco_set_t           on_set;
-  lco_attach_t     on_attach;
-  lco_get_t           on_get;
-  lco_getref_t     on_getref;
-  lco_release_t   on_release;
-  lco_wait_t         on_wait;
-  lco_reset_t       on_reset;
-  lco_size_t         on_size;
+  /// Operator new() overloads that allow us to allocate space for LCOs from
+  /// global memory (and possibly remote global memory. These will throw a
+  /// NonLocalMemory exception if the allocation succeeded but was
+  /// non-local. They will throw a std::bad_alloc if the allocation failed
+  /// entirely.
+  /// @{
+  class NonLocalMemory : public std::exception {
+  };
+
+  static void* operator new(size_t, void* ptr);
+  static void* operator new(size_t, hpx_addr_t& gva);
+  static void* operator new(size_t, size_t bytes, hpx_addr_t& gva);
+  static void operator delete(void* obj);       // does nothing
+  /// @}
+
+  /// The abstract LCO interface that needs to be implemented by all
+  /// subclasses.
+  /// @{
+  virtual size_t size(size_t size) const = 0;
+  virtual void error(hpx_status_t code) = 0;
+  virtual int set(size_t size, const void *value) = 0;
+  virtual hpx_status_t get(size_t size, void *value, int reset) = 0;
+  virtual hpx_status_t wait(int reset) = 0;
+  virtual hpx_status_t attach(hpx_parcel_t *p) = 0;
+  virtual void reset() = 0;
+  /// @}
+
+  /// The virtual LCO interface that can be implemented in terms of the abstract
+  /// LCO interface, but that can also be overridden in subclasses.
+  /// @{
+  virtual hpx_status_t getRef(size_t size, void **out, int *unpin);
+  virtual bool release(void *out);
+  /// @}
+
+  /// Static action entry points for remote procedure call handling.
+  /// @{
+  static int DeleteHandler(LCO* lco);
+  static int SetHandler(LCO* lco, void* data, size_t n);
+  static int ErrorHandler(LCO* lco, void* args, size_t n);
+  static int ResetHandler(LCO* lco);
+  static int SizeHandler(const LCO* lco, int arg);
+  static int GetHandler(LCO* lco, int n);
+  static int WaitHandler(LCO *lco, int reset);
+  static int AttachHandler(LCO *lco, hpx_parcel_t *p, size_t size);
+  /// @}
+
+  /// Lock and unlock the LCO. The owner pointer helps with debugging.
+  /// @{
+  void lock(hpx_parcel_t* owner);
+  void unlock(hpx_parcel_t* owner);
+  /// @}
+
+  /// Implement the std BasicLockable concept for use with std::lock_guard.
+  /// @{
+  void lock();
+  void unlock();
+  /// @}
+
+ protected:
+  /// The enumeration used for dynamically typing LCOs.
+  enum Type : unsigned {
+    LCO_ALLREDUCE = 0,
+    LCO_ALLTOALL,
+    LCO_AND,
+    LCO_FUTURE,
+    LCO_GATHER,
+    LCO_GENCOUNT,
+    LCO_REDUCE,
+    LCO_SEMA,
+    LCO_USER,
+    LCO_DATAFLOW,
+    LCO_MAX
+  };
+
+  /// Initialize the LCO with a dynamic type.
+  LCO(enum Type type);
+
+  /// Routines to interact with the LCO's state.
+  /// @{
+  short setTriggered();
+  void resetTriggered();
+  short getTriggered() const;
+  void setUser();
+  short getUser() const;
+  /// @}
+
+  /// Used in the operator new() context to try to pin a global address. The
+  /// TryPin() operation will throw a NonLocalMemory exception if the gva
+  /// represents a non-local address.
+  /// @{
+  static void* TryPin(hpx_addr_t gva);
+  /// @}
+
+ private:
+  TatasLock<short> lock_;                       //<! The LCO's lock
+  short           state_;                       //<! State bits
+  Type             type_;                       //<! The LCO's dynamic type
 };
-typedef struct lco_class lco_class_t;
 
-extern const lco_class_t *lco_vtables[LCO_MAX];
-
-/// Lock an LCO.
-///
-/// @param lco  The LCO to lock
-void lco_lock(lco_t *lco)
-  HPX_NON_NULL(1);
-
-/// Unlock an LCO.
-///
-/// The calling thread must currently hold the LCO's lock.
-///
-/// @param lco - the LCO to unlock
-void lco_unlock(lco_t* lco)
-  HPX_NON_NULL(1);
-
-/// Initialize an LCO vtable pointer.
-///
-/// @param           lco The pointer to initialize
-/// @param          type The class pointer for this LCO instance
-void lco_init(lco_t *lco, const lco_class_t *type)
-  HPX_NON_NULL(1,2);
-
-/// Finalize an LCO vtable pointer.
-///
-/// @param           lco The pointer to finalize.
-void lco_fini(lco_t *lco)
-  HPX_NON_NULL(1);
-
-/// Set the triggered state to true.
-///
-/// This operation does not acquire the LCO lock---the caller must lock the
-/// pointer first if this could occur concurrently.
-///
-/// @param           lco The LCO to trigger.
-void lco_set_triggered(lco_t *lco)
-  HPX_NON_NULL(1);
-
-/// Reset the triggered state to false.
-///
-/// This operation does not acquire the LCO lock---the caller must lock the
-/// pointer first if this could occur concurrently.
-///
-/// @param           lco The LCO to trigger.
-void lco_reset_triggered(lco_t *lco)
-  HPX_NON_NULL(1);
-
-/// Get the triggered state.
-///
-/// This operation does not acquire the LCO lock---the caller must lock the
-/// pointer first if this could occur concurrently.
-///
-/// @param           lco The LCO to read.
-///
-/// @returns Non-zero if the triggered bit is set, zero otherwise.
-uintptr_t lco_get_triggered(const lco_t *lco)
-  HPX_NON_NULL(1);
-
-/// Set the user state to true.
-///
-/// This operation does not acquire the LCO lock---the caller must lock the
-/// pointer first if this could occur concurrently.
-///
-/// @param           lco The target LCO.
-void lco_set_user(lco_t *lco)
-  HPX_NON_NULL(1);
-
-/// Get the user state of an LCO.
-///
-/// This operation does not acquire the LCO lock---the caller must lock the
-/// pointer first if this could occur concurrently.
-///
-/// @param           lco The LCO to read.
-///
-/// @returns Non-zero if the user bit is set, zero otherwise.
-uintptr_t lco_get_user(const lco_t *lco)
-  HPX_NON_NULL(1);
+#define LCO_LOG_NEW(gva, lva) do {                                \
+    dbg_assert_str(gva, "Could not malloc global memory\n");      \
+    log_lco("allocated lco %" PRIu64 " (%p)\n", gva, (void*)lva); \
+  } while (0)
 
 // Helper macros to allocate LCOs in the global address space
 #define lco_alloc_local(n, size, boundary)                      \
@@ -170,7 +153,6 @@ uintptr_t lco_get_user(const lco_t *lco)
 #define lco_alloc_cyclic(n, size, boundary)                      \
   hpx_gas_alloc_cyclic_attr(n, size, boundary, HPX_GAS_ATTR_LCO)
 
-} // namespace lco
 } // namespace scheduler
 } // namespace libhpx
 

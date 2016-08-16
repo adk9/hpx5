@@ -15,16 +15,16 @@
 #define LIBHPX_SCHEDULER_CVAR_H
 
 #include <hpx/hpx.h>
-/// Forward declarations.
-/// @{
-struct ustack;
-/// @}
 
 namespace libhpx {
 namespace scheduler {
+class LCO;
 
 class Condition {
  public:
+  Condition();
+  ~Condition();
+
   /// Reset a condition variable.
   void reset();
 
@@ -59,27 +59,17 @@ class Condition {
   /// @param         cvar The condition variable to update.
   void clearError();
 
-  /// Push an executing thread onto a condition variable.
-  ///
-  /// If the condition is in an error condition, this will return that error
-  /// without pushing the thread, otherwise it will push the thread and return
-  /// HPX_SUCCESS.
-  ///
-  /// @param       thread The thread to push.
-  ///
-  /// @returns            HPX_SUCCESS or an error code
-  hpx_status_t pushThread(struct ustack *thread);
-
   /// Push a parcel onto a condition variable directly.
   ///
   /// If the condition is in an error condition, this will return that error
   /// condition without pushing the parcel onto the condition's queue, otherwise
-  /// it will push the parcel and return HPX_SUCCESS.
+  /// it will push the parcel and return HPX_SUCCESS. The parcel may be
+  /// associated with an executing thread or simply an attached parcel.
   ///
   /// @param       parcel The parcel to push.
   ///
   /// @returns            HPX_SUCCESS or an error code
-  hpx_status_t attach(struct hpx_parcel *parcel);
+  hpx_status_t push(struct hpx_parcel *parcel);
 
   /// Pop the top parcel from a condition variable.
   ///
@@ -94,6 +84,14 @@ class Condition {
   /// @return             The list of continuation parcels (NULL if there are
   ///                       none).
   hpx_parcel_t *popAll();
+
+  hpx_status_t wait(LCO* lco);
+
+  void signal();
+
+  void signalAll();
+
+  void signalError(hpx_status_t code);
 
  private:
 

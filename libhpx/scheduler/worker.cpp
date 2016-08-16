@@ -46,13 +46,14 @@
 #include <libhpx/termination.h>
 #include <libhpx/topology.h>
 #include <libhpx/worker.h>
-#include "cvar.h"
 #include "events.h"
 #include "thread.h"
+#include "cvar.h"
 #include "lco/lco.h"
 
 namespace {
 using libhpx::scheduler::Condition;
+using libhpx::scheduler::LCO;
 }
 
 /// Storage for the thread-local worker pointer.
@@ -427,14 +428,14 @@ static hpx_parcel_t *_handle_steal(worker_t *cthis) {
 static void _null(hpx_parcel_t *UNUSED1, void *UNUSED2) {
 }
 
-/// A checkpoint continuation that unlocks a lock.
+/// A checkpoint continuation that unlocks an LCO.
 ///
 /// This is used by threads that are blocking on condition variables.
 ///
 /// @param            p The previous parcel.
-/// @param          env The continuation environment, which is a tatas lock.
-static void _unlock(hpx_parcel_t *to, void *lock) {
-  sync_tatas_release(static_cast<tatas_lock_t*>(lock));
+/// @param          env The continuation environment, which is an lco.
+static void _unlock(hpx_parcel_t *p, void *lco) {
+  static_cast<LCO*>(lco)->unlock(p);
 }
 
 /// A checkpoint continuation that frees the previous thread.
@@ -924,29 +925,27 @@ void scheduler_yield(void) {
 }
 
 hpx_status_t
-scheduler_wait(void *lock, void *cond)
+scheduler_wait(void *lco, void *cond)
 {
   Condition* condition = static_cast<Condition*>(cond);
   // push the current thread onto the condition variable---no lost-update
   // problem here because we're holing the @p lock
   worker_t *w = self;
   hpx_parcel_t *p = w->current;
-  ustack_t *thread = p->ustack;
 
   // we had better be holding a lock here
-  dbg_assert(thread->lco_depth > 0);
+  dbg_assert(p->ustack->lco_depth > 0);
 
-  hpx_status_t status = condition->pushThread(thread);
-  if (status != HPX_SUCCESS) {
+  if (hpx_status_t status = condition->push(p)) {
     return status;
   }
 
   EVENT_THREAD_SUSPEND(p, w);
-  _schedule_nb(w, _unlock, lock);
+  _schedule_nb(w, _unlock, lco);
   EVENT_THREAD_RESUME(p, self);
 
   // reacquire the lco lock before returning
-  sync_tatas_acquire(static_cast<tatas_lock_t*>(lock));
+  static_cast<LCO*>(lco)->lock(p);
   return condition->getError();
 }
 

@@ -70,424 +70,338 @@
 #include "cvar.h"
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
-#include "libhpx/locality.h"
 #include "libhpx/memory.h"
+#include "libhpx/padding.h"
 #include "libhpx/scheduler.h"
-#include <cassert>
-#include <cinttypes>
+#include <mutex>
 #include <cstring>
-#include <cstdlib>
 
 namespace {
 using libhpx::scheduler::Condition;
-using namespace libhpx::scheduler::lco;
-}
+using libhpx::scheduler::LCO;
 
-/// Local alltoall interface.
-/// @{
-typedef struct {
-  lco_t           lco;
-  Condition      wait;
-  size_t participants;
-  size_t        count;
-  volatile int  phase;
-  void         *value;
-} _alltoall_t;
+class AllToAll final : public LCO {
+  static constexpr int GATHERING = 0;
+  static constexpr int READING = 1;
 
-static const int GATHERING = 0;
-static const int READING = 1;
+ public:
+  AllToAll(unsigned inputs);
+  ~AllToAll();
 
-typedef struct {
-  unsigned offset;
-  char buffer[];
-} _alltoall_set_offset_t;
+  int set(size_t size, const void *value);
+  void error(hpx_status_t code);
+  hpx_status_t get(size_t size, void *value, int reset);
+  hpx_status_t getRef(size_t size, void **out, int *unpin);
+  bool release(void *out);
+  hpx_status_t wait(int reset);
+  hpx_status_t attach(hpx_parcel_t *p);
+  void reset();
 
-typedef struct {
-  int size;
-  unsigned offset;
-} _alltoall_get_offset_t;
-
-static int
-_alltoall_getid_proxy_handler(_alltoall_get_offset_t *args, size_t n);
-static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _alltoall_getid_proxy,
-                     _alltoall_getid_proxy_handler, HPX_POINTER, HPX_SIZE_T);
-
-static int
-_alltoall_setid_proxy_handler(_alltoall_t *g, void *args, size_t n);
-static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _alltoall_setid_proxy,
-                     _alltoall_setid_proxy_handler,
-                     HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
-
-static size_t _alltoall_size(lco_t *lco) {
-  _alltoall_t *alltoall = (_alltoall_t *)lco;
-  return sizeof(*alltoall);
-}
-
-/// Deletes a gathering.
-static void _alltoall_fini(lco_t *lco) {
-  if (!lco) {
-    return;
+  size_t size(size_t bytes) const {
+    return sizeof(AllToAll) + inputs_ * bytes;
   }
 
-  lco_lock(lco);
-  _alltoall_t *g = (_alltoall_t *)lco;
-  if (g->value) {
-    free(g->value);
-  }
-  lco_fini(lco);
+  hpx_status_t setId(unsigned offset, size_t size, const void* buffer);
+  hpx_status_t getId(unsigned offset, size_t size, void *out);
+
+  static int NewHandler(void* buffer, unsigned inputs);
+  static int GetIdHandler(AllToAll& lco, unsigned offset, size_t size);
+  struct SetIdArgs {
+    unsigned offset;
+    char buffer[];
+  };
+  static int SetIdHandler(AllToAll& lco, const SetIdArgs& args, size_t n);
+
+ private:
+  Condition        wait_;
+  const unsigned inputs_;
+  unsigned        count_;
+  volatile int    phase_;
+  const char _pad[_BYTES(16,
+                         sizeof(LCO) + sizeof(wait_) + sizeof(inputs_) +
+                         sizeof(count_) + sizeof(phase_))];
+  char            value_[];
+};
+
+LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, New, AllToAll::NewHandler, HPX_POINTER,
+              HPX_UINT);
+LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, GetId, AllToAll::GetIdHandler,
+              HPX_POINTER, HPX_UINT, HPX_SIZE_T);
+LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, SetId,
+              AllToAll::SetIdHandler, HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
 }
 
-/// Handle an error condition.
-static void _alltoall_error(lco_t *lco, hpx_status_t code) {
-  _alltoall_t *g = (_alltoall_t *)lco;
-  lco_lock(&g->lco);
-  scheduler_signal_error(&g->wait, code);
-  lco_unlock(&g->lco);
-}
-
-static void _alltoall_reset(lco_t *lco) {
-  _alltoall_t *g = (_alltoall_t *)lco;
-  lco_lock(&g->lco);
-  dbg_assert_str(g->wait.empty(),
-                 "Reset on alltoall LCO that has waiting threads.\n");
-  g->wait.reset();
-  lco_unlock(&g->lco);
-}
-
-static hpx_status_t _alltoall_attach(lco_t *lco, hpx_parcel_t *p) {
-  hpx_status_t status = HPX_SUCCESS;
-  lco_lock(lco);
-  _alltoall_t *g = (_alltoall_t *)lco;
-
-  // We have to wait for gathering to complete before sending the parcel.
-  if (g->phase != GATHERING) {
-    status = g->wait.attach(p);
-    goto unlock;
-  }
-
-  // If the alltoall has an error, then return that error without sending the
-  // parcel.
-  status = g->wait.getError();
-  if (status != HPX_SUCCESS) {
-    goto unlock;
-  }
-
-  // Go ahead and send this parcel eagerly.
-  hpx_parcel_send(p, HPX_NULL);
-
-  unlock:
-    lco_unlock(lco);
-    return status;
-}
-
-/// Get the value of the gathering, will wait if the phase is gathering.
-static hpx_status_t
-_alltoall_getid(_alltoall_t *g, unsigned offset, int size, void *out)
+AllToAll::AllToAll(unsigned inputs)
+    : LCO(LCO_ALLTOALL),
+      wait_(),
+      inputs_(inputs),
+      count_(inputs),
+      phase_(GATHERING),
+      _pad(),
+      value_()
 {
-  hpx_status_t status = HPX_SUCCESS;
-  lco_lock(&g->lco);
+}
 
-  // wait until we're reading, and watch for errors
-  while ((g->phase != READING) && (status == HPX_SUCCESS)) {
-    status = scheduler_wait(&g->lco.lock, &g->wait);
-  }
+AllToAll::~AllToAll()
+{
+  lock();
+}
 
-  // if there was an error signal, unlock and return it
-  if (status != HPX_SUCCESS) {
-    goto unlock;
-  }
+void
+AllToAll::error(hpx_status_t code)
+{
+  std::lock_guard<LCO> _(*this);
+  wait_.signalError(code);
+}
 
-  // We're in the reading phase, if the user wants data copy it out
-  if (size && out) {
-    memcpy(out, (char *)g->value + (offset * size), size);
-  }
+void
+AllToAll::reset()
+{
+  std::lock_guard<LCO> _(*this);
+  wait_.reset();
+}
 
-  // update the count, if I'm the last reader to arrive, switch the mode and
-  // release all of the other readers, otherwise wait for the phase to change
-  // back to gathering---this blocking behavior prevents gets from one "epoch"
-  // to satisfy earlier READING epochs
-  if (++g->count == g->participants) {
-    g->phase = GATHERING;
-    scheduler_signal_all(&g->wait);
-  }
-  else {
-    while ((g->phase == READING) && (status == HPX_SUCCESS)) {
-      status = scheduler_wait(&g->lco.lock, &g->wait);
+hpx_status_t
+AllToAll::attach(hpx_parcel_t *p)
+{
+  std::lock_guard<LCO> _(*this);
+  if (phase_ != GATHERING) {
+    if (auto status = wait_.push(p)) {
+      return status;
     }
   }
 
- unlock:
-  lco_unlock(&g->lco);
-  return status;
-}
-
-/// Get the ID for alltoall. This is global getid for the user to use.
-/// Since the LCO is local, we use the local get functionality
-///
-/// @param   alltoall    Global address of the alltoall LCO
-/// @param   id          The ID of our rank
-/// @param   size        The size of the data being gathered
-/// @param   value       Address of the value buffer
-hpx_status_t hpx_lco_alltoall_getid(hpx_addr_t alltoall, unsigned id, int size,
-                                    void *value) {
-  hpx_status_t status = HPX_SUCCESS;
-  _alltoall_t *local;
-
-  if (!hpx_gas_try_pin(alltoall, (void**)&local)) {
-    _alltoall_get_offset_t args = {.size = size, .offset = id };
-    hpx_action_t act = _alltoall_getid_proxy;
-    return hpx_call_sync(alltoall, act, value, size, &args, sizeof(args));
+  if (auto status = wait_.getError()) {
+    return status;
   }
 
-  status = _alltoall_getid(local, id, size, value);
-  hpx_gas_unpin(alltoall);
-  return status;
+  // Go ahead and send this parcel eagerly.
+  parcel_launch(p);
+  return HPX_SUCCESS;
 }
 
-static int
-_alltoall_getid_proxy_handler(_alltoall_get_offset_t *args, size_t n)
+hpx_status_t
+AllToAll::wait(int reset)
 {
-  // try and pin the alltoall LCO, if we fail, we need to resend the underlying
-  // parcel to "catch up" to the moving LCO
-  hpx_addr_t target = hpx_thread_current_target();
-  _alltoall_t *g;
-  if (!hpx_gas_try_pin(target, (void **)&g)) {
-     return HPX_RESEND;
-  }
-
-  // otherwise we pinned the LCO, extract the arguments from @p args and use the
-  // local getid routine
-  char buffer[args->size];
-  hpx_status_t status = _alltoall_getid(g, args->offset, args->size, buffer);
-  hpx_gas_unpin(target);
-
-  // if success, finish the current thread's execution, sending buffer value to
-  // the thread's continuation address else finish the current thread's execution.
-  if (status == HPX_SUCCESS) {
-    return hpx_thread_continue(buffer, args->size);
-  }
-
-  return status;
+  return getId(0, 0, nullptr);
 }
 
-// Wait for the gathering, loses the value of the gathering for this round.
-static hpx_status_t _alltoall_wait(lco_t *lco, int reset) {
-  _alltoall_t *g = (_alltoall_t *)lco;
-  return _alltoall_getid(g, 0, 0, NULL);
+hpx_status_t
+AllToAll::getId(unsigned offset, size_t size, void *out)
+{
+  std::lock_guard<LCO> _(*this);
+
+  // wait until we're reading, and watch for errors
+  while (phase_ != READING) {
+    if (auto status = wait_.wait(this)) {
+      return status;
+    }
+  }
+
+  // We're in the reading phase, if the user wants data copy it out.
+  if (size && out) {
+    memcpy(out, value_ + (offset * size), size);
+  }
+
+  // Update the count, if I'm the last reader to arrive, switch the mode and
+  // release all of the other readers, otherwise wait for the phase to change
+  // back to gathering---this blocking behavior prevents gets from one "epoch"
+  // to satisfy earlier READING epochs.
+  if (++count_ == inputs_) {
+    phase_ = GATHERING;
+    wait_.signalAll();
+  }
+  else {
+    while (phase_ == READING) {
+      if (auto status = wait_.wait(this)) {
+        return status;
+      }
+    }
+  }
+
+  return HPX_SUCCESS;
 }
 
 // Local set id function.
-static hpx_status_t
-_alltoall_setid(_alltoall_t *g, unsigned offset, int size, const void* buffer)
+hpx_status_t
+AllToAll::setId(unsigned offset, size_t size, const void* buffer)
 {
-  int nDoms;
-  int elementSize;
-  int columnOffset;
-  hpx_status_t status = HPX_SUCCESS;
-  lco_lock(&g->lco);
+  dbg_assert(size && buffer);
+  std::lock_guard<LCO> _(*this);
 
   // wait until we're gathering
-  while ((g->phase != GATHERING) && (status == HPX_SUCCESS)) {
-    status = scheduler_wait(&g->lco.lock, &g->wait);
+  while (phase_ != GATHERING) {
+    if (auto status = wait_.wait(this)) {
+      return status;
+    }
   }
 
-  if (status != HPX_SUCCESS) {
-    goto unlock;
-  }
+  unsigned elementSize = size / inputs_;
+  unsigned columnOffset = offset * elementSize;
 
-  nDoms = g->participants;
-  // copy in our chunk of the data
-  assert(size && buffer);
-  elementSize = size / nDoms;
-  columnOffset = offset * elementSize;
-
-  for (int i = 0; i < nDoms; i++) {
-    int rowOffset = i * size;
-    int tempOffset = rowOffset + columnOffset;
-    int sourceOffset = i * elementSize;
-    memcpy((char*)g->value + tempOffset, (char *)buffer + sourceOffset, elementSize);
+  for (int i = 0, e = inputs_; i < e; ++i) {
+    unsigned rowOffset = i * size;
+    unsigned destOffset = rowOffset + columnOffset;
+    unsigned sourceOffset = i * elementSize;
+    memcpy(value_ + destOffset, (char *)buffer + sourceOffset, elementSize);
   }
 
   // if we're the last one to arrive, switch the phase and signal readers
-  if (--g->count == 0) {
-    g->phase = READING;
-    scheduler_signal_all(&g->wait);
+  if (--count_ == 0) {
+    phase_ = READING;
+    wait_.signalAll();
   }
-
- unlock:
-  lco_unlock(&g->lco);
-  return status;
-}
-
-/// Set the ID for alltoall. This is global setid for the user to use.
-///
-/// @param   alltoall   Global address of the alltoall LCO
-/// @param   id         ID to be set
-/// @param   size       The size of the data being gathered
-/// @param   value      Address of the value to be set
-/// @param   lsync      An LCO to signal on local completion HPX_NULL if we
-///                     don't care. Local completion indicates that the
-///                     @p value may be freed or reused.
-/// @param   rsync      An LCO to signal remote completion HPX_NULL if we
-///                     don't care.
-/// @returns HPX_SUCCESS or the code passed to hpx_lco_error()
-hpx_status_t hpx_lco_alltoall_setid(hpx_addr_t alltoall, unsigned id, int size,
-                                    const void *value, hpx_addr_t lsync,
-                                    hpx_addr_t rsync) {
-  hpx_status_t status = HPX_SUCCESS;
-  _alltoall_t *local;
-
-  if (!hpx_gas_try_pin(alltoall, (void**)&local)) {
-    size_t args_size = sizeof(_alltoall_set_offset_t) + size;
-    hpx_parcel_t *p = hpx_parcel_acquire(NULL, args_size);
-    assert(p);
-    hpx_parcel_set_target(p, alltoall);
-    hpx_parcel_set_action(p, _alltoall_setid_proxy);
-    hpx_parcel_set_cont_target(p, rsync);
-    hpx_parcel_set_cont_action(p, hpx_lco_set_action);
-
-    void* buffer = hpx_parcel_get_data(p);
-    auto* args = static_cast<_alltoall_set_offset_t *>(buffer);
-    args->offset = id;
-    memcpy(&args->buffer, value, size);
-    hpx_parcel_send(p, lsync);
-  }
-  else {
-    status = _alltoall_setid(local, id, size, value);
-    hpx_gas_unpin(alltoall);
-    hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
-    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
-  }
-
-  return status;
-}
-
-static int
-_alltoall_setid_proxy_handler(_alltoall_t *g, void *args, size_t n)
-{
-  // otherwise we pinned the LCO, extract the arguments from @p args and use the
-  // local setid routine
-  auto* a = static_cast<_alltoall_set_offset_t *>(args);
-  size_t size = n - sizeof(_alltoall_set_offset_t);
-  return _alltoall_setid(g, a->offset, size, &a->buffer);
-}
-
-static int _alltoall_set(lco_t *lco, int size, const void *from) {
-  dbg_assert_str(false, "can't call set on an alltoall LCO.\n");
-}
-
-static hpx_status_t _alltoall_get(lco_t *lco, int size, void *out, int release) {
-  dbg_assert_str(false, "can't call get on an alltoall LCO.\n");
   return HPX_SUCCESS;
 }
 
-// We universally clone the buffer here, because the all* family of LCOs will
-// reset themselves so we can't retain a pointer to their buffer.
-static hpx_status_t
-_alltoall_getref(lco_t *lco, int size, void **out, int *unpin) {
+int
+AllToAll::set(size_t size, const void *from)
+{
+  // @todo: why is this an LCO?
+  dbg_error("can't call set on an alltoall LCO.\n");
+}
+
+hpx_status_t
+AllToAll::get(size_t size, void *out, int release)
+{
+  // @todo: why is this an LCO?
+  dbg_error("can't call get on an alltoall LCO.\n");
+}
+
+hpx_status_t
+AllToAll::getRef(size_t size, void **out, int *unpin)
+{
+  // We universally clone the buffer here, because the all* family of LCOs will
+  // reset themselves so we can't retain a pointer to their buffer.
   *out = registered_malloc(size);
   *unpin = 1;
-  return _alltoall_get(lco, size, *out, 0);
+  return get(size, *out, 0);
 }
 
-// We know that allreduce buffers were always copies, so we can just free them
-// here.
-static int _alltoall_release(lco_t *lco, void *out) {
+bool
+AllToAll::release(void *out)
+{
+  // We know that allreduce buffers were always copies, so we just free them.
   registered_free(out);
-  return 0;
+  return false;
 }
 
-static const lco_class_t _alltoall_vtable = {
-  LCO_ALLTOALL,
-  _alltoall_fini,
-  _alltoall_error,
-  _alltoall_set,
-  _alltoall_attach,
-  _alltoall_get,
-  _alltoall_getref,
-  _alltoall_release,
-  _alltoall_wait,
-  _alltoall_reset,
-  _alltoall_size
-};
-
-static void HPX_CONSTRUCTOR _register_vtable(void) {
-  lco_vtables[LCO_ALLTOALL] = &_alltoall_vtable;
-}
-
-static int _alltoall_init_handler(_alltoall_t *g, size_t participants, size_t size) {
-  lco_init(&g->lco, &_alltoall_vtable);
-  g->wait.reset();
-  g->participants = participants;
-  g->count = participants;
-  g->phase = GATHERING;
-  g->value = NULL;
-
-  if (size) {
-    // Ultimately, g->value points to start of the array containing the
-    // scattered data.
-    g->value = malloc(size * participants);
-    assert(g->value);
+int
+AllToAll::NewHandler(void *buffer, unsigned inputs)
+{
+  if (auto lco = new(buffer) AllToAll(inputs)) {
+    LCO_LOG_NEW(hpx_thread_current_target(), lco);
+    return HPX_SUCCESS;
   }
+  dbg_error("Could not initialize AllToAll.\n");
+}
 
+int
+AllToAll::GetIdHandler(AllToAll& lco, unsigned offset, size_t size)
+{
+  // Allocate a parcel that targeting our continuation with enough space for the
+  // reduced value, and use its data buffer to get the value---this prevents a
+  // copy or two. This "steals" the current continuation.
+  auto*     p = self->current;
+  auto target = p->c_target;
+  auto action = p->c_action;
+  auto    pid = p->pid;
+  auto*     c = parcel_new(target, action, 0, 0, pid, nullptr, size);
+  dbg_assert(c);
+  p->c_target = 0;
+  p->c_action = 0;
+  int rc = lco.getId(offset, size, hpx_parcel_get_data(c));
+  parcel_launch_error(c, rc);
   return HPX_SUCCESS;
 }
-static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _alltoall_init_async,
-                     _alltoall_init_handler, HPX_POINTER, HPX_SIZE_T, HPX_SIZE_T);
 
-/// Allocate a new alltoall LCO. It scatters elements from each process in order
-/// of their rank and sends the result to all the processes
-///
-/// The gathering is allocated in gathering-mode, i.e., it expects @p
-/// participants to call the hpx_lco_alltoall_setid() operation as the first
-/// phase of operation.
-///
-/// @param inputs The static number of participants in the gathering.
-/// @param size   The size of the data being gathered.
-hpx_addr_t hpx_lco_alltoall_new(size_t inputs, size_t size) {
-  _alltoall_t *g = NULL;
-  hpx_addr_t gva = lco_alloc_local(1, sizeof(*g), 0);
+int
+AllToAll::SetIdHandler(AllToAll& lco, const SetIdArgs& args, size_t n)
+{
+  return lco.setId(args.offset, n - sizeof(args), args.buffer);
+}
 
-  if (!hpx_gas_try_pin(gva, (void**)&g)) {
-    int e = hpx_call_sync(gva, _alltoall_init_async, NULL, 0, &inputs, &size);
-    dbg_check(e, "could not initialize an allreduce at %" PRIu64 "\n", gva);
-  }
-  else {
-    LCO_LOG_NEW(gva, g);
-    _alltoall_init_handler(g, inputs, size);
+hpx_status_t
+hpx_lco_alltoall_getid(hpx_addr_t gva, unsigned id, int size, void *value)
+{
+  dbg_assert(size >= 0);
+  AllToAll *lva = nullptr;
+  if (hpx_gas_try_pin(gva, (void**)&lva)) {
+    hpx_status_t status = lva->getId(id, size, value);
     hpx_gas_unpin(gva);
+    return status;
+  }
+  size_t n(size);
+  return hpx_call_sync(gva, GetId, value, size, &id, &n);
+}
+
+hpx_status_t
+hpx_lco_alltoall_setid(hpx_addr_t gva, unsigned id, int size, const void *value,
+                       hpx_addr_t lsync, hpx_addr_t rsync)
+{
+  dbg_assert(size > 0);
+  AllToAll* lva = nullptr;
+  if (hpx_gas_try_pin(gva, (void**)&lva)) {
+    hpx_status_t status = lva->setId(id, size, value);
+    hpx_gas_unpin(gva);
+    hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
+    hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
+    return status;
+  }
+
+  size_t bytes = sizeof(AllToAll::SetIdArgs) + size;
+  hpx_parcel_t *p = action_new_parcel(SetId,              // action
+                                      gva,                // target
+                                      rsync,              // continuation target
+                                      hpx_lco_set_action, // continuation action
+                                      2,                  // nargs
+                                      nullptr,            // buffer
+                                      bytes);             // size
+
+  auto& args = *static_cast<AllToAll::SetIdArgs*>(hpx_parcel_get_data(p));
+  args.offset = id;
+  memcpy(args.buffer, value, size);
+  hpx_parcel_send(p, lsync);
+  return HPX_SUCCESS;
+}
+
+hpx_addr_t
+hpx_lco_alltoall_new(size_t inputs, size_t size)
+{
+  dbg_assert(inputs < UINT_MAX);
+  hpx_addr_t gva = HPX_NULL;
+  unsigned in(inputs);
+  try {
+    size_t bytes = in * size;
+    AllToAll* lco = new(bytes, gva) AllToAll(in);
+    hpx_gas_unpin(gva);
+    LCO_LOG_NEW(gva, lco);
+  }
+  catch (const LCO::NonLocalMemory&) {
+    dbg_check( hpx_call_sync(gva, New, nullptr, 0, &in) );
   }
   return gva;
 }
 
-/// Initialize a block of alltoall LCOs.
-static int _block_init_handler(void *lco, uint32_t n, uint32_t inputs,
-                               uint32_t size) {
-  for (uint32_t i = 0; i < n; i++) {
-    auto *addr = reinterpret_cast<_alltoall_t*>((char*)lco + i * (sizeof(_alltoall_t) + size));
-    _alltoall_init_handler(addr, inputs, size);
+hpx_addr_t
+hpx_lco_alltoall_local_array_new(int n, size_t inputs, size_t size)
+{
+  dbg_assert(inputs < UINT_MAX);
+  unsigned in(inputs);
+  size_t bytes = in * size;
+  size_t bsize = sizeof(AllToAll) + bytes;
+  hpx_addr_t base = lco_alloc_local(n, bsize, 0);
+  if (!base) {
+    throw std::bad_alloc();
   }
-  return HPX_SUCCESS;
-}
-static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _block_init,
-                     _block_init_handler,
-                     HPX_POINTER, HPX_UINT32, HPX_UINT32, HPX_UINT32);
 
-/// Allocate an array of alltoall LCO local to the calling locality.
-/// @param          n The (total) number of lcos to allocate
-/// @param     inputs Number of inputs to alltoall LCO
-/// @param       size The size of the value for alltoall LCO
-///
-/// @returns the global address of the allocated array lco.
-hpx_addr_t hpx_lco_alltoall_local_array_new(int n, size_t inputs, size_t size) {
-  uint32_t lco_bytes = sizeof(_alltoall_t) + size;
-  dbg_assert(n * lco_bytes < UINT32_MAX);
-  hpx_addr_t base = lco_alloc_local(n, lco_bytes, 0);
-
-  int e = hpx_call_sync(base, _block_init, NULL, 0, &n, &inputs, &size);
-  dbg_check(e, "call of _block_init_action failed\n");
-
-  // return the base address of the allocation
+  hpx_addr_t bcast = hpx_lco_and_new(n);
+  for (int i = 0, e = n; i < e; ++i) {
+    hpx_addr_t addr = hpx_addr_add(base, i * bsize, bsize);
+    dbg_check( hpx_call(addr, New, bcast, &in) );
+  }
+  hpx_lco_wait(bcast);
+  hpx_lco_delete_sync(bcast);
   return base;
 }
 

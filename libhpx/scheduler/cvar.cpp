@@ -16,26 +16,41 @@
 #endif
 
 /// ----------------------------------------------------------------------------
-/// @file libhpx/scheduler/schedule.c
+/// @file libhpx/scheduler/condition.c
 /// ----------------------------------------------------------------------------
-#include <stdint.h>
 
-#include "libhpx/parcel.h"
 #include "cvar.h"
 #include "thread.h"
-
+#include "libhpx/debug.h"
+#include "libhpx/parcel.h"
+#include "libhpx/scheduler.h"
+#include <cstdint>
 
 namespace {
 using libhpx::scheduler::Condition;
-constexpr int CODE_OFFSET = ((sizeof(uintptr_t) / 2) * 8);
-constexpr uintptr_t ERROR_MASK = 0x1;
+using libhpx::scheduler::LCO;
 }
+
+static constexpr int CODE_OFFSET = ((sizeof(uintptr_t) / 2) * 8);
+static constexpr uintptr_t ERROR_MASK = 0x1;
 
 // static check to make sure the error code is related to the cvar size in the
 // way that we expect---if this fails we're probably on a 32-bit platform, and
 // we need a different error code size
 static_assert(sizeof(Condition) - (2 * sizeof(hpx_status_t)) + 1 > 0,
              "Condition instances have unexpected size.");
+
+Condition::Condition()
+    : top_(nullptr)
+{
+}
+
+Condition::~Condition()
+{
+  DEBUG_IF(!hasError() && !empty()) {
+    dbg_error("Destroying a condition that has waiting threads.\n");
+  }
+}
 
 uintptr_t
 Condition::hasError() const
@@ -75,7 +90,7 @@ Condition::clearError()
 }
 
 hpx_status_t
-Condition::attach(struct hpx_parcel *parcel)
+Condition::push(hpx_parcel_t *parcel)
 {
   if (hasError()) {
     return getError();
@@ -84,12 +99,6 @@ Condition::attach(struct hpx_parcel *parcel)
   parcel->next = top_;
   top_ = parcel;
   return HPX_SUCCESS;
-}
-
-hpx_status_t
-Condition::pushThread(struct ustack *thread)
-{
-  return attach(thread->parcel);
 }
 
 hpx_parcel_t *
@@ -122,6 +131,9 @@ Condition::popAll()
 void
 Condition::reset()
 {
+  DEBUG_IF(!hasError() && !empty()) {
+    dbg_error("Resetting a condition that has waiting threads.\n");
+  }
   top_ = nullptr;
 }
 
@@ -129,4 +141,28 @@ bool
 Condition::empty() const
 {
   return (top_ == nullptr);
+}
+
+hpx_status_t
+Condition::wait(LCO* lco)
+{
+  return scheduler_wait(lco, this);
+}
+
+void
+Condition::signal()
+{
+  scheduler_signal(this);
+}
+
+void
+Condition::signalAll()
+{
+  scheduler_signal_all(this);
+}
+
+void
+Condition::signalError(hpx_status_t code)
+{
+  scheduler_signal_error(this, code);
 }

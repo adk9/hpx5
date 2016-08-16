@@ -22,383 +22,328 @@
 #include "cvar.h"
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
-#include "libhpx/locality.h"
 #include "libhpx/memory.h"
-#include "libhpx/scheduler.h"
-#include <cassert>
-#include <cinttypes>
+#include "libhpx/padding.h"
+#include <mutex>
 #include <cstring>
-#include <cstdlib>
 
 namespace {
 using libhpx::scheduler::Condition;
-using namespace libhpx::scheduler::lco;
-}
+using libhpx::scheduler::LCO;
 
-/// A predicate that "guards" the LCO.
-///
-/// This has to return true when the value pointed to by the buffer @p
-/// i is fully resolved and can be bound to the buffer associated
-/// with the LCO. All of the waiting threads are signaled once the
-/// predicate returns true.
-typedef bool (*_hpx_predicate_t)(void *i, size_t bytes);
+class UserLCO final : public LCO {
+ public:
+  /// Allocate a user lco.
+  ///
+  /// This will serialize the initialization data into the end of the user
+  /// data. This should only be called using a placement new operation into a
+  /// buffer of size GetPaddedBytes(size, initSize).
+  UserLCO(size_t size, hpx_action_t id, hpx_action_t op, hpx_action_t predicate,
+          size_t initSize, const void *init);
 
-typedef void (*_hpx_user_lco_id_t)(void *i, size_t size,
-                                   void *init, size_t init_size);
-
-/// Generic LCO interface.
-/// @{
-typedef struct {
-  lco_t              lco;
-  Condition         cvar;
-  size_t            size;
-  hpx_action_t        id;
-  hpx_action_t        op;
-  hpx_action_t predicate;
-  size_t       init_size;
-  char           data[0];
-} _user_lco_t;
-
-// Forward declaration---used during reset as well.
-static int _user_lco_init(_user_lco_t *u, size_t size, hpx_action_t id,
-                          hpx_action_t op, hpx_action_t predicate,
-                          void *init, size_t init_size);
-
-static void _reset(_user_lco_t *u) {
-  u->cvar.clearError();
-  dbg_assert_str(u->cvar.empty(),
-                 "Reset on an LCO that has waiting threads.\n");
-  lco_reset_triggered(&u->lco);
-  _user_lco_init(u, u->size, u->id, u->op, u->predicate, u->data, u->init_size);
-}
-
-
-static bool _trigger(_user_lco_t *u) {
-  if (lco_get_triggered(&u->lco)) {
-    return false;
-  }
-  lco_set_triggered(&u->lco);
-  return true;
-}
-
-static size_t _user_lco_size(lco_t *lco) {
-  _user_lco_t *u = (_user_lco_t *)lco;
-  return (sizeof(*u) + u->size + u->init_size);
-}
-
-/// Deletes a user-defined LCO.
-static void _user_lco_fini(lco_t *lco) {
-  if (!lco) {
-    return;
+  /// Delete a user lco.
+  ///
+  /// We don't expose any sort of user-programmable destructor, and all of the
+  /// data has been serialized, so we don't really have anything extra to do
+  /// here.
+  ~UserLCO() {
+    lock();
   }
 
-  lco_lock(lco);
-  lco_fini(lco);
-}
+  /// Set a user LCO.
+  ///
+  /// This will call the provided operation to reduce the data locally, and then
+  /// it will check the predicate to see if the set operation triggered the LCO.
+  int set(size_t size, const void *value);
 
-/// Handle an error condition.
-static void _user_lco_error(lco_t *lco, hpx_status_t code) {
-  lco_lock(lco);
-  _user_lco_t *u = (_user_lco_t *)lco;
-  _trigger(u);
-  scheduler_signal_error(&u->cvar, code);
-  lco_unlock(lco);
-}
+  /// Get a user LCO's data.
+  hpx_status_t get(size_t size, void *value, int reset);
 
-static void _user_lco_reset(lco_t *lco) {
-  _user_lco_t *u = (_user_lco_t *)lco;
-  lco_lock(lco);
-  _reset(u);
-  lco_unlock(lco);
-}
+  /// Get a reference to the user-lco data. For local operations this returns an
+  /// internal pointer to the user data buffer, so we use the @p unpin parameter
+  /// to tell the user if they can unpin the lco or not.
+  hpx_status_t getRef(size_t size, void **out, int *unpin);
 
-/// Invoke an operation on the user-defined LCO's buffer.
-static int _user_lco_set(lco_t *lco, int size, const void *from) {
-  int set = 0;
-  lco_lock(lco);
-  _user_lco_t *u = (_user_lco_t *)lco;
-  handler_t f = actions[u->op].handler;
-  hpx_monoid_op_t op = (hpx_monoid_op_t)f;
-  void *buffer = hpx_lco_user_get_user_data(lco);
-  _hpx_predicate_t predicate = (_hpx_predicate_t)f;
+  /// Release a reference to the user lco data.
+  bool release(void *out);
 
-  if (lco_get_triggered(&u->lco)) {
-    dbg_error("cannot set an already set user_lco.\n");
-    goto unlock;
+  /// Attach a continuation parcel to the user lco.
+  hpx_status_t attach(hpx_parcel_t *p);
+
+  /// Wait for the lco.
+  hpx_status_t wait(int reset) {
+    return get(0, nullptr, reset);
   }
 
-  // perform the op()
-  f = actions[u->op].handler;
-  op = (hpx_monoid_op_t)f;
-  buffer = hpx_lco_user_get_user_data(lco);
-  op(buffer, from, size);
-
-  f = actions[u->predicate].handler;
-  predicate = (_hpx_predicate_t)f;
-  if (predicate(buffer, u->size)) {
-    lco_set_triggered(&u->lco);
-    scheduler_signal_all(&u->cvar);
-    set = 1;
+  void error(hpx_status_t code) {
+    std::lock_guard<LCO> _(*this);
+    setTriggered();
+    cvar_.signalError(code);
   }
 
-  unlock:
-   lco_unlock(lco);
-   return set;
+  void reset() {
+    std::lock_guard<LCO> _(*this);
+    resetState();
+  }
+
+  size_t size(size_t size) const {
+    return GetPaddedBytes(size_, initSize_);
+  }
+
+  void* getUserData() {
+    return userData_;
+  }
+
+  static size_t GetPaddedBytes(size_t size, size_t initSize) {
+    return sizeof(UserLCO) + size + _BYTES(8, size) + initSize;
+  }
+
+ private:
+  void resetState() {
+    resetTriggered();
+    cvar_.reset();
+    id();
+  }
+
+  void id() {
+    auto f = (void (*)(void*, size_t, const void*, size_t))actions[id_].handler;
+    f(userData_, size_, initData_, initSize_);
+  }
+
+  void op(const void* rhs) {
+    auto f = (hpx_monoid_op_t)actions[op_].handler;
+    f(userData_, rhs, size_);
+  }
+
+  bool predicate() const {
+    auto f = (bool (*)(const void*, size_t))actions[predicate_].handler;
+    return f(userData_, size_);
+  }
+
+  Condition               cvar_;                //<! The single user condition
+  const size_t            size_;                //<! The size of the user data
+  const char* const   initData_;                //<! Address of init data
+  const size_t        initSize_;                //<! Size of the init data
+  const hpx_action_t        id_;                //<! The id handler
+  const hpx_action_t        op_;                //<! The operation
+  const hpx_action_t predicate_;                //<! The predicate
+  const char _pad[_BYTES(8,
+                         sizeof(LCO) + sizeof(cvar_) + sizeof(size_) +
+                         sizeof(initData_) + sizeof(initSize_) + sizeof(id_) +
+                         sizeof(op_) + sizeof(predicate_))];
+  char                userData_[];              //<! The user data and init data
+};
+
+/// Function object class to deal with the variable-length nature of the
+/// UserLCO initialization data.
+class NewOp {
+ public:
+  NewOp(size_t size, hpx_action_t id, hpx_action_t op, hpx_action_t pred,
+        size_t initSize, const void* init)
+      : size_(size), initSize_(initSize), id_(id), op_(op), predicate_(pred)
+  {
+    memcpy(init_, init, initSize);
+  }
+
+  /// Perform a construction call on a target address.
+  int operator()(hpx_addr_t gva) const;
+
+  /// Perform a construction call on a target address.
+  int operator()(hpx_addr_t gva, hpx_addr_t sync) const;
+
+  /// Remote entry point for the construct() handler.
+  static int Handler(char* buffer, const NewOp& args, size_t) {
+    return args.constructIn(buffer);
+  }
+
+ private:
+  int constructIn(char* blocks) const;
+
+  size_t size_;
+  size_t initSize_;
+  hpx_action_t id_;
+  hpx_action_t op_;
+  hpx_action_t predicate_;
+  char init_[];
+};
+
+LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, New, NewOp::Handler,
+              HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
 }
 
-static hpx_status_t _user_lco_attach(lco_t *lco, hpx_parcel_t *p) {
-  hpx_status_t status = HPX_SUCCESS;
-  lco_lock(lco);
-  _user_lco_t *u = (_user_lco_t *)lco;
-
-  if (!lco_get_triggered(lco)) {
-    status = u->cvar.attach(p);
-    goto unlock;
-  }
-
-  // If there was an error, then return that error without sending the parcel
-  status = u->cvar.getError();
-  if (status != HPX_SUCCESS) {
-    goto unlock;
-  }
-
-  // go ahead and send this parcel eagerly
-  hpx_parcel_send(p, HPX_NULL);
-
- unlock:
-  lco_unlock(lco);
-  return status;
+UserLCO::UserLCO(size_t size, hpx_action_t id, hpx_action_t op,
+                 hpx_action_t predicate, size_t initSize, const void *init)
+    : LCO(LCO_USER),
+      cvar_(),
+      size_(size),
+      initData_(userData_ + size_ + _BYTES(8, size_)),
+      initSize_(initSize),
+      id_(id),
+      op_(op),
+      predicate_(predicate),
+      _pad()
+{
+  dbg_assert(size_);
+  dbg_assert(id_);
+  dbg_assert(op_);
+  dbg_assert(predicate_);
+  dbg_assert(!initData_ || init);
+  memcpy(const_cast<char* const>(initData_), init, initSize);
+  this->id();
 }
 
-static hpx_status_t _wait(_user_lco_t *u) {
-  if (!lco_get_triggered(&u->lco))
-    return scheduler_wait(&u->lco.lock, &u->cvar);
+int
+UserLCO::set(size_t size, const void *from)
+{
+  dbg_assert(size == size_);
+  dbg_assert(!size || from);
 
-  return u->cvar.getError();
-}
-
-/// Get the user-defined LCO's buffer.
-static hpx_status_t _user_lco_get(lco_t *lco, int size, void *out, int reset) {
-  hpx_status_t status = HPX_SUCCESS;
-  lco_lock(lco);
-
-  _user_lco_t *u = (_user_lco_t *)lco;
-
-  status = _wait(u);
-  if (status != HPX_SUCCESS) {
-    lco_unlock(lco);
-    return status;
+  std::lock_guard<LCO> _(*this);
+  if (getTriggered()) {
+    dbg_error("Cannot set an already set LCO\n");
   }
 
-  // copy out the value if the caller wants it
-  if (out) {
-    void *buffer = hpx_lco_user_get_user_data(lco);
-    memcpy(out, buffer, size);
+  op(from);
+
+  if (!predicate()) {
+    return 0;
+  }
+
+  setTriggered();
+  cvar_.signalAll();
+  return 1;
+}
+
+hpx_status_t
+UserLCO::get(size_t size, void *out, int reset)
+{
+  dbg_assert(!size || (size == size_));
+  dbg_assert(!size || out);
+
+  std::lock_guard<LCO> _(*this);
+  while (!getTriggered()) {
+    if (auto status = cvar_.wait(this)) {
+      return status;
+    }
+  }
+
+  if (size) {
+    memcpy(out, userData_, size_);
   }
 
   if (reset) {
-    _reset(u);
+    resetState();
   }
 
-  lco_unlock(lco);
-  return status;
+  return HPX_SUCCESS;
 }
 
-// Wait for the reduction.
-static hpx_status_t _user_lco_wait(lco_t *lco, int reset) {
-  hpx_status_t status = HPX_SUCCESS;
-  lco_lock(lco);
-  _user_lco_t *u = (_user_lco_t *)lco;
-  status = _wait(u);
-
-  if (reset && status == HPX_SUCCESS) {
-    _reset(u);
-  }
-
-  lco_unlock(lco);
-  return status;
-}
-
-// Get the reference to the reduction.
-static hpx_status_t _user_lco_getref(lco_t *lco, int size, void **out, int *unpin) {
+hpx_status_t
+UserLCO::getRef(size_t size, void **out, int *unpin)
+{
   dbg_assert(size && out);
 
-  hpx_status_t status = _user_lco_wait(lco, 0);
-  if (status != HPX_SUCCESS) {
+  if (hpx_status_t status = wait(0)) {
     return status;
   }
 
-  // No need for a lock here, synchronization happened in _wait(), and the LCO
-  // is pinned externally.
-  *out  = hpx_lco_user_get_user_data(lco);
+  *out  = userData_;
   *unpin = 0;
   return HPX_SUCCESS;
 }
 
-// Release the reference to the buffer.
-static int _user_lco_release(lco_t *lco, void *out) {
-  void *buffer = hpx_lco_user_get_user_data(lco);
-  dbg_assert(lco && out && out == buffer);
-  (void)buffer;
+bool
+UserLCO::release(void *out)
+{
+  dbg_assert(out == userData_);
   return 1;
 }
 
-// vtable
-static const lco_class_t _user_lco_vtable = {
-  .type        = LCO_USER,
-  .on_fini     = _user_lco_fini,
-  .on_error    = _user_lco_error,
-  .on_set      = _user_lco_set,
-  .on_attach   = _user_lco_attach,
-  .on_get      = _user_lco_get,
-  .on_getref   = _user_lco_getref,
-  .on_release  = _user_lco_release,
-  .on_wait     = _user_lco_wait,
-  .on_reset    = _user_lco_reset,
-  .on_size     = _user_lco_size
-};
-
-static void HPX_CONSTRUCTOR _register_vtable(void) {
-  lco_vtables[LCO_USER] = &_user_lco_vtable;
-}
-
-static int
-_user_lco_init(_user_lco_t *u, size_t size, hpx_action_t id,
-               hpx_action_t op, hpx_action_t predicate, void *init,
-               size_t init_size) {
-  dbg_assert(id);
-  dbg_assert(op);
-  dbg_assert(predicate);
-
-  lco_init(&u->lco, &_user_lco_vtable);
-  u->cvar.reset();
-  u->size = size;
-  u->id = id;
-  u->op = op;
-  u->predicate = predicate;
-  u->init_size = init_size;
-
-  handler_t f = actions[u->id].handler;
-  _hpx_user_lco_id_t init_fn = (_hpx_user_lco_id_t)f;
-  void *buffer = (char*)u->data + init_size;
-  init_fn(buffer, u->size, init, init_size);
-  return HPX_SUCCESS;
-}
-/// @}
-
-typedef struct {
-  int                  n;
-  size_t            size;
-  hpx_action_t        id;
-  hpx_action_t        op;
-  hpx_action_t predicate;
-  size_t       init_size;
-  char           data[0];
-} _user_lco_init_args_t;
-
-static int
-_user_lco_init_handler(_user_lco_t *u, _user_lco_init_args_t *args) {
-  size_t size = args->size;
-  hpx_action_t id = args->id;
-  hpx_action_t op = args->op;
-  hpx_action_t predicate = args->predicate;
-  size_t init_size = args->init_size;
-  void *init = args->data;
-
-  return _user_lco_init(u, size, id, op, predicate, init, init_size);
-}
-static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED,
-                     _user_lco_init_action, _user_lco_init_handler,
-                     HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
-
-hpx_addr_t hpx_lco_user_new(size_t size, hpx_action_t id, hpx_action_t op,
-                            hpx_action_t predicate, void *init,
-                            size_t init_size) {
-  _user_lco_t *u = NULL;
-  hpx_addr_t gva = lco_alloc_local(1, sizeof(*u) + size + init_size, 0);
-
-  if (!hpx_gas_try_pin(gva, (void**)&u)) {
-    size_t args_size = sizeof(_user_lco_t) + init_size;
-    void *buffer = calloc(1, args_size);
-    _user_lco_init_args_t *args = static_cast<_user_lco_init_args_t *>(buffer);
-    args->size = size;
-    args->id = id;
-    args->op = op;
-    args->predicate = predicate;
-    args->init_size = init_size;
-    memcpy(args->data, init, init_size);
-
-    int e = hpx_call_sync(gva, _user_lco_init_action, NULL, 0, args, args_size);
-    dbg_check(e, "could not initialize an allreduce at %" PRIu64 "\n", gva);
-    free(args);
-  } else {
-    LCO_LOG_NEW(gva, u);
-    memcpy(u->data, init, init_size);
-    _user_lco_init(u, size, id, op, predicate, init, init_size);
-    hpx_gas_unpin(gva);
+hpx_status_t
+UserLCO::attach(hpx_parcel_t *p)
+{
+  std::lock_guard<LCO> _(*this);
+  if (!getTriggered()) {
+    return cvar_.push(p);
   }
 
+  if (auto status = cvar_.getError()) {
+    parcel_delete(p);                         // todo: send error?
+    return status;
+  }
+
+  parcel_launch(p);
+  return HPX_SUCCESS;
+}
+
+int
+NewOp::operator()(hpx_addr_t gva) const
+{
+  return hpx_call_sync(gva, New, nullptr, 0, this, sizeof(*this) + initSize_);
+}
+
+int
+NewOp::operator()(hpx_addr_t gva, hpx_addr_t sync) const
+{
+  return hpx_call(gva, New, sync, sizeof(*this) + initSize_);
+}
+
+int
+NewOp::constructIn(char* buffer) const
+{
+  if (auto lva =
+      new(buffer) UserLCO(size_, id_, op_, predicate_, initSize_, init_)) {
+    LCO_LOG_NEW(hpx_thread_current_target(), lva);
+    return HPX_SUCCESS;
+  }
+  dbg_error("Could not construct UserLCO\n");
+}
+
+hpx_addr_t
+hpx_lco_user_new(size_t size, hpx_action_t id, hpx_action_t op,
+                 hpx_action_t predicate, void *init, size_t initSize)
+{
+  hpx_addr_t gva = HPX_NULL;
+  size_t bytes = UserLCO::GetPaddedBytes(size, initSize);
+  try {
+    UserLCO* lco = new(bytes, gva) UserLCO(size, id, op, predicate, initSize, init);
+    hpx_gas_unpin(gva);
+    LCO_LOG_NEW(gva, lco);
+  }
+  catch (const LCO::NonLocalMemory&) {
+    void* buffer = alloca(sizeof(NewOp) + initSize);
+    NewOp& f = *(new(buffer) NewOp(size, id, op, predicate, initSize, init));
+    dbg_check( f(gva) );
+  }
   return gva;
 }
 
-/// Initialize a block of array of lco.
-static int
-_block_init_handler(_user_lco_t *lco, _user_lco_init_args_t *args) {
-  int n = args->n;
-  int lco_bytes = sizeof(_user_lco_t) + args->size + args->init_size;
-  for (int i = 0; i < n; i++) {
-    auto* addr = reinterpret_cast<_user_lco_t*>((char*)lco + (i * lco_bytes));
-    int e = _user_lco_init_handler(addr, args);
-    dbg_check(e, "_block_init_handler failed\n");
+hpx_addr_t
+hpx_lco_user_local_array_new(int n, size_t size, hpx_action_t id,
+                             hpx_action_t op, hpx_action_t predicate,
+                             void *init, size_t init_size)
+{
+  size_t bsize = UserLCO::GetPaddedBytes(size, init_size);
+  hpx_addr_t base = lco_alloc_local(n, bsize, 0);
+  if (!base) {
+    throw std::bad_alloc();
   }
-  return HPX_SUCCESS;
-}
 
-static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED,
-                     _block_init, _block_init_handler,
-                     HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
-
-/// Allocate an array of user LCO local to the calling locality.
-/// @param          n The (total) number of lcos to allocate
-/// @param       size The size of the LCO Buffer
-/// @param         id An initialization function for the data, this is
-///                   used to initialize the data in every epoch.
-/// @param         op The commutative-associative operation we're
-///                   performing.
-/// @param  predicate Predicate to guard the LCO.
-/// @param       init The initialization data address.
-/// @param  init_size The size of the initialization data.
-///
-/// @returns the global address of the allocated array lco.
-hpx_addr_t hpx_lco_user_local_array_new(int n, size_t size, hpx_action_t id,
-                                        hpx_action_t op, hpx_action_t predicate,
-                                        void *init, size_t init_size) {
-  uint32_t lco_bytes = sizeof(_user_lco_t) + size + init_size;
-  dbg_assert(n * lco_bytes < UINT32_MAX);
-  hpx_addr_t base = lco_alloc_local(n, lco_bytes, 0);
-
-  size_t args_size = sizeof(_user_lco_t) + init_size;
-  void* buffer = calloc(1, args_size);
-  _user_lco_init_args_t *args = reinterpret_cast<_user_lco_init_args_t *>(buffer);
-  args->n = n;
-  args->size = size;
-  args->id = id;
-  args->op = op;
-  args->predicate = predicate;
-  args->init_size = init_size;
-  memcpy(args->data, init, init_size);
-
-  int e = hpx_call_sync(base, _block_init, NULL, 0, args, args_size);
-  dbg_check(e, "call of _block_init_action failed\n");
-
-  free(args);
-  // return the base address of the allocation
+  void *buffer = alloca(sizeof(NewOp) + init_size);
+  NewOp& f = *(new(buffer) NewOp(size, id, op, predicate, init_size, init));
+  hpx_addr_t bcast = hpx_lco_and_new(n);
+  for (int i = 0, e = n; i < e; ++i) {
+    hpx_addr_t addr = hpx_addr_add(base, i * bsize, bsize);
+    dbg_check( f(addr, bcast) );
+  }
+  hpx_lco_wait(bcast);
+  hpx_lco_delete_sync(bcast);
   return base;
 }
 
 /// Get the user-defined LCO's user data. This allows to access the buffer
 /// portion of the user-defined LCO regardless the LCO has been set or not.
-void *hpx_lco_user_get_user_data(void *lco) {
-  _user_lco_t *u = static_cast<_user_lco_t*>(lco);
-  return (char*)u->data + u->init_size;
+void *
+hpx_lco_user_get_user_data(void *lco) {
+  return static_cast<UserLCO*>(lco)->getUserData();
 }
