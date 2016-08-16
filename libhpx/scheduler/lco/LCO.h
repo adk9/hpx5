@@ -19,6 +19,7 @@
 #include "hpx/hpx.h"
 #include <cinttypes>
 #include <memory>
+#include <mutex>
 
 /// The action used to propagate an LCO error.
 ///
@@ -47,6 +48,10 @@ class LCO {
   /// NonLocalMemory exception if the allocation succeeded but was
   /// non-local. They will throw a std::bad_alloc if the allocation failed
   /// entirely.
+  ///
+  /// Operator delete() is required by C++ when there's an operator new(), but
+  /// we don't do anything in it because our new() operators will throw rather
+  /// than returning nullptr.
   /// @{
   class NonLocalMemory : public std::exception {
   };
@@ -94,7 +99,9 @@ class LCO {
   void unlock(hpx_parcel_t* owner);
   /// @}
 
-  /// Implement the std BasicLockable concept for use with std::lock_guard.
+  /// Implement the std BasicLockable concept for use with
+  /// std::lock_guard. These forward to the explicit parcel version using
+  /// self->current.
   /// @{
   void lock();
   void unlock();
@@ -141,6 +148,7 @@ class LCO {
   Type             type_;                       //<! The LCO's dynamic type
 };
 
+/// Utility macro designed to aid in debugging.
 #define LCO_LOG_NEW(gva, lva) do {                                \
     dbg_assert_str(gva, "Could not malloc global memory\n");      \
     log_lco("allocated lco %" PRIu64 " (%p)\n", gva, (void*)lva); \

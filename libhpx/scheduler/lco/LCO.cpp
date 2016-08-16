@@ -35,7 +35,6 @@ using libhpx::scheduler::LCO;
 
 static constexpr short TRIGGERED_MASK = (0x2);
 static constexpr short      USER_MASK = (0x4);
-static constexpr short     STATE_MASK = (0x7);
 
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _lco_size,
                      LCO::SizeHandler, HPX_POINTER, HPX_SIZE_T);
@@ -68,6 +67,7 @@ LCO::TryPin(hpx_addr_t gva)
 void*
 LCO::operator new(size_t, void * ptr)
 {
+  dbg_assert_str(ptr, "LCO placement new() requires valid address.\n");
   return ptr;
 }
 
@@ -105,6 +105,9 @@ LCO::LCO(enum Type type) : lock_(), state_(), type_(type)
   trace_append(HPX_TRACE_LCO, TRACE_EVENT_LCO_INIT, this, state_);
 }
 
+/// Our infrastructure requires that the destructor run atomically with the rest
+/// of the monitor interface, so the subclasses will all call lock() while they
+/// run.
 LCO::~LCO()
 {
   unlock();

@@ -97,8 +97,15 @@ class AllReduce final : public LCO {
     return getInner(size, out, 0);
   }
 
+ public:
+  /// Static action interface.
+  /// @{
   static int NewHandler(void* buffer, size_t writers, size_t readers,
-                        size_t size, hpx_action_t id, hpx_action_t op);
+                        size_t size, hpx_action_t id, hpx_action_t op) {
+    auto lco = new(buffer) AllReduce(writers, readers, size, id, op);
+    LCO_LOG_NEW(hpx_thread_current_target(), lco);
+    return HPX_SUCCESS;
+  }
 
   static int JoinHandler(AllReduce* lco, const void* data, size_t n);
 
@@ -109,12 +116,12 @@ class AllReduce final : public LCO {
   };
   static int JoinRequestHandler(AllReduce *lco, JoinAsyncArgs *args, size_t n);
   static int JoinReplyHandler(JoinAsyncArgs *args, size_t n);
-
+  /// @}
 
  private:
   /// The set and get inner handlers perform the operations without acquiring
   /// the lock. This allows them to be shared by the set and get
-  ///  implementations, along with the join operation.
+  /// implementations, along with the join operation.
   int setInner(size_t size, const void *value);
   hpx_status_t getInner(size_t size, void *value, int reset);
 
@@ -279,17 +286,6 @@ AllReduce::AllReduce(size_t writers, size_t readers, size_t size,
     assert(op);
     this->id(size);
   }
-}
-
-int
-AllReduce::NewHandler(void* buffer, size_t writers, size_t readers,
-                      size_t size, hpx_action_t id, hpx_action_t op)
-{
-  if (auto lco = new(buffer) AllReduce(writers, readers, size, id, op)) {
-    LCO_LOG_NEW(hpx_thread_current_target(), lco);
-    return HPX_SUCCESS;
-  }
-  dbg_error("Could not initialize allreduce.\n");
 }
 
 hpx_addr_t

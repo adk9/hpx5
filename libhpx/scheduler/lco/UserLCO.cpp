@@ -140,7 +140,7 @@ class NewOp {
  public:
   NewOp(size_t size, hpx_action_t id, hpx_action_t op, hpx_action_t pred,
         size_t initSize, const void* init)
-      : size_(size), initSize_(initSize), id_(id), op_(op), predicate_(pred)
+      : size_(size), initSize_(initSize), id_(id), op_(op), pred_(pred)
   {
     memcpy(init_, init, initSize);
   }
@@ -157,13 +157,17 @@ class NewOp {
   }
 
  private:
-  int constructIn(char* blocks) const;
+  int constructIn(char* buffer) const {
+    auto lva = new(buffer) UserLCO(size_, id_, op_, pred_, initSize_, init_);
+    LCO_LOG_NEW(hpx_thread_current_target(), lva);
+    return HPX_SUCCESS;
+  }
 
   size_t size_;
   size_t initSize_;
   hpx_action_t id_;
   hpx_action_t op_;
-  hpx_action_t predicate_;
+  hpx_action_t pred_;
   char init_[];
 };
 
@@ -288,17 +292,6 @@ NewOp::operator()(hpx_addr_t gva, hpx_addr_t sync) const
   return hpx_call(gva, New, sync, sizeof(*this) + initSize_);
 }
 
-int
-NewOp::constructIn(char* buffer) const
-{
-  if (auto lva =
-      new(buffer) UserLCO(size_, id_, op_, predicate_, initSize_, init_)) {
-    LCO_LOG_NEW(hpx_thread_current_target(), lva);
-    return HPX_SUCCESS;
-  }
-  dbg_error("Could not construct UserLCO\n");
-}
-
 hpx_addr_t
 hpx_lco_user_new(size_t size, hpx_action_t id, hpx_action_t op,
                  hpx_action_t predicate, void *init, size_t initSize)
@@ -344,6 +337,7 @@ hpx_lco_user_local_array_new(int n, size_t size, hpx_action_t id,
 /// Get the user-defined LCO's user data. This allows to access the buffer
 /// portion of the user-defined LCO regardless the LCO has been set or not.
 void *
-hpx_lco_user_get_user_data(void *lco) {
+hpx_lco_user_get_user_data(void *lco)
+{
   return static_cast<UserLCO*>(lco)->getUserData();
 }

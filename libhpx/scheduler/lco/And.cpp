@@ -34,20 +34,43 @@ using libhpx::scheduler::LCO;
 class And final : public LCO {
  public:
   And(int inputs);
-  ~And();
 
-  int set(size_t size, const void *value);
+  ~And() {
+    lock();                                     // released in ~LCO()
+  }
 
-  void error(hpx_status_t code);
-  hpx_status_t get(size_t size, void *value, int reset);
-  hpx_status_t wait(int reset);
-  hpx_status_t attach(hpx_parcel_t *p);
-  void reset();
+  void error(hpx_status_t code) {
+    std::lock_guard<LCO> _(*this);
+    barrier_.signalError(code);
+  }
+
+  hpx_status_t get(size_t size, void *value, int reset) {
+    dbg_assert(!size && !value);
+    return wait(reset);
+  }
+
+  void reset() {
+    std::lock_guard<LCO> _(*this);
+    unlockedReset();
+  }
+
   size_t size(size_t) const {
     return sizeof(And);
   }
 
-  static int NewHandler(void* buffer, int n);
+  int set(size_t size, const void *value);
+  hpx_status_t wait(int reset);
+  hpx_status_t attach(hpx_parcel_t *p);
+
+ public:
+  /// Static action interface.
+  /// @{
+  static int NewHandler(void* buffer, int inputs) {
+    auto lco = new(buffer) And(inputs);
+    LCO_LOG_NEW(hpx_thread_current_target(), lco);
+    return HPX_SUCCESS;
+  }
+  /// @}
 
  private:
   void unlockedReset();
@@ -61,6 +84,18 @@ LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, New, And::NewHandler, HPX_POINTER,
               HPX_INT);
 }
 
+And::And(int count)
+    : LCO(LCO_AND),
+      barrier_(),
+      count_(count),
+      value_(count)
+{
+  log_lco("initialized with %d inputs lco %p\n", count_.load(), (void*)this);
+  if (!count_) {
+    setTriggered();
+  }
+}
+
 void
 And::unlockedReset()
 {
@@ -71,13 +106,6 @@ And::unlockedReset()
   if (!value_) {
     setTriggered();
   }
-}
-
-void
-And::reset()
-{
-  std::lock_guard<LCO> _(*this);
-  unlockedReset();
 }
 
 hpx_status_t
@@ -120,13 +148,6 @@ And::attach(hpx_parcel_t *p)
   return barrier_.push(p);
 }
 
-void
-And::error(hpx_status_t code)
-{
-  std::lock_guard<LCO> _(*this);
-  barrier_.signalError(code);
-}
-
 int
 And::set(size_t size, const void *from)
 {
@@ -155,39 +176,6 @@ And::set(size_t size, const void *from)
 
   dbg_error("too many threads joined (%d).\n", count - n);
   unreachable();
-}
-
-hpx_status_t
-And::get(size_t size, void *out, int reset)
-{
-  return wait(reset);
-}
-
-And::And(int count)
-    : LCO(LCO_AND),
-      barrier_(),
-      count_(count),
-      value_(count)
-{
-  log_lco("initialized with %d inputs lco %p\n", count_.load(), (void*)this);
-  if (!count_) {
-    setTriggered();
-  }
-}
-
-And::~And()
-{
-  lock();
-}
-
-int
-And::NewHandler(void* buffer, int limit)
-{
-  if (auto lco = new(buffer) And(limit)) {
-    LCO_LOG_NEW(hpx_thread_current_target(), lco);
-    return HPX_SUCCESS;
-  }
-  dbg_error("Could not initialize an And gate.\n");
 }
 
 hpx_addr_t

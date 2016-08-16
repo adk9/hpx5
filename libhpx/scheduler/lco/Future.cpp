@@ -36,33 +36,62 @@ class Future final : public LCO
 {
  public:
   Future(size_t size);
-  ~Future();
+
+  ~Future() {
+    lock();                                     // release in ~LCO()
+  }
 
   int set(size_t size, const void *value);
-  void error(hpx_status_t code);
   hpx_status_t get(size_t size, void *value, int reset);
   hpx_status_t getRef(size_t size, void **out, int *unpin);
   bool release(void *out);
-  hpx_status_t wait(int reset);
   hpx_status_t attach(hpx_parcel_t *p);
-  void reset();
+
+  void error(hpx_status_t code) {
+    std::lock_guard<LCO> _(*this);
+    setTriggered();
+    full_.signalError(code);
+  }
+
+  hpx_status_t wait(int reset) {
+    return get(0, NULL, reset);
+  }
+
+  void reset() {
+    std::lock_guard<LCO> _(*this);
+    resetFull();
+  }
   size_t size(size_t bytes) const {
     return sizeof(Future) + bytes;
   }
 
-  static int NewHandler(void* buffer, size_t size);
+ public:
+  /// Static action interface.
+  /// @{
+  static int NewHandler(void* buffer, size_t size) {
+    auto lco = new(buffer) Future(size);
+    return HPX_THREAD_CONTINUE(lco);
+  }
+
   static int NewBlockHandler(char* blocks, unsigned n, size_t size);
+  /// @}
 
  private:
   /// Reset the full condition.
   ///
   /// This must be called while holding the LCO lock.
-  void resetFull();
+  void resetFull() {
+    log_lco("resetting future %p\n", (void*)this);
+    resetTriggered();
+    full_.reset();
+  }
 
   /// Wait until the full condition is true.
   ///
   /// This must be called while holding the LCO lock.
-  hpx_status_t waitFull();
+  hpx_status_t waitFull() {
+    return (getTriggered()) ? full_.getError() : full_.wait(this);
+  }
 
   Condition full_;
   char   value_[];
@@ -85,11 +114,6 @@ Future::Future(size_t size)
     }
     memset(value_, 0, size);
   }
-}
-
-Future::~Future()
-{
-  lock();                                       // release in ~LCO()
 }
 
 /// Copies @p from into the appropriate location.
@@ -115,14 +139,6 @@ Future::set(size_t size, const void *from)
 
   full_.signalAll();
   return 1;
-}
-
-void
-Future::error(hpx_status_t code)
-{
-  std::lock_guard<LCO> _(*this);
-  setTriggered();
-  full_.signalError(code);
 }
 
 /// Copies the appropriate value into @p out, waiting if the lco isn't set yet.
@@ -184,12 +200,6 @@ Future::release(void *out)
 }
 
 hpx_status_t
-Future::wait(int reset)
-{
-  return get(0, NULL, reset);
-}
-
-hpx_status_t
 Future::attach(hpx_parcel_t *p)
 {
   std::lock_guard<LCO> _(*this);
@@ -208,35 +218,6 @@ Future::attach(hpx_parcel_t *p)
 
   hpx_parcel_send(p, HPX_NULL);
   return HPX_SUCCESS;
-}
-
-void
-Future::reset()
-{
-  std::lock_guard<LCO> _(*this);
-  resetFull();
-}
-
-void
-Future::resetFull()
-{
-  log_lco("resetting future %p\n", (void*)this);
-  resetTriggered();
-  full_.reset();
-}
-
-hpx_status_t
-Future::waitFull() {
-  return (getTriggered()) ? full_.getError() : full_.wait(this);
-}
-
-int
-Future::NewHandler(void* buffer, size_t size)
-{
-  if (auto lco = new(buffer) Future(size)) {
-    return HPX_THREAD_CONTINUE(lco);
-  }
-  dbg_error("Could not initialize a Future.\n");
 }
 
 int

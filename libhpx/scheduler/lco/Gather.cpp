@@ -34,29 +34,65 @@ using libhpx::scheduler::LCO;
 class Gather final : public LCO {
  public:
   Gather(unsigned writers, unsigned readers, size_t size);
-  ~Gather();
 
-  int set(size_t size, const void *value);
-  void error(hpx_status_t code);
+  ~Gather() {
+    lock();                                     // reset in ~LCO()
+  }
+
   hpx_status_t get(size_t size, void *value, int reset);
-  hpx_status_t getRef(size_t size, void **out, int *unpin);
-  bool release(void *out);
-  hpx_status_t wait(int reset);
   hpx_status_t attach(hpx_parcel_t *p);
-  void reset();
+  hpx_status_t setId(unsigned offset, size_t size, const void* buffer);
+
+  int set(size_t size, const void *value) {
+    // @todo: is this even an LCO in this case?
+    dbg_error("Gather LCO does not support get\n");
+  }
+
+  void error(hpx_status_t code) {
+    std::lock_guard<LCO> _(*this);
+    cvar_.signalError(code);
+  }
+
+  hpx_status_t getRef(size_t size, void **out, int *unpin) {
+    *out = registered_malloc(size);             // clone the buffer because
+    *unpin = 1;                                 // it is reset between rounds
+    return get(size, *out, 0);
+  }
+
+  bool release(void *out) {
+    registered_free(out);                       // free the clone
+    return 0;
+  }
+
+  hpx_status_t wait(int reset) {
+    return get(0, NULL, reset);
+  }
+
+  void reset() {
+    std::lock_guard<LCO> _(*this);
+    cvar_.reset();
+  }
+
   size_t size(size_t bytes) const {
     return sizeof(Gather) + writers_ * bytes;
   }
 
-  hpx_status_t setId(unsigned offset, size_t size, const void* buffer);
+ public:
+  /// Static action interface.
+  /// @{
+  static int NewHandler(void* buffer, unsigned writers, unsigned readers,
+                        size_t size) {
+    auto lco = new(buffer) Gather(writers, readers, size);
+    LCO_LOG_NEW(hpx_thread_current_target(), lco);
+    return HPX_SUCCESS;
+  }
 
   struct SetIdArgs {
     unsigned offset;
     char     buffer[];
   };
   static int SetIdHandler(Gather& lco, const SetIdArgs& args, size_t n);
-  static int NewHandler(void* buffer, unsigned writers, unsigned readers,
-                        size_t size);
+  /// @}
 
  private:
   Condition           cvar_;
@@ -82,33 +118,6 @@ Gather::Gather(unsigned writers, unsigned readers, size_t size)
       rcount_(readers)
 {
   memset(value_, 0, size);
-}
-
-Gather::~Gather()
-{
-  lock();
-}
-
-/// Handle an error condition.
-void
-Gather::error(hpx_status_t code)
-{
-  std::lock_guard<LCO> _(*this);
-  cvar_.signalError(code);
-}
-
-void
-Gather::reset()
-{
-  std::lock_guard<LCO> _(*this);
-  cvar_.reset();
-}
-
-int
-Gather::set(size_t size, const void *from)
-{
-  // nb: is this even an LCO in this case?
-  dbg_error("Gather LCO does not support get\n");
 }
 
 hpx_status_t
@@ -163,32 +172,6 @@ Gather::get(size_t size, void *out, int reset)
   return HPX_SUCCESS;
 }
 
-// Wait for the gather LCO. This operation loses the value of the gathering for
-// this round.
-hpx_status_t
-Gather::wait(int reset)
-{
-  return get(0, NULL, reset);
-}
-
-// We clone the buffer here because the gather LCO will reset itself
-// so we can't retain a pointer to its buffer.
-hpx_status_t
-Gather::getRef(size_t size, void **out, int *unpin)
-{
-  *out = registered_malloc(size);
-  *unpin = 1;
-  return get(size, *out, 0);
-}
-
-// We know that gather buffer was a copy, so we can just free it here.
-bool
-Gather::release(void *out)
-{
-  registered_free(out);
-  return 0;
-}
-
 // Local set id function.
 hpx_status_t
 Gather::setId(unsigned offset, size_t size, const void* buffer)
@@ -213,17 +196,6 @@ Gather::setId(unsigned offset, size_t size, const void* buffer)
   }
 
   return HPX_SUCCESS;
-}
-
-int
-Gather::NewHandler(void* buffer, unsigned writers, unsigned readers,
-                   size_t size)
-{
-  if (auto lco = new(buffer) Gather(writers, readers, size)) {
-    LCO_LOG_NEW(hpx_thread_current_target(), lco);
-    return HPX_SUCCESS;
-  }
-  dbg_error("Could not initialize gather.\n");
 }
 
 int

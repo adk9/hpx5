@@ -34,28 +34,68 @@ using libhpx::scheduler::LCO;
 struct Reduce final : public LCO {
  public:
   Reduce(unsigned inputs, size_t size, hpx_action_t id, hpx_action_t op);
-  ~Reduce();
 
-  int set(size_t size, const void *value);
-  void error(hpx_status_t code);
+  ~Reduce() {
+    lock();
+  }
+
+  hpx_status_t attach(hpx_parcel_t *p);
   hpx_status_t get(size_t size, void *value, int reset);
   hpx_status_t getRef(size_t size, void **out, int *unpin);
   bool release(void *out);
-  hpx_status_t wait(int reset);
-  hpx_status_t attach(hpx_parcel_t *p);
-  void reset();
+  int set(size_t size, const void *value);
+
+  void error(hpx_status_t code) {
+    std::lock_guard<LCO> _(*this);
+    barrier_.signalError(code);
+  }
+
+  hpx_status_t wait(int reset) {
+    return get(0, NULL, reset);
+  }
+
+
+  void reset() {
+    std::lock_guard<LCO> _(*this);
+    resetBarrier();
+  }
 
   size_t size(size_t size) const {
     return sizeof(Reduce) + size;
   }
 
-  static int NewHandler(void* buffer, unsigned inputs, size_t size, hpx_action_t id,
-                        hpx_action_t op);
- private:
-  void resetBarrier();
+ public:
+  /// Static action interface.
+  /// @{
+  static int NewHandler(void* buffer, unsigned inputs, size_t size,
+                        hpx_action_t id, hpx_action_t op) {
+    auto lco = new(buffer) Reduce(inputs, size, id, op);
+    LCO_LOG_NEW(hpx_thread_current_target(), lco);
+    return HPX_SUCCESS;
+  }
+  /// @}
 
-  void op(const void* from);
-  void id();
+ private:
+  void resetBarrier() {
+    barrier_.reset();
+    remaining_ = inputs_;
+    id();
+  }
+
+  void op(const void* from) {
+    if (size_) {
+      dbg_assert(from);
+      hpx_monoid_op_t f = (hpx_monoid_op_t)actions[op_].handler;
+      f(value_, from, size_);
+    }
+  }
+
+  void id() {
+    if (size_) {
+      hpx_monoid_id_t f = (hpx_monoid_id_t)actions[id_].handler;
+      f(value_, size_);
+    }
+  }
 
   Condition           barrier_;
   const size_t           size_;
@@ -90,40 +130,6 @@ Reduce::Reduce(unsigned inputs, size_t size, hpx_action_t id, hpx_action_t op)
   this->id();
 }
 
-Reduce::~Reduce()
-{
-  lock();
-}
-
-void
-Reduce::op(const void* from)
-{
-  if (size_) {
-    dbg_assert(from);
-    handler_t handler = actions[op_].handler;
-    hpx_monoid_op_t monoid = (hpx_monoid_op_t)handler;
-    monoid(value_, from, size_);
-  }
-}
-
-void
-Reduce::id()
-{
-  if (size_) {
-    handler_t handler = actions[id_].handler;
-    hpx_monoid_id_t monoid = (hpx_monoid_id_t)handler;
-    monoid(value_, size_);
-  }
-}
-
-void
-Reduce::resetBarrier()
-{
-  barrier_.reset();
-  remaining_ = inputs_;
-  id();
-}
-
 hpx_status_t
 Reduce::attach(hpx_parcel_t *p)
 {
@@ -141,20 +147,6 @@ Reduce::attach(hpx_parcel_t *p)
   // go ahead and send this parcel eagerly
   parcel_launch(p);
   return HPX_SUCCESS;
-}
-
-void
-Reduce::error(hpx_status_t code)
-{
-  std::lock_guard<LCO> _(*this);
-  barrier_.signalError(code);
-}
-
-void
-Reduce::reset()
-{
-  std::lock_guard<LCO> _(*this);
-  resetBarrier();
 }
 
 /// Update the reduction.
@@ -207,12 +199,6 @@ Reduce::get(size_t size, void *out, int reset)
 }
 
 hpx_status_t
-Reduce::wait(int reset)
-{
-  return get(0, NULL, reset);
-}
-
-hpx_status_t
 Reduce::getRef(size_t size, void **out, int *unpin)
 {
   dbg_assert(size == size_);
@@ -232,17 +218,6 @@ Reduce::release(void *out)
 {
   dbg_assert(out == value_);
   return 1;
-}
-
-int
-Reduce::NewHandler(void* buffer, unsigned inputs, size_t size, hpx_action_t id,
-                   hpx_action_t op)
-{
-  if (auto lco = new(buffer) Reduce(inputs, size, id, op)) {
-    LCO_LOG_NEW(hpx_thread_current_target(), lco);
-    return HPX_SUCCESS;
-  }
-  dbg_error("Could not initialize Reduce.\n");
 }
 
 hpx_addr_t

@@ -30,80 +30,83 @@ using libhpx::scheduler::LCO;
 
 class Dataflow final : public LCO {
  public:
-  Dataflow();
-  ~Dataflow();
+  Dataflow() : LCO(LCO_DATAFLOW), cvar_() {
+  }
 
-  int set(size_t size, const void *value);
-  void error(hpx_status_t code);
+  ~Dataflow() {
+    lock();                                     // released in ~LCO()
+  }
+
   hpx_status_t get(size_t size, void *value, int reset);
-  hpx_status_t wait(int reset);
   hpx_status_t attach(hpx_parcel_t *p);
-  void reset();
+
+  int set(size_t size, const void *value) {
+    // @todo: why doesn't this do anything at all?
+    std::lock_guard<LCO> _(*this);
+    return HPX_SUCCESS;
+  }
+
+  void error(hpx_status_t code) {
+    std::lock_guard<LCO> _(*this);
+    cvar_.signalError(code);
+  }
+
+  hpx_status_t wait(int reset) {
+    return get(0, NULL, reset);
+  }
+
+  void reset() {
+    std::lock_guard<LCO> _(*this);
+    resetCondition();
+  }
+
   size_t size(size_t) const {
     return sizeof(Dataflow);
   }
 
-  static int NewHandler(void* buffer);
-
-  /// Inner class that manages the dataflow run operation.
-  class RunOp {
-   public:
-    static hpx_parcel_t* Create(hpx_addr_t lco, hpx_action_t action,
-                                hpx_addr_t out, int n, va_list& args);
-
-    static int Handler(const RunOp& run, size_t);
-
-   private:
-    void init(hpx_action_t action, int n, va_list& args);
-    int operator()() const;
-
-    size_t n_;
-    hpx_action_t action_;
-    struct Record {
-      size_t     size;
-      hpx_addr_t addr;
-    } data_[];
-  };
+ public:
+  /// Static action interface.
+  /// @{
+  static int NewHandler(void* buffer) {
+    auto lco = new(buffer) Dataflow();
+    return HPX_THREAD_CONTINUE(lco);
+  }
+  /// @}
 
  private:
-  void resetCondition();
+  void resetCondition() {
+    log_lco("resetting dataflow LCO %p\n", this);
+    resetTriggered();
+    cvar_.reset();
+  }
 
   Condition cvar_;
 };
+
+/// Class that manages the dataflow run operation.
+class RunOp {
+ public:
+  static hpx_parcel_t* Create(hpx_addr_t lco, hpx_action_t action,
+                              hpx_addr_t out, int n, va_list& args);
+
+  static int Handler(const RunOp& run, size_t) {
+    return run();
+  }
+
+ private:
+  void init(hpx_action_t action, int n, va_list& args);
+  int operator()() const;
+
+  size_t n_;
+  hpx_action_t action_;
+  struct Record {
+    size_t     size;
+    hpx_addr_t addr;
+  } data_[];
+};
+
 LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, New, Dataflow::NewHandler, HPX_POINTER);
-LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, Run, Dataflow::RunOp::Handler,
-              HPX_POINTER, HPX_SIZE_T);
-}
-
-Dataflow::Dataflow() : LCO(LCO_DATAFLOW), cvar_()
-{
-}
-
-Dataflow::~Dataflow()
-{
-  lock();                                       // released in ~LCO()
-}
-
-void
-Dataflow::resetCondition()
-{
-  log_lco("resetting dataflow LCO %p\n", this);
-  resetTriggered();
-  cvar_.reset();
-}
-
-void
-Dataflow::error(hpx_status_t code)
-{
-  std::lock_guard<LCO> _(*this);
-  cvar_.signalError(code);
-}
-
-void
-Dataflow::reset()
-{
-  std::lock_guard<LCO> _(*this);
-  resetCondition();
+LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, Run, RunOp::Handler, HPX_POINTER, HPX_SIZE_T);
 }
 
 hpx_status_t
@@ -118,13 +121,6 @@ Dataflow::attach(hpx_parcel_t *p) {
   }
 
   return cvar_.push(p);
-}
-
-int
-Dataflow::set(size_t size, const void *from)
-{
-  std::lock_guard<LCO> _(*this);
-  return HPX_SUCCESS;
 }
 
 /// Invoke a get operation on the dataflow LCO.
@@ -147,23 +143,8 @@ Dataflow::get(size_t size, void *out, int reset)
   return HPX_SUCCESS;
 }
 
-hpx_status_t
-Dataflow::wait(int reset)
-{
-  return get(0, NULL, reset);
-}
-
-int
-Dataflow::NewHandler(void *buffer)
-{
-  if (auto lco = new(buffer) Dataflow()) {
-    return HPX_THREAD_CONTINUE(lco);
-  }
-  dbg_error("Could not initialize an And gate.\n");
-}
-
 void
-Dataflow::RunOp::init(hpx_action_t action, int n, va_list& args)
+RunOp::init(hpx_action_t action, int n, va_list& args)
 {
   action_ = action;
   n_ = n;
@@ -174,7 +155,7 @@ Dataflow::RunOp::init(hpx_action_t action, int n, va_list& args)
 }
 
 int
-Dataflow::RunOp::operator()() const
+RunOp::operator()() const
 {
   std::unique_ptr<hpx_addr_t[]> inputs(new hpx_addr_t[n_]);
   std::unique_ptr<size_t[]> sizes(new size_t[n_]);
@@ -193,8 +174,8 @@ Dataflow::RunOp::operator()() const
 }
 
 hpx_parcel_t*
-Dataflow::RunOp::Create(hpx_addr_t lco, hpx_action_t action, hpx_addr_t out,
-                        int n, va_list& vargs)
+RunOp::Create(hpx_addr_t lco, hpx_action_t action, hpx_addr_t out, int n,
+              va_list& vargs)
 {
   dbg_assert(n > 0);
   dbg_assert(~(n & 1));
@@ -210,12 +191,6 @@ Dataflow::RunOp::Create(hpx_addr_t lco, hpx_action_t action, hpx_addr_t out,
   auto& args = *static_cast<RunOp*>(hpx_parcel_get_data(p));
   args.init(action, n / 2, vargs);
   return p;
-}
-
-int
-Dataflow::RunOp::Handler(const RunOp& run, size_t)
-{
-  return run();
 }
 
 hpx_addr_t
@@ -240,7 +215,7 @@ _hpx_lco_dataflow_add(hpx_addr_t lco, hpx_action_t action, hpx_addr_t out,
 {
   va_list vargs;
   va_start(vargs, n);
-  hpx_parcel_t* p = Dataflow::RunOp::Create(lco, action, out, n, vargs);
+  hpx_parcel_t* p = RunOp::Create(lco, action, out, n, vargs);
   va_end(vargs);
   hpx_parcel_send(p, HPX_NULL);
   return HPX_SUCCESS;

@@ -1,66 +1,66 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
-//
+
 //  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
-//
+
 //  This software may be modified and distributed under the terms of the BSD
 //  license.  See the COPYING file for details.
-//
+
 //  This software was created at the Indiana University Center for Research in
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
-/// AlltoAll is an extention of allgather to the case where each process sends
-/// distinct data to each of the receivers. The jth block sent from process i
-/// is received by process j and is placed in the ith block of recvbuf.
-/// (Complete exchange).
-///
-///           sendbuff
-///           ####################################
-///           #      #      #      #      #      #
-///         0 #  A0  #  A1  #  A2  #  A3  #  A4  #
-///           #      #      #      #      #      #
-///           ####################################
-///      T    #      #      #      #      #      #
-///         1 #  B0  #  B1  #  B2  #  B3  #  B4  #
-///      a    #      #      #      #      #      #
-///           ####################################
-///      s    #      #      #      #      #      #
-///         2 #  C0  #  C1  #  C2  #  C3  #  C4  #       BEFORE
-///      k    #      #      #      #      #      #
-///           ####################################
-///      s    #      #      #      #      #      #
-///         3 #  D0  #  D1  #  D2  #  D3  #  D4  #
-///           #      #      #      #      #      #
-///           ####################################
-///           #      #      #      #      #      #
-///         4 #  E0  #  E1  #  E2  #  E3  #  E4  #
-///           #      #      #      #      #      #
-///           ####################################
-///
-///             <---------- recvbuff ---------->
-///           ####################################
-///           #      #      #      #      #      #
-///         0 #  A0  #  B0  #  C0  #  D0  #  E0  #
-///           #      #      #      #      #      #
-///           ####################################
-///      T    #      #      #      #      #      #
-///         1 #  A1  #  B1  #  C1  #  D1  #  E1  #
-///      a    #      #      #      #      #      #
-///           ####################################
-///      s    #      #      #      #      #      #
-///         2 #  A2  #  B2  #  C2  #  D2  #  E2  #       AFTER
-///      k    #      #      #      #      #      #
-///           ####################################
-///      s    #      #      #      #      #      #
-///         3 #  A3  #  B3  #  C3  #  D3  #  E3  #
-///           #      #      #      #      #      #
-///           ####################################
-///           #      #      #      #      #      #
-///         4 #  A4  #  B4  #  C4  #  D4  #  E4  #
-///           #      #      #      #      #      #
-///           ####################################
+// AlltoAll is an extention of allgather to the case where each process sends
+// distinct data to each of the receivers. The jth block sent from process i
+// is received by process j and is placed in the ith block of recvbuf.
+// (Complete exchange).
+
+//           sendbuff
+//           ####################################
+//           #      #      #      #      #      #
+//         0 #  A0  #  A1  #  A2  #  A3  #  A4  #
+//           #      #      #      #      #      #
+//           ####################################
+//      T    #      #      #      #      #      #
+//         1 #  B0  #  B1  #  B2  #  B3  #  B4  #
+//      a    #      #      #      #      #      #
+//           ####################################
+//      s    #      #      #      #      #      #
+//         2 #  C0  #  C1  #  C2  #  C3  #  C4  #       BEFORE
+//      k    #      #      #      #      #      #
+//           ####################################
+//      s    #      #      #      #      #      #
+//         3 #  D0  #  D1  #  D2  #  D3  #  D4  #
+//           #      #      #      #      #      #
+//           ####################################
+//           #      #      #      #      #      #
+//         4 #  E0  #  E1  #  E2  #  E3  #  E4  #
+//           #      #      #      #      #      #
+//           ####################################
+
+//             <---------- recvbuff ---------->
+//           ####################################
+//           #      #      #      #      #      #
+//         0 #  A0  #  B0  #  C0  #  D0  #  E0  #
+//           #      #      #      #      #      #
+//           ####################################
+//      T    #      #      #      #      #      #
+//         1 #  A1  #  B1  #  C1  #  D1  #  E1  #
+//      a    #      #      #      #      #      #
+//           ####################################
+//      s    #      #      #      #      #      #
+//         2 #  A2  #  B2  #  C2  #  D2  #  E2  #       AFTER
+//      k    #      #      #      #      #      #
+//           ####################################
+//      s    #      #      #      #      #      #
+//         3 #  A3  #  B3  #  C3  #  D3  #  E3  #
+//           #      #      #      #      #      #
+//           ####################################
+//           #      #      #      #      #      #
+//         4 #  A4  #  B4  #  C4  #  D4  #  E4  #
+//           #      #      #      #      #      #
+//           ####################################
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -86,31 +86,73 @@ class AllToAll final : public LCO {
 
  public:
   AllToAll(unsigned inputs);
-  ~AllToAll();
 
-  int set(size_t size, const void *value);
-  void error(hpx_status_t code);
-  hpx_status_t get(size_t size, void *value, int reset);
-  hpx_status_t getRef(size_t size, void **out, int *unpin);
-  bool release(void *out);
-  hpx_status_t wait(int reset);
+  ~AllToAll() {
+    lock();                                     // released in ~LCO()
+  }
+
+  /// Set the buffer for a specific offset.
+  hpx_status_t setId(unsigned offset, size_t size, const void* buffer);
+
+  /// Get the offset for a specific address.
+  hpx_status_t getId(unsigned offset, size_t size, void *out);
+
   hpx_status_t attach(hpx_parcel_t *p);
-  void reset();
+
+  int set(size_t size, const void *value) {
+    // @todo: why is this an LCO?
+    dbg_error("can't call set on an alltoall LCO.\n");
+  }
+
+  void error(hpx_status_t code) {
+      std::lock_guard<LCO> _(*this);
+      wait_.signalError(code);
+  }
+
+  hpx_status_t get(size_t size, void *value, int reset) {
+    // @todo: why is this an LCO?
+    dbg_error("can't call get on an alltoall LCO.\n");
+  }
+
+  hpx_status_t getRef(size_t size, void **out, int *unpin) {
+    // @todo: why is this an LCO?
+    dbg_error("can't call get on an alltoall LCO.\n");
+  }
+
+  bool release(void *out) {
+    // @todo: why is this an LCO?
+    dbg_error("can't call get on an alltoall LCO.\n");
+  }
+
+  hpx_status_t wait(int reset) {
+    return getId(0, 0, nullptr);
+  }
+
+  void reset() {
+      std::lock_guard<LCO> _(*this);
+      wait_.reset();
+  }
 
   size_t size(size_t bytes) const {
     return sizeof(AllToAll) + inputs_ * bytes;
   }
 
-  hpx_status_t setId(unsigned offset, size_t size, const void* buffer);
-  hpx_status_t getId(unsigned offset, size_t size, void *out);
+ public:
+  /// Static action interface.
+  /// @{
+  static int NewHandler(void* buffer, unsigned inputs) {
+    auto lco = new(buffer) AllToAll(inputs);
+    LCO_LOG_NEW(hpx_thread_current_target(), lco);
+    return HPX_SUCCESS;
+  }
 
-  static int NewHandler(void* buffer, unsigned inputs);
   static int GetIdHandler(AllToAll& lco, unsigned offset, size_t size);
   struct SetIdArgs {
     unsigned offset;
     char buffer[];
   };
   static int SetIdHandler(AllToAll& lco, const SetIdArgs& args, size_t n);
+  /// @}
 
  private:
   Condition        wait_;
@@ -142,25 +184,6 @@ AllToAll::AllToAll(unsigned inputs)
 {
 }
 
-AllToAll::~AllToAll()
-{
-  lock();
-}
-
-void
-AllToAll::error(hpx_status_t code)
-{
-  std::lock_guard<LCO> _(*this);
-  wait_.signalError(code);
-}
-
-void
-AllToAll::reset()
-{
-  std::lock_guard<LCO> _(*this);
-  wait_.reset();
-}
-
 hpx_status_t
 AllToAll::attach(hpx_parcel_t *p)
 {
@@ -178,12 +201,6 @@ AllToAll::attach(hpx_parcel_t *p)
   // Go ahead and send this parcel eagerly.
   parcel_launch(p);
   return HPX_SUCCESS;
-}
-
-hpx_status_t
-AllToAll::wait(int reset)
-{
-  return getId(0, 0, nullptr);
 }
 
 hpx_status_t
@@ -252,48 +269,6 @@ AllToAll::setId(unsigned offset, size_t size, const void* buffer)
     wait_.signalAll();
   }
   return HPX_SUCCESS;
-}
-
-int
-AllToAll::set(size_t size, const void *from)
-{
-  // @todo: why is this an LCO?
-  dbg_error("can't call set on an alltoall LCO.\n");
-}
-
-hpx_status_t
-AllToAll::get(size_t size, void *out, int release)
-{
-  // @todo: why is this an LCO?
-  dbg_error("can't call get on an alltoall LCO.\n");
-}
-
-hpx_status_t
-AllToAll::getRef(size_t size, void **out, int *unpin)
-{
-  // We universally clone the buffer here, because the all* family of LCOs will
-  // reset themselves so we can't retain a pointer to their buffer.
-  *out = registered_malloc(size);
-  *unpin = 1;
-  return get(size, *out, 0);
-}
-
-bool
-AllToAll::release(void *out)
-{
-  // We know that allreduce buffers were always copies, so we just free them.
-  registered_free(out);
-  return false;
-}
-
-int
-AllToAll::NewHandler(void *buffer, unsigned inputs)
-{
-  if (auto lco = new(buffer) AllToAll(inputs)) {
-    LCO_LOG_NEW(hpx_thread_current_target(), lco);
-    return HPX_SUCCESS;
-  }
-  dbg_error("Could not initialize AllToAll.\n");
 }
 
 int

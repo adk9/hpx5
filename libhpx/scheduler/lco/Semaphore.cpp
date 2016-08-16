@@ -33,22 +33,60 @@ class Semaphore final : public LCO
 {
  public:
   Semaphore(unsigned init);
-  ~Semaphore();
 
-  int set(size_t size, const void *value);
-  void error(hpx_status_t code);
-  hpx_status_t get(size_t size, void *value, int reset);
+  ~Semaphore() {
+    lock();                                     // Released in ~LCO()
+  }
+
+  int set(size_t size, const void *value) {
+    std::lock_guard<LCO> _(*this);
+    if (0 == count_++) {
+      nonZero_.signal();                        // just wake one waiter
+    }
+    return 1;
+  }
+
+  void error(hpx_status_t code) {
+    std::lock_guard<LCO> _(*this);
+    nonZero_.signalError(code);
+  }
+
+  hpx_status_t get(size_t size, void *value, int reset) {
+    dbg_assert(size == 0);
+    return wait(reset);
+  }
+
   hpx_status_t wait(int reset);
-  hpx_status_t attach(hpx_parcel_t *p);
-  void reset();
+
+  hpx_status_t attach(hpx_parcel_t *p) {
+    // @todo: what does it mean to create an error here?
+    dbg_error("Attaching to a semaphore is unsupported.\n");
+  }
+
+  void reset() {
+    std::lock_guard<LCO> _(*this);
+    resetNonZero();
+  }
+
   size_t size(size_t) const {
     return sizeof(*this);
   }
 
-  static int NewHandler(void* buffer, unsigned init);
+ public:
+  /// Static action interface.
+  /// @{
+  static int NewHandler(void* buffer, unsigned count) {
+    auto lco = new(buffer) Semaphore(count);
+    return HPX_THREAD_CONTINUE(lco);
+  }
+  /// @}
 
  private:
-  void resetNonZero();
+  void resetNonZero() {
+    nonZero_.signalAll();                         // wake all waiters
+    nonZero_.reset();
+    count_ = init_;
+  }
 
   Condition   nonZero_;
   unsigned      count_;
@@ -65,44 +103,6 @@ Semaphore::Semaphore(unsigned count)
       count_(count),
       init_(count)
 {
-}
-
-Semaphore::~Semaphore()
-{
-  lock();                                       // Released in ~LCO()
-}
-
-void
-Semaphore::resetNonZero()
-{
-  nonZero_.signalAll();                         // wake all waiters
-  nonZero_.reset();
-  count_ = init_;
-}
-
-void
-Semaphore::error(hpx_status_t code)
-{
-  std::lock_guard<LCO> _(*this);
-  nonZero_.signalError(code);
-}
-
-void
-Semaphore::reset()
-{
-  std::lock_guard<LCO> _(*this);
-  resetNonZero();
-}
-
-/// Set is equivalent to returning a resource to the semaphore.
-int
-Semaphore::set(size_t size, const void *from)
-{
-  std::lock_guard<LCO> _(*this);
-  if (0 == count_++) {
-    nonZero_.signal();                          // just wake one waiter
-  }
-  return 1;
 }
 
 hpx_status_t
@@ -122,28 +122,6 @@ Semaphore::wait(int reset)
   }
 
   return HPX_SUCCESS;
-}
-
-hpx_status_t
-Semaphore::get(size_t size, void *out, int reset)
-{
-  dbg_assert(size == 0);
-  return wait(reset);
-}
-
-hpx_status_t
-Semaphore::attach(hpx_parcel_t *p)
-{
-  dbg_error("Attaching to a semaphore is unsupported.\n");
-}
-
-int
-Semaphore::NewHandler(void* buffer, unsigned count)
-{
-  if (auto lco = new(buffer) Semaphore(count)) {
-    return HPX_THREAD_CONTINUE(lco);
-  }
-  dbg_error("Could not initialize a Semaphore.\n");
 }
 
 /// Allocate a semaphore LCO.

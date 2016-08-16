@@ -30,127 +30,121 @@ namespace {
 using libhpx::scheduler::Condition;
 using libhpx::scheduler::LCO;
 
-struct GenerationCount final : public LCO {
+struct GenerationCounter final : public LCO {
  public:
-  GenerationCount(unsigned ninplace);
-  ~GenerationCount();
+  GenerationCounter(unsigned ninplace);
+  ~GenerationCounter();
 
-  int set(size_t size, const void *value);
-  void error(hpx_status_t code);
-  hpx_status_t get(size_t size, void *value, int reset);
-  hpx_status_t wait(int reset);
-  hpx_status_t attach(hpx_parcel_t *p);
-  void reset();
-  size_t size(size_t size) const {
-    return sizeof(GenerationCount) + ninplace_ * sizeof(Condition);
+  /// Wait for the specified generation.
+  hpx_status_t waitForGeneration(unsigned long i);
+
+  int set(size_t size, const void *value) {
+    std::lock_guard<LCO> _(*this);
+    unsigned long i = ++gen_;
+    oflow_.signalAll();
+    if (ninplace_) {
+      conditionAt(i % ninplace_).signalAll();
+    }
+    return 1;
   }
 
-  hpx_status_t waitForGeneration(unsigned long gen);
+  void error(hpx_status_t code) {
+    std::lock_guard<LCO> _(*this);
+    for (unsigned i = 0, e = ninplace_; i < e; ++i) {
+      conditionAt(i).signalError(code);
+    }
+    oflow_.signalError(code);
+  }
 
-  static int NewHandler(void* buffer, unsigned ninplace);
-  static int WaitForGenerationHandler(GenerationCount& lco, unsigned long gen);
+  hpx_status_t get(size_t size, void *out, int reset) {
+    // @note: No lock here... just a single volatile read is good enough.
+    dbg_assert(!size || out);
+    if (size) {
+      unsigned long i = gen_;                   // volatile read
+      memcpy(out, &i, size);
+    }
+    return HPX_SUCCESS;
+  }
+
+  hpx_status_t wait(int reset) {
+    std::lock_guard<LCO> _(*this);
+    return oflow_.wait(this);
+  }
+
+  hpx_status_t attach(hpx_parcel_t *p) {
+    std::lock_guard<LCO> _(*this);
+    return oflow_.push(p);
+  }
+
+  void reset() {
+    std::lock_guard<LCO> _(*this);
+    for (unsigned i = 0, e = ninplace_; i < e; ++i) {
+      conditionAt(i).reset();
+    }
+    oflow_.reset();
+  }
+
+  size_t size(size_t size) const {
+    return sizeof(GenerationCounter) + ninplace_ * sizeof(Condition);
+  }
+
+ public:
+  /// Static action interface.
+  /// @{
+  static int WaitForGenerationHandler(GenerationCounter& lco, unsigned long i) {
+    return lco.waitForGeneration(i);
+  }
+
+  static int NewHandler(void* buffer, unsigned ninplace) {
+    auto lco = new(buffer) GenerationCounter(ninplace);
+    return HPX_THREAD_CONTINUE(lco);
+  }
+  /// @}
 
  private:
+  Condition& conditionAt(size_t i) {
+    return *reinterpret_cast<Condition*>(inplace_ + i * sizeof(Condition));
+  }
+
   Condition            oflow_;
   volatile unsigned long gen_;
   const unsigned    ninplace_;
-  Condition          inplace_[];
+  char               inplace_[];
 };
 
-LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, New, GenerationCount::NewHandler,
+LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, New, GenerationCounter::NewHandler,
               HPX_POINTER, HPX_UINT);
 LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, WaitForGeneration,
-              GenerationCount::WaitForGenerationHandler, HPX_POINTER,
+              GenerationCounter::WaitForGenerationHandler, HPX_POINTER,
               HPX_ULONG);
 }
 
-GenerationCount::GenerationCount(unsigned ninplace)
+GenerationCounter::GenerationCounter(unsigned ninplace)
     : LCO(LCO_GENCOUNT),
       gen_(),
       ninplace_(ninplace),
       inplace_()
 {
   for (unsigned i = 0, e = ninplace; i < e; ++i) {
-    new(inplace_ + i) Condition();
+    new(inplace_ + i * sizeof(Condition)) Condition();
   }
 }
 
-GenerationCount::~GenerationCount()
+GenerationCounter::~GenerationCounter()
 {
   lock();
   for (unsigned i = 0, e = ninplace_; i < e; ++i) {
-    inplace_[i].~Condition();
+    conditionAt(i).~Condition();
   }
-}
-
-void
-GenerationCount::error(hpx_status_t code)
-{
-  std::lock_guard<LCO> _(*this);
-  for (unsigned i = 0, e = ninplace_; i < e; ++i) {
-    inplace_[i].signalError(code);
-  }
-  oflow_.signalError(code);
-}
-
-void
-GenerationCount::reset()
-{
-  std::lock_guard<LCO> _(*this);
-  for (unsigned i = 0, e = ninplace_; i < e; ++i) {
-    inplace_[i].reset();
-  }
-  oflow_.reset();
-}
-
-int
-GenerationCount::set(size_t size, const void *from)
-{
-  std::lock_guard<LCO> _(*this);
-  unsigned long i = ++gen_;
-  oflow_.signalAll();
-  if (ninplace_) {
-    inplace_[i % ninplace_].signalAll();
-  }
-  return 1;
 }
 
 hpx_status_t
-GenerationCount::get(size_t size, void *out, int reset)
-{
-  // @note No lock here... just a single volatile read is good enough
-  if (size && out) {
-    unsigned long i = gen_;
-    memcpy(out, &i, size);
-  }
-  return HPX_SUCCESS;
-}
-
-hpx_status_t
-GenerationCount::wait(int reset)
-{
-  std::lock_guard<LCO> _(*this);
-  return oflow_.wait(this);
-}
-
-hpx_status_t
-GenerationCount::attach(hpx_parcel_t *p)
-{
-  std::lock_guard<LCO> _(*this);
-  if (auto status = oflow_.getError()) {
-    return status;
-  }
-  return oflow_.push(p);
-}
-
-
-hpx_status_t
-GenerationCount::waitForGeneration(unsigned long i)
+GenerationCounter::waitForGeneration(unsigned long i)
 {
   std::lock_guard<LCO> _(*this);
   while (gen_ < i) {
     bool inplace = i < (gen_ + ninplace_);
-    Condition& cond = (inplace) ? inplace_[i % ninplace_] : oflow_;
+    Condition& cond = (inplace) ? conditionAt(i % ninplace_) : oflow_;
     if (auto status = cond.wait(this)) {
       return status;
     }
@@ -158,32 +152,17 @@ GenerationCount::waitForGeneration(unsigned long i)
   return oflow_.getError();
 }
 
-int
-GenerationCount::NewHandler(void* buffer, unsigned ninplace)
-{
-  if (auto lco = new(buffer) GenerationCount(ninplace)) {
-    return HPX_THREAD_CONTINUE(lco);
-  }
-  dbg_error("Could not initialize allreduce.\n");
-}
-
-int
-GenerationCount::WaitForGenerationHandler(GenerationCount& lco, unsigned long i)
-{
-  return lco.waitForGeneration(i);
-}
-
 hpx_addr_t
 hpx_lco_gencount_new(unsigned long ninplace)
 {
   hpx_addr_t gva = HPX_NULL;
-  GenerationCount* lco = nullptr;
+  GenerationCounter* lco = nullptr;
   try {
-    lco = new(ninplace * sizeof(Condition), gva) GenerationCount(ninplace);
+    lco = new(ninplace * sizeof(Condition), gva) GenerationCounter(ninplace);
     hpx_gas_unpin(gva);
   }
   catch (const LCO::NonLocalMemory&) {
-    hpx_call_sync(gva, New, &lco, sizeof(lco), &ninplace);
+    hpx_call_sync(gva, New, &lco, sizeof(Condition), &ninplace);
   }
   LCO_LOG_NEW(gva, lco);
   return gva;
@@ -199,7 +178,7 @@ hpx_lco_gencount_inc(hpx_addr_t gencnt, hpx_addr_t rsync)
 hpx_status_t
 hpx_lco_gencount_wait(hpx_addr_t gva, unsigned long i)
 {
-  GenerationCount *lva = nullptr;
+  GenerationCounter *lva = nullptr;
   if (hpx_gas_try_pin(gva, (void**)&lva)) {
     hpx_status_t status = lva->waitForGeneration(i);
     hpx_gas_unpin(gva);
