@@ -17,8 +17,8 @@
 
 /// @file libhpx/scheduler/dataflow.c
 /// @brief A dataflow LCO.
-#include "lco.h"
-#include "cvar.h"
+#include "LCO.h"
+#include "Condition.h"
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "hpx/hpx.h"

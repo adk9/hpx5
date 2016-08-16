@@ -18,8 +18,8 @@
 /// @file libhpx/scheduler/allreduce.c
 /// @brief Defines the all-reduction LCO.
 
-#include "lco.h"
-#include "cvar.h"
+#include "LCO.h"
+#include "Condition.h"
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/memory.h"
@@ -32,15 +32,15 @@ namespace {
 using libhpx::scheduler::Condition;
 using libhpx::scheduler::LCO;
 
-class Allreduce final : public LCO {
+class AllReduce final : public LCO {
   static constexpr int REDUCING = 0;
   static constexpr int READING = 1;
 
  public:
-  Allreduce(size_t writers, size_t readers, size_t size,
+  AllReduce(size_t writers, size_t readers, size_t size,
             hpx_action_t id, hpx_action_t op);
 
-  ~Allreduce() {
+  ~AllReduce() {
     // lock(TRACE_EVENT_LCO_DELETE);
     lock();
   }
@@ -88,7 +88,7 @@ class Allreduce final : public LCO {
   }
 
   size_t size(size_t bytes) const {
-    return sizeof(Allreduce) + bytes;
+    return sizeof(AllReduce) + bytes;
   }
 
   int join(size_t size, const void* value, void* out) {
@@ -100,14 +100,14 @@ class Allreduce final : public LCO {
   static int NewHandler(void* buffer, size_t writers, size_t readers,
                         size_t size, hpx_action_t id, hpx_action_t op);
 
-  static int JoinHandler(Allreduce* lco, const void* data, size_t n);
+  static int JoinHandler(AllReduce* lco, const void* data, size_t n);
 
   struct JoinAsyncArgs {
     void *out;
     hpx_addr_t done;
     char data[];
   };
-  static int JoinRequestHandler(Allreduce *lco, JoinAsyncArgs *args, size_t n);
+  static int JoinRequestHandler(AllReduce *lco, JoinAsyncArgs *args, size_t n);
   static int JoinReplyHandler(JoinAsyncArgs *args, size_t n);
 
 
@@ -136,23 +136,23 @@ class Allreduce final : public LCO {
   char         value_[];
 };
 
-LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, New, Allreduce::NewHandler,
+LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, New, AllReduce::NewHandler,
               HPX_POINTER, HPX_SIZE_T, HPX_SIZE_T, HPX_SIZE_T, HPX_ACTION_T,
               HPX_ACTION_T);
 
 LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED | HPX_PINNED, Join,
-              Allreduce::JoinHandler, HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
+              AllReduce::JoinHandler, HPX_POINTER, HPX_POINTER, HPX_SIZE_T);
 
 LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED | HPX_PINNED, JoinRequest,
-              Allreduce::JoinRequestHandler, HPX_POINTER, HPX_POINTER,
+              AllReduce::JoinRequestHandler, HPX_POINTER, HPX_POINTER,
               HPX_SIZE_T);
 
 LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, JoinReply,
-              Allreduce::JoinReplyHandler, HPX_POINTER, HPX_SIZE_T);
+              AllReduce::JoinReplyHandler, HPX_POINTER, HPX_SIZE_T);
 }
 
 void
-Allreduce::op(size_t size, const void *from) {
+AllReduce::op(size_t size, const void *from) {
   dbg_assert(!size || op_);
   dbg_assert(!size || from);
   if (size) {
@@ -163,7 +163,7 @@ Allreduce::op(size_t size, const void *from) {
 }
 
 void
-Allreduce::id(size_t size)
+AllReduce::id(size_t size)
 {
   dbg_assert(!size || id_);
   if (id_) {
@@ -174,14 +174,14 @@ Allreduce::id(size_t size)
 }
 
 int
-Allreduce::setInner(size_t size, const void *value)
+AllReduce::setInner(size_t size, const void *value)
 {
   // wait until we're reducing (rather than reading) and then perform the
   // operation
   while (phase_ != REDUCING) {
     if (epoch_.wait(this)) {
       // no way to push an error back to the user here
-      dbg_error("Error detected in Allreduce\n");
+      dbg_error("Error detected in AllReduce\n");
       unreachable();
     }
   }
@@ -200,7 +200,7 @@ Allreduce::setInner(size_t size, const void *value)
 }
 
 hpx_status_t
-Allreduce::getInner(size_t size, void *out, int reset)
+AllReduce::getInner(size_t size, void *out, int reset)
 {
   dbg_assert(!size || out);
 
@@ -238,7 +238,7 @@ Allreduce::getInner(size_t size, void *out, int reset)
 }
 
 hpx_status_t
-Allreduce::attach(hpx_parcel_t *p)
+AllReduce::attach(hpx_parcel_t *p)
 {
   // lock(TRACE_EVENT_LCO_ATTACH_PARCEL);
   std::lock_guard<LCO> _(*this);
@@ -261,7 +261,7 @@ Allreduce::attach(hpx_parcel_t *p)
 }
 
 
-Allreduce::Allreduce(size_t writers, size_t readers, size_t size,
+AllReduce::AllReduce(size_t writers, size_t readers, size_t size,
                      hpx_action_t id, hpx_action_t op)
     : LCO(LCO_ALLREDUCE),
       epoch_(),
@@ -282,10 +282,10 @@ Allreduce::Allreduce(size_t writers, size_t readers, size_t size,
 }
 
 int
-Allreduce::NewHandler(void* buffer, size_t writers, size_t readers,
+AllReduce::NewHandler(void* buffer, size_t writers, size_t readers,
                       size_t size, hpx_action_t id, hpx_action_t op)
 {
-  if (auto lco = new(buffer) Allreduce(writers, readers, size, id, op)) {
+  if (auto lco = new(buffer) AllReduce(writers, readers, size, id, op)) {
     LCO_LOG_NEW(hpx_thread_current_target(), lco);
     return HPX_SUCCESS;
   }
@@ -298,7 +298,7 @@ hpx_lco_allreduce_new(size_t inputs, size_t outputs, size_t size,
 {
   hpx_addr_t gva = HPX_NULL;
   try {
-    Allreduce* lva = new(size, gva) Allreduce(inputs, outputs, size, id, op);
+    AllReduce* lva = new(size, gva) AllReduce(inputs, outputs, size, id, op);
     hpx_gas_unpin(gva);
     LCO_LOG_NEW(gva, lva);
   }
@@ -312,7 +312,7 @@ hpx_addr_t
 hpx_lco_allreduce_local_array_new(int n, size_t participants, size_t readers,
                                   size_t size, hpx_action_t id, hpx_action_t op)
 {
-  size_t bsize = sizeof(Allreduce) + size;
+  size_t bsize = sizeof(AllReduce) + size;
   hpx_addr_t base = lco_alloc_local(n, bsize, 0);
   if (!base) {
     throw std::bad_alloc();
@@ -330,7 +330,7 @@ hpx_lco_allreduce_local_array_new(int n, size_t participants, size_t readers,
 }
 
 int
-Allreduce::JoinHandler(Allreduce *lco, const void *data, size_t n)
+AllReduce::JoinHandler(AllReduce *lco, const void *data, size_t n)
 {
   // Allocate a parcel that targeting our continuation with enough space for the
   // reduced value, and use its data buffer to join---this prevents a copy or
@@ -365,7 +365,7 @@ hpx_status_t
 hpx_lco_allreduce_join_sync(hpx_addr_t lco, int id, size_t n, const void *value,
                             void *out)
 {
-  Allreduce *allreduce = nullptr;
+  AllReduce *allreduce = nullptr;
   if (hpx_gas_try_pin(lco, (void**)&allreduce)) {
     int rc = allreduce->join(n, value, out);
     hpx_gas_unpin(lco);
@@ -377,7 +377,7 @@ hpx_lco_allreduce_join_sync(hpx_addr_t lco, int id, size_t n, const void *value,
 /// The request handler uses the join member to do the join, and then continues
 /// the reduced value along with the header information.
 int
-Allreduce::JoinRequestHandler(Allreduce *lco, JoinAsyncArgs *args, size_t n)
+AllReduce::JoinRequestHandler(AllReduce *lco, JoinAsyncArgs *args, size_t n)
 {
   size_t bytes = n - sizeof(*args);
   if (int rc = lco->join(bytes, &args->data, &args->data)) {
@@ -391,7 +391,7 @@ Allreduce::JoinRequestHandler(Allreduce *lco, JoinAsyncArgs *args, size_t n)
 /// The join reply handler copies the data as specified in the arguments, and
 /// then signals the done LCO explicitly.
 int
-Allreduce::JoinReplyHandler(JoinAsyncArgs *args, size_t n)
+AllReduce::JoinReplyHandler(JoinAsyncArgs *args, size_t n)
 {
   if (size_t bytes = n - sizeof(*args)) {
     memcpy(args->out, args->data, bytes);
@@ -404,7 +404,7 @@ hpx_status_t
 hpx_lco_allreduce_join_async(hpx_addr_t lco, int id, size_t n,
                              const void *value, void *out, hpx_addr_t done)
 {
-  Allreduce *allreduce = nullptr;
+  AllReduce *allreduce = nullptr;
   if (hpx_gas_try_pin(lco, (void**)&allreduce)) {
     int rc = allreduce->join(n, value, out);
     hpx_lco_error(done, rc, HPX_NULL);
@@ -413,13 +413,13 @@ hpx_lco_allreduce_join_async(hpx_addr_t lco, int id, size_t n,
   }
 
   // avoid extra copy by allocating and sending a parcel directly
-  auto bytes = sizeof(Allreduce::JoinAsyncArgs) + n;
+  auto bytes = sizeof(AllReduce::JoinAsyncArgs) + n;
   auto pid = self->current->pid;
   auto *p = parcel_new(lco, JoinRequest, HPX_HERE, JoinReply, pid, nullptr,
                        bytes);
 
   void *buffer = hpx_parcel_get_data(p);
-  auto args = static_cast<Allreduce::JoinAsyncArgs*>(buffer);
+  auto args = static_cast<AllReduce::JoinAsyncArgs*>(buffer);
   args->out = out;
   args->done = done;
   memcpy(args->data, value, n);

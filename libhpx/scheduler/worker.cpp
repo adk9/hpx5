@@ -48,8 +48,8 @@
 #include <libhpx/worker.h>
 #include "events.h"
 #include "thread.h"
-#include "cvar.h"
-#include "lco/lco.h"
+#include "Condition.h"
+#include "lco/LCO.h"
 
 namespace {
 using libhpx::scheduler::Condition;

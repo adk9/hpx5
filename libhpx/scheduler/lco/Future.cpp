@@ -18,8 +18,8 @@
 /// @file libhpx/scheduler/future.c
 /// Defines the future structure.
 
-#include "lco.h"
-#include "cvar.h"
+#include "LCO.h"
+#include "Condition.h"
 #include "hpx/builtins.h"
 #include "libhpx/action.h"
 #include "libhpx/debug.h"

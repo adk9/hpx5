@@ -18,8 +18,8 @@
 /// @file libhpx/scheduler/and.c
 /// Defines the AND LCO.
 
-#include "lco.h"
-#include "cvar.h"
+#include "LCO.h"
+#include "Condition.h"
 #include "TatasLock.h"
 #include "libhpx/action.h"
 #include "libhpx/debug.h"

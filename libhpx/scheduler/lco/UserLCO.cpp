@@ -18,8 +18,8 @@
 /// @file libhpx/scheduler/user_lco.c
 /// @brief A user-defined LCO.
 
-#include "lco.h"
-#include "cvar.h"
+#include "LCO.h"
+#include "Condition.h"
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/memory.h"

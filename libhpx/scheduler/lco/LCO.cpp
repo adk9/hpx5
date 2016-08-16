@@ -17,7 +17,7 @@
 
 /// @file libhpx/scheduler/lco.cpp
 
-#include "lco.h"
+#include "LCO.h"
 #include "thread.h"                             //<! struct ustack
 #include "libhpx/action.h"
 #include "libhpx/attach.h"

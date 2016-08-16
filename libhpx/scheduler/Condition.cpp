@@ -19,7 +19,7 @@
 /// @file libhpx/scheduler/condition.c
 /// ----------------------------------------------------------------------------
 
-#include "cvar.h"
+#include "Condition.h"
 #include "thread.h"
 #include "libhpx/debug.h"
 #include "libhpx/parcel.h"
