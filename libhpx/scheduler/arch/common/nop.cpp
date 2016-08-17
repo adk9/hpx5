@@ -15,7 +15,7 @@
 #include "config.h"
 #endif
 
-#include "nop.h"
+#include "asm.h"
 
 void nop(void) {
   __asm__ volatile ("nop");
