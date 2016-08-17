@@ -79,7 +79,7 @@ static void _mprotect_boundary_pages(void *base, int prot) {
     dbg_error("stack must be page aligned for mprotect\n");
   }
 
-  char *p1 = base;
+  char *p1 = static_cast<char*>(base);
   char *p2 = p1 + _thread_size + HPX_PAGE_SIZE;
   int e1 = mprotect(p1, HPX_PAGE_SIZE, prot);
   int e2 = mprotect(p2, HPX_PAGE_SIZE, prot);
@@ -97,11 +97,11 @@ static void _mprotect_boundary_pages(void *base, int prot) {
 /// @returns            The page-aligned, writable base of the stack structure.
 static ustack_t *_protect(void *buffer) {
   if (!_protect_stacks()) {
-    return buffer;
+    return static_cast<ustack_t*>(buffer);
   }
 
   _mprotect_boundary_pages(buffer, PROT_NONE);
-  return (void*)((char*)buffer + HPX_PAGE_SIZE);
+  return reinterpret_cast<ustack_t*>(((char*)buffer + HPX_PAGE_SIZE));
 }
 
 /// Unprotect the stack so that the pages can be reused.

@@ -66,7 +66,7 @@ static int lco_user_handler(void) {
   srand(time(NULL));
   hpx_addr_t lco;
   int init = 0;
-  lco = hpx_lco_user_new(sizeof(bool), _lco_init, _lco_op, _lco_predicate,
+  lco = hpx_lco_user_new(sizeof(int), _lco_init, _lco_op, _lco_predicate,
                          &init, sizeof(init));
   for (int i = 0; i < 16; ++i) {
     hpx_addr_t and = hpx_lco_and_new(2);

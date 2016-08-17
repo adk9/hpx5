@@ -42,7 +42,6 @@ extern "C" {
 /// Forward declarations
 /// @{
 struct config;
-struct cvar;
 /// @}
 
 /// Scheduler states.
@@ -228,11 +227,11 @@ void scheduler_suspend(void (*f)(hpx_parcel_t *, void*), void *env);
 /// scheduler_wait() will call _schedule() and transfer away from the calling
 /// thread.
 ///
-/// @param         lock The tatas lock protecting the condition.
+/// @param          lco The LCO that is executing.
 /// @param          con The condition we'd like to wait for.
 ///
 /// @returns            LIBHPX_OK or an error
-hpx_status_t scheduler_wait(void *lock, struct cvar *con)
+hpx_status_t scheduler_wait(void *lco, void *con)
   HPX_NON_NULL(1, 2);
 
 /// Signal a condition.
@@ -241,7 +240,7 @@ hpx_status_t scheduler_wait(void *lock, struct cvar *con)
 /// synchronous (MESA style) and one waiting thread will be woken up.
 ///
 /// @param         cond The condition we'd like to signal.
-void scheduler_signal(struct cvar *cond)
+void scheduler_signal(void *cond)
   HPX_NON_NULL(1);
 
 /// Signal a condition.
@@ -250,7 +249,7 @@ void scheduler_signal(struct cvar *cond)
 /// synchronous (MESA style) and all waiting threads will be woken up.
 ///
 /// @param         cvar The condition we'd like to signal.
-void scheduler_signal_all(struct cvar *cvar)
+void scheduler_signal_all(void *cvar)
   HPX_NON_NULL(1);
 
 /// Signal an error condition.
@@ -262,7 +261,7 @@ void scheduler_signal_all(struct cvar *cvar)
 ///
 /// @param         cvar The condition we'd like to signal an error on.
 /// @param         code The error code to set in the condition.
-void scheduler_signal_error(struct cvar *cvar, hpx_status_t code)
+void scheduler_signal_error(void *cvar, hpx_status_t code)
   HPX_NON_NULL(1);
 
 /// Get the parcel bound to the current executing thread.

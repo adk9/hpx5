@@ -14,12 +14,13 @@
 #ifndef LIBHPX_ASM_H
 #define LIBHPX_ASM_H
 
-#include <stdint.h>
-
 /// This file is the header that declares all of our generic assembly
 /// functions. These are all implemented in an architecture-dependent way. These
 /// are suitable for gcc inline assembly, but are done as asm to support
 /// compilers that do not support inline asm.
-void align_stack_trampoline(void);
+extern "C" void align_stack_trampoline(void);
+
+extern "C" void nop(void);
+extern "C" void pause_nop(void);
 
 #endif // LIBHPX_ASM_H

@@ -113,7 +113,6 @@ static int thread_exit_handler(void) {
   hpx_time_t t1 = hpx_time_now();
 
   hpx_addr_t done = hpx_lco_future_new(sizeof(uint64_t));
-  uint64_t value = SET_CONT_VALUE;
   hpx_status_t status = hpx_call(HPX_HERE, _worker, done);
   assert_msg(status == HPX_SUCCESS, "Could not normally terminate the thread");
   status = hpx_lco_wait(done);

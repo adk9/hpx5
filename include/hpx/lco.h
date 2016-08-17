@@ -230,6 +230,7 @@ hpx_status_t hpx_lco_get_reset(hpx_addr_t lco, size_t size, void *value)
 /// @param      lco the LCO we're processing
 /// @param     size the size of the LCO buffer
 /// @param[out] ref pointer to hold the reference to an LCO's buffer
+///
 /// @returns        HPX_SUCCESS or the code passed to hpx_lco_error()
 hpx_status_t hpx_lco_getref(hpx_addr_t lco, size_t size, void **ref)
   HPX_PUBLIC;
@@ -238,7 +239,6 @@ hpx_status_t hpx_lco_getref(hpx_addr_t lco, size_t size, void **ref)
 ///
 /// @param      lco the LCO we're processing
 /// @param[out] ref the reference to an LCO's buffer
-/// @returns        HPX_SUCCESS or the code passed to hpx_lco_error()
 void hpx_lco_release(hpx_addr_t lco, void *ref)
   HPX_PUBLIC;
 
@@ -284,9 +284,13 @@ int hpx_lco_get_all(int n, hpx_addr_t lcos[], size_t sizes[], void *values[],
                     hpx_status_t statuses[])
   HPX_PUBLIC;
 
-/// Get the size of an LCO (including the size of its internal
-/// buffer).
-size_t hpx_lco_size(hpx_addr_t lco)
+/// Get the size of an LCO.
+///
+/// This may require communication.
+///
+/// @param          lco The address of the LCO.
+/// @param         size The number of bytes in the LCO's data type.
+size_t hpx_lco_size(hpx_addr_t lco, size_t size)
   HPX_PUBLIC;
 
 /// Semaphores are builtin LCOs that represent resource usage.
@@ -401,11 +405,10 @@ hpx_addr_t hpx_lco_future_array_at(hpx_addr_t base, int i, int size, int bsize)
 ///
 /// @param      base The base address of the array of lcos.
 /// @param         i The index of the lco to return.
-/// @param      size The size of the data stored with each lco. Should be 0 for
-///                  and lco.
+/// @param      size The size of the data type in the LCO.
 ///
 /// @returns The address of the ith lco in the array.
-hpx_addr_t hpx_lco_array_at(hpx_addr_t base, int i, int size)
+hpx_addr_t hpx_lco_array_at(hpx_addr_t base, int i, size_t size)
   HPX_PUBLIC;
 
 /// Allocate a new generation counter.

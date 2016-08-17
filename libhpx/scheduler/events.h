@@ -17,10 +17,6 @@
 /// @file libhpx/scheduler/events.h
 /// @short Define the set of scheduler events that we know how to trace.
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 struct hpx_parcel;
 struct worker;
 
@@ -34,10 +30,6 @@ void EVENT_THREAD_RESUME(struct hpx_parcel *p, struct worker *w);
 # define EVENT_THREAD_END(...)
 # define EVENT_THREAD_SUSPEND(...)
 # define EVENT_THREAD_RESUME(...)
-#endif
-
-#ifdef __cplusplus
-}
 #endif
 
 #endif // LIBHPX_SCHEDULER_EVENTS_H

@@ -11,18 +11,16 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
-#ifndef LIBHPX_ASM_H
-#define LIBHPX_ASM_H
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
-#include <stdint.h>
+#include "nop.h"
 
-/// This file is the header that declares all of our generic assembly
-/// functions. These are all implemented in an architecture-dependent way. These
-/// are suitable for gcc inline assembly, but are done as asm to support
-/// compilers that do not support inline asm.
+void nop(void) {
+  __asm__ volatile ("nop");
+}
 
-extern "C" void get_mxcsr(uint32_t *out);
-extern "C" void get_fpucw(uint16_t *out);
-extern "C" void align_stack_trampoline(void);
-
-#endif // LIBHPX_ASM_H
+void pause_nop(void) {
+  __asm__ volatile ("nop");
+}
