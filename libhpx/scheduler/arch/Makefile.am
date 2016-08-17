@@ -11,9 +11,9 @@ libarch_la_SOURCES = x86_64/transfer.S x86_64/asm.S x86_64/nop.S x86_64/frame.cp
 endif
 
 if CPU_ARM
-libarch_la_SOURCES = arm/frame.c arm/asm.S arm/transfer.S common/nop.c
+libarch_la_SOURCES = arm/frame.cpp arm/asm.S arm/transfer.S common/nop.c
 endif
 
 if CPU_AARCH64
-libarch_la_SOURCES = aarch64/frame.c aarch64/asm.S aarch64/transfer.S common/nop.c
+libarch_la_SOURCES = aarch64/frame.cpp aarch64/asm.S aarch64/transfer.S common/nop.cpp
 endif
