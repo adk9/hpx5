@@ -15,7 +15,7 @@
 # include "config.h"
 #endif
 
-/// @file libhpx/scheduler/worker.c
+/// @file libhpx/scheduler/worker.cpp
 /// @brief Implementation of the scheduler worker thread.
 
 #include <errno.h>
@@ -236,24 +236,24 @@ static void _vcontinue_parcel(hpx_parcel_t *p, int n, va_list *args) {
   }
 }
 
-static chase_lev_ws_deque_t *_work(worker_t *cthis) {
+static two_lock_queue_t *_work(worker_t *cthis) {
   int id = sync_load(&cthis->work_id, SYNC_RELAXED);
   return &cthis->queues[id].work;
 }
 
-static chase_lev_ws_deque_t *_yielded(worker_t *cthis) {
+static two_lock_queue_t *_yielded(worker_t *cthis) {
   int id = sync_load(&cthis->work_id, SYNC_RELAXED);
   return &cthis->queues[1 - id].work;
 }
 
-/// Process the next available parcel from our work queue in a lifo order.
-static hpx_parcel_t *_pop_lifo(worker_t *cthis) {
-  chase_lev_ws_deque_t *work = _work(cthis);
-  void *buffer = sync_chase_lev_ws_deque_pop(work);
+/// Process the next available parcel from our work queue in a fifo order.
+static hpx_parcel_t *_pop_fifo(worker_t *cthis) {
+  two_lock_queue_t *work = _work(cthis);
+  void *buffer = sync_two_lock_queue_dequeue(work);
   hpx_parcel_t *p = (hpx_parcel_t*)buffer;
   INST_IF (p) {
-    EVENT_SCHED_POP_LIFO(p->id);
-    EVENT_SCHED_WQSIZE(sync_chase_lev_ws_deque_size(work));
+    EVENT_SCHED_POP_FIFO(p->id);
+    EVENT_SCHED_WQSIZE(sync_two_lock_queue_size(work));
   }
   return p;
 }
@@ -261,7 +261,7 @@ static hpx_parcel_t *_pop_lifo(worker_t *cthis) {
 /// Steal a parcel from a worker with the given @p id.
 static hpx_parcel_t *_steal_from(worker_t *cthis, int id) {
   worker_t *victim = scheduler_get_worker(cthis->sched, id);
-  void *buffer = sync_chase_lev_ws_deque_steal(_work(victim));
+  void *buffer = sync_two_lock_queue_dequeue(_work(victim));
   hpx_parcel_t *p = (hpx_parcel_t*)buffer;
   cthis->last_victim = (p) ? id : -1;
   EVENT_SCHED_STEAL(p ? p->id : 0, victim->id);
@@ -296,7 +296,7 @@ static int _push_half_handler(int src) {
   worker_t *cthis = self;
   const int steal_half_threshold = 6;
   log_sched("received push half request from worker %d\n", src);
-  int qsize = sync_chase_lev_ws_deque_size(_work(cthis));
+  int qsize = sync_two_lock_queue_size(_work(cthis));
   if (qsize < steal_half_threshold) {
     return HPX_SUCCESS;
   }
@@ -305,7 +305,7 @@ static int _push_half_handler(int src) {
   int count = (qsize >> 1);
   hpx_parcel_t *parcels = NULL;
   for (int i = 0; i < count; ++i) {
-    hpx_parcel_t *p = _pop_lifo(cthis);
+    hpx_parcel_t *p = _pop_fifo(cthis);
     if (!p) {
       continue;
     }
@@ -473,24 +473,25 @@ static void _send_mail(hpx_parcel_t *p, void *worker) {
 /// @param       worker The current worker.
 static void _yield(hpx_parcel_t *p, void *worker) {
   worker_t *cthis = (worker_t *)worker;
-  sync_chase_lev_ws_deque_push(_yielded(cthis), p);
+  sync_two_lock_queue_enqueue(_yielded(cthis), p);
   cthis->yielded = 0;
 }
 
-/// A transfer continuation that schedules a parcel for lifo work.
+/// A transfer continuation that schedules a parcel for fifo work.
 ///
 /// This continuation can change the local scheduling policy from help-first to
-/// work first, and will be used directly whenever we need to push lifo work.
+/// work first, and will be used directly whenever we need to push fifo work.
 ///
-/// @param            p The parcel that we're going to push.
+/// @param            p The parcel that we're going to enqueue.
 /// @param       worker The worker pointer.
-static void _push_lifo(hpx_parcel_t *p, void *worker) {
+static void _push_fifo(hpx_parcel_t *p, void *worker) {
   dbg_assert(p->target != HPX_NULL);
   dbg_assert(actions[p->action].handler != NULL);
-  EVENT_SCHED_PUSH_LIFO(p->id);
+  EVENT_SCHED_PUSH_FIFO(p->id);
   GAS_TRACE_ACCESS(p->src, here->rank, p->target, p->size);
   worker_t *cthis = (worker_t *)worker;
-  uint64_t size = sync_chase_lev_ws_deque_push(_work(cthis), p);
+  sync_two_lock_queue_enqueue(_work(cthis), p);
+  uint64_t size = sync_two_lock_queue_size(_work(cthis));
   if (cthis->work_first >= 0) {
     cthis->work_first = (here->config->sched_wfthreshold < size);
   }
@@ -518,7 +519,7 @@ static hpx_parcel_t *_handle_mail(worker_t *cthis) {
     while ((next = parcel_stack_pop(&parcels))) {
       EVENT_SCHED_MAIL(prev->id);
       log_sched("got mail %p\n", prev);
-      _push_lifo(prev, cthis);
+      _push_fifo(prev, cthis);
       prev = next;
     }
     buffer = sync_two_lock_queue_dequeue(&cthis->inbox);
@@ -547,9 +548,9 @@ static hpx_parcel_t *_handle_network(worker_t *cthis) {
 
   hpx_parcel_t *p = NULL;
   while ((p = parcel_stack_pop(&stack))) {
-    _push_lifo(p, cthis);
+    _push_fifo(p, cthis);
   }
-  return _pop_lifo(cthis);
+  return _pop_fifo(cthis);
 }
 
 /// Handle a scheduler worker epoch transition.
@@ -586,7 +587,7 @@ static void _schedule_nb(worker_t *cthis, void (*f)(hpx_parcel_t *, void*),
   }
   else if ((p = _handle_mail(cthis))) {
   }
-  else if ((p = _pop_lifo(cthis))) {
+  else if ((p = _pop_fifo(cthis))) {
   }
   else {
     p = cthis->system;
@@ -608,7 +609,7 @@ static void _schedule(worker_t *cthis) {
     if ((p = _handle_mail(cthis))) {
       _transfer(p, _null, 0, cthis);
     }
-    else if ((p = _pop_lifo(cthis))) {
+    else if ((p = _pop_fifo(cthis))) {
       _transfer(p, _null, 0, cthis);
     }
     else if ((p = _handle_epoch(cthis))) {
@@ -640,14 +641,14 @@ static void _stop(worker_t *cthis) {
   while (_is_state(cthis, SCHED_STOP)) {
     // make sure we don't have anything stuck in mail or yield
     void *buffer;
-    while ((buffer = sync_chase_lev_ws_deque_pop(_yielded(cthis)))) {
+    while ((buffer = sync_two_lock_queue_dequeue(_yielded(cthis)))) {
       hpx_parcel_t *p = (hpx_parcel_t*)buffer;
-      _push_lifo(p, cthis);
+      _push_fifo(p, cthis);
     }
 
     if ((buffer = _handle_mail(cthis))) {
       hpx_parcel_t *p = (hpx_parcel_t*)buffer;
-      _push_lifo(p, cthis);
+      _push_fifo(p, cthis);
     }
 
     // go back to sleep
@@ -771,8 +772,8 @@ void worker_init(worker_t *cthis, struct scheduler *sched, int id) {
   sync_store(&cthis->work_id, 0, SYNC_RELAXED);
   sync_store(&cthis->state, SCHED_STOP, SYNC_RELAXED);
 
-  sync_chase_lev_ws_deque_init(&cthis->queues[0].work, 32);
-  sync_chase_lev_ws_deque_init(&cthis->queues[1].work, 32);
+  sync_two_lock_queue_init(&cthis->queues[0].work, NULL);
+  sync_two_lock_queue_init(&cthis->queues[1].work, NULL);
   sync_two_lock_queue_init(&cthis->inbox, NULL);
 }
 
@@ -792,11 +793,11 @@ void worker_fini(worker_t *cthis) {
   sync_two_lock_queue_fini(&cthis->inbox);
 
   // and clean up the workqueue parcels
-  while ((p = _pop_lifo(cthis))) {
+  while ((p = _pop_fifo(cthis))) {
     parcel_delete(p);
   }
-  sync_chase_lev_ws_deque_fini(&cthis->queues[0].work);
-  sync_chase_lev_ws_deque_fini(&cthis->queues[1].work);
+  sync_two_lock_queue_fini(&cthis->queues[0].work);
+  sync_two_lock_queue_fini(&cthis->queues[1].work);
 
   // and delete any cached stacks
   ustack_t *stack = NULL;
@@ -880,13 +881,13 @@ void scheduler_spawn(hpx_parcel_t *p) {
   // If we're not running then push the parcel and return. This prevents an
   // infinite spawn from inhibiting termination.
   if (!_is_state(w, SCHED_RUN)) {
-    _push_lifo(p, w);
+    _push_fifo(p, w);
     return;
   }
 
   // If we're not in work-first mode, then push the parcel for later.
   if (w->work_first < 1) {
-    _push_lifo(p, w);
+    _push_fifo(p, w);
     return;
   }
 
@@ -895,14 +896,14 @@ void scheduler_spawn(hpx_parcel_t *p) {
   // If we're holding a lock then we have to push the spawn for later
   // processing, or we could end up causing a deadlock.
   if (current->ustack->lco_depth) {
-    _push_lifo(p, w);
+    _push_fifo(p, w);
     return;
   }
 
   // If we are currently running an interrupt, then we can't work-first since we
   // don't have our own stack to suspend.
   if (action_is_interrupt(current->action)) {
-    _push_lifo(p, w);
+    _push_fifo(p, w);
     return;
   }
 
@@ -910,7 +911,7 @@ void scheduler_spawn(hpx_parcel_t *p) {
   // prevent it from being stolen, which we can do by using the NULL
   // continuation.
   EVENT_THREAD_SUSPEND(current, w);
-  _transfer(p, (current == w->system) ? _null : _push_lifo, w, w);
+  _transfer(p, (current == w->system) ? _null : _push_fifo, w, w);
   EVENT_THREAD_RESUME(current, self);
 }
 

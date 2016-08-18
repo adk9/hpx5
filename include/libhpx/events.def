@@ -91,13 +91,13 @@ LIBHPX_EVENT(NETWORK, PROGRESS_END)
 
 /// Scheduler events
 /// Scheduler events mark when the scheduler is entered or exited as well as
-/// when events affecting the LIFO queue occur.
+/// when events affecting the FIFO queue occur.
 /// @{
 LIBHPX_EVENT(SCHED, WQSIZE,
              uint64_t, workqueue_size)
-LIBHPX_EVENT(SCHED, PUSH_LIFO,
+LIBHPX_EVENT(SCHED, PUSH_FIFO,
              uint64_t, id)
-LIBHPX_EVENT(SCHED, POP_LIFO,
+LIBHPX_EVENT(SCHED, POP_FIFO,
              uint64_t, id)
 LIBHPX_EVENT(SCHED, STEAL,
              uint64_t, id,

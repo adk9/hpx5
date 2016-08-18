@@ -89,6 +89,7 @@ void sync_two_lock_queue_enqueue_node(two_lock_queue_t *q,
 
 void sync_two_lock_queue_enqueue(two_lock_queue_t *q, void *val) {
   sync_two_lock_queue_enqueue_node(q, _node_new(val));
+  sync_addf(&q->size, 1, SYNC_ACQ_REL);
 }
 
 
@@ -112,5 +113,11 @@ void *sync_two_lock_queue_dequeue(two_lock_queue_t *q) {
     return NULL;
   void *value = n->value;
   _node_delete(n);
+  sync_addf(&q->size, -1, SYNC_ACQ_REL);
   return value;
 }
+
+uint64_t sync_two_lock_queue_size(two_lock_queue_t *q) {
+  return sync_load(&q->size, SYNC_ACQUIRE);
+}
+

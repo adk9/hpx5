@@ -51,13 +51,15 @@ typedef struct HPX_ALIGNED(64) {
   = {0};
 #endif
   ;
+  volatile uint64_t size;
 } two_lock_queue_t;
 
 #define SYNC_TWO_LOCK_QUEUE_INIT {              \
     .head = NULL,                               \
     ._paddinga = {0},                           \
     .tail = NULL,                               \
-    ._paddingb = {0}                            \
+    ._paddingb = {0},                           \
+    .size = 0                                   \
   }
 
 two_lock_queue_t *sync_two_lock_queue_new(void) HPX_MALLOC HPX_PUBLIC;
@@ -80,6 +82,9 @@ void sync_two_lock_queue_enqueue_node(two_lock_queue_t *q,
   HPX_NON_NULL(2) HPX_PUBLIC;
 
 two_lock_queue_node_t *sync_two_lock_queue_dequeue_node(two_lock_queue_t *q)
+  HPX_NON_NULL(1) HPX_PUBLIC;
+
+uint64_t sync_two_lock_queue_size(two_lock_queue_t *q)
   HPX_NON_NULL(1) HPX_PUBLIC;
 
 

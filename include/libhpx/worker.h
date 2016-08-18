@@ -41,9 +41,9 @@ struct scheduler;
 ///
 /// @{
 typedef struct {
-  chase_lev_ws_deque_t work;                    // my work
-  PAD_TO_CACHELINE(sizeof(chase_lev_ws_deque_t));
-} padded_deque_t;
+  two_lock_queue_t work;                    // my work
+  PAD_TO_CACHELINE(sizeof(two_lock_queue_t));
+} padded_queue_t;
 
 struct worker {
   pthread_t        thread;                      //!< this worker's native thread
@@ -74,7 +74,7 @@ struct worker {
   PAD_TO_CACHELINE(sizeof(pthread_mutex_t) +
                    sizeof(pthread_cond_t) +
                    sizeof(int) * 2);
-  padded_deque_t   queues[2];                   //!< work and yield queues
+  padded_queue_t   queues[2];                   //!< work and yield queues
   two_lock_queue_t  inbox;                      //!< mail sent to me
 };
 typedef struct worker worker_t;
