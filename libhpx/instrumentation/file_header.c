@@ -123,7 +123,7 @@ static size_t _write_event_metadata(void* base, int class, int event_id, int wor
                                  .name = "class"};
   inst_named_value_t id_md = {.value = event_id, 
                               .type = "i4", 
-                              .name = "id"};
+                              .name = "event_id"};
   inst_named_value_t named_values[] = {rank_md, worker_md, class_md, id_md};
   
   return write_header_dict((void*) curr, event_md, named_values, 4);
