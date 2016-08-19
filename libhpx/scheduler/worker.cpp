@@ -237,13 +237,7 @@ static void _vcontinue_parcel(hpx_parcel_t *p, int n, va_list *args) {
 }
 
 static two_lock_queue_t *_work(worker_t *cthis) {
-  int id = sync_load(&cthis->work_id, SYNC_RELAXED);
-  return &cthis->queues[id].work;
-}
-
-static two_lock_queue_t *_yielded(worker_t *cthis) {
-  int id = sync_load(&cthis->work_id, SYNC_RELAXED);
-  return &cthis->queues[1 - id].work;
+  return &cthis->queue.work;
 }
 
 /// Process the next available parcel from our work queue in a fifo order.
@@ -466,14 +460,14 @@ static void _send_mail(hpx_parcel_t *p, void *worker) {
   sync_two_lock_queue_enqueue(&cthis->inbox, p);
 }
 
-/// A checkpoint continuation that puts the previous thread into the yield
+/// A checkpoint continuation that puts the previous thread into the back of the
 /// queue.
 ///
 /// @param            p The previous parcel.
 /// @param       worker The current worker.
 static void _yield(hpx_parcel_t *p, void *worker) {
   worker_t *cthis = (worker_t *)worker;
-  sync_two_lock_queue_enqueue(_yielded(cthis), p);
+  sync_two_lock_queue_enqueue(_work(cthis), p);
   cthis->yielded = 0;
 }
 
@@ -555,11 +549,9 @@ static hpx_parcel_t *_handle_network(worker_t *cthis) {
 
 /// Handle a scheduler worker epoch transition.
 ///
-/// Currently we don't handle our yielded work eagerly---we'll try and prefer
-/// network and stolen work to yield work.
+/// TODO: Insert a parcel that comes around periodically and use that to trigger
+///       an epoch
 static hpx_parcel_t *_handle_epoch(worker_t *cthis) {
-  int id = sync_load(&cthis->work_id, SYNC_RELAXED);
-  sync_store(&cthis->work_id, 1 - id, SYNC_RELAXED);
   return NULL;
 }
 
@@ -639,12 +631,8 @@ static void _schedule(worker_t *cthis) {
 static void _stop(worker_t *cthis) {
   pthread_mutex_lock(&cthis->lock);
   while (_is_state(cthis, SCHED_STOP)) {
-    // make sure we don't have anything stuck in mail or yield
+    // make sure we don't have anything stuck in mail
     void *buffer;
-    while ((buffer = sync_two_lock_queue_dequeue(_yielded(cthis)))) {
-      hpx_parcel_t *p = (hpx_parcel_t*)buffer;
-      _push_fifo(p, cthis);
-    }
 
     if ((buffer = _handle_mail(cthis))) {
       hpx_parcel_t *p = (hpx_parcel_t*)buffer;
@@ -665,7 +653,7 @@ static void *_run(void *worker) {
   dbg_assert(here && here->config && here->gas && here->net);
   dbg_assert(cthis);
   dbg_assert(((uintptr_t)cthis & (HPX_CACHELINE_SIZE - 1)) == 0);
-  dbg_assert(((uintptr_t)&cthis->queues & (HPX_CACHELINE_SIZE - 1)) == 0);
+  dbg_assert(((uintptr_t)&cthis->queue & (HPX_CACHELINE_SIZE - 1)) == 0);
   dbg_assert(((uintptr_t)&cthis->inbox & (HPX_CACHELINE_SIZE - 1))== 0);
 
   self = cthis;
@@ -769,11 +757,9 @@ void worker_init(worker_t *cthis, struct scheduler *sched, int id) {
   if (pthread_cond_init(&cthis->running, NULL)) {
     dbg_error("could not initialize the condition for %d\n", id);
   }
-  sync_store(&cthis->work_id, 0, SYNC_RELAXED);
   sync_store(&cthis->state, SCHED_STOP, SYNC_RELAXED);
 
-  sync_two_lock_queue_init(&cthis->queues[0].work, NULL);
-  sync_two_lock_queue_init(&cthis->queues[1].work, NULL);
+  sync_two_lock_queue_init(&cthis->queue.work, NULL);
   sync_two_lock_queue_init(&cthis->inbox, NULL);
 }
 
@@ -796,8 +782,7 @@ void worker_fini(worker_t *cthis) {
   while ((p = _pop_fifo(cthis))) {
     parcel_delete(p);
   }
-  sync_two_lock_queue_fini(&cthis->queues[0].work);
-  sync_two_lock_queue_fini(&cthis->queues[1].work);
+  sync_two_lock_queue_fini(&cthis->queue.work);
 
   // and delete any cached stacks
   ustack_t *stack = NULL;

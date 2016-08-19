@@ -70,11 +70,10 @@ struct worker {
   pthread_mutex_t    lock;                      //!< state lock
   pthread_cond_t  running;                      //!< local condition for sleep
   volatile int      state;                      //!< what state are we in
-  volatile int    work_id;                      //!< which queue are we using
   PAD_TO_CACHELINE(sizeof(pthread_mutex_t) +
                    sizeof(pthread_cond_t) +
                    sizeof(int) * 2);
-  padded_queue_t   queues[2];                   //!< work and yield queues
+  padded_queue_t    queue;                      //!< work queue
   two_lock_queue_t  inbox;                      //!< mail sent to me
 };
 typedef struct worker worker_t;
