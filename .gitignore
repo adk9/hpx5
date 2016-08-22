@@ -10,6 +10,7 @@
 *.trs
 *.btr
 *Makefile.in
+*.pyc
 
 # /
 /aclocal.m4
