@@ -110,9 +110,9 @@ class UserLCO final : public LCO {
     f(userData_, size_, initData_, initSize_);
   }
 
-  void op(const void* rhs) {
+  void op(const void* rhs, size_t size) {
     auto f = (hpx_monoid_op_t)actions[op_].handler;
-    f(userData_, rhs, size_);
+    f(userData_, rhs, size);
   }
 
   bool predicate() const {
@@ -199,7 +199,6 @@ UserLCO::UserLCO(size_t size, hpx_action_t id, hpx_action_t op,
 int
 UserLCO::set(size_t size, const void *from)
 {
-  dbg_assert(size == size_);
   dbg_assert(!size || from);
 
   std::lock_guard<LCO> _(*this);
@@ -207,7 +206,7 @@ UserLCO::set(size_t size, const void *from)
     dbg_error("Cannot set an already set LCO\n");
   }
 
-  op(from);
+  op(from, size);
 
   if (!predicate()) {
     return 0;
