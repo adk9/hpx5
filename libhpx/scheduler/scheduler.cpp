@@ -17,6 +17,7 @@
 
 #include "libhpx/Scheduler.h"
 #include "libhpx/c_scheduler.h"
+#include "Condition.h"
 #include "thread.h"
 #include "libhpx/action.h"
 #include "libhpx/config.h"
@@ -32,6 +33,10 @@
 #include <sys/time.h>
 #include <stdlib.h>
 #include <string.h>
+
+namespace {
+using libhpx::scheduler::Condition;
+}
 
 scheduler_t *
 scheduler_new(const config_t *cfg)
@@ -65,15 +70,15 @@ scheduler_new(const config_t *cfg)
   sched->output = NULL;
 
   // Initialize the worker data structures.
+  libhpx::Network* network = static_cast<libhpx::Network*>(here->net);
   for (int i = 0, e = workers; i < e; ++i) {
-    new(&sched->workers[i]) Worker(sched, i);
-    // worker_init(&sched->workers[i], sched, i);
+    new(&sched->workers[i]) Worker(*sched, *network, i);
   }
 
   // Start the worker threads.
   for (int i = 0, e = workers; i < e; ++i) {
-    if (worker_create(&sched->workers[i])) {
-      log_error("failed to initialize a worker during scheduler_new.\n");
+    if (!sched->workers[i].create()) {
+      log_error("failed to create a worker during scheduler_new.\n");
       scheduler_delete(sched);
       return NULL;
     }
@@ -89,8 +94,8 @@ scheduler_delete(void *obj)
   Scheduler *sched = static_cast<Scheduler*>(obj);
   // shutdown and join all of the worker threads
   for (int i = 0, e = sched->n_workers; i < e; ++i) {
-    worker_shutdown(&sched->workers[i]);
-    worker_join(&sched->workers[i]);
+    sched->workers[i].shutdown();
+    sched->workers[i].join();
   }
 
   // clean up all of the worker data structures
@@ -123,7 +128,7 @@ _wait(void * const scheduler)
   int n = min_int(apex_get_thread_cap(), csched->n_workers);
   log_sched("apex adjusting from %d to %d workers\n", prev, n);
   csched->n_target = n;
-  void (*op)(Worker*) = (n < prev) ? worker_stop : worker_start;
+  auto op = (n < prev) ? Worker::stop : Worker::start;
   for (int i = max_int(prev, n), e = min_int(prev, n); i >= e; --i) {
     op(&csched->workers[i]);
   }
@@ -162,7 +167,7 @@ scheduler_start(void *obj, int spmd, hpx_action_t act, void *out, int n,
   sched->code = HPX_SUCCESS;
   sched->state = SCHED_RUN;
   for (int i = 0, e = sched->n_target; i < e; ++i) {
-    worker_start(&sched->workers[i]);
+    sched->workers[i].start();
   }
 
   // wait for someone to stop the scheduler
@@ -174,7 +179,7 @@ scheduler_start(void *obj, int spmd, hpx_action_t act, void *out, int n,
 
   // stop all of the worker threads
   for (int i = 0, e = sched->n_target; i < e; ++i) {
-    worker_stop(&sched->workers[i]);
+    sched->workers[i].stop();
   }
 
   // Use sched crude barrier to wait for the worker threads to stop.
@@ -347,13 +352,29 @@ scheduler_exit(void *obj, size_t size, const void *out)
   hpx_thread_exit(HPX_SUCCESS);
 }
 
-
-/// Called by the application to terminate the scheduler and network.
 void
-hpx_exit(size_t size, const void *out)
+scheduler_spawn(hpx_parcel_t *p)
 {
-  assert(here && self);
-  scheduler_exit(here->sched, size, out);
+  Worker *w = self;
+  dbg_assert(w);
+  dbg_assert(w->id >= 0);
+  w->spawn(p);
+}
+
+// Spawn a parcel on a specified worker thread.
+void
+scheduler_spawn_at(hpx_parcel_t *p, int thread)
+{
+  dbg_assert(p);
+  dbg_assert(thread >= 0);
+  dbg_assert(here && here->sched && (here->sched->n_workers > thread));
+  here->sched->workers[thread].pushMail(p);
+}
+
+hpx_parcel_t *
+scheduler_current_parcel(void)
+{
+  return self->current;
 }
 
 int
@@ -361,4 +382,25 @@ scheduler_get_n_workers(const void *obj)
 {
   auto *sched = static_cast<const Scheduler*>(obj);
   return sched->n_workers;
+}
+
+void
+scheduler_signal(void *cond)
+{
+  Condition* condition = static_cast<Condition*>(cond);
+  parcel_launch_all(condition->pop());
+}
+
+void
+scheduler_signal_all(void *cond)
+{
+  Condition* condition = static_cast<Condition*>(cond);
+  parcel_launch_all(condition->popAll());
+}
+
+void
+scheduler_signal_error(void* cond, hpx_status_t code)
+{
+  Condition* condition = static_cast<Condition*>(cond);
+  parcel_launch_all(condition->setError(code));
 }
