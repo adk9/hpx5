@@ -119,15 +119,39 @@ class AllReduce final : public LCO {
   /// @}
 
  private:
-  /// The set and get inner handlers perform the operations without acquiring
-  /// the lock. This allows them to be shared by the set and get
-  /// implementations, along with the join operation.
-  int setInner(size_t size, const void *value);
-  hpx_status_t getInner(size_t size, void *value, int reset);
+  /// Helper function that applies the stored operation.
+  void op(size_t size, const void* from) {
+    if (size) {
+      dbg_assert(from && op_);
+      hpx_monoid_op_t f = (hpx_monoid_op_t)actions[op_].handler;
+      f(value_, from, size);
+    }
+  }
 
-  /// The op and id handlers.
-  void op(size_t size, const void* from);
-  void id(size_t size);
+  /// Helper function that resets the stored value.
+  void id(size_t size) {
+    if (id_) {
+      hpx_monoid_id_t f = (hpx_monoid_id_t)actions[id_].handler;
+      f(value_, size);
+    }
+  }
+
+  /// Handle the set operation without acquiring the lock.
+  ///
+  /// @param       size The number of bytes in @p value.
+  /// @param      value The input value for the set operation.
+  ///
+  /// @returns          HPX_SUCCESS
+  int setInner(size_t size, const void *value);
+
+  /// Handle the get operation without acquiring the lock.
+  ///
+  /// @param       size The number of bytes in @p value.
+  /// @param[out] value The value returned.
+  /// @param      reset A flag indicating if we should reset the LCO.
+  ///
+  /// @returns          HPX_SUCCESS
+  hpx_status_t getInner(size_t size, void *value, int reset);
 
   Condition       epoch_;
   const size_t  readers_;
@@ -156,28 +180,6 @@ LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED | HPX_PINNED, JoinRequest,
 
 LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, JoinReply,
               AllReduce::JoinReplyHandler, HPX_POINTER, HPX_SIZE_T);
-}
-
-void
-AllReduce::op(size_t size, const void *from) {
-  dbg_assert(!size || op_);
-  dbg_assert(!size || from);
-  if (size) {
-    handler_t f = actions[op_].handler;
-    hpx_monoid_op_t monoid = (hpx_monoid_op_t)f;
-    monoid(value_, from, size);
-  }
-}
-
-void
-AllReduce::id(size_t size)
-{
-  dbg_assert(!size || id_);
-  if (id_) {
-    handler_t f = actions[id_].handler;
-    hpx_monoid_id_t monoid = (hpx_monoid_id_t)f;
-    monoid(value_, size);
-  }
 }
 
 int

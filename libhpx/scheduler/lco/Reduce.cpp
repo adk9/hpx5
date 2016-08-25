@@ -82,16 +82,16 @@ struct Reduce final : public LCO {
     id();
   }
 
-  void op(const void* from) {
-    if (size_) {
-      dbg_assert(from);
+  void op(size_t size, const void* from) {
+    if (size) {
+      dbg_assert(from && size_ && op_);
       hpx_monoid_op_t f = (hpx_monoid_op_t)actions[op_].handler;
-      f(value_, from, size_);
+      f(value_, from, size);
     }
   }
 
   void id() {
-    if (size_) {
+    if (id_) {
       hpx_monoid_id_t f = (hpx_monoid_id_t)actions[id_].handler;
       f(value_, size_);
     }
@@ -157,7 +157,7 @@ Reduce::set(size_t size, const void *from)
   dbg_assert(!size || from);
   std::lock_guard<LCO> _(*this);
 
-  op(from);
+  op(size, from);
 
   if (0 == --remaining_) {
     barrier_.signalAll();
