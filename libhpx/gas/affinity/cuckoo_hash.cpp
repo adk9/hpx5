@@ -22,7 +22,7 @@
 #include <libhpx/debug.h>
 #include <libhpx/gas.h>
 #include <libhpx/locality.h>
-#include <libhpx/scheduler.h>
+#include <libhpx/c_scheduler.h>
 #include "cuckoo_hash.h"
 
 using libhpx::gas::Affinity;

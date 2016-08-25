@@ -25,7 +25,7 @@
 #include <libhpx/memory.h>
 #include <libhpx/parcel.h>
 #include <libhpx/rebalancer.h>
-#include <libhpx/scheduler.h>
+#include <libhpx/c_scheduler.h>
 #include <libhpx/worker.h>
 #include <uthash.h>
 #include "agas.h"

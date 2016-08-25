@@ -15,7 +15,7 @@
 # include "config.h"
 #endif
 
-#include "libhpx/scheduler.h"
+#include "libhpx/c_scheduler.h"
 #include "thread.h"
 #include "libhpx/action.h"
 #include "libhpx/config.h"

@@ -19,7 +19,7 @@
 #include "Commands.h"
 #include "libhpx/debug.h"
 #include "libhpx/memory.h"
-#include "libhpx/scheduler.h"
+#include "libhpx/c_scheduler.h"
 
 namespace {
 using libhpx::network::pwc::Command;

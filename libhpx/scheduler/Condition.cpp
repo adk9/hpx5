@@ -23,7 +23,7 @@
 #include "thread.h"
 #include "libhpx/debug.h"
 #include "libhpx/parcel.h"
-#include "libhpx/scheduler.h"
+#include "libhpx/c_scheduler.h"
 #include <cstdint>
 
 namespace {

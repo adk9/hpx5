@@ -30,7 +30,7 @@
 #include <hpx/hpx.h>
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
-#include <libhpx/scheduler.h>
+#include <libhpx/c_scheduler.h>
 #include "metadata.h"
 
 static void _vappend(int UNUSED, int n, int id, ...) {

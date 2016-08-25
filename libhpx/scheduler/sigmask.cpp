@@ -21,7 +21,7 @@
 #include <signal.h>
 #include <libhpx/debug.h>
 #include <libhpx/parcel.h>
-#include <libhpx/scheduler.h>
+#include <libhpx/c_scheduler.h>
 #include "thread.h"
 
 int hpx_thread_sigmask(int how, int mask) {

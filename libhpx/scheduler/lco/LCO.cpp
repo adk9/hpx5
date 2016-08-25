@@ -25,7 +25,7 @@
 #include "libhpx/instrumentation.h"
 #include "libhpx/memory.h"
 #include "libhpx/c_network.h"
-#include "libhpx/scheduler.h"
+#include "libhpx/c_scheduler.h"
 #include "libhpx/worker.h"
 #include "libhpx/parcel.h"
 

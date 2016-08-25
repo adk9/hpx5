@@ -23,7 +23,7 @@ noinst_HEADERS = \
                  percolation.h \
                  process.h \
                  rebalancer.h \
-                 scheduler.h \
+                 c_scheduler.h \
                  StringOps.h \
                  system.h \
                  termination.h \

@@ -41,7 +41,7 @@
 #include <libhpx/parcel.h>                      // used as thread-control block
 #include <libhpx/process.h>
 #include <libhpx/rebalancer.h>
-#include <libhpx/scheduler.h>
+#include <libhpx/c_scheduler.h>
 #include <libhpx/system.h>
 #include <libhpx/termination.h>
 #include <libhpx/topology.h>

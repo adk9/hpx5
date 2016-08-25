@@ -23,7 +23,7 @@
 #include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
 #include "libhpx/c_network.h"
-#include "libhpx/scheduler.h"
+#include "libhpx/c_scheduler.h"
 
 namespace {
 using libhpx::network::pwc::Command;

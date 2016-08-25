@@ -30,7 +30,7 @@
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
 #include <libhpx/parcel.h>
-#include <libhpx/scheduler.h>
+#include <libhpx/c_scheduler.h>
 #include "thread.h"
 
 /// The size of the thread structure. This is set during initialization based on

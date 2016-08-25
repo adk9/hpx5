@@ -19,7 +19,7 @@
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
 #include <libhpx/padding.h>
-#include <libhpx/scheduler.h>
+#include <libhpx/c_scheduler.h>
 #include "allreduce.h"
 
 struct reduce {

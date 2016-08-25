@@ -19,7 +19,7 @@
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/parcel.h"
-#include "libhpx/scheduler.h"
+#include "libhpx/c_scheduler.h"
 #include <alloca.h>
 #include <cstring>
 

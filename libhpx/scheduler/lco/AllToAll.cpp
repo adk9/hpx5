@@ -72,7 +72,7 @@
 #include "libhpx/debug.h"
 #include "libhpx/memory.h"
 #include "libhpx/padding.h"
-#include "libhpx/scheduler.h"
+#include "libhpx/c_scheduler.h"
 #include <mutex>
 #include <cstring>
 

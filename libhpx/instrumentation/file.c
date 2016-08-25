@@ -28,7 +28,7 @@
 
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
-#include <libhpx/scheduler.h>
+#include <libhpx/c_scheduler.h>
 #include <hpx/hpx.h>
 #include "metadata.h"
 #include "file.h"

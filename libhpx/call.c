@@ -24,7 +24,7 @@
 #include <hpx/hpx.h>
 #include <libhpx/action.h>
 #include <libhpx/parcel.h>
-#include <libhpx/scheduler.h>
+#include <libhpx/c_scheduler.h>
 
 /// A RPC call with a user-specified continuation action.
 int _hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,

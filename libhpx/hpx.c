@@ -37,7 +37,7 @@
 #include <libhpx/c_network.h>
 #include <libhpx/percolation.h>
 #include <libhpx/process.h>
-#include <libhpx/scheduler.h>
+#include <libhpx/c_scheduler.h>
 #include <libhpx/system.h>
 #include <libhpx/time.h>
 #include <libhpx/topology.h>

@@ -20,7 +20,7 @@
 #include <libhpx/gas.h>
 #include <libhpx/locality.h>
 #include <libhpx/parcel.h>
-#include <libhpx/scheduler.h>
+#include <libhpx/c_scheduler.h>
 #include <string.h>
 
 /// Emulate a put-with-completion operation.

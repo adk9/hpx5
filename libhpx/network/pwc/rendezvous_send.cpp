@@ -27,7 +27,7 @@
 #include "PWCNetwork.h"
 #include "libhpx/debug.h"
 #include "libhpx/events.h"
-#include "libhpx/scheduler.h"
+#include "libhpx/c_scheduler.h"
 
 namespace {
 using libhpx::network::pwc::Command;

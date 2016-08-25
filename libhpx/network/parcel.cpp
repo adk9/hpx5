@@ -33,7 +33,7 @@
 #include "libhpx/Network.h"
 #include <libhpx/padding.h>
 #include <libhpx/parcel.h>
-#include <libhpx/scheduler.h>
+#include <libhpx/c_scheduler.h>
 #include <libhpx/topology.h>
 #include <libsync/sync.h>
 #include <hpx/hpx.h>
