@@ -18,13 +18,13 @@
 /// @short Define the set of scheduler events that we know how to trace.
 
 struct hpx_parcel;
-struct worker;
+struct Worker;
 
 #ifdef ENABLE_INSTRUMENTATION
-void EVENT_THREAD_RUN(struct hpx_parcel *p, struct worker *w);
-void EVENT_THREAD_END(struct hpx_parcel *p, struct worker *w);
-void EVENT_THREAD_SUSPEND(struct hpx_parcel *p, struct worker *w);
-void EVENT_THREAD_RESUME(struct hpx_parcel *p, struct worker *w);
+void EVENT_THREAD_RUN(struct hpx_parcel *p, Worker *w);
+void EVENT_THREAD_END(struct hpx_parcel *p, Worker *w);
+void EVENT_THREAD_SUSPEND(struct hpx_parcel *p, Worker *w);
+void EVENT_THREAD_RESUME(struct hpx_parcel *p, Worker *w);
 #else
 # define EVENT_THREAD_RUN(...)
 # define EVENT_THREAD_END(...)

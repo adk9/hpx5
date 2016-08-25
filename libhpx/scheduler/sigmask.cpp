@@ -25,7 +25,7 @@
 #include "thread.h"
 
 int hpx_thread_sigmask(int how, int mask) {
-  worker_t *w = self;
+  Worker *w = self;
   hpx_parcel_t *p = w->current;
   p->ustack->masked = 1;
 

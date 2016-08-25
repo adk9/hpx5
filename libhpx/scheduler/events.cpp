@@ -15,14 +15,14 @@
 # include "config.h"
 #endif
 
-#include <hpx/hpx.h>
-#include <libhpx/events.h>
-#include <libhpx/worker.h>
 #include "events.h"
+#include "libhpx/events.h"
+#include "libhpx/Worker.h"
+#include "hpx/hpx.h"
 
 /// Thread tracing events.
 /// @{
-void EVENT_THREAD_RUN(hpx_parcel_t *p, worker_t *w) {
+void EVENT_THREAD_RUN(hpx_parcel_t *p, Worker *w) {
   if (p == w->system) {
     return;
   }
@@ -37,7 +37,7 @@ void EVENT_THREAD_RUN(hpx_parcel_t *p, worker_t *w) {
   EVENT_PARCEL_RUN(p->id, p->action, p->size);
 }
 
-void EVENT_THREAD_END(hpx_parcel_t *p, worker_t *w) {
+void EVENT_THREAD_END(hpx_parcel_t *p, Worker *w) {
   if (p == w->system) {
     return;
   }
@@ -50,7 +50,7 @@ void EVENT_THREAD_END(hpx_parcel_t *p, worker_t *w) {
   EVENT_PARCEL_END(p->id, p->action);
 }
 
-void EVENT_THREAD_SUSPEND(hpx_parcel_t *p, worker_t *w) {
+void EVENT_THREAD_SUSPEND(hpx_parcel_t *p, Worker *w) {
   if (p == w->system) {
     return;
   }
@@ -63,7 +63,7 @@ void EVENT_THREAD_SUSPEND(hpx_parcel_t *p, worker_t *w) {
   EVENT_PARCEL_SUSPEND(p->id, p->action);
 }
 
-void EVENT_THREAD_RESUME(hpx_parcel_t *p, worker_t *w) {
+void EVENT_THREAD_RESUME(hpx_parcel_t *p, Worker *w) {
   if (p == w->system) {
     return;
   }

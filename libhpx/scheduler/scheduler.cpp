@@ -15,6 +15,7 @@
 # include "config.h"
 #endif
 
+#include "libhpx/Scheduler.h"
 #include "libhpx/c_scheduler.h"
 #include "thread.h"
 #include "libhpx/action.h"
@@ -38,8 +39,8 @@ scheduler_new(const config_t *cfg)
   thread_set_stack_size(cfg->stacksize);
 
   const int workers = cfg->threads;
-  scheduler_t *sched = NULL;
-  size_t bytes = sizeof(*sched) + workers * sizeof(worker_t);
+  Scheduler *sched = NULL;
+  size_t bytes = sizeof(*sched) + workers * sizeof(Worker);
   if (posix_memalign((void**)&sched, HPX_CACHELINE_SIZE, bytes)) {
     dbg_error("could not allocate a scheduler.\n");
     return NULL;
@@ -82,8 +83,9 @@ scheduler_new(const config_t *cfg)
 }
 
 void
-scheduler_delete(scheduler_t *sched)
+scheduler_delete(void *obj)
 {
+  Scheduler *sched = static_cast<Scheduler*>(obj);
   // shutdown and join all of the worker threads
   for (int i = 0, e = sched->n_workers; i < e; ++i) {
     worker_shutdown(&sched->workers[i]);
@@ -99,12 +101,14 @@ scheduler_delete(scheduler_t *sched)
   as_leave();
 }
 
-worker_t *
-scheduler_get_worker(scheduler_t *sched, int id)
+void *
+scheduler_get_worker(void *obj, int id)
 {
+  Scheduler *sched = static_cast<Scheduler*>(obj);
+
   assert(id >= 0);
   assert(id < sched->n_workers);
-  worker_t *w = &sched->workers[id];
+  Worker *w = &sched->workers[id];
   assert(((uintptr_t)w & (HPX_CACHELINE_SIZE - 1)) == 0);
   return w;
 }
@@ -112,13 +116,13 @@ scheduler_get_worker(scheduler_t *sched, int id)
 static void
 _wait(void * const scheduler)
 {
-  auto* csched = static_cast<scheduler_t * const>(scheduler);
+  auto* csched = static_cast<Scheduler * const>(scheduler);
 #ifdef HAVE_APEX
   int prev = csched->n_target;
   int n = min_int(apex_get_thread_cap(), csched->n_workers);
   log_sched("apex adjusting from %d to %d workers\n", prev, n);
   csched->n_target = n;
-  void (*op)(worker_t*) = (n < prev) ? worker_stop : worker_start;
+  void (*op)(Worker*) = (n < prev) ? worker_stop : worker_start;
   for (int i = max_int(prev, n), e = min_int(prev, n); i >= e; --i) {
     op(&csched->workers[i]);
   }
@@ -136,9 +140,11 @@ _wait(void * const scheduler)
 }
 
 int
-scheduler_start(scheduler_t *sched, int spmd, hpx_action_t act, void *out, int n,
+scheduler_start(void *obj, int spmd, hpx_action_t act, void *out, int n,
                 va_list *args)
 {
+  Scheduler *sched = static_cast<Scheduler*>(obj);
+
   log_dflt("hpx started running %d\n", sched->epoch);
 
   // remember the output slot
@@ -190,8 +196,9 @@ scheduler_start(scheduler_t *sched, int spmd, hpx_action_t act, void *out, int n
 }
 
 void
-scheduler_set_output(scheduler_t *sched, size_t bytes, const void *out)
+scheduler_set_output(void *obj, size_t bytes, const void *out)
 {
+  Scheduler *sched = static_cast<Scheduler*>(obj);
   if (!bytes) return;
   if (!sched->output) return;
   pthread_mutex_lock(&sched->lock);
@@ -210,8 +217,9 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _scheduler_set_output_async,
                      HPX_SIZE_T);
 
 void
-scheduler_stop(scheduler_t *sched, uint64_t code)
+scheduler_stop(void *obj, uint64_t code)
 {
+  Scheduler *sched = static_cast<Scheduler*>(obj);
   pthread_mutex_lock(&sched->lock);
   dbg_assert(code < UINT64_MAX);
   sched->code = (int)code;
@@ -230,8 +238,9 @@ static LIBHPX_ACTION(HPX_DEFAULT, 0, _scheduler_stop_async,
                      _scheduler_stop_async_handler);
 
 int
-scheduler_is_stopped(const scheduler_t *sched)
+scheduler_is_stopped(const void *obj)
 {
+  const Scheduler *sched = static_cast<const Scheduler*>(obj);
   return (sync_load(&sched->state, SYNC_ACQUIRE) != SCHED_RUN);
 }
 
@@ -251,8 +260,10 @@ scheduler_is_stopped(const scheduler_t *sched)
 /// Don't perform the local shutdown until we're sure all the remote shutdowns
 /// have gotten out, otherwise we might not progress the network enough.
 static void
-_scheduler_exit_diffuse(scheduler_t *sched, size_t size, const void *out)
+_scheduler_exit_diffuse(void *obj, size_t size, const void *out)
 {
+  Scheduler *sched = static_cast<Scheduler*>(obj);
+
   hpx_addr_t sync = hpx_lco_and_new(here->ranks - 1);
   for (auto i = 0u, e = here->ranks; i < e; ++i) {
     if (i == here->rank) continue;
@@ -316,15 +327,16 @@ static LIBHPX_ACTION(HPX_DEFAULT, 0, _scheduler_terminate_spmd,
                      _scheduler_terminate_spmd_handler);
 
 static void
-_scheduler_exit_spmd(scheduler_t *sched, size_t size, const void *out)
+_scheduler_exit_spmd(void *sched, size_t size, const void *out)
 {
   scheduler_set_output(sched, size, out);
   hpx_call(HPX_THERE(0), _scheduler_terminate_spmd, HPX_NULL);
 }
 
 void
-scheduler_exit(scheduler_t *sched, size_t size, const void *out)
+scheduler_exit(void *obj, size_t size, const void *out)
 {
+  Scheduler *sched = static_cast<Scheduler*>(obj);
   if (sched->spmd) {
     _scheduler_exit_spmd(sched, size, out);
   }
@@ -332,4 +344,20 @@ scheduler_exit(scheduler_t *sched, size_t size, const void *out)
     _scheduler_exit_diffuse(sched, size, out);
   }
   hpx_thread_exit(HPX_SUCCESS);
+}
+
+
+/// Called by the application to terminate the scheduler and network.
+void
+hpx_exit(size_t size, const void *out)
+{
+  assert(here && self);
+  scheduler_exit(here->sched, size, out);
+}
+
+int
+scheduler_get_n_workers(const void *obj)
+{
+  auto *sched = static_cast<const Scheduler*>(obj);
+  return sched->n_workers;
 }

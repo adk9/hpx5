@@ -37,7 +37,7 @@
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
 #include <libhpx/parcel.h>
-#include <libhpx/worker.h>
+#include <libhpx/Worker.h>
 #include "file.h"
 
 trace_t *trace_new(const config_t *cfg) {

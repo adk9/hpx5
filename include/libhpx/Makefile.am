@@ -24,10 +24,11 @@ noinst_HEADERS = \
                  process.h \
                  rebalancer.h \
                  c_scheduler.h \
+                 Scheduler.h\
                  StringOps.h \
                  system.h \
                  termination.h \
                  time.h \
                  topology.h \
                  utils.h \
-                 worker.h
+                 Worker.h

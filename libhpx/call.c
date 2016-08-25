@@ -69,7 +69,7 @@ int _hpx_call_sync(hpx_addr_t addr, hpx_action_t id, void *out, size_t olen,
 int _hpx_call_cc(hpx_addr_t addr, hpx_action_t id, int n, ...) {
   va_list args;
   va_start(args, n);
-  hpx_parcel_t *p = self->current;
+  hpx_parcel_t *p = scheduler_current_parcel();
   hpx_addr_t rsync = p->c_target;
   hpx_action_t rop = p->c_action;
   int e = action_call_lsync_va(id, addr, rsync, rop, n, &args);
@@ -118,7 +118,7 @@ int _hpx_call_when_cc(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t id, int n,
                       ...) {
   va_list args;
   va_start(args, n);
-  hpx_parcel_t *p = self->current;
+  hpx_parcel_t *p = scheduler_current_parcel();
   hpx_addr_t rsync = p->c_target;
   hpx_action_t rop = p->c_action;
   p->c_target = HPX_NULL;

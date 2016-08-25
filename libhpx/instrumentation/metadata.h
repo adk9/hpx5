@@ -19,6 +19,10 @@
 #include <libhpx/instrumentation.h>
 #include <libhpx/events.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // Event data
 typedef struct record {
   int32_t worker;
@@ -50,24 +54,24 @@ typedef struct inst_named_value {
 
 typedef struct inst_event_col_metadata {
   const inst_type_info_t data_type;
-  const unsigned int offset; 
+  const unsigned int offset;
   const char name[256];
 } inst_event_col_metadata_t;
 
 #define METADATA_WORKER                       \
   { .data_type   = METADATA_TYPE_INT32,       \
     .offset      = offsetof(record_t, worker),\
-    .name        = "worker"}
+    "worker" }
 
 #define METADATA_NS                           \
   { .data_type   = METADATA_TYPE_INT64,       \
     .offset      = offsetof(record_t, ns),    \
-    .name        = "nanoseconds"}
+    "nanoseconds" }
 
 #define METADATA_int(_name, off)              \
   { .data_type   = METADATA_TYPE_INT64,       \
     .offset      = offsetof(record_t, user)+(off*8),\
-    .name        = _name}
+    _name }
 
 
 //TODO: WHY are all values packaged as int64?  There are other data types...
@@ -88,7 +92,7 @@ typedef struct inst_event_metadata {
   const inst_event_col_metadata_t *col_metadata;
 } inst_event_metadata_t;
 
-#define _ENTRY(...) {                                       \
+#define _ENTRY(...) {                                               \
   .num_cols = __HPX_NARGS(__VA_ARGS__)+2,                           \
   .col_metadata =                                                   \
     (const inst_event_col_metadata_t[__HPX_NARGS(__VA_ARGS__)+2]) { \
@@ -127,5 +131,9 @@ static const inst_event_metadata_t INST_EVENT_METADATA[] =
 # undef _ARGSN
 # undef _MD
 };
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

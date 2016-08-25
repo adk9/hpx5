@@ -23,11 +23,11 @@
 /// technique is to rely on the unwind.h header directly along with
 /// _Unwind_ForcedUnwind, however that technique had problems with some of our
 /// arm platforms.
+#include "libhpx/Worker.h"
+#include "events.h"
 #include <libhpx/action.h>
 #include <libhpx/events.h>
 #include <libhpx/parcel.h>
-#include <libhpx/worker.h>
-#include "events.h"
 
 namespace {
   /// A local exception type used to propagate the status from

@@ -22,7 +22,7 @@
 #include "libhpx/locality.h"
 #include "libhpx/c_network.h"
 #include "libhpx/rebalancer.h"
-#include "libhpx/worker.h"
+#include "libhpx/Worker.h"
 #include "hpx/hpx.h"
 #include <cinttypes>
 #include <cstdlib>

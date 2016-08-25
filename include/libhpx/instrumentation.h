@@ -98,10 +98,6 @@ int inst_check_vappend(int id, ...);
 # define trace_append(type, id, ...)
 #endif
 
-#ifdef __cplusplus
-}
-#endif
-
 // Constructor for a "file" tracer object.
 trace_t *trace_file_new(const config_t *cfg);
 
@@ -110,5 +106,9 @@ trace_t *trace_console_new(const config_t *cfg);
 
 // Constructor for the "stats" tracer object.
 trace_t *trace_stats_new(const config_t *cfg);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

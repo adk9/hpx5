@@ -31,14 +31,16 @@
 #include <hpx/hpx.h>
 
 #ifdef __cplusplus
+#include "libhpx/Scheduler.h"
 extern "C" {
+#else
+#define Scheduler void
 #endif
 
 /// Forward declarations.
 /// @{
 struct boot;
 struct config;
-struct scheduler;
 struct topology;
 struct tracer;
 /// @}
@@ -54,10 +56,10 @@ typedef struct locality {
   void                   *gas; //!< The global address space object. This
                                //!< provides global memory allocation and
                                //!< address space functionality.
-  void                  *net; //!< The network layer. This provides an active
+  void                   *net; //!< The network layer. This provides an active
                                //!< message interface targeting global
                                //!< addresses.
-  struct scheduler     *sched; //!< The lightweight thread scheduler. This
+  Scheduler            *sched; //!< The lightweight thread scheduler. This
                                //!< provides the infrastructure required to
                                //!< create lightweight threads, and to deal
                                //!< with inter-thread data and control
@@ -81,6 +83,8 @@ extern locality_t *here HPX_PUBLIC;
 
 #ifdef __cplusplus
 }
+#else
+# undef Scheduler
 #endif
 
 #endif // LIBHPX_LOCALITY_H

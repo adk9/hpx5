@@ -273,19 +273,7 @@ int hpx_get_num_ranks(void) {
 }
 
 int hpx_get_num_threads(void) {
-  return (here && here->sched) ? here->sched->n_workers : -1;
-}
-
-int hpx_is_active(void) {
-  return (self->current != NULL);
-}
-
-/// Called by the application to terminate the scheduler and network.
-void
-hpx_exit(size_t size, const void *out)
-{
-  assert(here && self);
-  scheduler_exit(here->sched, size, out);
+  return (here && here->sched) ? scheduler_get_n_workers(here->sched) : -1;
 }
 
 /// Called by the application to shutdown the scheduler and network. May be

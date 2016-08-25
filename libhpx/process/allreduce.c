@@ -15,15 +15,14 @@
 # include "config.h"
 #endif
 
+#include "allreduce.h"
+#include "libhpx/collective.h"
+#include "libhpx/debug.h"
+#include "libhpx/parcel.h"
+#include "libhpx/gas.h"
+#include "libhpx/c_network.h"
 #include <stdlib.h>
 #include <string.h>
-#include <libhpx/collective.h>
-#include <libhpx/debug.h>
-#include <libhpx/parcel.h>
-#include <libhpx/gas.h>
-#include <libhpx/c_network.h>
-#include "allreduce.h"
-
 
 void allreduce_init(allreduce_t *r, size_t bytes, hpx_addr_t parent,
                     hpx_monoid_id_t id, hpx_monoid_op_t op) {

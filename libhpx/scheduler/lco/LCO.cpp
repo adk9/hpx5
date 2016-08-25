@@ -26,7 +26,7 @@
 #include "libhpx/memory.h"
 #include "libhpx/c_network.h"
 #include "libhpx/c_scheduler.h"
-#include "libhpx/worker.h"
+#include "libhpx/Worker.h"
 #include "libhpx/parcel.h"
 
 namespace {

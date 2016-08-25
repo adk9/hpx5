@@ -14,7 +14,15 @@
 #ifndef LIBHPX_INSTRUMENTATION_FILE_H
 #define LIBHPX_INSTRUMENTATION_FILE_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // Output the header for the trace file.
-size_t write_trace_header(void *base, int class, int id);
+size_t write_trace_header(void *base, int type, int id);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIBHPX_INSTRUMENTATION_FILE_H

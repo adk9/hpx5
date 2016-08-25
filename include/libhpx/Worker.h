@@ -14,8 +14,8 @@
 #ifndef LIBHPX_WORKER_H
 #define LIBHPX_WORKER_H
 
-#ifdef __cplusplus
-extern "C" {
+#ifndef __cplusplus
+#error
 #endif
 
 #include <pthread.h>
@@ -23,13 +23,12 @@ extern "C" {
 #include <hpx/attributes.h>
 #include <libsync/deques.h>
 #include <libsync/queues.h>
-#include <libhpx/instrumentation.h>
 #include <libhpx/padding.h>
 
 /// Forward declarations.
 /// @{
 struct ustack;
-struct scheduler;
+struct Scheduler;
 /// @}
 
 /// Class representing a worker thread's state.
@@ -45,7 +44,7 @@ typedef struct {
   PAD_TO_CACHELINE(sizeof(chase_lev_ws_deque_t));
 } padded_deque_t;
 
-struct worker {
+struct Worker {
   pthread_t        thread;                      //!< this worker's native thread
   int                  id;                      //!< this worker's id
   unsigned           seed;                      //!< my random seed
@@ -60,7 +59,7 @@ struct worker {
   void           *network;                      //!< reference to the network
   struct logtable   *logs;                      //!< reference to tracer data
   uint64_t         *stats;                      //!< reference to statistics data
-  struct scheduler *sched;                      //!< pointer to the scheduler
+  Scheduler        *sched;                      //!< pointer to the scheduler
   hpx_parcel_t    *system;                      //!< this worker's native parcel
   hpx_parcel_t   *current;                      //!< current thread
   struct ustack   *stacks;                      //!< freelisted stacks
@@ -77,13 +76,12 @@ struct worker {
   padded_deque_t   queues[2];                   //!< work and yield queues
   two_lock_queue_t  inbox;                      //!< mail sent to me
 };
-typedef struct worker worker_t;
 
-_HPX_ASSERT((sizeof(worker_t) & (HPX_CACHELINE_SIZE - 1)) == 0, worker_align);
+_HPX_ASSERT((sizeof(Worker) & (HPX_CACHELINE_SIZE - 1)) == 0, worker_align);
 
 /// @}
 
-extern __thread worker_t * volatile self;
+extern __thread Worker * volatile self;
 
 /// Initialize a worker structure.
 ///
@@ -94,7 +92,7 @@ extern __thread worker_t * volatile self;
 /// @param           id The worker's id.
 ///
 /// @returns  LIBHPX_OK or an error code
-void worker_init(worker_t *w, struct scheduler *sched, int id)
+void worker_init(Worker *w, Scheduler *sched, int id)
   HPX_NON_NULL(1, 2);
 
 /// Finalize a worker structure.
@@ -104,7 +102,7 @@ void worker_init(worker_t *w, struct scheduler *sched, int id)
 /// joined so that an _in-flight_ mail message doesn't get missed.
 ///
 /// @param            w The worker structure to finalize.
-void worker_fini(worker_t *w)
+void worker_fini(Worker *w)
   HPX_NON_NULL(1);
 
 /// Create a scheduler worker thread.
@@ -118,7 +116,7 @@ void worker_fini(worker_t *w)
 /// @param           id The worker's id.
 ///
 /// @returns  LIBHPX_OK or an error code
-int worker_create(worker_t *w)
+int worker_create(Worker *w)
   HPX_NON_NULL(1);
 
 /// Join with a scheduler worker thread.
@@ -128,16 +126,16 @@ int worker_create(worker_t *w)
 /// conditions on the mailbox and scheduling and whatnot.
 ///
 /// @param            w The worker to join (should be active).
-void worker_join(worker_t *w)
+void worker_join(Worker *w)
   HPX_NON_NULL(1);
 
-void worker_stop(worker_t *w)
+void worker_stop(Worker *w)
   HPX_NON_NULL(1);
 
-void worker_start(worker_t *w)
+void worker_start(Worker *w)
   HPX_NON_NULL(1);
 
-void worker_shutdown(worker_t *w)
+void worker_shutdown(Worker *w)
   HPX_NON_NULL(1);
 
 /// The thread entry function that the worker uses to start a thread.
@@ -165,9 +163,5 @@ void worker_execute_thread(hpx_parcel_t *p)
 /// @param       status The status code that the thread returned with.
 void worker_finish_thread(hpx_parcel_t *p, int status)
   HPX_NORETURN;
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif // LIBHPX_WORKER_H
