@@ -66,7 +66,8 @@ scheduler_new(const config_t *cfg)
 
   // Initialize the worker data structures.
   for (int i = 0, e = workers; i < e; ++i) {
-    worker_init(&sched->workers[i], sched, i);
+    new(&sched->workers[i]) Worker(sched, i);
+    // worker_init(&sched->workers[i], sched, i);
   }
 
   // Start the worker threads.
@@ -94,7 +95,7 @@ scheduler_delete(void *obj)
 
   // clean up all of the worker data structures
   for (int i = 0, e = sched->n_workers; i < e; ++i) {
-    worker_fini(&sched->workers[i]);
+    sched->workers[i].~Worker();
   }
 
   free(sched);

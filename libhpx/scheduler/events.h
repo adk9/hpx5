@@ -16,9 +16,8 @@
 
 /// @file libhpx/scheduler/events.h
 /// @short Define the set of scheduler events that we know how to trace.
-
-struct hpx_parcel;
-struct Worker;
+#include "libhpx/parcel.h"
+#include "libhpx/Worker.h"
 
 #ifdef ENABLE_INSTRUMENTATION
 void EVENT_THREAD_RUN(struct hpx_parcel *p, Worker *w);

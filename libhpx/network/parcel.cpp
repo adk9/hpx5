@@ -34,6 +34,7 @@
 #include <libhpx/padding.h>
 #include <libhpx/parcel.h>
 #include <libhpx/c_scheduler.h>
+#include "libhpx/Scheduler.h"
 #include <libhpx/topology.h>
 #include <libsync/sync.h>
 #include <hpx/hpx.h>

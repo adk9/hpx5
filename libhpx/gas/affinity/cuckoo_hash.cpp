@@ -43,10 +43,10 @@ CuckooHash::set(hpx_addr_t gva, int worker)
     dbg_error("Attempt to set affinity of %" PRIu64 " at %d (owned by %d)\n",
               gva, here->rank, gas_owner_of(here->gas, gva));
   }
-  DEBUG_IF(worker < 0 || here->sched->n_workers <= worker) {
+  DEBUG_IF(worker < 0 || scheduler_get_n_workers(here->sched) <= worker) {
     dbg_error("Attempt to set affinity of %" PRIu64
               " to %d is outside range [0, %d)\n",
-              gva, worker, here->sched->n_workers);
+              gva, worker, scheduler_get_n_workers(here->sched));
   }
   // @todo: Should we be pinning gva? The interface doesn't require it, but it
   //        could prevent usage errors in AGAS? On the other hand, it could

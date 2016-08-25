@@ -31,7 +31,7 @@
 #include <hpx/hpx.h>
 
 #ifdef __cplusplus
-#include "libhpx/Scheduler.h"
+class Scheduler;
 extern "C" {
 #else
 #define Scheduler void

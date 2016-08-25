@@ -16,6 +16,7 @@
 
 #include <hpx/hpx.h>
 #include <libhpx/config.h>
+#include "libhpx/locality.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -82,7 +83,6 @@ void log_internal(unsigned line, const char *filename, const char *func,
   HPX_PRINTF(4, 5);
 
 #ifdef ENABLE_LOGGING
-# include "libhpx/locality.h"
 # define log_level(level, ...)                                 \
   do {                                                         \
     if (here->config &&                                        \

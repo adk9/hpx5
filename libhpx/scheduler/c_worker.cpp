@@ -37,6 +37,7 @@
 #include <libhpx/process.h>
 #include <libhpx/rebalancer.h>
 #include <libhpx/c_scheduler.h>
+#include "libhpx/Scheduler.h"
 #include <libhpx/system.h>
 #include <libhpx/termination.h>
 #include <libhpx/topology.h>
@@ -57,16 +58,6 @@ using libhpx::scheduler::LCO;
 
 /// Storage for the thread-local worker pointer.
 __thread Worker * volatile self = NULL;
-
-/// Macro to record a parcel's GAS accesses.
-#if defined(HAVE_AGAS) && defined(HAVE_REBALANCING)
-# define GAS_TRACE_ACCESS(src, dst, block, size) \
-  rebalancer_add_entry(src, dst, block, size)
-#elif defined(ENABLE_INSTRUMENTATION)
-# define GAS_TRACE_ACCESS EVENT_GAS_ACCESS
-#else
-# define GAS_TRACE_ACCESS(src, dst, block, size)
-#endif
 
 /// Swap a worker's current parcel.
 ///
@@ -236,25 +227,15 @@ static void _vcontinue_parcel(hpx_parcel_t *p, int n, va_list *args) {
 }
 
 static chase_lev_ws_deque_t *_work(Worker *cthis) {
-  int id = sync_load(&cthis->work_id, SYNC_RELAXED);
-  return &cthis->queues[id].work;
+  return &cthis->queues[cthis->work_id].work;
 }
 
 static chase_lev_ws_deque_t *_yielded(Worker *cthis) {
-  int id = sync_load(&cthis->work_id, SYNC_RELAXED);
-  return &cthis->queues[1 - id].work;
+  return &cthis->queues[1 - cthis->work_id].work;
 }
 
-/// Process the next available parcel from our work queue in a lifo order.
 static hpx_parcel_t *_pop_lifo(Worker *cthis) {
-  chase_lev_ws_deque_t *work = _work(cthis);
-  void *buffer = sync_chase_lev_ws_deque_pop(work);
-  hpx_parcel_t *p = (hpx_parcel_t*)buffer;
-  INST_IF (p) {
-    EVENT_SCHED_POP_LIFO(p->id);
-    EVENT_SCHED_WQSIZE(sync_chase_lev_ws_deque_size(work));
-  }
-  return p;
+  return cthis->popLIFO();
 }
 
 /// Steal a parcel from a worker with the given @p id.
@@ -484,47 +465,11 @@ static void _yield(hpx_parcel_t *p, void *worker) {
 /// @param            p The parcel that we're going to push.
 /// @param       worker The worker pointer.
 static void _push_lifo(hpx_parcel_t *p, void *worker) {
-  dbg_assert(p->target != HPX_NULL);
-  dbg_assert(actions[p->action].handler != NULL);
-  EVENT_SCHED_PUSH_LIFO(p->id);
-  GAS_TRACE_ACCESS(p->src, here->rank, p->target, p->size);
-  Worker *cthis = (Worker *)worker;
-  uint64_t size = sync_chase_lev_ws_deque_push(_work(cthis), p);
-  if (cthis->work_first >= 0) {
-    cthis->work_first = (here->config->sched_wfthreshold < size);
-  }
+  static_cast<Worker*>(worker)->pushLIFO(p);
 }
 
-/// Process a mail queue.
-///
-/// This processes all of the parcels in the mailbox of the worker, moving them
-/// into the work queue of the designated worker. It will return a parcel if
-/// there was one.
-///
-/// @param         cthis The worker to process mail.
-///
-/// @returns            A parcel from the mailbox if there is one.
 static hpx_parcel_t *_handle_mail(Worker *cthis) {
-  void *buffer = sync_two_lock_queue_dequeue(&cthis->inbox);
-  hpx_parcel_t *parcels = static_cast<hpx_parcel_t*>(buffer);
-  if (!parcels) {
-    return NULL;
-  }
-
-  hpx_parcel_t *prev = parcel_stack_pop(&parcels);
-  do {
-    hpx_parcel_t *next = NULL;
-    while ((next = parcel_stack_pop(&parcels))) {
-      EVENT_SCHED_MAIL(prev->id);
-      log_sched("got mail %p\n", prev);
-      _push_lifo(prev, cthis);
-      prev = next;
-    }
-    buffer = sync_two_lock_queue_dequeue(&cthis->inbox);
-    parcels = static_cast<hpx_parcel_t*>(buffer);
-  } while (parcels);
-  dbg_assert(prev);
-  return prev;
+  return cthis->handleMail();
 }
 
 /// Handle the network.
@@ -556,8 +501,7 @@ static hpx_parcel_t *_handle_network(Worker *cthis) {
 /// Currently we don't handle our yielded work eagerly---we'll try and prefer
 /// network and stolen work to yield work.
 static hpx_parcel_t *_handle_epoch(Worker *cthis) {
-  int id = sync_load(&cthis->work_id, SYNC_RELAXED);
-  sync_store(&cthis->work_id, 1 - id, SYNC_RELAXED);
+  cthis->work_id = 1 - cthis->work_id;
   return NULL;
 }
 
@@ -740,69 +684,6 @@ static void *_run(void *worker) {
 
   EVENT_SCHED_END(0, 0);
   return NULL;
-}
-
-void worker_init(Worker *cthis, Scheduler *sched, int id) {
-  cthis->thread      = 0;
-  cthis->id          = id;
-  cthis->seed        = id;
-  cthis->work_first  = 0;
-  cthis->nstacks     = 0;
-  cthis->yielded     = 0;
-  cthis->active      = 1;
-  cthis->last_victim = -1;
-  cthis->numa_node   = -1;
-  cthis->profiler    = NULL;
-  cthis->bst         = NULL;
-  cthis->network     = here->net;
-  cthis->logs        = NULL;
-  cthis->sched       = sched;
-  cthis->system      = NULL;
-  cthis->current     = NULL;
-  cthis->stacks      = NULL;
-
-  if (pthread_mutex_init(&cthis->lock, NULL)) {
-    dbg_error("could not initialize the lock for %d\n", id);
-  }
-  if (pthread_cond_init(&cthis->running, NULL)) {
-    dbg_error("could not initialize the condition for %d\n", id);
-  }
-  sync_store(&cthis->work_id, 0, SYNC_RELAXED);
-  sync_store(&cthis->state, SCHED_STOP, SYNC_RELAXED);
-
-  sync_chase_lev_ws_deque_init(&cthis->queues[0].work, 32);
-  sync_chase_lev_ws_deque_init(&cthis->queues[1].work, 32);
-  sync_two_lock_queue_init(&cthis->inbox, NULL);
-}
-
-void worker_fini(Worker *cthis) {
-  if (pthread_cond_destroy(&cthis->running)) {
-    dbg_error("Failed to destroy the running condition for %d\n", self->id);
-  }
-  if (pthread_mutex_destroy(&cthis->lock)) {
-    dbg_error("Failed to destroy the lock for %d\n", self->id);
-  }
-
-  hpx_parcel_t *p = NULL;
-  // clean up the mailbox
-  if ((p = _handle_mail(cthis))) {
-    parcel_delete(p);
-  }
-  sync_two_lock_queue_fini(&cthis->inbox);
-
-  // and clean up the workqueue parcels
-  while ((p = _pop_lifo(cthis))) {
-    parcel_delete(p);
-  }
-  sync_chase_lev_ws_deque_fini(&cthis->queues[0].work);
-  sync_chase_lev_ws_deque_fini(&cthis->queues[1].work);
-
-  // and delete any cached stacks
-  ustack_t *stack = NULL;
-  while ((stack = cthis->stacks)) {
-    cthis->stacks = stack->next;
-    thread_delete(stack);
-  }
 }
 
 int worker_create(Worker *cthis) {

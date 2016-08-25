@@ -31,6 +31,7 @@
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/c_scheduler.h>
+#include "libhpx/Worker.h"
 #include "metadata.h"
 
 static void _vappend(int UNUSED, int n, int id, ...) {

@@ -277,7 +277,7 @@ AllToAll::GetIdHandler(AllToAll& lco, unsigned offset, size_t size)
   // Allocate a parcel that targeting our continuation with enough space for the
   // reduced value, and use its data buffer to get the value---this prevents a
   // copy or two. This "steals" the current continuation.
-  auto*     p = self->current;
+  auto*     p = scheduler_current_parcel();
   auto target = p->c_target;
   auto action = p->c_action;
   auto    pid = p->pid;

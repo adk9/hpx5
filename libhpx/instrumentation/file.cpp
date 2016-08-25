@@ -29,6 +29,7 @@
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/c_scheduler.h>
+#include "libhpx/Worker.h"
 #include <hpx/hpx.h>
 #include "metadata.h"
 #include "file.h"
@@ -313,7 +314,7 @@ static void _vappend(int UNUSED, int n, int id, ...) {
 }
 
 static void _start(void) {
-  for (int k = 0; k < here->sched->n_workers; ++k) {
+  for (int k = 0, e = scheduler_get_n_workers(here->sched); k < e; ++k) {
     Worker *w = (Worker *)scheduler_get_worker(here->sched, k);
     // Allocate memory for pointers to the logs
     w->logs = static_cast<logtable_t*>(calloc(TRACE_NUM_EVENTS, sizeof(logtable_t)));
@@ -347,7 +348,7 @@ static void _destroy(void) {
     _log_path = NULL;
   }
 
-  for (int k = 0; k < here->sched->n_workers; ++k) {
+  for (int k = 0, e = scheduler_get_n_workers(here->sched); k < e; ++k) {
     Worker *w = (Worker *)scheduler_get_worker(here->sched, k);
     if (w->logs) {
       // deallocate the log tables

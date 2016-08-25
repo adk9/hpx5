@@ -34,7 +34,7 @@ using libhpx::network::pwc::PWCNetwork;
 static int
 _pwc_lco_wait_handler(struct hpx_parcel *p, int reset)
 {
-  const hpx_parcel_t *curr = self->current;
+  const hpx_parcel_t *curr = scheduler_current_parcel();
   hpx_addr_t lco = curr->target;
   int e = (reset) ? hpx_lco_wait_reset(lco) : hpx_lco_wait(lco);
 

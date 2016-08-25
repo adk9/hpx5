@@ -18,11 +18,11 @@
 # include "config.h"
 #endif
 
-#include <signal.h>
-#include <libhpx/debug.h>
-#include <libhpx/parcel.h>
-#include <libhpx/c_scheduler.h>
 #include "thread.h"
+#include "libhpx/debug.h"
+#include "libhpx/parcel.h"
+#include "libhpx/Scheduler.h"
+#include <signal.h>
 
 int hpx_thread_sigmask(int how, int mask) {
   Worker *w = self;

@@ -103,7 +103,7 @@ class AllReduce final : public LCO {
   static int NewHandler(void* buffer, size_t writers, size_t readers,
                         size_t size, hpx_action_t id, hpx_action_t op) {
     auto lco = new(buffer) AllReduce(writers, readers, size, id, op);
-    LCO_LOG_NEW(hpx_thread_current_target(), lco);
+    LCO_LOG_NEW((uintptr_t)scheduler_current_parcel(), lco);
     return HPX_SUCCESS;
   }
 
@@ -333,7 +333,7 @@ AllReduce::JoinHandler(AllReduce *lco, const void *data, size_t n)
   // Allocate a parcel that targeting our continuation with enough space for the
   // reduced value, and use its data buffer to join---this prevents a copy or
   // two. This "steals" the current continuation.
-  auto*     p = self->current;
+  auto*     p = scheduler_current_parcel();
   auto target = p->c_target;
   auto action = p->c_action;
   auto    pid = p->pid;
@@ -412,7 +412,7 @@ hpx_lco_allreduce_join_async(hpx_addr_t lco, int id, size_t n,
 
   // avoid extra copy by allocating and sending a parcel directly
   auto bytes = sizeof(AllReduce::JoinAsyncArgs) + n;
-  auto pid = self->current->pid;
+  auto pid = scheduler_current_parcel()->pid;
   auto *p = parcel_new(lco, JoinRequest, HPX_HERE, JoinReply, pid, nullptr,
                        bytes);
 

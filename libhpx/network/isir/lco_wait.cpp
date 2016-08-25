@@ -47,10 +47,10 @@ static LIBHPX_ACTION(HPX_INTERRUPT, 0, _isir_lco_launch_parcel,
 /// @returns            HPX_SUCCESS
 static int _isir_lco_wait_handler(int reset, void *parcel) {
   if (reset) {
-    dbg_check( hpx_lco_wait_reset(self->current->target) );
+    dbg_check( hpx_lco_wait_reset(scheduler_current_parcel()->target) );
   }
   else {
-    dbg_check( hpx_lco_wait(self->current->target) );
+    dbg_check( hpx_lco_wait(scheduler_current_parcel()->target) );
   }
 
   return hpx_thread_continue(parcel);
