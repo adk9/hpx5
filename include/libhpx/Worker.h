@@ -22,6 +22,7 @@
 #include "hpx/attributes.h"
 #include <pthread.h>
 #include <atomic>
+#include <functional>
 
 /// Forward declarations.
 /// @{
@@ -89,8 +90,9 @@ struct Worker {
 
   /// Workers are allocated in flexible array members and this allows them to be
   /// initialized using placement new.
-  static void* operator new(size_t bytes, void *addr);
-
+  static void* operator new(size_t bytes, void *addr) {
+    return addr;
+  }
 
   /// Create a scheduler worker thread.
   ///
@@ -165,8 +167,12 @@ struct Worker {
   ///
   /// @param            p The parcel to transfer to.
   /// @param            f The checkpoint continuation.
-  /// @param            e The checkpoint continuation environment.
-  void transfer(hpx_parcel_t *p, void (*f)(hpx_parcel_t *, void *), void *e);
+  void transfer(hpx_parcel_t* p, std::function<void(hpx_parcel_t*)>&& f);
+
+  template <typename Lambda>
+  void transfer(hpx_parcel_t* p, Lambda&& l) {
+    transfer(p, std::function<void(hpx_parcel_t*)>(std::forward<Lambda>(l)));
+  }
 
   /// The non-blocking schedule operation.
   ///
@@ -176,21 +182,25 @@ struct Worker {
   /// extended transfer time.
   ///
   /// @param            f The continuation function.
-  /// @param          env The continuation environment.
-  void schedule(void (*f)(hpx_parcel_t *, void*), void *env);
+  void schedule(std::function<void(hpx_parcel_t*)>&& f);
+
+  template <typename Lambda>
+  void schedule(Lambda&& l) {
+    schedule(std::function<void(hpx_parcel_t*)>(std::forward<Lambda>(l)));
+  }
 
   void spawn(hpx_parcel_t* p);
 
  private:
 
   /// The main entry point for the worker thread.
-  void run();
+  void enter();
 
   /// The primary schedule loop.
   ///
   /// This will continue to try and schedule lightweight threads while the
   /// worker's state is SCHED_RUN.
-  void schedule();
+  void run();
 
   /// The sleep loop.
   ///
@@ -222,8 +232,8 @@ struct Worker {
  private:
   /// Just used through the pthread interface during create to bounce to the
   /// worker's run member.
-  static void* Run(void *worker) {
-    static_cast<Worker*>(worker)->run();
+  static void* Enter(void *worker) {
+    static_cast<Worker*>(worker)->enter();
     return nullptr;
   }
 

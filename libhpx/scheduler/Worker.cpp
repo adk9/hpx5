@@ -33,13 +33,6 @@ namespace {
 using libhpx::Network;
 }
 
-static void*
-Worker::operator new(size_t bytes, void *addr)
-{
-  dbg_assert(((uintptr_t)addr & (HPX_CACHELINE_SIZE - 1)) == 0);
-  return addr;
-}
-
 Worker::Worker(Scheduler& sched, Network& network, int id)
     : thread(0),
       id(id),
@@ -68,6 +61,7 @@ Worker::Worker(Scheduler& sched, Network& network, int id)
       queues(),
       inbox()
 {
+  dbg_assert(((uintptr_t)this & (HPX_CACHELINE_SIZE - 1)) == 0);
   sync_two_lock_queue_init(&inbox, NULL);
 }
 
@@ -171,7 +165,7 @@ Worker::handleMail()
 bool
 Worker::create()
 {
-  if (int e = pthread_create(&thread, NULL, Worker::Run, this)) {
+  if (int e = pthread_create(&thread, NULL, Worker::Enter, this)) {
     dbg_error("cannot start worker thread %d (%s).\n", id, strerror(e));
     return false;
   }
@@ -269,26 +263,26 @@ Worker::unbind(hpx_parcel_t* p)
 }
 
 void
-Worker::schedule(void (*f)(hpx_parcel_t *, void*), void *env)
+Worker::schedule(std::function<void(hpx_parcel_t*)>&& f)
 {
   EVENT_SCHED_BEGIN();
   if (state != SCHED_RUN) {
-    transfer(system_, f, env);
+    transfer(system_, std::forward<std::function<void(hpx_parcel_t*)>>(f));
   }
   else if (hpx_parcel_t *p = handleMail()) {
-    transfer(p, f, env);
+    transfer(p, std::forward<std::function<void(hpx_parcel_t*)>>(f));
   }
   else if (hpx_parcel_t *p = popLIFO()) {
-    transfer(p, f, env);
+    transfer(p, std::forward<std::function<void(hpx_parcel_t*)>>(f));
   }
   else {
-    transfer(system_, f, env);
+    transfer(system_, std::forward<std::function<void(hpx_parcel_t*)>>(f));
   }
   EVENT_SCHED_END(0, 0);
 }
 
 void
-Worker::run()
+Worker::enter()
 {
   EVENT_SCHED_BEGIN();
   dbg_assert(here && here->config && here->gas && here->net);
@@ -341,7 +335,7 @@ Worker::run()
 
   // Hang out here until we're shut down.
   while (state != SCHED_SHUTDOWN) {
-    schedule();                              // returns when state != SCHED_RUN
+    run();                                   // returns when state != SCHED_RUN
     sleep();                                 // returns when state != SCHED_STOP
   }
 

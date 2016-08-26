@@ -18,6 +18,7 @@
 /// @brief Defines the lightweight thread stack structure and interface for user
 ///        level threads.
 #include <hpx/hpx.h>
+#include <functional>
 
 /// Forward declarations
 /// @{
@@ -82,7 +83,8 @@ void thread_exit(int status, const void *value, size_t size)
   HPX_NORETURN;
 
 /// The transfer continuation function type.
-typedef void (*thread_transfer_cont_t)(hpx_parcel_t *p, void *sp, void *env);
+typedef void (*thread_transfer_cont_t)(hpx_parcel_t *p, void *sp,
+                                       std::function<void(hpx_parcel_t*)>&&);
 
 /// The actual routine to transfer between thread.
 ///
@@ -96,7 +98,7 @@ typedef void (*thread_transfer_cont_t)(hpx_parcel_t *p, void *sp, void *env);
 /// @param       cont A continuation function to handle the old stack pointer.
 /// @param        env The environment for the continuation.
 extern "C" void thread_transfer(hpx_parcel_t *p, thread_transfer_cont_t cont,
-                                void *env)
+                                std::function<void(hpx_parcel_t*)>&& continuation)
   HPX_NON_NULL(1, 2);
 
 #endif  // LIBHPX_THREAD_H
