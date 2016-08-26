@@ -45,7 +45,7 @@ scheduler_new(const config_t *cfg)
 
   const int workers = cfg->threads;
   Scheduler *sched = NULL;
-  size_t bytes = sizeof(*sched) + workers * sizeof(Worker);
+  size_t bytes = sizeof(*sched) + workers * sizeof(Worker*);
   if (posix_memalign((void**)&sched, HPX_CACHELINE_SIZE, bytes)) {
     dbg_error("could not allocate a scheduler.\n");
     return NULL;
@@ -72,12 +72,12 @@ scheduler_new(const config_t *cfg)
   // Initialize the worker data structures.
   libhpx::Network* network = static_cast<libhpx::Network*>(here->net);
   for (int i = 0, e = workers; i < e; ++i) {
-    new(&sched->workers[i]) Worker(*sched, *network, i);
+    sched->workers[i] = new Worker(*sched, *network, i);
   }
 
   // Start the worker threads.
   for (int i = 0, e = workers; i < e; ++i) {
-    if (!sched->workers[i].create()) {
+    if (!sched->workers[i]->create()) {
       log_error("failed to create a worker during scheduler_new.\n");
       scheduler_delete(sched);
       return NULL;
@@ -94,13 +94,13 @@ scheduler_delete(void *obj)
   Scheduler *sched = static_cast<Scheduler*>(obj);
   // shutdown and join all of the worker threads
   for (int i = 0, e = sched->n_workers; i < e; ++i) {
-    sched->workers[i].shutdown();
-    sched->workers[i].join();
+    sched->workers[i]->shutdown();
+    sched->workers[i]->join();
   }
 
   // clean up all of the worker data structures
   for (int i = 0, e = sched->n_workers; i < e; ++i) {
-    sched->workers[i].~Worker();
+    delete sched->workers[i];
   }
 
   free(sched);
@@ -111,12 +111,9 @@ void *
 scheduler_get_worker(void *obj, int id)
 {
   Scheduler *sched = static_cast<Scheduler*>(obj);
-
   assert(id >= 0);
   assert(id < sched->n_workers);
-  Worker *w = &sched->workers[id];
-  assert(((uintptr_t)w & (HPX_CACHELINE_SIZE - 1)) == 0);
-  return w;
+  return sched->workers[id];
 }
 
 static void
@@ -167,7 +164,7 @@ scheduler_start(void *obj, int spmd, hpx_action_t act, void *out, int n,
   sched->code = HPX_SUCCESS;
   sched->state = SCHED_RUN;
   for (int i = 0, e = sched->n_target; i < e; ++i) {
-    sched->workers[i].start();
+    sched->workers[i]->start();
   }
 
   // wait for someone to stop the scheduler
@@ -179,7 +176,7 @@ scheduler_start(void *obj, int spmd, hpx_action_t act, void *out, int n,
 
   // stop all of the worker threads
   for (int i = 0, e = sched->n_target; i < e; ++i) {
-    sched->workers[i].stop();
+    sched->workers[i]->stop();
   }
 
   // Use sched crude barrier to wait for the worker threads to stop.
@@ -368,7 +365,7 @@ scheduler_spawn_at(hpx_parcel_t *p, int thread)
   dbg_assert(p);
   dbg_assert(thread >= 0);
   dbg_assert(here && here->sched && (here->sched->n_workers > thread));
-  here->sched->workers[thread].pushMail(p);
+  here->sched->workers[thread]->pushMail(p);
 }
 
 hpx_parcel_t *

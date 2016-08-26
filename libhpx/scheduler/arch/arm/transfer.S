@@ -15,8 +15,7 @@
 
         // @param r0 - a pointer to the stack pointer to transfer to
         // @param r1 - the continuation to call after the sp exchange
-        // @param r2 - the environment for the continutation
-        // @returns r0  -  from the continuation call
+        // @param r2 - the worker
         .file "libhpx/scheduler/arch/arm/transfer.S"
         .text
         .syntax unified
@@ -64,14 +63,12 @@ LABEL(thread_transfer)
         // We want to call cont(p, sp, env).
         // p is already in r0 and env is already in r2,
         // but we need to move the new sp to r1.
-        mov r4, r1                              // cont          r4 = r1
-        ldr r1, [r0]                            // p->ustack     r1 = (r0)
-        ldr r1, [r1]                            // p->ustack->sp  r1 = (r1)
-        mov r5, sp                              // swap sp and r1
-        mov sp, r1                              // ... cont.
-        mov r1, r5                              // ... cont.
+        mov r3, sp                              // checkpoint sp for call
+        ldr r4, [r0]                            // p->ustack      r4 = (r0)
+        ldr r4, [r4]                            // p->ustack->sp  r4 = (r4)
+        mov sp, r4                              // replace sp for the context switch
         CFA_REGISTER(r1)
-        blx r4                                  // cont(p, sp, env)
+        bl worker_checkpoint
         CFA_DEF(sp, 56)
 
         add sp, sp, #4

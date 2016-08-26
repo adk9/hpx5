@@ -66,7 +66,7 @@ struct Scheduler {
                    sizeof(int) * 10 +
                    sizeof(long) +
                    sizeof(void*));            //!< padding to align workers
-  Worker          workers[];                 //!< array of worker data
+  Worker*          workers[];                 //!< array of worker data
 };
 
 #endif // LIBHPX_C_SCHEDULER_H

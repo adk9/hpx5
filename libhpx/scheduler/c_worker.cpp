@@ -68,11 +68,11 @@ __thread Worker * volatile self = NULL;
 /// @param           to The parcel we transferred to.
 /// @param           sp The stack pointer we transferred from.
 /// @param          env A _checkpoint_env_t that describes the closure.
-static void _checkpoint(hpx_parcel_t *to, void *sp,
-                        std::function<void(hpx_parcel_t*)>&& f) {
-  Worker* w = self;
-  hpx_parcel_t *old = w->current;
-  w->current = to;
+void
+Worker::checkpoint(hpx_parcel_t *to, Continuation& f, void *sp)
+{
+  hpx_parcel_t *old = current;
+  current = to;
   old->ustack->sp = sp;
   f(old);
 
@@ -84,7 +84,13 @@ static void _checkpoint(hpx_parcel_t *to, void *sp,
 }
 
 void
-Worker::transfer(hpx_parcel_t *p, std::function<void(hpx_parcel_t*)>&& f)
+Worker::Checkpoint(hpx_parcel_t* p, Continuation& f, Worker* w, void *sp)
+{
+  w->checkpoint(p, f, sp);
+}
+
+void
+Worker::transfer(hpx_parcel_t *p, Continuation& f)
 {
   dbg_assert(p != current);
 
@@ -93,22 +99,24 @@ Worker::transfer(hpx_parcel_t *p, std::function<void(hpx_parcel_t*)>&& f)
   }
 
   if (!this->current->ustack->masked) {
-    thread_transfer(p, _checkpoint, std::forward<std::function<void(hpx_parcel_t*)>>(f));
+    ContextSwitch(p, f, this);
+    // thread_transfer(p, _checkpoint, std::forward<Continuation>(f));
   }
   else {
     sigset_t set;
     dbg_check(pthread_sigmask(SIG_SETMASK, &here->mask, &set));
-    thread_transfer(p, _checkpoint, std::forward<std::function<void(hpx_parcel_t*)>>(f));
+    ContextSwitch(p, f, this);
+    // thread_transfer(p, _checkpoint, std::forward<Continuation>(f));
     dbg_check(pthread_sigmask(SIG_SETMASK, &set, NULL));
   }
 }
 
 /// Steal a parcel from a worker with the given @p id.
 static hpx_parcel_t *_steal_from(Worker *cthis, int id) {
-  Worker& victim = cthis->sched_.workers[id];
-  hpx_parcel_t *p = victim.queues[victim.work_id].steal();
+  Worker* victim = cthis->sched_.workers[id];
+  hpx_parcel_t *p = victim->queues[victim->work_id].steal();
   cthis->last_victim = (p) ? id : -1;
-  EVENT_SCHED_STEAL(p ? p->id : 0, victim.id);
+  EVENT_SCHED_STEAL(p ? p->id : 0, victim->id);
   return p;
 }
 

@@ -58,19 +58,19 @@ typedef struct inst_event_col_metadata {
   const char name[256];
 } inst_event_col_metadata_t;
 
-#define METADATA_WORKER                       \
-  { .data_type   = METADATA_TYPE_INT32,       \
-    .offset      = offsetof(record_t, worker),\
+#define METADATA_WORKER                                   \
+  { .data_type = METADATA_TYPE_INT32,                     \
+    .offset    = offsetof(record_t, worker),              \
     "worker" }
 
-#define METADATA_NS                           \
-  { .data_type   = METADATA_TYPE_INT64,       \
-    .offset      = offsetof(record_t, ns),    \
+#define METADATA_NS                         \
+  { .data_type = METADATA_TYPE_INT64,       \
+    .offset = offsetof(record_t, ns),       \
     "nanoseconds" }
 
-#define METADATA_int(_name, off)              \
-  { .data_type   = METADATA_TYPE_INT64,       \
-    .offset      = offsetof(record_t, user)+(off*8),\
+#define METADATA_int(_name, off)                \
+  { .data_type = METADATA_TYPE_INT64,           \
+    .offset = offsetof(record_t, user)+(off*8), \
     _name }
 
 

@@ -88,10 +88,17 @@ struct Worker {
   /// joined so that an _in-flight_ mail message doesn't get missed.
   ~Worker();
 
-  /// Workers are allocated in flexible array members and this allows them to be
-  /// initialized using placement new.
-  static void* operator new(size_t bytes, void *addr) {
+  /// Workers need to be aligned on cacheline boundaries.
+  static void* operator new(size_t bytes) {
+    void* addr;
+    if (posix_memalign(&addr, HPX_CACHELINE_SIZE, bytes)) {
+      abort();
+    }
     return addr;
+  }
+
+  static void operator delete(void* worker) {
+    free(worker);
   }
 
   /// Create a scheduler worker thread.
@@ -159,6 +166,16 @@ struct Worker {
   /// Push a parcel into the lifo queue.
   void pushLIFO(hpx_parcel_t *p);
 
+  using Continuation = std::function<void(hpx_parcel_t*)>;
+
+  void checkpoint(hpx_parcel_t* p, Continuation& f, void *sp);
+
+  static void Checkpoint(hpx_parcel_t* p, Continuation& f, Worker* w, void *sp)
+    asm("worker_checkpoint");
+
+  static void ContextSwitch(hpx_parcel_t* p, Continuation& f, Worker* w)
+    asm("thread_transfer");
+
   /// Local wrapper for the thread transfer call.
   ///
   /// This wrapper will reset the signal mask as part of the transfer if it is
@@ -167,11 +184,12 @@ struct Worker {
   ///
   /// @param            p The parcel to transfer to.
   /// @param            f The checkpoint continuation.
-  void transfer(hpx_parcel_t* p, std::function<void(hpx_parcel_t*)>&& f);
+  void transfer(hpx_parcel_t* p, Continuation& f);
 
   template <typename Lambda>
   void transfer(hpx_parcel_t* p, Lambda&& l) {
-    transfer(p, std::function<void(hpx_parcel_t*)>(std::forward<Lambda>(l)));
+    Continuation f(std::forward<Lambda>(l));
+    transfer(p, f);
   }
 
   /// The non-blocking schedule operation.
@@ -182,11 +200,12 @@ struct Worker {
   /// extended transfer time.
   ///
   /// @param            f The continuation function.
-  void schedule(std::function<void(hpx_parcel_t*)>&& f);
+  void schedule(Continuation& f);
 
   template <typename Lambda>
   void schedule(Lambda&& l) {
-    schedule(std::function<void(hpx_parcel_t*)>(std::forward<Lambda>(l)));
+    Continuation f(std::forward<Lambda>(l));
+    schedule(f);
   }
 
   void spawn(hpx_parcel_t* p);

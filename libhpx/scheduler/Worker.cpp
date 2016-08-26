@@ -263,20 +263,20 @@ Worker::unbind(hpx_parcel_t* p)
 }
 
 void
-Worker::schedule(std::function<void(hpx_parcel_t*)>&& f)
+Worker::schedule(Continuation& f)
 {
   EVENT_SCHED_BEGIN();
   if (state != SCHED_RUN) {
-    transfer(system_, std::forward<std::function<void(hpx_parcel_t*)>>(f));
+    transfer(system_, f);
   }
   else if (hpx_parcel_t *p = handleMail()) {
-    transfer(p, std::forward<std::function<void(hpx_parcel_t*)>>(f));
+    transfer(p, f);
   }
   else if (hpx_parcel_t *p = popLIFO()) {
-    transfer(p, std::forward<std::function<void(hpx_parcel_t*)>>(f));
+    transfer(p, f);
   }
   else {
-    transfer(system_, std::forward<std::function<void(hpx_parcel_t*)>>(f));
+    transfer(system_, f);
   }
   EVENT_SCHED_END(0, 0);
 }
