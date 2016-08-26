@@ -98,7 +98,7 @@ def print_log(log, ensure_widths=False, lines=-1, delimit=" | "):
     names = data.dtype.names
     name_lens = [len(str(name)) for name in names]
     
-    if ensure_widths and not "maxes" in log or not "mins" in log:
+    if ensure_widths and (not "maxes" in log or not "mins" in log):
         log = extend_metadata(log)
         
     maxes = [len(str(e)) for e in log["maxes"].tolist()] if "maxes" in log else name_lens
@@ -110,7 +110,7 @@ def print_log(log, ensure_widths=False, lines=-1, delimit=" | "):
     print(format.format(*names))
         
     for (i, line) in enumerate(data):
-        if lines>0 and i > lines: break
+        if lines > 0 and i > lines: break
         print(format.format(*line))
 
 
@@ -366,7 +366,7 @@ def main():
     parser.add_argument("files", nargs='+', 
                         help="HPX log files (or numpy files) to load/merge")
     parser.add_argument("--quiet", "-q", action='store_true', 
-                        help="Suprress non-table data in the output")
+                        help="Suppress non-table data in the output")
     parser.add_argument("--out", "-o", nargs='?',
                         help="File to save numpy result")
     parser.add_argument("--compress", "-c", action='store_true',
