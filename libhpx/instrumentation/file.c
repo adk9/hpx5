@@ -43,7 +43,7 @@
 /// of an individual event log
 typedef struct logtable {
   int               fd;               //!< file backing the log
-  int               id;               //!< the event we're logging
+  int         event_id;               //!< the event we're logging
   int     record_bytes;               //!< record size
   char         *buffer;               //!< pointer to buffer
   char * volatile next;               //!< pointer to next record
@@ -207,11 +207,12 @@ static void _dump_actions(void) {
 /// @param     filename The name of the file to create and map.
 /// @param         size The number of bytes to allocate.
 /// @param        class The event class.
-/// @param        event The event type.
+/// @param     event_id The event type.
+/// @param    worker_id ID of the current worker
 static void logtable_init(logtable_t *log, const char* filename, size_t size,
-                   int class, int id) {
+                   int class, int event_id, int worker_id) {
   log->fd = -1;
-  log->id = id;
+  log->event_id = event_id;
   log->record_bytes = 0;
   log->max_size = size;
   log->buffer = NULL;
@@ -233,12 +234,12 @@ static void logtable_init(logtable_t *log, const char* filename, size_t size,
     return;
   }
 
-  int fields = TRACE_EVENT_NUM_FIELDS[id];
+  int fields = TRACE_EVENT_NUM_FIELDS[event_id];
   log->record_bytes = sizeof(record_t) + fields * sizeof(uint64_t);
   log->next = log->buffer - log->record_bytes;
 
   char *buffer = calloc(1, 32768);
-  log->header_size = write_trace_header(buffer, class, id);
+  log->header_size = write_trace_header(buffer, class, event_id, worker_id);
   if (write(log->fd, buffer, log->header_size) != log->header_size) {
     log_error("failed to write header to file\n");
   }
@@ -264,14 +265,14 @@ static void logtable_fini(logtable_t *log) {
   }
 }
 
-static void _create_logtable(worker_t *w, int class, int id, size_t size) {
+static void _create_logtable(worker_t *w, int class, int event_id, size_t size) {
   char filename[256];
-  snprintf(filename, 256, "event.%03d.%03d.%05d.%s.log",
-           w->id, id, hpx_get_my_rank(),
-           TRACE_EVENT_TO_STRING[id]);
+  snprintf(filename, 256, "%05d.%03d.event.%03d.%s.log",
+           hpx_get_my_rank(), w->id, event_id, 
+           TRACE_EVENT_TO_STRING[event_id]);
 
   char *path = _concat_path(_log_path, filename);
-  logtable_init(&w->logs[id], path, size, class, id);
+  logtable_init(&w->logs[event_id], path, size, class, event_id, w->id);
   free(path);
 }
 
@@ -302,7 +303,6 @@ static void _vappend(int UNUSED, int n, int id, ...) {
   log->next = next;
 
   record_t *r = (record_t*)next;
-  r->worker = self->id;
   r->ns = time;
   for (int i = 0, e = n; i < e; ++i) {
     r->user[i] = va_arg(vargs, uint64_t);

@@ -15,6 +15,6 @@
 #define LIBHPX_INSTRUMENTATION_FILE_H
 
 // Output the header for the trace file.
-size_t write_trace_header(void *base, int class, int id);
+size_t write_trace_header(void *base, int class, int event_id, int worker_id);
 
 #endif // LIBHPX_INSTRUMENTATION_FILE_H
