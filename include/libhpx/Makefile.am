@@ -1,5 +1,6 @@
-noinst_HEADERS = \
-                 action.h \
+SUBDIRS = util
+
+noinst_HEADERS = action.h \
                  attach.h \
                  bitmap.h \
                  boot.h \
@@ -32,3 +33,5 @@ noinst_HEADERS = \
                  topology.h \
                  utils.h \
                  Worker.h
+
+

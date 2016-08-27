@@ -15,71 +15,66 @@
 #define LIBHPX_WORKER_H
 
 #include "libhpx/Network.h"
-#include "libhpx/padding.h"
-#include "libsync/deques.h"
-#include "libsync/queues.h"
+#include "libhpx/util/Aligned.h"
+#include "libhpx/util/ChaseLevDeque.h"
+#include "libhpx/util/TwoLockQueue.h"
 #include "hpx/hpx.h"
-#include "hpx/attributes.h"
-#include <pthread.h>
+#include <thread>
 #include <atomic>
+#include <condition_variable>
+#include <mutex>
 #include <functional>
 
 /// Forward declarations.
 /// @{
+struct logtable;
 struct ustack;
-struct Scheduler;
 /// @}
 
-// namespace libhpx {
-// namespace scheduler {
-/// Class representing a worker thread's state.
-///
-/// Worker threads are "object-oriented" insofar as that goes, but each native
-/// thread has exactly one, thread-local worker structure, so the interface
-/// doesn't take a "this" pointer and instead grabs the "self" structure using
-/// __thread local storage.
-///
-/// @{
-struct PaddedDequeue {
-  PaddedDequeue() : work(), _pad() {
-    sync_chase_lev_ws_deque_init(&work, 32);
-  }
+namespace libhpx {
 
-  ~PaddedDequeue() {
-    sync_chase_lev_ws_deque_fini(&work);
-  }
+class Worker : public libhpx::util::Aligned<HPX_CACHELINE_SIZE>
+{
+  static constexpr int MAGIC_STEAL_HALF_THRESHOLD = 6;
 
-  size_t size() const {
-    return sync_chase_lev_ws_deque_size(&work);
-  }
-
-  hpx_parcel_t* pop() {
-    return static_cast<hpx_parcel_t*>(sync_chase_lev_ws_deque_pop(&work));
-  }
-
-  hpx_parcel_t* steal() {
-    return static_cast<hpx_parcel_t*>(sync_chase_lev_ws_deque_steal(&work));
-  }
-
-  size_t push(hpx_parcel_t *p) {
-    return sync_chase_lev_ws_deque_push(&work, p);
-  }
-
-  chase_lev_ws_deque_t work;                    // my work
-  const char _pad[_BYTES(HPX_CACHELINE_SIZE, sizeof(work))];
-};
-
-struct Worker {
+  enum State {
+    SHUTDOWN,
+    RUN,
+    STOP
+  };
 
  public:
+  using Continuation = std::function<void(hpx_parcel_t*)>;
+  using Mailbox = libhpx::util::TwoLockQueue<hpx_parcel_t>;
+  using Deque = libhpx::util::ChaseLevDeque<hpx_parcel_t>;
+
+  /// Event handlers.
+  ///
+  /// These event handlers are used during instrumentation to keep track of
+  /// events that are occurring on specific threads. When we're not using
+  /// instrumentation they're just defined as empty inline functions
+  ///
+  /// @{
+#ifdef ENABLE_INSTRUMENTATION
+  void EVENT_THREAD_RUN(struct hpx_parcel *p);
+  void EVENT_THREAD_END(struct hpx_parcel *p);
+  void EVENT_THREAD_SUSPEND(struct hpx_parcel *p);
+  void EVENT_THREAD_RESUME(struct hpx_parcel *p);
+#else
+  void EVENT_THREAD_RUN(struct hpx_parcel *p) {}
+  void EVENT_THREAD_END(struct hpx_parcel *p) {}
+  void EVENT_THREAD_SUSPEND(struct hpx_parcel *p) {}
+  void EVENT_THREAD_RESUME(struct hpx_parcel *p) {}
+#endif
+  /// @}
 
   /// Initialize a worker structure.
   ///
   /// This initializes a worker.
   ///
-  /// @param        sched The scheduler associated with this worker.
-  /// @param           id The worker's id.
-  Worker(Scheduler& sched, libhpx::Network& network, int id);
+  /// @param      sched The scheduler associated with this worker.
+  /// @param         id The worker's id.
+  Worker(int id);
 
   /// Finalize a worker structure.
   ///
@@ -88,66 +83,99 @@ struct Worker {
   /// joined so that an _in-flight_ mail message doesn't get missed.
   ~Worker();
 
-  /// Workers need to be aligned on cacheline boundaries.
-  static void* operator new(size_t bytes) {
-    void* addr;
-    if (posix_memalign(&addr, HPX_CACHELINE_SIZE, bytes)) {
-      abort();
-    }
-    return addr;
+  /// Create a random integer bounded by @p mod.
+  ///
+  /// @todo: now that we are using C++11 we should switch to standard random
+  /// number generation.
+  ///
+  /// @param        mod The bound for the random number.
+  ///
+  /// @returns          A random number in the range [0, @p mod).
+  int rand(int mod) {
+    return rand_r(&seed_) % mod;
   }
 
-  static void operator delete(void* worker) {
-    free(worker);
+  int getId() const {
+    return id_;
   }
 
-  /// Create a scheduler worker thread.
-  ///
-  /// This starts an underlying system thread for the scheduler. Assuming the
-  /// scheduler is stopped the underlying thread will immediately sleep waiting
-  /// for a run condition.
-  ///
-  /// @returns          true if the thread was created successfully
-  ///                  false otherwise
-  bool create();
+  hpx_parcel_t* getCurrentParcel() const {
+    return current_;
+  }
 
-  /// Join with a scheduler worker thread.
+  /// Stop processing lightweight threads.
   ///
-  /// This will block waiting for the designated worker thread to exit. It should
-  /// be used before calling worker_fini() on this thread in order to avoid race
-  /// conditions on the mailbox and scheduling and whatnot.
+  /// This will cause the worker to drop into its sleep() loop the next time a
+  /// context switch happens, where it will wait for the start() operation.
+  void stop() {
+    std::lock_guard<std::mutex> _(lock_);
+    state_ = STOP;
+  }
+
+  /// Start processing lightweight threads.
   ///
-  /// @param            w The worker to join (should be active).
-  void join();
+  /// This will notify the worker that it should start running lightweight
+  /// threads.
+  void start() {
+    std::lock_guard<std::mutex> _(lock_);
+    state_ = RUN;
+    running_.notify_all();
+  }
 
-  void stop();
+  void shutdown() {
+    std::lock_guard<std::mutex> _(lock_);
+    state_ = SHUTDOWN;
+    running_.notify_all();
+  }
 
-  void start();
-
-  void shutdown();
+  void spawn(hpx_parcel_t* p);
 
   void pushMail(hpx_parcel_t* p) {
-    sync_two_lock_queue_enqueue(&inbox, p);
+    inbox_.enqueue(p);
   }
 
   void pushYield(hpx_parcel_t* p) {
-    queues[1 - work_id].push(p);
+    queues_[1 - workId_].push(p);
   }
 
- public:
+  /// The non-blocking schedule operation.
+  ///
+  /// This will schedule new work relatively quickly, in order to avoid delaying
+  /// the execution of the user's continuation. If there is no local work we can
+  /// find quickly we'll transfer back to the main pthread stack and go through an
+  /// extended transfer time.
+  ///
+  /// @param          f The continuation function.
+  void schedule(Continuation& f);
 
+  template <typename Lambda>
+  void schedule(Lambda&& l) {
+    Continuation f(std::forward<Lambda>(l));
+    schedule(f);
+  }
+
+  /// Asynchronous entry point for the steal-half operation.
+  ///
+  /// @todo This is public because we register it with the LIBHPX_ACTION
+  ///       macro. We should increase its protection if possible.
+  ///
+  /// @param        src The source of the steal request.
+  static int StealHalfHandler(Worker* src);
+
+ private:
   /// Process a mail queue.
   ///
   /// This processes all of the parcels in the mailbox of the worker, moving them
   /// into the work queue of the designated worker. It will return a parcel if
   /// there was one.
   ///
-  /// @returns            A parcel from the mailbox if there is one.
+  /// @returns          A parcel from the mailbox if there is one.
   hpx_parcel_t* handleMail();
 
+  /// Handle anything we need to do between epochs.
   hpx_parcel_t* handleEpoch() {
-    work_id = 1 - work_id;
-    return NULL;
+    workId_ = 1 - workId_;
+    return nullptr;
   }
 
   /// Handle the network.
@@ -155,7 +183,7 @@ struct Worker {
   /// This will return a parcel from the network if it finds any. It will also
   /// refill the local work queue.
   ///
-  /// @returns            A parcel from the network if there is one.
+  /// @returns          A parcel from the network if there is one.
   hpx_parcel_t* handleNetwork();
 
   hpx_parcel_t* handleSteal();
@@ -166,51 +194,17 @@ struct Worker {
   /// Push a parcel into the lifo queue.
   void pushLIFO(hpx_parcel_t *p);
 
-  using Continuation = std::function<void(hpx_parcel_t*)>;
-
-  void checkpoint(hpx_parcel_t* p, Continuation& f, void *sp);
-
-  static void Checkpoint(hpx_parcel_t* p, Continuation& f, Worker* w, void *sp)
-    asm("worker_checkpoint");
-
-  static void ContextSwitch(hpx_parcel_t* p, Continuation& f, Worker* w)
-    asm("thread_transfer");
-
-  /// Local wrapper for the thread transfer call.
+  /// All of the steal functionality.
   ///
-  /// This wrapper will reset the signal mask as part of the transfer if it is
-  /// necessary, and it will always checkpoint the stack for the thread that we
-  /// are transferring away from.
-  ///
-  /// @param            p The parcel to transfer to.
-  /// @param            f The checkpoint continuation.
-  void transfer(hpx_parcel_t* p, Continuation& f);
-
-  template <typename Lambda>
-  void transfer(hpx_parcel_t* p, Lambda&& l) {
-    Continuation f(std::forward<Lambda>(l));
-    transfer(p, f);
-  }
-
-  /// The non-blocking schedule operation.
-  ///
-  /// This will schedule new work relatively quickly, in order to avoid delaying
-  /// the execution of the user's continuation. If there is no local work we can
-  /// find quickly we'll transfer back to the main pthread stack and go through an
-  /// extended transfer time.
-  ///
-  /// @param            f The continuation function.
-  void schedule(Continuation& f);
-
-  template <typename Lambda>
-  void schedule(Lambda&& l) {
-    Continuation f(std::forward<Lambda>(l));
-    schedule(f);
-  }
-
-  void spawn(hpx_parcel_t* p);
-
- private:
+  /// @todo We should extract stealing policies into a policy class that is
+  ///       initialized based on the runtime configuration.
+  /// @{
+  hpx_parcel_t* stealFrom(Worker* victim);
+  hpx_parcel_t* stealHalf();
+  hpx_parcel_t* stealRandom();
+  hpx_parcel_t* stealRandomNode();
+  hpx_parcel_t* stealHierarchical();
+  /// @}
 
   /// The main entry point for the worker thread.
   void enter();
@@ -235,102 +229,141 @@ struct Worker {
   /// thread can be. Calling bind() on a parcel that already has a stack
   /// (i.e., a thread) is permissible and has no effect.
   ///
-  /// @param            p The parcel to which we are binding.
+  /// @param          p The parcel to which we are binding.
   void bind(hpx_parcel_t* p);
 
- public:
   /// This returns the parcel's stack to the stack cache.
   ///
   /// This will push the parcel's stack onto the local worker's freelist, and
   /// possibly trigger a freelist flush if there are too many parcels cached
   /// locally.
   ///
-  /// @param            p The parcel that has the stack that we are freeing.
+  /// @param          p The parcel that has the stack that we are freeing.
   void unbind(hpx_parcel_t* p);
 
- private:
+  /// The basic checkpoint continuation used by the worker.
+  ///
+  /// This transfer continuation updates the current_ parcel to record that we
+  /// are now running @p p, checkpoints the previous stack pointer in the
+  /// previous stack, and then runs the continuation encapsulated in @p f.
+  ///
+  /// @param          p The parcel we transferred to.
+  /// @param          f A function to call as a continuation.
+  /// @param         sp The stack pointer we transferred from.
+  void checkpoint(hpx_parcel_t* p, Continuation& f, void *sp);
+
+  /// Used inside of the thread transfer ASM in order to call the
+  /// Worker::checkpoint member.
+  ///
+  /// We use a static member because it is called from asm and I don't know how
+  /// to call a C++ member function from asm code. I force a specific asm label
+  /// so that I don't have to deal a mangled name. This just forwards to
+  /// w->checkpoint(p, f, sp), but it is outlined to make sure it is included in
+  /// the binary.
+  ///
+  /// @param          p The parcel we transferred to.
+  /// @param          f A function to call as a continuation.
+  /// @param          w The worker structure.
+  /// @param         sp The stack pointer we transferred from.
+  static void Checkpoint(hpx_parcel_t* p, Continuation& f, Worker* w, void *sp)
+    asm("worker_checkpoint");
+
+  /// This performs the context switch.
+  ///
+  /// This will checkpoint the current thread's state, and then switch stacks to
+  /// the stack associated with p, and then call the continuation @p f. This is
+  /// an architecture-specific asm function. It is static because I do not want
+  /// to know how all of the different architecture ABIs deal with member
+  /// function calls (i.e., which register `this` is in, vs. the arguments).
+  ///
+  /// I give this an explicit asm label so that I do not need to understand C++
+  /// name mangling.
+  ///
+  /// @param          p The parcel we transferred to.
+  /// @param          f A function to call as a continuation.
+  /// @param          w The worker structure.
+  static void ContextSwitch(hpx_parcel_t* p, Continuation& f, Worker* w)
+    asm("thread_transfer");
+
+  /// The thread transfer call.
+  ///
+  /// This will handle any transfer-time details (e.g., reset the signal mask)
+  /// and then forward to the context switch operation.
+  ///
+  /// @param          p The parcel to transfer to.
+  /// @param          f The checkpoint continuation.
+  void transfer(hpx_parcel_t* p, Continuation& f);
+
+  /// A convenience wrapper for the transfer() operation.
+  ///
+  /// This version of transfer allows the continuation to be specified as any
+  /// lambda function that is compatible with the Continuation type.
+  ///
+  /// @param          p The parcel to transfer to.
+  /// @param     lambda A lambda function to run as a continuation.
+  template <typename Lambda>
+  void transfer(hpx_parcel_t* p, Lambda&& lambda) {
+    Continuation f(std::forward<Lambda>(lambda));
+    transfer(p, f);
+  }
+
+  /// The main entry point for worker threads.
+  ///
   /// Just used through the pthread interface during create to bounce to the
   /// worker's run member.
+  ///
+  /// @param     worker The initialized worker structure for this thread.
+  /// @returns          nullptr
   static void* Enter(void *worker) {
     static_cast<Worker*>(worker)->enter();
     return nullptr;
   }
 
-  /// The thread entry function that the worker uses to start a thread.
+  /// The entry function that the worker uses to start a lightweight thread.
   ///
   /// This is the function that sits at the outermost stack frame for a
   /// lightweight thread, and deals with dispatching the parcel's action and
   /// handling the action's return value.
   ///
+  /// It is not a member function because the lightweight thread can context
+  /// switch and thus the `this` pointer can change asynchronously. I (a) don't
+  /// know how to indicate that the `this` pointer is volatile and (b) even if I
+  /// knew how I don't really want to reload `this` every time I need it.
+  ///
   /// It does not return.
   ///
-  /// @param            p The parcel to execute.
-  [[ noreturn ]] static void Execute(hpx_parcel_t *p);
+  /// @param          p The parcel to execute.
+  [[ noreturn ]]
+  static void ExecuteUserThread(hpx_parcel_t *p);
 
-
- public:
-#ifdef ENABLE_INSTRUMENTATION
-  void EVENT_THREAD_RUN(struct hpx_parcel *p);
-  void EVENT_THREAD_END(struct hpx_parcel *p);
-  void EVENT_THREAD_SUSPEND(struct hpx_parcel *p);
-  void EVENT_THREAD_RESUME(struct hpx_parcel *p);
-#else
-  void EVENT_THREAD_RUN(struct hpx_parcel *p) {}
-  void EVENT_THREAD_END(struct hpx_parcel *p) {}
-  void EVENT_THREAD_SUSPEND(struct hpx_parcel *p) {}
-  void EVENT_THREAD_RESUME(struct hpx_parcel *p) {}
-#endif
-
- public:
-  pthread_t        thread;                      //!< this worker's native thread
-  int                  id;                      //!< this worker's id
-  unsigned           seed;                      //!< my random seed
-  int          work_first;                      //!< this worker's mode
  private:
-  int             nstacks_;                      //!< count of freelisted stacks
+  const int           id_;                     //!< this worker's id
+  const int      numaNode_;                      //!< this worker's numa node
+  unsigned           seed_;                     //!< my random seed
+  int           workFirst_;                     //!< this worker's mode
+  int             nstacks_;                     //!< count of freelisted stacks
+  Worker*      lastVictim_;                     //!< last successful victim
  public:
-  int             yielded;                      //!< used by APEX
-  int              active;                      //!< used by APEX
-  int         last_victim;                      //!< last successful victim
-  int           numa_node;                      //!< this worker's numa node
   void          *profiler_;                     //!< reference to the profiler
   void               *bst;                      //!< the block statistics table
-  libhpx::Network& network_;                      //!< reference to the network
   struct logtable   *logs;                      //!< reference to tracer data
   uint64_t         *stats;                      //!< reference to statistics data
-  Scheduler&        sched_;                      //!< pointer to the scheduler
  private:
-  hpx_parcel_t    *system_;                      //!< this worker's native parcel
- public:
-  hpx_parcel_t   *current;                      //!< current thread
- private:
-  struct ustack   *stacks_;                      //!< freelisted stacks
-  const char _pad1[_BYTES(HPX_CACHELINE_SIZE,
-                          sizeof(pthread_t) +
-                          sizeof(int) * 8 +
-                          sizeof(void*) * 9)];
- public:
-  pthread_mutex_t     lock;                     //!< state lock
-  pthread_cond_t   running;                     //!< local condition for sleep
-  std::atomic<int>   state;                     //!< what state are we in
-  std::atomic<int> work_id;                     //!< which queue are we using
-  const char _pad2[_BYTES(HPX_CACHELINE_SIZE,
-                          sizeof(pthread_mutex_t) +
-                          sizeof(pthread_cond_t) +
-                          sizeof(int) * 2)];
-  PaddedDequeue    queues[2];                   //!< work and yield queues
-  two_lock_queue_t  inbox;                      //!< mail sent to me
+  hpx_parcel_t            *system_;             //!< this worker's native parcel
+  hpx_parcel_t           *current_;              //!< current thread
+  struct ustack           *stacks_;              //!< freelisted stacks
+  alignas(HPX_CACHELINE_SIZE)
+  std::mutex                 lock_;             //!< state lock
+  std::condition_variable running_;             //!< local condition for sleep
+  std::atomic<State>        state_;             //!< what state are we in
+  std::atomic<int>         workId_;             //!< which queue are we using
+  Deque                    queues_[2];          //!< work and yield queues
+  Mailbox                   inbox_;             //!< mail sent to me
+  std::thread              thread_;//!< this worker's native thread
 };
 
-static_assert((sizeof(Worker) & (HPX_CACHELINE_SIZE - 1)) == 0,
-              "Poor alignment for worker structure");
+extern thread_local Worker * volatile self;
 
-// } // namespace scheduler
-// } // namespace libhpx
-
-/// @}
-
-extern __thread Worker * volatile self;
-
+} // namespace libhpx
 
 #endif // LIBHPX_WORKER_H

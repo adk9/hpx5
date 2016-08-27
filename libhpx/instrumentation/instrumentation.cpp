@@ -89,7 +89,7 @@ int inst_check_vappend(int id, ...) {;
     return 0;
   }
 
-  if (!self) {
+  if (!libhpx::self) {
     return 0;
   }
 

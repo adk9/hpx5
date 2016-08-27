@@ -34,6 +34,10 @@
 #include "metadata.h"
 #include "file.h"
 
+namespace {
+using libhpx::Worker;
+}
+
 #ifndef HOST_NAME_MAX
 # define HOST_NAME_MAX 255
 #endif
@@ -268,7 +272,7 @@ static void logtable_fini(logtable_t *log) {
 static void _create_logtable(Worker *w, int type, int id, size_t size) {
   char filename[256];
   snprintf(filename, 256, "event.%03d.%03d.%05d.%s.log",
-           w->id, id, hpx_get_my_rank(),
+           w->getId(), id, hpx_get_my_rank(),
            TRACE_EVENT_TO_STRING[id]);
 
   char *path = _concat_path(_log_path, filename);
@@ -289,8 +293,8 @@ static void _vappend(int UNUSED, int n, int id, ...) {
   va_list vargs;
   va_start(vargs, id);
 
-  dbg_assert(self->logs);
-  logtable_t *log = &self->logs[id];
+  dbg_assert(libhpx::self->logs);
+  logtable_t *log = &libhpx::self->logs[id];
   dbg_assert(log);
   uint64_t time = hpx_time_from_start_ns(hpx_time_now());
   char *next = log->next + log->record_bytes;
@@ -304,7 +308,7 @@ static void _vappend(int UNUSED, int n, int id, ...) {
   log->next = next;
 
   record_t *r = (record_t*)next;
-  r->worker = self->id;
+  r->worker = libhpx::self->getId();
   r->ns = time;
   for (int i = 0, e = n; i < e; ++i) {
     r->user[i] = va_arg(vargs, uint64_t);

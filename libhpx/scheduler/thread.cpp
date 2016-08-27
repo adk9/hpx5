@@ -30,6 +30,7 @@
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
 #include <libhpx/parcel.h>
+#include "libhpx/process.h"
 #include <libhpx/c_scheduler.h>
 #include "thread.h"
 
@@ -202,3 +203,19 @@ void thread_delete(ustack_t *thread) {
   as_free(AS_REGISTERED, base);
 }
 
+void
+thread_continue_va(ustack_t* thread, int n, va_list* args)
+{
+  if (thread->cont) {
+    return;
+  }
+
+  thread->cont = 1;
+  hpx_parcel_t* p = thread->parcel;
+  if (p->c_action && p->c_target) {
+    action_continue_va(p->c_action, p, n, args);
+  }
+  else {
+    process_recover_credit(p);
+  }
+}

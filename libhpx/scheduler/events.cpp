@@ -19,8 +19,10 @@
 #include "libhpx/events.h"
 #include "hpx/hpx.h"
 
-/// Thread tracing events.
-/// @{
+namespace {
+using libhpx::Worker;
+}
+
 void
 Worker::EVENT_THREAD_RUN(hpx_parcel_t *p) {
   if (p == system_) {
@@ -78,5 +80,4 @@ Worker::EVENT_THREAD_RESUME(hpx_parcel_t *p) {
 #endif
   EVENT_PARCEL_RESUME(p->id, p->action);
 }
-/// @}
 

@@ -45,7 +45,7 @@ static void _print_actions(void) {
 
 #define _vprint_console(c,id,fmt,...)                 \
   fprintf(stderr, "%d,%d,%" PRIu64 ",%s,%s" fmt "\n", \
-          here->rank, self->id,                       \
+          here->rank, libhpx::self->getId(),          \
           hpx_time_from_start_ns(hpx_time_now()),     \
           HPX_TRACE_CLASS_TO_STRING[ceil_log2_32(c)], \
           TRACE_EVENT_TO_STRING[id], ##__VA_ARGS__)

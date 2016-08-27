@@ -212,7 +212,7 @@ LCO::WaitHandler(LCO *lco, int reset)
 int
 LCO::AttachHandler(LCO *lco, hpx_parcel_t *p, size_t size)
 {
-  hpx_parcel_t *parent = self->current;
+  hpx_parcel_t *parent = self->getCurrentParcel();
   dbg_assert(hpx_parcel_get_data(parent) == p);
   log_lco("pinning %p, nesting %p\n", (void*)parent, (void*)p);
   parcel_pin(parent);
@@ -241,13 +241,13 @@ LCO::unlock(hpx_parcel_t* p)
 void
 LCO::lock()
 {
-  lock(self->current);
+  lock(self->getCurrentParcel());
 }
 
 void
 LCO::unlock()
 {
-  unlock(self->current);
+  unlock(self->getCurrentParcel());
 }
 
 short

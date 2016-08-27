@@ -19,6 +19,7 @@
 #include "libhpx/c_scheduler.h"
 #include "Condition.h"
 #include "thread.h"
+#include "lco/LCO.h"
 #include "libhpx/action.h"
 #include "libhpx/config.h"
 #include "libhpx/debug.h"
@@ -35,7 +36,10 @@
 #include <string.h>
 
 namespace {
+using libhpx::Worker;
+using libhpx::self;
 using libhpx::scheduler::Condition;
+using libhpx::scheduler::LCO;
 }
 
 scheduler_t *
@@ -69,21 +73,6 @@ scheduler_new(const config_t *cfg)
   sched->spmd = 0;
   sched->output = NULL;
 
-  // Initialize the worker data structures.
-  libhpx::Network* network = static_cast<libhpx::Network*>(here->net);
-  for (int i = 0, e = workers; i < e; ++i) {
-    sched->workers[i] = new Worker(*sched, *network, i);
-  }
-
-  // Start the worker threads.
-  for (int i = 0, e = workers; i < e; ++i) {
-    if (!sched->workers[i]->create()) {
-      log_error("failed to create a worker during scheduler_new.\n");
-      scheduler_delete(sched);
-      return NULL;
-    }
-  }
-
   log_sched("initialized a new scheduler.\n");
   return sched;
 }
@@ -92,14 +81,8 @@ void
 scheduler_delete(void *obj)
 {
   Scheduler *sched = static_cast<Scheduler*>(obj);
-  // shutdown and join all of the worker threads
   for (int i = 0, e = sched->n_workers; i < e; ++i) {
     sched->workers[i]->shutdown();
-    sched->workers[i]->join();
-  }
-
-  // clean up all of the worker data structures
-  for (int i = 0, e = sched->n_workers; i < e; ++i) {
     delete sched->workers[i];
   }
 
@@ -149,6 +132,13 @@ scheduler_start(void *obj, int spmd, hpx_action_t act, void *out, int n,
   Scheduler *sched = static_cast<Scheduler*>(obj);
 
   log_dflt("hpx started running %d\n", sched->epoch);
+
+  // Create the worker threads for the first epoch.
+  if (sched->epoch == 0) {
+    for (int i = 0, e = sched->n_workers; i < e; ++i) {
+      sched->workers[i] = new Worker(i);
+    }
+  }
 
   // remember the output slot
   sched->spmd = spmd;
@@ -352,10 +342,8 @@ scheduler_exit(void *obj, size_t size, const void *out)
 void
 scheduler_spawn(hpx_parcel_t *p)
 {
-  Worker *w = self;
-  dbg_assert(w);
-  dbg_assert(w->id >= 0);
-  w->spawn(p);
+  assert(self && "Spawn called on non-scheduler thread");
+  self->spawn(p);
 }
 
 // Spawn a parcel on a specified worker thread.
@@ -371,7 +359,8 @@ scheduler_spawn_at(hpx_parcel_t *p, int thread)
 hpx_parcel_t *
 scheduler_current_parcel(void)
 {
-  return self->current;
+  dbg_assert(self);
+  return self->getCurrentParcel();
 }
 
 int
@@ -400,4 +389,57 @@ scheduler_signal_error(void* cond, hpx_status_t code)
 {
   Condition* condition = static_cast<Condition*>(cond);
   parcel_launch_all(condition->setError(code));
+}
+
+hpx_status_t
+scheduler_wait(void *lco, void *cond)
+{
+  Condition* condition = static_cast<Condition*>(cond);
+  // push the current thread onto the condition variable---no lost-update
+  // problem here because we're holing the @p lock
+  Worker *w = self;
+  hpx_parcel_t *p = w->getCurrentParcel();
+
+  // we had better be holding a lock here
+  dbg_assert(p->ustack->lco_depth > 0);
+
+  if (hpx_status_t status = condition->push(p)) {
+    return status;
+  }
+
+  w->EVENT_THREAD_SUSPEND(p);
+  w->schedule([lco](hpx_parcel_t* p) {
+      static_cast<LCO*>(lco)->unlock(p);
+    });
+  self->EVENT_THREAD_RESUME(p);
+
+  // reacquire the lco lock before returning
+  static_cast<LCO*>(lco)->lock(p);
+  return condition->getError();
+}
+
+void
+scheduler_yield(void)
+{
+  Worker *w = self;
+  dbg_assert(action_is_default(w->getCurrentParcel()->action));
+  EVENT_SCHED_YIELD();
+  w->EVENT_THREAD_SUSPEND(w->getCurrentParcel());
+  w->schedule([w](hpx_parcel_t* p) {
+      dbg_assert(w == self);
+      w->pushYield(p);
+    });
+  self->EVENT_THREAD_RESUME(w->getCurrentParcel());
+}
+
+void
+scheduler_suspend(void (*f)(hpx_parcel_t *, void*), void *env)
+{
+  Worker *w = self;
+  hpx_parcel_t *p = w->getCurrentParcel();
+  log_sched("suspending %p in %s\n", p, actions[p->action].key);
+  w->EVENT_THREAD_SUSPEND(p);
+  w->schedule(std::bind(f, std::placeholders::_1, env));
+  self->EVENT_THREAD_RESUME(p);
+  log_sched("resuming %p in %s\n", p, actions[p->action].key);
 }

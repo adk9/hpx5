@@ -82,7 +82,7 @@ int reduce_remove(reduce_t *r) {
 }
 
 int reduce_join(reduce_t *r, const void *in) {
-  void *buffer = r->values + self->id * r->padded;
+  void *buffer = r->values + libhpx::self->getId() * r->padded;
   r->op(buffer, in, r->bytes);
   return (sync_addf(&r->i, -1, SYNC_ACQ_REL) == 0);
 }

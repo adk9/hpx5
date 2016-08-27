@@ -132,7 +132,7 @@ void parcel_launch(hpx_parcel_t *p) {
              p->c_target);
 
   EVENT_PARCEL_SEND(p->id, p->action, p->size,
-                    (self && self->current) ? self->current->target : HPX_NULL,
+                    hpx_thread_current_target(),
                     p->target);
 
   // do a local send through loopback, bypassing the network, otherwise dump the
@@ -167,7 +167,7 @@ void parcel_launch_error(hpx_parcel_t *p, int error) {
 void parcel_launch_through(hpx_parcel_t *p, hpx_addr_t gate) {
   dbg_assert(gate);
   parcel_prepare(p);
-  hpx_pid_t pid = self->current->pid;
+  hpx_pid_t pid = hpx_thread_current_pid();
   p = parcel_new(gate, lco_attach, 0, 0, pid, p, parcel_size(p));
   parcel_launch(p);
 }
@@ -229,10 +229,14 @@ hpx_parcel_t *parcel_alloc(size_t payload) {
 hpx_parcel_t *parcel_new(hpx_addr_t target, hpx_action_t action,
                          hpx_addr_t c_target, hpx_action_t c_action,
                          hpx_pid_t pid, const void *data, size_t len) {
-  hpx_parcel_t *p = parcel_alloc(len);
+  hpx_parcel_t* p = parcel_alloc(len);
   parcel_init(target, action, c_target, c_action, pid, data, len, p);
-  EVENT_PARCEL_CREATE(p->id, p->action, p->size,
-                      ((self && self->current) ? self->current->id : 0));
+  if (libhpx::Worker* w = libhpx::self) {
+    EVENT_PARCEL_CREATE(p->id, p->action, p->size, w->getCurrentParcel()->id);
+  }
+  else {
+    EVENT_PARCEL_CREATE(p->id, p->action, p->size, 0);
+  }
   return p;
 }
 

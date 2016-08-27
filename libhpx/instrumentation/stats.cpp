@@ -34,8 +34,12 @@
 #include "libhpx/Worker.h"
 #include "metadata.h"
 
+namespace {
+using libhpx::Worker;
+}
+
 static void _vappend(int UNUSED, int n, int id, ...) {
-  self->stats[id]++;
+  libhpx::self->stats[id]++;
 }
 
 static void _start(void) {

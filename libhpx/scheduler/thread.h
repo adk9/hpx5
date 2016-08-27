@@ -82,4 +82,12 @@ void thread_delete(ustack_t *stack)
 void thread_exit(int status, const void *value, size_t size)
   HPX_NORETURN;
 
+/// Invoking a thread's continuation.
+///
+/// @param       thread The thread.
+/// @param            n The number of arguments to continue.
+/// @param         args The arguments we are continuing.
+void thread_continue_va(ustack_t* thread, int n, va_list* args)
+  HPX_NON_NULL(1);
+
 #endif  // LIBHPX_THREAD_H
