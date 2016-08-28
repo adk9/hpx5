@@ -29,6 +29,7 @@ extern HPX_ACTION_DECL(lco_error);
 
 namespace libhpx {
 namespace scheduler {
+class Condition;
 
 /// The LCO abstract class interface.
 ///
@@ -134,6 +135,9 @@ class LCO {
   void setUser();
   short getUser() const;
   /// @}
+
+  /// Used in subclasses to wait for a condition.
+  hpx_status_t waitFor(Condition& cond);
 
   /// Used in the operator new() context to try to pin a global address. The
   /// TryPin() operation will throw a NonLocalMemory exception if the gva

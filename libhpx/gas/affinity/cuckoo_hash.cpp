@@ -22,7 +22,7 @@
 #include <libhpx/debug.h>
 #include <libhpx/gas.h>
 #include <libhpx/locality.h>
-#include <libhpx/c_scheduler.h>
+#include <libhpx/Scheduler.h>
 #include "cuckoo_hash.h"
 
 using libhpx::gas::Affinity;
@@ -43,10 +43,10 @@ CuckooHash::set(hpx_addr_t gva, int worker)
     dbg_error("Attempt to set affinity of %" PRIu64 " at %d (owned by %d)\n",
               gva, here->rank, gas_owner_of(here->gas, gva));
   }
-  DEBUG_IF(worker < 0 || scheduler_get_n_workers(here->sched) <= worker) {
+  DEBUG_IF(worker < 0 || here->sched->getNWorkers() <= worker) {
     dbg_error("Attempt to set affinity of %" PRIu64
               " to %d is outside range [0, %d)\n",
-              gva, worker, scheduler_get_n_workers(here->sched));
+              gva, worker, here->sched->getNWorkers());
   }
   // @todo: Should we be pinning gva? The interface doesn't require it, but it
   //        could prevent usage errors in AGAS? On the other hand, it could

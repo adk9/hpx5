@@ -72,11 +72,12 @@
 #include "libhpx/debug.h"
 #include "libhpx/memory.h"
 #include "libhpx/padding.h"
-#include "libhpx/c_scheduler.h"
+#include "libhpx/Worker.h"
 #include <mutex>
 #include <cstring>
 
 namespace {
+using libhpx::self;
 using libhpx::scheduler::Condition;
 using libhpx::scheduler::LCO;
 
@@ -210,7 +211,7 @@ AllToAll::getId(unsigned offset, size_t size, void *out)
 
   // wait until we're reading, and watch for errors
   while (phase_ != READING) {
-    if (auto status = wait_.wait(this)) {
+    if (auto status = waitFor(wait_)) {
       return status;
     }
   }
@@ -230,7 +231,7 @@ AllToAll::getId(unsigned offset, size_t size, void *out)
   }
   else {
     while (phase_ == READING) {
-      if (auto status = wait_.wait(this)) {
+      if (auto status = waitFor(wait_)) {
         return status;
       }
     }
@@ -248,7 +249,7 @@ AllToAll::setId(unsigned offset, size_t size, const void* buffer)
 
   // wait until we're gathering
   while (phase_ != GATHERING) {
-    if (auto status = wait_.wait(this)) {
+    if (auto status = waitFor(wait_)) {
       return status;
     }
   }
@@ -277,7 +278,7 @@ AllToAll::GetIdHandler(AllToAll& lco, unsigned offset, size_t size)
   // Allocate a parcel that targeting our continuation with enough space for the
   // reduced value, and use its data buffer to get the value---this prevents a
   // copy or two. This "steals" the current continuation.
-  auto*     p = scheduler_current_parcel();
+  auto*     p = self->getCurrentParcel();
   auto target = p->c_target;
   auto action = p->c_action;
   auto    pid = p->pid;

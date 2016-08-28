@@ -19,34 +19,35 @@
 #include <inttypes.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/parcel.h>
-#include <libhpx/c_scheduler.h>
+#include <libhpx/Worker.h>
 #include <cuckoohash_map.hh>
 #include <city_hasher.hh>
 #include "agas.h"
 #include "btt.h"
 
 namespace {
-  struct Entry {
-    int32_t count;
-    uint32_t owner;
-    void *lva;
-    size_t blocks;
-    hpx_parcel_t *cont;
-    uint32_t attr;
-    Entry() : count(0), owner(0), lva(NULL), blocks(1),
-              cont(NULL), attr(HPX_GAS_ATTR_NONE) {
-    }
-    Entry(int32_t o, void *l, size_t b, uint32_t a) :
-        count(0), owner(o), lva(l), blocks(b), cont(NULL), attr(a) {
-    }
-  };
+using libhpx::self;
+struct Entry {
+  int32_t count;
+  uint32_t owner;
+  void *lva;
+  size_t blocks;
+  hpx_parcel_t *cont;
+  uint32_t attr;
+  Entry() : count(0), owner(0), lva(NULL), blocks(1),
+            cont(NULL), attr(HPX_GAS_ATTR_NONE) {
+  }
+  Entry(int32_t o, void *l, size_t b, uint32_t a) :
+      count(0), owner(o), lva(l), blocks(b), cont(NULL), attr(a) {
+  }
+};
 
-  typedef cuckoohash_map<uint64_t, Entry, CityHasher<uint64_t> > Map;
+typedef cuckoohash_map<uint64_t, Entry, CityHasher<uint64_t> > Map;
 
-  class BTT : public Map {
-   public:
-    BTT(size_t);
-  };
+class BTT : public Map {
+ public:
+  BTT(size_t);
+};
 }
 
 BTT::BTT(size_t size) : Map(size) {
@@ -127,7 +128,7 @@ bool btt_try_pin(void *obj, gva_t gva, void **lva) {
     });
 
   if (owner >= 0) {
-    hpx_parcel_t *p = scheduler_current_parcel();
+    hpx_parcel_t *p = self->getCurrentParcel();
     if (p->src != here->rank) {
       hpx_call(HPX_THERE(p->src), _btt_update_owner, HPX_NULL,
                &gva.addr, &owner);
@@ -155,7 +156,7 @@ void btt_unpin(void *obj, gva_t gva) {
 
   // if we found a continuation parcel, launch it
   if (p) {
-    scheduler_spawn(p);
+    self->spawn(p);
   }
 }
 
@@ -255,7 +256,7 @@ static void _btt_continuation(hpx_parcel_t *p, void *e) {
   void     **lva = env->lva;
   uint32_t *attr = env->attr;
   int32_t *count = env->count;
-  
+
   uint64_t key = gva_to_key(gva);
   bool found = btt->update_fn(key, [&](Entry& entry) {
       if (lva) {
@@ -275,7 +276,7 @@ static void _btt_continuation(hpx_parcel_t *p, void *e) {
     });
   assert(found);
   if (!*count) {
-    scheduler_spawn(p);
+    self->spawn(p);
   }
   (void)found;
 }
@@ -293,7 +294,7 @@ int btt_try_delete(void *obj, gva_t gva, void **lva) {
   };
 
   do {
-    scheduler_suspend(_btt_continuation, &env);
+    self->suspend(_btt_continuation, &env);
   } while (count != 0);
   btt_remove(obj, gva);
   return HPX_SUCCESS;
@@ -313,7 +314,7 @@ int btt_try_move(void *obj, gva_t gva, uint32_t to, void **lva,
   };
 
   do {
-    scheduler_suspend(_btt_continuation, &env);
+    self->suspend(_btt_continuation, &env);
   } while (count != 0);
   return HPX_SUCCESS;
 }

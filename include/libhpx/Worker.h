@@ -31,9 +31,13 @@ struct logtable;
 /// @}
 
 namespace libhpx {
+
 namespace scheduler {
+class Condition;
+class LCO;
 class Thread;
 }
+
 class Worker : public libhpx::util::Aligned<HPX_CACHELINE_SIZE>
 {
   static constexpr int MAGIC_STEAL_HALF_THRESHOLD = 6;
@@ -84,6 +88,57 @@ class Worker : public libhpx::util::Aligned<HPX_CACHELINE_SIZE>
   /// joined so that an _in-flight_ mail message doesn't get missed.
   ~Worker();
 
+  /// Spawn a new lightweight thread.
+  ///
+  /// This is unsynchronized and only safe when self == this.
+  void spawn(hpx_parcel_t* p);
+
+  /// Yield the current user-level thread.
+  ///
+  /// This triggers a scheduling event, and possibly selects a new user-level
+  /// thread to run. If a new thread is selected, this moves the thread into the
+  /// next local epoch, and also makes the thread available to be stolen within
+  /// the locality.
+  void yield();
+
+  /// Suspend the execution of the current thread.
+  ///
+  /// This suspends the execution of the current lightweight thread. It must be
+  /// explicitly resumed in the future. The continuation @p f(p, @p env) is run
+  /// synchronously after the thread has been suspended but before a new thread
+  /// is run. This allows the lightweight thread to perform "safe"
+  /// synchronization where @p f will trigger a resume operation on the current
+  /// thread, and we don't want to miss that signal or possibly have our thread
+  /// stolen before it is checkpointed. The runtime passes the parcel we
+  /// transferred away from to @p as the first parameter.
+  ///
+  /// This will find a new thread to execute, and will effect a context
+  /// switch. It is not possible to immediately switch back to the current
+  /// thread, even if @p f makes it runnable, because thread selection is
+  /// performed prior to the execution of @p f, and the current thread is not a
+  /// valid option at that point.
+  ///
+  /// The continuation @p f, and the environment @p env, can be on the stack.
+  ///
+  /// @param            f A continuation to run after the context switch.
+  /// @param          env The environment to pass to the continuation @p f.
+  void suspend(void (*f)(hpx_parcel_t *, void*), void *env);
+
+  /// Wait for a condition.
+  ///
+  /// This suspends execution of the current user level thread until the condition
+  /// is signaled. The calling thread must hold the lock. This releases the lock
+  /// during the wait, but reacquires it before the user-level thread returns.
+  ///
+  /// scheduler_wait() will call _schedule() and transfer away from the calling
+  /// thread.
+  ///
+  /// @param          lco The LCO that is executing.
+  /// @param         cond The condition to wait for.
+  ///
+  /// @returns            LIBHPX_OK or an error
+  hpx_status_t wait(scheduler::LCO& lco, scheduler::Condition& cond);
+
   /// Create a random integer bounded by @p mod.
   ///
   /// @todo: now that we are using C++11 we should switch to standard random
@@ -128,8 +183,6 @@ class Worker : public libhpx::util::Aligned<HPX_CACHELINE_SIZE>
     state_ = SHUTDOWN;
     running_.notify_all();
   }
-
-  void spawn(hpx_parcel_t* p);
 
   void pushMail(hpx_parcel_t* p) {
     inbox_.enqueue(p);

@@ -24,11 +24,12 @@
 #include "libhpx/debug.h"
 #include "libhpx/memory.h"
 #include "libhpx/padding.h"
-#include "libhpx/c_scheduler.h"
+#include "libhpx/Worker.h"
 #include <cstring>
 #include <mutex>
 
 namespace {
+using libhpx::self;
 using libhpx::scheduler::Condition;
 using libhpx::scheduler::LCO;
 
@@ -103,7 +104,7 @@ class AllReduce final : public LCO {
   static int NewHandler(void* buffer, size_t writers, size_t readers,
                         size_t size, hpx_action_t id, hpx_action_t op) {
     auto lco = new(buffer) AllReduce(writers, readers, size, id, op);
-    LCO_LOG_NEW((uintptr_t)scheduler_current_parcel(), lco);
+    LCO_LOG_NEW((uintptr_t)self->getCurrentParcel(), lco);
     return HPX_SUCCESS;
   }
 
@@ -188,7 +189,7 @@ AllReduce::setInner(size_t size, const void *value)
   // wait until we're reducing (rather than reading) and then perform the
   // operation
   while (phase_ != REDUCING) {
-    if (epoch_.wait(this)) {
+    if (waitFor(epoch_)) {
       // no way to push an error back to the user here
       dbg_error("Error detected in AllReduce\n");
       unreachable();
@@ -215,7 +216,7 @@ AllReduce::getInner(size_t size, void *out, int reset)
 
   // wait until we're reading
   while (phase_ != READING) {
-    if (auto status = epoch_.wait(this)) {
+    if (auto status = waitFor(epoch_)) {
       return status;
     }
   }
@@ -238,7 +239,7 @@ AllReduce::getInner(size_t size, void *out, int reset)
   }
 
   while (phase_ == READING) {
-    if (auto status = epoch_.wait(this)) {
+    if (auto status = waitFor(epoch_)) {
       return status;
     }
   }
@@ -333,7 +334,7 @@ AllReduce::JoinHandler(AllReduce *lco, const void *data, size_t n)
   // Allocate a parcel that targeting our continuation with enough space for the
   // reduced value, and use its data buffer to join---this prevents a copy or
   // two. This "steals" the current continuation.
-  auto*     p = scheduler_current_parcel();
+  auto*     p = self->getCurrentParcel();
   auto target = p->c_target;
   auto action = p->c_action;
   auto    pid = p->pid;
@@ -412,7 +413,7 @@ hpx_lco_allreduce_join_async(hpx_addr_t lco, int id, size_t n,
 
   // avoid extra copy by allocating and sending a parcel directly
   auto bytes = sizeof(AllReduce::JoinAsyncArgs) + n;
-  auto pid = scheduler_current_parcel()->pid;
+  auto pid = self->getCurrentParcel()->pid;
   auto *p = parcel_new(lco, JoinRequest, HPX_HERE, JoinReply, pid, nullptr,
                        bytes);
 

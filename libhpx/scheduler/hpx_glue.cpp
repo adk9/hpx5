@@ -20,7 +20,6 @@
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/parcel.h"
-#include "libhpx/c_scheduler.h"
 #include "libhpx/Scheduler.h"
 #include "libhpx/Worker.h"
 #include <signal.h>
@@ -45,13 +44,13 @@ void
 hpx_exit(size_t size, const void *out)
 {
   assert(here && self);
-  scheduler_exit(here->sched, size, out);
+  here->sched->exit(size, out);
 }
 
 void
 hpx_thread_yield(void)
 {
-  scheduler_yield();
+  self->yield();
 }
 
 int
@@ -115,7 +114,7 @@ int
 hpx_is_active(void)
 {
   assert(here && "hpx not yet initialized");
-  return (sync_load(&here->sched->state, SYNC_ACQUIRE) == SCHED_RUN);
+  return (here->sched->getState() == Scheduler::RUN);
 }
 
 void

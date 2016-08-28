@@ -23,7 +23,7 @@
 #include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
 #include "libhpx/c_network.h"
-#include "libhpx/c_scheduler.h"
+#include "libhpx/Worker.h"
 
 namespace {
 using libhpx::network::pwc::Command;
@@ -120,7 +120,7 @@ DMAStringOps::memget(void *to, hpx_addr_t from, size_t n, hpx_addr_t lsync)
     .n     = n,
     .lsync = lsync
   };
-  scheduler_suspend(_pwc_memget_rsync_continuation, &env);
+  self->suspend(_pwc_memget_rsync_continuation, &env);
 }
 /// @}
 
@@ -153,7 +153,7 @@ DMAStringOps::memget(void *to, hpx_addr_t from, size_t size)
     .from = from,
     .n = size
   };
-  scheduler_suspend(_pwc_memget_lsync_continuation, &env);
+  self->suspend(_pwc_memget_lsync_continuation, &env);
 }
 /// @}
 
@@ -262,7 +262,7 @@ DMAStringOps::memput(hpx_addr_t to, const void *from, size_t n,
     .n = n,
     .rsync = rsync
   };
-  scheduler_suspend(_pwc_memput_lsync_continuation, &env);
+  self->suspend(_pwc_memput_lsync_continuation, &env);
 }
 /// @}
 
@@ -296,7 +296,7 @@ DMAStringOps::memput(hpx_addr_t to, const void *from, size_t n)
     .from = from,
     .n = n
   };
-  scheduler_suspend(_pwc_memput_rsync_continuation, &env);
+  self->suspend(_pwc_memput_rsync_continuation, &env);
 }
 /// @}
 

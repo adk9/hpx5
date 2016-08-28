@@ -150,7 +150,7 @@ Gather::get(size_t size, void *out, int reset)
 
   // Wait until we're reading, and watch for errors.
   while (wcount_ < writers_) {
-    if (auto status = cvar_.wait(this)) {
+    if (auto status = waitFor(cvar_)) {
       return status;
     }
   }
@@ -179,7 +179,7 @@ Gather::setId(unsigned offset, size_t size, const void* buffer)
   std::lock_guard<LCO> _(*this);
   // wait until we're gathering
   while (wcount_ == writers_) {
-    if (auto status = cvar_.wait(this)) {
+    if (auto status = waitFor(cvar_)) {
       return status;
     }
   }

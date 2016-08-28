@@ -132,7 +132,7 @@ Dataflow::get(size_t size, void *out, int reset)
     return cvar_.getError();
   }
 
-  if (hpx_status_t status = cvar_.wait(this)) {
+  if (hpx_status_t status = waitFor(cvar_)) {
     return status;
   }
 

@@ -16,6 +16,7 @@
 #endif
 
 #include "libhpx/Worker.h"
+#include "Condition.h"
 #include "Thread.h"
 #include "lco/LCO.h"
 #include "libhpx/action.h"
@@ -35,6 +36,8 @@
 namespace {
 using libhpx::Worker;
 using libhpx::self;
+using libhpx::scheduler::Condition;
+using libhpx::scheduler::LCO;
 using libhpx::scheduler::Thread;
 LIBHPX_ACTION(HPX_INTERRUPT, 0, StealHalf, Worker::StealHalfHandler,
               HPX_POINTER);
@@ -298,10 +301,9 @@ Worker::sleep()
     }
 
     // go back to sleep
-    Scheduler* sched = here->sched;
-    sync_addf(&sched->n_active, -1, SYNC_ACQ_REL);
+    here->sched->subActive();
     running_.wait(_);
-    sync_addf(&sched->n_active, 1, SYNC_ACQ_REL);
+    here->sched->addActive();
   }
 }
 
@@ -380,8 +382,7 @@ Worker::spawn(hpx_parcel_t* p)
   // If the target has affinity then send the parcel to that worker.
   int affinity = gas_get_affinity(here->gas, p->target);
   if (0 <= affinity && affinity != id_) {
-    dbg_assert(affinity < here->sched->n_workers);
-    here->sched->workers[affinity]->pushMail(p);
+    here->sched->getWorker(affinity)->pushMail(p);
     return;
   }
 
@@ -445,12 +446,12 @@ Worker::stealFrom(Worker* victim) {
 hpx_parcel_t*
 Worker::stealRandom()
 {
-  int n = here->sched->n_workers;
+  int n = here->sched->getNWorkers();
   int id;
   do {
     id = rand(n);
   } while (id == id_);
-  return stealFrom(here->sched->workers[id]);
+  return stealFrom(here->sched->getWorker(id));
 }
 
 hpx_parcel_t*
@@ -557,7 +558,7 @@ Worker::stealHierarchical()
 hpx_parcel_t*
 Worker::handleSteal()
 {
-  if (here->sched->n_workers == 1) {
+  if (here->sched->getNWorkers() == 1) {
     return NULL;
   }
 
@@ -631,4 +632,55 @@ Worker::ExecuteUserThread(hpx_parcel_t *p)
    default:
     dbg_error("thread produced unexpected error %s.\n", hpx_strerror(status));
   }
+}
+
+void
+Worker::yield()
+{
+  dbg_assert(action_is_default(current_->action));
+  EVENT_SCHED_YIELD();
+  EVENT_THREAD_SUSPEND(current_);
+  schedule([this](hpx_parcel_t* p) {
+      pushYield(p);
+    });
+
+  // `this` is volatile across the scheduler call but we can't actually indicate
+  // that, so re-read self here
+  self->EVENT_THREAD_RESUME(current_);
+}
+
+void
+Worker::suspend(void (*f)(hpx_parcel_t *, void*), void *env)
+{
+  hpx_parcel_t* p = current_;
+  log_sched("suspending %p in %s\n", p, actions[p->action].key);
+  EVENT_THREAD_SUSPEND(p);
+  schedule(std::bind(f, std::placeholders::_1, env));
+
+  // `this` is volatile across the scheduler call but we can't actually indicate
+  // that, so re-read self here
+  self->EVENT_THREAD_RESUME(p);
+  log_sched("resuming %p in %s\n", p, actions[p->action].key);
+}
+
+hpx_status_t
+Worker::wait(LCO& lco, Condition& cond)
+{
+  hpx_parcel_t* p = current_;
+  // we had better be holding a lock here
+  dbg_assert(p->thread->inLCO());
+
+  if (hpx_status_t status = cond.push(p)) {
+    return status;
+  }
+
+  EVENT_THREAD_SUSPEND(p);
+  schedule([&lco](hpx_parcel_t* p) {
+      lco.unlock(p);
+    });
+
+  // `this` is volatile across schedule
+  self->EVENT_THREAD_RESUME(p);
+  lco.lock(p);
+  return cond.getError();
 }

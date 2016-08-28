@@ -24,8 +24,7 @@
 #include "libhpx/debug.h"
 #include "libhpx/instrumentation.h"
 #include "libhpx/memory.h"
-#include "libhpx/c_network.h"
-#include "libhpx/c_scheduler.h"
+#include "libhpx/Network.h"
 #include "libhpx/Worker.h"
 #include "libhpx/parcel.h"
 
@@ -281,6 +280,12 @@ LCO::getUser() const
   return (state_ & USER_MASK);
 }
 
+hpx_status_t
+LCO::waitFor(Condition& cond)
+{
+  return self->wait(*this, cond);
+}
+
 void
 hpx_lco_delete(hpx_addr_t target, hpx_addr_t rsync)
 {
@@ -519,7 +524,7 @@ hpx_lco_get(hpx_addr_t target, size_t size, void *value)
   dbg_assert(value);
   LCO *lco = nullptr;
   if (!hpx_gas_try_pin(target, (void**)&lco)) {
-    return network_lco_get(here->net, target, size, value, 0);
+    return here->net->lcoOpsProvider().get(target, size, value, 0);
   }
 
   hpx_status_t status = lco->get(size, value, 0);
@@ -537,7 +542,7 @@ hpx_lco_get_reset(hpx_addr_t target, size_t size, void *value)
   dbg_assert(value);
   LCO *lco = nullptr;
   if (!hpx_gas_try_pin(target, (void**)&lco)) {
-    return network_lco_get(here->net, target, size, value, 1);
+    return here->net->lcoOpsProvider().get(target, size, value, 1);
   }
 
   hpx_status_t status = lco->get(size, value, 1);
@@ -560,7 +565,7 @@ hpx_lco_getref(hpx_addr_t target, size_t size, void **out)
     return hpx_lco_get(target, size, *out);
   }
 
-  int unpin;
+  int unpin = 0;
   hpx_status_t e = lco->getRef(size, out, &unpin);
   if (unpin) {
     hpx_gas_unpin(target);

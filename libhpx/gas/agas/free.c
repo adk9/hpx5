@@ -41,7 +41,7 @@
 /// must remain true during the implementation of AGAS move.
 static HPX_ACTION_DECL(_agas_free_block);
 static int _agas_free_block_handler(hpx_addr_t block) {
-  agas_t *agas = here->gas;
+  agas_t *agas = (void*)here->gas;
   gva_t    gva = { .addr = block };
   void    *lva = NULL;
   int        e = btt_try_delete(agas->btt, gva, &lva);
@@ -72,7 +72,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, 0, _agas_free_block, _agas_free_block_handler,
 /// This action is also used by non-cyclic array allocations to clean up the
 /// blocks associated with the array.
 static int _agas_free_segment_handler(hpx_addr_t base) {
-  agas_t *agas = here->gas;
+  agas_t *agas = (void*)here->gas;
   gva_t    gva = { .addr = base };
 
   // This message is always sent to the right place, but the base address isn't
@@ -127,7 +127,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, 0, _agas_free_segment,
 ///   free segment
 /// free address space
 static int _agas_free_async_handler(hpx_addr_t base) {
-  agas_t *gas = here->gas;
+  agas_t *gas = (void*)here->gas;
   gva_t   gva = { .addr = base };
   dbg_assert(gva.bits.home == here->rank);
 

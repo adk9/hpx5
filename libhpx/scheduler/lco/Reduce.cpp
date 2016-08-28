@@ -181,7 +181,7 @@ Reduce::get(size_t size, void *out, int reset)
   std::lock_guard<LCO> _(*this);
 
   while (remaining_) {
-    if (auto status = barrier_.wait(this)) {
+    if (auto status = waitFor(barrier_)) {
       return status;
     }
   }

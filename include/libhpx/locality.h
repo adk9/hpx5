@@ -32,8 +32,13 @@
 
 #ifdef __cplusplus
 struct Scheduler;
+namespace libhpx {
+class Network;
+}
+using libhpx::Network;
 extern "C" {
 #else
+#define Network void
 #define Scheduler void
 #endif
 
@@ -41,6 +46,7 @@ extern "C" {
 /// @{
 struct boot;
 struct config;
+struct gas;
 struct topology;
 struct tracer;
 /// @}
@@ -53,10 +59,10 @@ typedef struct locality {
   struct boot           *boot; //!< The bootstrap object. This provides rank
                                //!< and ranks, as well as some basic, IP-based
                                //!< networking functionality.
-  void                   *gas; //!< The global address space object. This
+  struct gas             *gas; //!< The global address space object. This
                                //!< provides global memory allocation and
                                //!< address space functionality.
-  void                   *net; //!< The network layer. This provides an active
+  Network                *net; //!< The network layer. This provides an active
                                //!< message interface targeting global
                                //!< addresses.
   Scheduler            *sched; //!< The lightweight thread scheduler. This

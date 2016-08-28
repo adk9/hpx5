@@ -191,7 +191,7 @@ int
 Thread::getTlsId()
 {
   if (tlsId_ < 0) {
-    tlsId_ = sync_fadd(&here->sched->next_tls_id, 1, SYNC_ACQ_REL);
+    tlsId_ = here->sched->getNextTlsId();
   }
   return tlsId_;
 }

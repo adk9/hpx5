@@ -33,9 +33,8 @@
 #include "libhpx/Network.h"
 #include <libhpx/padding.h>
 #include <libhpx/parcel.h>
-#include <libhpx/c_scheduler.h>
-#include "libhpx/Scheduler.h"
 #include <libhpx/topology.h>
+#include "libhpx/Worker.h"
 #include <libsync/sync.h>
 #include <hpx/hpx.h>
 #include <ffi.h>
@@ -43,6 +42,10 @@
 #include <cinttypes>
 #include <cstdlib>
 #include <cstring>
+
+namespace {
+using libhpx::self;
+}
 
 // this will only be used during instrumentation
 __thread uint64_t parcel_count = 1;
@@ -67,7 +70,7 @@ void parcel_prepare(hpx_parcel_t *p) {
   }
 
   if (p->pid && !p->credit) {
-    hpx_parcel_t *parent = scheduler_current_parcel();
+    hpx_parcel_t *parent = self->getCurrentParcel();
     dbg_assert(parent->pid == p->pid);
     p->credit = ++parent->credit;
   }
@@ -141,7 +144,7 @@ void parcel_launch(hpx_parcel_t *p) {
   if (target == here->rank) {
     // instrument local "receives"
     EVENT_PARCEL_RECV(p->id, p->action, p->size, p->src, p->target);
-    scheduler_spawn(p);
+    self->spawn(p);
   }
   else {
     int e = network_send(here->net, p, NULL);

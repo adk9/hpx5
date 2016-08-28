@@ -24,7 +24,6 @@ noinst_HEADERS = action.h \
                  percolation.h \
                  process.h \
                  rebalancer.h \
-                 c_scheduler.h \
                  Scheduler.h\
                  StringOps.h \
                  system.h \

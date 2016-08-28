@@ -68,7 +68,7 @@ struct GenerationCounter final : public LCO {
 
   hpx_status_t wait(int reset) {
     std::lock_guard<LCO> _(*this);
-    return oflow_.wait(this);
+    return waitFor(oflow_);
   }
 
   hpx_status_t attach(hpx_parcel_t *p) {
@@ -145,7 +145,7 @@ GenerationCounter::waitForGeneration(unsigned long i)
   while (gen_ < i) {
     bool inplace = i < (gen_ + ninplace_);
     Condition& cond = (inplace) ? conditionAt(i % ninplace_) : oflow_;
-    if (auto status = cond.wait(this)) {
+    if (auto status = waitFor(cond)) {
       return status;
     }
   }

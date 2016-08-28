@@ -30,7 +30,7 @@
 #include <hpx/hpx.h>
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
-#include <libhpx/c_scheduler.h>
+#include <libhpx/Scheduler.h>
 #include "libhpx/Worker.h"
 #include "metadata.h"
 
@@ -43,16 +43,15 @@ static void _vappend(int UNUSED, int n, int id, ...) {
 }
 
 static void _start(void) {
-  for (int k = 0; k < HPX_THREADS; ++k) {
-    Worker *w = (Worker *)scheduler_get_worker(here->sched, k);
+  for (auto&& w : here->sched->getWorkers()) {
     w->stats = static_cast<uint64_t*>(calloc(TRACE_NUM_EVENTS, sizeof(uint64_t)));
   }
 }
 
 static void _destroy(void) {
-  Worker *master = (Worker *)scheduler_get_worker(here->sched, 0);
+  Worker *master = here->sched->getWorker(0);
   for (int k = 1; k < HPX_THREADS; ++k) {
-    Worker *w = (Worker *)scheduler_get_worker(here->sched, k);
+    Worker *w = here->sched->getWorker(k);
     for (unsigned i = 0; i < TRACE_NUM_EVENTS; ++i) {
       int c = TRACE_EVENT_TO_CLASS[i];
       if (inst_trace_class(c)) {

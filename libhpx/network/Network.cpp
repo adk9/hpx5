@@ -40,7 +40,7 @@ Network::~Network()
 {
 }
 
-void*
+Network*
 Network::Create(config_t *cfg, boot_t *boot, gas_t *gas)
 {
 #ifndef HAVE_NETWORK
@@ -136,18 +136,6 @@ Network::Create(config_t *cfg, boot_t *boot, gas_t *gas)
   }
 
   return new InstrumentationWrapper(network);
-}
-
-network_t*
-network_new(struct config *cfg, struct boot *boot, struct gas *gas)
-{
-  return Network::Create(cfg, boot, gas);
-}
-
-void
-network_delete(void *obj)
-{
-  delete static_cast<Network*>(obj);
 }
 
 void

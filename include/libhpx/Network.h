@@ -36,7 +36,7 @@ class Network {
   /// @param          gas The global address space.
   ///
   /// @returns            The network object, or NULL if there was an issue.
-  static void* Create(config_t *config, boot_t *boot, gas_t *gas);
+  static Network* Create(config_t *config, boot_t *boot, gas_t *gas);
 
   /// Get the HPX configuration type of the base network implementation.
   virtual int type() const = 0;

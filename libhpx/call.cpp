@@ -17,19 +17,24 @@
 
 /// @file libhpx/call.c
 /// @brief Implement the hpx/call.h header.
-///
 
-#include <string.h>
-#include <stdarg.h>
-#include <hpx/hpx.h>
-#include <libhpx/action.h>
-#include <libhpx/parcel.h>
-#include <libhpx/c_scheduler.h>
+#include "libhpx/action.h"
+#include "libhpx/parcel.h"
+#include "libhpx/Worker.h"
+#include "hpx/hpx.h"
+#include <cstring>
+#include <cstdarg>
+
+namespace {
+using libhpx::self;
+}
 
 /// A RPC call with a user-specified continuation action.
-int _hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
-                                hpx_addr_t c_target, hpx_action_t c_action,
-                                int n, ...) {
+int
+_hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
+                            hpx_addr_t c_target, hpx_action_t c_action,
+                            int n, ...)
+{
   va_list args;
   va_start(args, n);
   int e = action_call_lsync_va(action, addr, c_target, c_action, n, &args);
@@ -37,8 +42,10 @@ int _hpx_call_with_continuation(hpx_addr_t addr, hpx_action_t action,
   return e;
 }
 
-int _hpx_call_async(hpx_addr_t addr, hpx_action_t id, hpx_addr_t lsync,
-                    hpx_addr_t rsync, int n, ...) {
+int
+_hpx_call_async(hpx_addr_t addr, hpx_action_t id, hpx_addr_t lsync,
+                hpx_addr_t rsync, int n, ...)
+{
   va_list args;
   va_start(args, n);
   hpx_action_t op = hpx_lco_set_action;
@@ -48,7 +55,9 @@ int _hpx_call_async(hpx_addr_t addr, hpx_action_t id, hpx_addr_t lsync,
 }
 
 /// Encapsulates an asynchronous remote-procedure-call.
-int _hpx_call(hpx_addr_t addr, hpx_action_t id, hpx_addr_t result, int n, ...) {
+int
+_hpx_call(hpx_addr_t addr, hpx_action_t id, hpx_addr_t result, int n, ...)
+{
   va_list args;
   va_start(args, n);
   hpx_action_t rop = hpx_lco_set_action;
@@ -57,8 +66,10 @@ int _hpx_call(hpx_addr_t addr, hpx_action_t id, hpx_addr_t result, int n, ...) {
   return e;
 }
 
-int _hpx_call_sync(hpx_addr_t addr, hpx_action_t id, void *out, size_t olen,
-                   int n, ...) {
+int
+_hpx_call_sync(hpx_addr_t addr, hpx_action_t id, void *out, size_t olen, int n,
+               ...)
+{
   va_list args;
   va_start(args, n);
   int e = action_call_rsync_va(id, addr, out, olen, n, &args);
@@ -66,10 +77,12 @@ int _hpx_call_sync(hpx_addr_t addr, hpx_action_t id, void *out, size_t olen,
   return e;
 }
 
-int _hpx_call_cc(hpx_addr_t addr, hpx_action_t id, int n, ...) {
+int
+_hpx_call_cc(hpx_addr_t addr, hpx_action_t id, int n, ...)
+{
   va_list args;
   va_start(args, n);
-  hpx_parcel_t *p = scheduler_current_parcel();
+  hpx_parcel_t *p = self->getCurrentParcel();
   hpx_addr_t rsync = p->c_target;
   hpx_action_t rop = p->c_action;
   int e = action_call_lsync_va(id, addr, rsync, rop, n, &args);
@@ -84,8 +97,10 @@ int _hpx_call_cc(hpx_addr_t addr, hpx_action_t id, int n, ...) {
   return e;
 }
 
-int _hpx_call_when(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t id,
-                   hpx_addr_t result, int n, ...) {
+int
+_hpx_call_when(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t id,
+               hpx_addr_t result, int n, ...)
+{
   va_list args;
   va_start(args, n);
   hpx_action_t rop = hpx_lco_set_action;
@@ -94,8 +109,10 @@ int _hpx_call_when(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t id,
   return e;
 }
 
-int _hpx_call_when_sync(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t id,
-                        void *out, size_t olen, int n, ...) {
+int
+_hpx_call_when_sync(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t id,
+                    void *out, size_t olen, int n, ...)
+{
   va_list args;
   va_start(args, n);
   int e = action_when_rsync_va(id, addr, gate, out, olen, n, &args);
@@ -104,9 +121,11 @@ int _hpx_call_when_sync(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t id,
 }
 
 /// hpx_call_when with a user-specified continuation action.
-int _hpx_call_when_with_continuation(hpx_addr_t gate, hpx_addr_t addr,
-                                     hpx_action_t id, hpx_addr_t rsync,
-                                     hpx_action_t rop, int n, ...) {
+int
+_hpx_call_when_with_continuation(hpx_addr_t gate, hpx_addr_t addr,
+                                 hpx_action_t id, hpx_addr_t rsync,
+                                 hpx_action_t rop, int n, ...)
+{
   va_list args;
   va_start(args, n);
   int e = action_when_lsync_va(id, addr, gate, rsync, rop, n, &args);
@@ -114,11 +133,13 @@ int _hpx_call_when_with_continuation(hpx_addr_t gate, hpx_addr_t addr,
   return e;
 }
 
-int _hpx_call_when_cc(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t id, int n,
-                      ...) {
+int
+_hpx_call_when_cc(hpx_addr_t gate, hpx_addr_t addr, hpx_action_t id, int n,
+                  ...)
+{
   va_list args;
   va_start(args, n);
-  hpx_parcel_t *p = scheduler_current_parcel();
+  hpx_parcel_t *p = self->getCurrentParcel();
   hpx_addr_t rsync = p->c_target;
   hpx_action_t rop = p->c_action;
   p->c_target = HPX_NULL;

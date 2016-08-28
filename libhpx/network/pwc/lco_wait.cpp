@@ -19,9 +19,10 @@
 #include "Commands.h"
 #include "libhpx/debug.h"
 #include "libhpx/memory.h"
-#include "libhpx/c_scheduler.h"
+#include "libhpx/Worker.h"
 
 namespace {
+using libhpx::self;
 using libhpx::network::pwc::Command;
 using libhpx::network::pwc::PhotonTransport;
 using libhpx::network::pwc::PWCNetwork;
@@ -34,7 +35,7 @@ using libhpx::network::pwc::PWCNetwork;
 static int
 _pwc_lco_wait_handler(struct hpx_parcel *p, int reset)
 {
-  const hpx_parcel_t *curr = scheduler_current_parcel();
+  const hpx_parcel_t *curr = self->getCurrentParcel();
   hpx_addr_t lco = curr->target;
   int e = (reset) ? hpx_lco_wait_reset(lco) : hpx_lco_wait(lco);
 
@@ -74,7 +75,7 @@ PWCNetwork::wait(hpx_addr_t lco, int reset)
     .lco = lco,
     .reset = reset
   };
-  scheduler_suspend(_pwc_lco_wait_continuation, &env);
+  self->suspend(_pwc_lco_wait_continuation, &env);
   // NB: we could return self->current->error
   return HPX_SUCCESS;
 }

@@ -15,50 +15,56 @@
 # include "config.h"
 #endif
 
-#include <libhpx/debug.h>
-#include "../../thread.h"
+#include "Thread.h"
 #include "../common/asm.h"
+#include "libhpx/parcel.h"
+#include <new>
+
+namespace {
+using libhpx::scheduler::Thread;
 
 /// A structure describing the initial frame on a stack.
 ///
 /// This must match the transfer.S asm file usage.
 ///
 /// This should be managed in an asm-specific manner.
-typedef struct HPX_PACKED {
-  void     *alignment; // keep 8-byte aligned stack
+class [[ gnu::packed ]] TransferFrame
+{
+  TransferFrame(hpx_parcel_t*p, Thread::Entry f)
+    : alignment_(),
 #ifdef __VFP_FP__
-  void *vfp_alignment;
-  void         *fpscr;
-  void   *vfpregs[16];
+      vfp_alignment_(),
+      fpscr_(),
+      vfpregs_(),
 #endif
-  void       *regs[6];        //!< r6-r11
-  void            *r5;        //!< we use this to hold the parcel that is passed to f()
-  thread_entry_t   r4;        //!< used to hold f(), called by align_stack_trampoline
-  void           (*lr)(void); //!< return address
-  void        *top_r4;
-  void       (*top_lr)(void);
-} _frame_t;
+      regs_(),
+      r5_(p),
+      r4_(f),
+      lr_(align_stacK_trampoline),
+      top_r4_(nullptr),
+      top_lr_(nullptr)
+  {
+  }
 
-void *transfer_frame_init(void *top, hpx_parcel_t *p, thread_entry_t f) {
-  // arm wants 8 byte alignment, so we adjust the top pointer if necessary
-  top = reinterpret_cast<void*>((uintptr_t)top & ~(7));
-
-  // Stack frame addresses go "down" while C struct addresses go "up, so compute
-  // the frame base from the top of the frame using the size of the frame
-  // structure. After this, we can just write values to the frame structure and
-  // they'll be in the right place for the initial return from transfer.
-  _frame_t *frame = reinterpret_cast<_frame_t*>((char*)top - sizeof(*frame));
-  assert((uintptr_t)frame % 8 == 0);
-
-  // register must be the same as the one used in align_stack_trampoline
-  frame->r4 = f;
-  frame->r5 = p;
-  frame->lr = align_stack_trampoline;
-
-#ifdef ENABLE_DEBUG
-  frame->top_r4 = NULL;
-  frame->top_lr = NULL;
+ private:
+  void     *alignment_; // keep 8-byte aligned stack
+#ifdef __VFP_FP__
+  void *vfp_alignment_;
+  void         *fpscr_;
+  void       *vfpregs_[16];
 #endif
+  void          *regs_[6];                      //!< r6-r11
+  void            *r5_;                         //!< hold the parcel
+  Thread::Entry    r4_;                         //!< hold the entry function
+  void           (*lr_)(void);                  //!< return address
+  void        *top_r4_;
+  void       (*top_lr_)(void);
+};
+}
 
-  return frame;
+void
+Thread::initTransferFrame(Entry f)
+{
+  void *addr = top() - sizeof(TransferFrame);
+  sp_ = new(addr) TransferFrame(parcel_, f);
 }

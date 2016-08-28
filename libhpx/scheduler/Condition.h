@@ -85,12 +85,26 @@ class Condition {
   ///                       none).
   hpx_parcel_t *popAll();
 
-  hpx_status_t wait(LCO* lco);
-
+  /// Signal a condition.
+  ///
+  /// The calling thread must hold the lock protecting the condition. This call is
+  /// synchronous (MESA style) and one waiting thread will be woken up.
   void signal();
 
+  /// Signal a condition.
+  ///
+  /// The calling thread must hold the lock protecting the condition. This call is
+  /// synchronous (MESA style) and all waiting threads will be woken up.
   void signalAll();
 
+  /// Signal an error condition.
+  ///
+  /// The calling thread must hold the lock on protecting the condition. This call
+  /// is synchronous (MESA style) and all of the waiting threads will be woken up,
+  /// with the return value of HPX_LCO_ERROR. The user-supplied error can be
+  /// retrieved from the condition.
+  ///
+  /// @param         code The error code to set in the condition.
   void signalError(hpx_status_t code);
 
  private:

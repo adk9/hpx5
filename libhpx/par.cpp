@@ -26,7 +26,7 @@
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
 #include <libhpx/parcel.h>
-#include <libhpx/c_scheduler.h>
+#include <libhpx/Scheduler.h>
 
 static int _par_for_async_handler(hpx_for_action_t f, void *args, int min,
                                   int max) {
@@ -45,12 +45,12 @@ int hpx_par_for(hpx_for_action_t f, int min, int max, void *args,
   // get the number of scheduler threads
   int nthreads = HPX_THREADS;
 
-  hpx_addr_t and = HPX_NULL;
+  hpx_addr_t lco = HPX_NULL;
   hpx_action_t set = hpx_lco_set_action;
   hpx_action_t del = hpx_lco_delete_action;
   if (sync) {
-    and = hpx_lco_and_new(nthreads);
-    hpx_call_when_with_continuation(and, sync, set, and, del, NULL, 0);
+    lco = hpx_lco_and_new(nthreads);
+    hpx_call_when_with_continuation(lco, sync, set, lco, del, NULL, 0);
   }
 
   const int n = max - min;
@@ -64,10 +64,10 @@ int hpx_par_for(hpx_for_action_t f, int min, int max, void *args,
     rmin = base;
     rmax = base + m + ((r-- > 0) ? 1 : 0);
     base = rmax;
-    hpx_parcel_t *p = action_new_parcel(_par_for_async, HPX_HERE, and, set,
+    hpx_parcel_t *p = action_new_parcel(_par_for_async, HPX_HERE, lco, set,
                                         4, &f, &args, &rmin, &rmax);
     parcel_prepare(p);
-    scheduler_spawn_at(p, i);
+    here->sched->getWorker(i)->pushMail(p);
   }
 
   return HPX_SUCCESS;
@@ -140,7 +140,8 @@ _hpx_par_call_helper(hpx_action_t action, const int min,
     int r = n % branching_factor;
 
     // we'll reuse this buffer
-    par_call_async_args_t *args = malloc(sizeof(par_call_async_args_t) + env_size);
+    void* buffer = malloc(sizeof(par_call_async_args_t) + env_size);
+    auto* args = static_cast<par_call_async_args_t *>(buffer);
     args->action = action;
     args->min = min;
     args->max = min + m + ((r-- > 0) ? 1 : 0);
@@ -152,8 +153,8 @@ _hpx_par_call_helper(hpx_action_t action, const int min,
     memcpy(&args->env, env, env_size);
 
     for (int i = 0, e = branching_factor; i < e; ++i) {
-      int e = hpx_call(HPX_HERE, _par_call_async, HPX_NULL, args, sizeof(*args) + env_size);
-      if (e) {
+      if (int e = hpx_call(HPX_HERE, _par_call_async, HPX_NULL, args,
+                           sizeof(*args) + env_size)) {
         return e;
       }
 
@@ -193,14 +194,14 @@ int hpx_par_call(hpx_action_t action, const int min, const int max,
   dbg_assert(branching_factor > 0);
   dbg_assert(cutoff > 0);
 
-  hpx_addr_t and = HPX_NULL;
+  hpx_addr_t lco = HPX_NULL;
   if (sync) {
-    and = hpx_lco_and_new(max - min);
-    hpx_call_when_with_continuation(and, sync, hpx_lco_set_action,
-                                    and, hpx_lco_delete_action, NULL, 0);
+    lco = hpx_lco_and_new(max - min);
+    hpx_call_when_with_continuation(lco, sync, hpx_lco_set_action,
+                                    lco, hpx_lco_delete_action, NULL, 0);
   }
   return _hpx_par_call_helper(action, min, max, branching_factor, cutoff,
-                              arg_size, arg_init, env_size, env, and);
+                              arg_size, arg_init, env_size, env, lco);
 }
 
 int hpx_par_call_sync(hpx_action_t action,
@@ -260,12 +261,13 @@ int hpx_count_range_call(hpx_action_t action,
                          const size_t arg_size,
                          void *const arg) {
   const size_t thread_chunk = count / (HPX_LOCALITIES * HPX_THREADS);
-  hpx_count_range_call_args_t *args = malloc(sizeof(*args) + arg_size);
+  void* buffer = malloc(sizeof(hpx_count_range_call_args_t) + arg_size);
+  auto* args = static_cast<hpx_count_range_call_args_t*>(buffer);
   memcpy(args->arg, arg, arg_size);
   args->action = action; args->count = thread_chunk;
   args->increment = increment; args->bsize = bsize; args->arg_size = arg_size;
-  for (size_t l = 0; l < HPX_LOCALITIES; ++l) {
-    for (size_t t = 0; t < HPX_THREADS; ++t) {
+  for (int l = 0, e = HPX_LOCALITIES; l < e; ++l) {
+    for (int t = 0, e = HPX_THREADS; t < e; ++t) {
       const hpx_gas_ptrdiff_t addr_delta =
         (l * HPX_THREADS + t) * thread_chunk * increment;
       args->addr = hpx_addr_add(addr, addr_delta, bsize);
