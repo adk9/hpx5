@@ -15,7 +15,15 @@
 #define LIBHPX_PARCEL_H
 
 #ifdef __cplusplus
+namespace libhpx {
+namespace scheduler {
+class Thread;
+}
+}
+using Thread = libhpx::scheduler::Thread;
 extern "C" {
+#else
+#define Thread void
 #endif
 
 #ifdef HAVE_APEX
@@ -25,8 +33,6 @@ extern "C" {
 
 #include <hpx/hpx.h>
 #include <libhpx/instrumentation.h>
-
-struct ustack;
 
 typedef uint16_t parcel_state_t;
 
@@ -64,24 +70,24 @@ static inline uint16_t parcel_pinned(parcel_state_t state) {
 /// The hpx_parcel structure is what the user-level interacts with.
 ///
 struct hpx_parcel {
-  struct ustack   *ustack;  //!< A pointer to a stack.
-  struct hpx_parcel *next;  //!< A pointer to the next parcel.
-  uint32_t            src;  //!< The src rank for the parcel.
-  uint32_t           size;  //!< The data size in bytes.
-  parcel_state_t    state;  //!< The parcel's state bits.
-  uint16_t         offset;  //!< Reserved for future use.
-  hpx_action_t     action;  //!< The target action identifier.
-  hpx_action_t   c_action;  //!< The continuation action identifier.
-  hpx_addr_t       target;  //!< The target address for parcel_send().
-  hpx_addr_t     c_target;  //!< The target address for the continuation.
-  hpx_pid_t           pid;  //!< The process ID.
-  uint64_t         credit;  //!< Credit held by the parcel.
+  Thread*          thread;         //!< A pointer to a thread.
+  struct hpx_parcel *next;         //!< A pointer to the next parcel.
+  uint32_t            src;         //!< The src rank for the parcel.
+  uint32_t           size;         //!< The data size in bytes.
+  parcel_state_t    state;         //!< The parcel's state bits.
+  uint16_t         offset;         //!< Reserved for future use.
+  hpx_action_t     action;         //!< The target action identifier.
+  hpx_action_t   c_action;         //!< The continuation action identifier.
+  hpx_addr_t       target;         //!< The target address for parcel_send().
+  hpx_addr_t     c_target;         //!< The target address for the continuation.
+  hpx_pid_t           pid;         //!< The process ID.
+  uint64_t         credit;         //!< Credit held by the parcel.
 #ifdef ENABLE_INSTRUMENTATION
-  uint64_t             id;  //!< A unique identifier for parcel tracing.
-  uint64_t        padding;  //!< Ensure consistent buffer alignment with
-                            //!< instrumentation.
+  uint64_t             id;         //!< A unique identifier for parcel tracing.
+  uint64_t        padding;         //!< Ensure consistent buffer alignment with
+                                                //!< instrumentation.
 #endif
-  char           buffer[];  //!< Either an in-place payload, or a pointer.
+  char           buffer[];        //!< Either an in-place payload, or a pointer.
 };
 
 // Verify an assumption about how big the parcel structure is.
@@ -119,7 +125,7 @@ void parcel_delete(hpx_parcel_t *p);
 ///
 /// For debugging purposes, this operation is done using an atomic exchange when
 /// ENABLE_DEBUG is set.
-struct ustack *parcel_swap_stack(hpx_parcel_t *p, struct ustack *stack);
+Thread* parcel_set_thread(hpx_parcel_t *p, Thread *thread);
 
 /// The core send operation.
 ///

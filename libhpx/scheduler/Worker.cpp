@@ -16,7 +16,7 @@
 #endif
 
 #include "libhpx/Worker.h"
-#include "thread.h"
+#include "Thread.h"
 #include "lco/LCO.h"
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
@@ -35,6 +35,7 @@
 namespace {
 using libhpx::Worker;
 using libhpx::self;
+using libhpx::scheduler::Thread;
 LIBHPX_ACTION(HPX_INTERRUPT, 0, StealHalf, Worker::StealHalfHandler,
               HPX_POINTER);
 }
@@ -47,7 +48,7 @@ Worker::Worker(int id)
       numaNode_(here->topology->cpu_to_numa[id % here->topology->ncpus]),
       seed_(id),
       workFirst_(0),
-      nstacks_(0),
+      nthreads_(0),
       lastVictim_(nullptr),
       profiler_(nullptr),
       bst(nullptr),
@@ -55,7 +56,7 @@ Worker::Worker(int id)
       stats(nullptr),
       system_(nullptr),
       current_(nullptr),
-      stacks_(nullptr),
+      threads_(nullptr),
       lock_(),
       running_(),
       state_(STOP),
@@ -76,9 +77,9 @@ Worker::~Worker() {
     parcel_delete(p);
   }
 
-  while (ustack_t* stack = stacks_) {
-    stacks_ = stack->next;
-    thread_delete(stack);
+  while (Thread* thread = threads_) {
+    threads_ = thread->getNext();
+    delete thread;
   }
 }
 
@@ -156,47 +157,42 @@ void
 Worker::bind(hpx_parcel_t *p)
 {
   // try and get a stack from the freelist, otherwise allocate a new one
-  ustack_t *stack = stacks_;
-  if (stack) {
-    stacks_ = stack->next;
-    --nstacks_;
-    thread_init(stack, p, ExecuteUserThread, stack->size);
+  Thread *thread = threads_;
+  if (thread) {
+    threads_ = thread->getNext();
+    --nthreads_;
+    thread = new(thread) Thread(p, ExecuteUserThread);
   }
   else {
-    stack = thread_new(p, ExecuteUserThread);
+    thread = new Thread(p, ExecuteUserThread);
   }
 
-  ustack_t *old = parcel_swap_stack(p, stack);
-  if (old) {
+  if (Thread* old = parcel_set_thread(p, thread)) {
     dbg_error("Replaced stack %p with %p in %p: cthis usually means two workers "
               "are trying to start a lightweight thread at the same time.\n",
-              (void*)old, (void*)stack, (void*)p);
+              old, thread, p);
   }
 }
 
 void
 Worker::unbind(hpx_parcel_t* p)
 {
-  ustack_t *stack = parcel_swap_stack(p, NULL);
-  if (!stack) {
-    return;
-  }
-
-  stack->next = stacks_;
-  stacks_ = stack;
-  int32_t count = ++nstacks_;
   int32_t limit = here->config->sched_stackcachelimit;
-  if (limit < 0 || count <= limit) {
+  if (Thread* thread  = parcel_set_thread(p, nullptr)) {
+    thread->setNext(threads_);
+    threads_ = thread;
+    threads_->~Thread();
+    ++nthreads_;
+  }
+
+  if (limit < 0 || nthreads_ < limit) {
     return;
   }
 
-  int32_t half = ceil_div_32(limit, 2);
-  log_sched("flushing half of the stack freelist (%d)\n", half);
-  while (count > half) {
-    stack = stacks_;
-    stacks_ = stack->next;
-    count = --nstacks_;
-    thread_delete(stack);
+  for (const int e = ceil_div_32(limit, 2); e < nthreads_; --nthreads_) {
+    Thread* thread = threads_->getNext();
+    delete threads_;
+    threads_ = thread;
   }
 }
 
@@ -252,17 +248,9 @@ Worker::enter()
 
   // allocate a parcel and a stack header for the system stack
   hpx_parcel_t system;
-  parcel_init(0, 0, 0, 0, 0, NULL, 0, &system);
-  ustack_t stack = {
-    .sp = NULL,
-    .parcel = &system,
-    .next = NULL,
-    .lco_depth = 0,
-    .tls_id = -1,
-    .stack_id = -1,
-    .size = 0
-  };
-  system.ustack = &stack;
+  parcel_init(0, 0, 0, 0, 0, nullptr, 0, &system);
+  Thread thread(&system);
+  parcel_set_thread(&system, &thread);
 
   system_ = &system;
   current_ = &system;
@@ -320,7 +308,7 @@ Worker::sleep()
 void
 Worker::checkpoint(hpx_parcel_t *p, Continuation& f, void *sp)
 {
-  current_->ustack->sp = sp;
+  current_->thread->setSp(sp);
   std::swap(current_, p);
   f(p);
 
@@ -340,18 +328,18 @@ Worker::transfer(hpx_parcel_t *p, Continuation& f)
 {
   dbg_assert(p != current_);
 
-  if (p->ustack == nullptr) {
+  if (p->thread == nullptr) {
     bind(p);
   }
 
-  if (!current_->ustack->masked) {
-    ContextSwitch(p, f, this);
-  }
-  else {
+  if (unlikely(current_->thread->getMasked())) {
     sigset_t set;
     dbg_check(pthread_sigmask(SIG_SETMASK, &here->mask, &set));
     ContextSwitch(p, f, this);
     dbg_check(pthread_sigmask(SIG_SETMASK, &set, NULL));
+  }
+  else {
+    ContextSwitch(p, f, this);
   }
 }
 
@@ -412,7 +400,7 @@ Worker::spawn(hpx_parcel_t* p)
 
   // If we're holding a lock then we have to push the spawn for later
   // processing, or we could end up causing a deadlock.
-  if (current_->ustack->lco_depth) {
+  if (current_->thread->inLCO()) {
     pushLIFO(p);
     return;
   }
@@ -616,7 +604,7 @@ Worker::ExecuteUserThread(hpx_parcel_t *p)
     unreachable();
 
    case HPX_SUCCESS:
-    thread_continue_va(p->ustack, 0, NULL);
+    p->thread->invokeContinue();
     w = self;
     w->EVENT_THREAD_END(p);
     w->schedule([w](hpx_parcel_t* p) {

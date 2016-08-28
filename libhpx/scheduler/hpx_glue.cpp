@@ -16,7 +16,7 @@
 #endif
 
 #include "hpx/hpx.h"
-#include "thread.h"
+#include "Thread.h"
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/parcel.h"
@@ -33,20 +33,11 @@ using libhpx::Worker;
 hpx_parcel_t *
 _hpx_thread_generate_continuation(int n, ...)
 {
-  hpx_parcel_t *p = self->getCurrentParcel();
-
-  dbg_assert(p->ustack->cont == 0);
-
-  hpx_action_t op = p->c_action;
-  hpx_addr_t target = p->c_target;
   va_list args;
   va_start(args, n);
-  hpx_parcel_t *c = action_new_parcel_va(op, target, 0, 0, n, &args);
+  hpx_parcel_t *p = self->getCurrentParcel();
+  hpx_parcel_t* c = p->thread->generateContinue(n, &args);
   va_end(args);
-
-  p->ustack->cont = 1;
-  p->c_action = 0;
-  p->c_target = 0;
   return c;
 }
 
@@ -137,12 +128,8 @@ int
 hpx_thread_get_tls_id(void)
 {
   assert(self && "hpx not active on current pthread");
-  Worker *w = self;
-  ustack_t *stack = w->getCurrentParcel()->ustack;
-  if (stack->tls_id < 0) {
-    stack->tls_id = sync_fadd(&here->sched->next_tls_id, 1, SYNC_ACQ_REL);
-  }
-  return stack->tls_id;
+  Thread *thread = self->getCurrentParcel()->thread;
+  return thread->getTlsId();
 }
 
 intptr_t
@@ -153,7 +140,7 @@ hpx_thread_can_alloca(size_t bytes)
   // current stack address, and we know that the ustack->stack address is the
   // lowest address in the stack.
   hpx_parcel_t* p = self->getCurrentParcel();
-  return (uintptr_t)&p - (uintptr_t)p->ustack->stack - bytes;
+  return p->thread->canAlloca(bytes);
 }
 
 int
@@ -162,7 +149,7 @@ hpx_thread_sigmask(int how, int mask)
   assert(self && "hpx not active on current pthread");
   Worker *w = self;
   hpx_parcel_t *p = w->getCurrentParcel();
-  p->ustack->masked = 1;
+  p->thread->setMasked();
 
   sigset_t set;
   sigemptyset(&set);
@@ -257,7 +244,7 @@ _hpx_thread_continue(int n, ...)
 
   va_list args;
   va_start(args, n);
-  thread_continue_va(p->ustack, n, &args);
+  p->thread->invokeContinue(n, &args);
   va_end(args);
 
   return HPX_SUCCESS;

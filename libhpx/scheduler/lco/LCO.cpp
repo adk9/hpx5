@@ -18,7 +18,7 @@
 /// @file libhpx/scheduler/lco.cpp
 
 #include "LCO.h"
-#include "thread.h"                             //<! struct ustack
+#include "Thread.h"                             //<! struct ustack
 #include "libhpx/action.h"
 #include "libhpx/attach.h"
 #include "libhpx/debug.h"
@@ -225,15 +225,13 @@ LCO::lock(hpx_parcel_t* p)
 {
   lock_.lock();
   log_lco("%p acquired lco %p\n", p, this);
-  dbg_assert(p->ustack->lco_depth == 0);
-  p->ustack->lco_depth = 1;
+  p->thread->enterLCO(this);
 }
 
 void
 LCO::unlock(hpx_parcel_t* p)
 {
-  dbg_assert(p->ustack->lco_depth == 1);
-  p->ustack->lco_depth = 0;
+  p->thread->leaveLCO(this);
   log_lco("%p released lco %p\n", p, this);
   lock_.unlock();
 }

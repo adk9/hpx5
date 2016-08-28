@@ -28,11 +28,12 @@
 /// Forward declarations.
 /// @{
 struct logtable;
-struct ustack;
 /// @}
 
 namespace libhpx {
-
+namespace scheduler {
+class Thread;
+}
 class Worker : public libhpx::util::Aligned<HPX_CACHELINE_SIZE>
 {
   static constexpr int MAGIC_STEAL_HALF_THRESHOLD = 6;
@@ -337,11 +338,11 @@ class Worker : public libhpx::util::Aligned<HPX_CACHELINE_SIZE>
   static void ExecuteUserThread(hpx_parcel_t *p);
 
  private:
-  const int           id_;                     //!< this worker's id
-  const int      numaNode_;                      //!< this worker's numa node
+  const int           id_;                      //!< this worker's id
+  const int      numaNode_;                     //!< this worker's numa node
   unsigned           seed_;                     //!< my random seed
   int           workFirst_;                     //!< this worker's mode
-  int             nstacks_;                     //!< count of freelisted stacks
+  int             nthreads_;                    //!< count of freelisted threads
   Worker*      lastVictim_;                     //!< last successful victim
  public:
   void          *profiler_;                     //!< reference to the profiler
@@ -350,8 +351,8 @@ class Worker : public libhpx::util::Aligned<HPX_CACHELINE_SIZE>
   uint64_t         *stats;                      //!< reference to statistics data
  private:
   hpx_parcel_t            *system_;             //!< this worker's native parcel
-  hpx_parcel_t           *current_;              //!< current thread
-  struct ustack           *stacks_;              //!< freelisted stacks
+  hpx_parcel_t           *current_;             //!< current thread
+  scheduler::Thread      *threads_;             //!< freelisted threads
   alignas(HPX_CACHELINE_SIZE)
   std::mutex                 lock_;             //!< state lock
   std::condition_variable running_;             //!< local condition for sleep

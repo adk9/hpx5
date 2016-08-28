@@ -15,22 +15,13 @@
 # include "config.h"
 #endif
 
-#include <libhpx/debug.h>
-#include "../../thread.h"
+#include "Thread.h"
 #include "asm.h"
+#include "libhpx/parcel.h"
+#include <new>
 
-/// The fp control register state; we read this once at startup and then use it
-/// to initialize thread state.
-///
-/// @{
-static uint32_t  _mxcsr = 0;
-static uint16_t  _fpucw = 0;
-
-static void HPX_CONSTRUCTOR _init_x86_64(void) {
-  get_mxcsr(&_mxcsr);
-  get_fpucw(&_fpucw);
-}
-/// @}
+namespace {
+using libhpx::scheduler::Thread;
 
 /// A structure describing the initial frame on a stack.
 ///
@@ -38,50 +29,59 @@ static void HPX_CONSTRUCTOR _init_x86_64(void) {
 ///
 /// This should be managed in an asm-specific manner, but we are just worried
 /// about x86-64 at the moment.
-typedef struct HPX_PACKED {
-  uint32_t     mxcsr;                        //!< 7
-  uint16_t     fpucw;                        //!< 7.5
-  uint16_t   padding;                        //!< 7.75 has to match transfer.S
-  void          *r15;                        //!< 6
-  void          *r14;                        //!< 5
-  void          *r13;                        //!< 4
-  hpx_parcel_t  *r12;                        //!< 3
-  thread_entry_t rbx;                        //!< 2
-  void          *rbp;                        //!< 1
-  void         (*rip)(void);                 //!< 0
-  void      *top_rbp;
-  void     (*top_rip)(void);
-} _frame_t;
+class [[ gnu::packed ]] TransferFrame {
+ public:
+  TransferFrame(hpx_parcel_t* p, Thread::Entry f, uint32_t mxcsr,
+                uint16_t fpucw)
+  : mxcsr_(mxcsr),
+    fpucw_(fpucw),
+    padding_(),
+    r15_(),
+    r14_(),
+    r13_(),
+    r12_(p),
+    rbx_(f),
+    rbp_(&rip_),
+    rip_(align_stack_trampoline),
+    top_rbp_(),
+    top_rip_()
+  {
+  }
 
-void *transfer_frame_init(void *top, hpx_parcel_t *p, thread_entry_t f) {
-  // x86_64 wants 16 byte alignment, so we adjust the top pointer if necessary
-  top = (void*)((uintptr_t)top & ~(15));
+ private:
+  uint32_t          mxcsr_;                    //!< 7
+  uint16_t          fpucw_;                    //!< 7.5
+  uint16_t        padding_;                    //!< 7.75 has to match transfer.S
+  void               *r15_;                    //!< 6
+  void               *r14_;                    //!< 5
+  void               *r13_;                    //!< 4
+  const hpx_parcel_t* r12_;                    //!< 3
+  void              (*rbx_)(hpx_parcel_t*);    //!< 2
+  void               *rbp_;                    //!< 1
+  void              (*rip_)(void);             //!< 0
+  void           *top_rbp_;
+  void          (*top_rip_)(void);
+};
+}
 
-  // Stack frame addresses go "down" while C struct addresses go "up, so compute
-  // the frame base from the top of the frame using the size of the frame
-  // structure. After this, we can just write values to the frame structure and
-  // they'll be in the right place for the initial return from transfer.
-  _frame_t *frame = reinterpret_cast<_frame_t*>((char*)top - sizeof(*frame));
-  assert((uintptr_t)frame % 16 == 0);
+static inline uint32_t GetMXCSR() {
+  uint32_t mxcsr;
+  get_mxcsr(&mxcsr);
+  return mxcsr;
+}
 
-  frame->mxcsr = _mxcsr;
-  frame->fpucw = _fpucw;
+static inline uint16_t GetFPUCW() {
+  uint16_t fpucw;
+  get_fpucw(&fpucw);
+  return fpucw;
+}
 
-#ifdef ENABLE_DEBUG
-  frame->r15 = NULL;
-  frame->r14 = NULL;
-  frame->r13 = NULL;
-#endif
+void
+Thread::initTransferFrame(Entry f)
+{
+  static const uint32_t mxcsr = GetMXCSR();
+  static const uint16_t fpucw = GetFPUCW();
 
-  frame->r12 = p;
-  frame->rbx = f;
-  frame->rbp = &frame->rip;
-  frame->rip = align_stack_trampoline;
-
-#ifdef ENABLE_DEBUG
-  frame->top_rbp = NULL;
-  frame->top_rip = NULL;
-#endif
-
-  return frame;
+  void *addr = top() - sizeof(TransferFrame);
+  sp_ = new(addr) TransferFrame(parcel_, f, mxcsr, fpucw);
 }

@@ -18,7 +18,7 @@
 #include "libhpx/Scheduler.h"
 #include "libhpx/c_scheduler.h"
 #include "Condition.h"
-#include "thread.h"
+#include "Thread.h"
 #include "lco/LCO.h"
 #include "libhpx/action.h"
 #include "libhpx/config.h"
@@ -45,7 +45,7 @@ using libhpx::scheduler::LCO;
 scheduler_t *
 scheduler_new(const config_t *cfg)
 {
-  thread_set_stack_size(cfg->stacksize);
+  Thread::SetStackSize(cfg->stacksize);
 
   const int workers = cfg->threads;
   Scheduler *sched = NULL;
@@ -82,8 +82,10 @@ scheduler_delete(void *obj)
 {
   Scheduler *sched = static_cast<Scheduler*>(obj);
   for (int i = 0, e = sched->n_workers; i < e; ++i) {
-    sched->workers[i]->shutdown();
-    delete sched->workers[i];
+    if (sched->workers[i]) {
+      sched->workers[i]->shutdown();
+      delete sched->workers[i];
+    }
   }
 
   free(sched);
@@ -401,7 +403,7 @@ scheduler_wait(void *lco, void *cond)
   hpx_parcel_t *p = w->getCurrentParcel();
 
   // we had better be holding a lock here
-  dbg_assert(p->ustack->lco_depth > 0);
+  dbg_assert(p->thread->inLCO());
 
   if (hpx_status_t status = condition->push(p)) {
     return status;

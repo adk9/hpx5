@@ -20,7 +20,7 @@
 /// ----------------------------------------------------------------------------
 
 #include "Condition.h"
-#include "thread.h"
+#include "Thread.h"
 #include "libhpx/debug.h"
 #include "libhpx/parcel.h"
 #include "libhpx/c_scheduler.h"

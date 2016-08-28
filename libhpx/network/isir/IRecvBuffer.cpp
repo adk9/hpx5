@@ -95,7 +95,7 @@ IRecvBuffer::start(unsigned i)
   auto tag = record.tag;
   auto size = tag_to_payload_size(tag);
   record.p = parcel_alloc(size);
-  record.p->ustack = nullptr;
+  record.p->thread = nullptr;
   record.p->next = nullptr;
   record.p->state = PARCEL_SERIALIZED;
 

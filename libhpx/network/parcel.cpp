@@ -176,8 +176,8 @@ void parcel_init(hpx_addr_t target, hpx_action_t action, hpx_addr_t c_target,
                  hpx_action_t c_action, hpx_pid_t pid, const void *data,
                  size_t len, hpx_parcel_t *p)
 {
-  p->ustack   = NULL;
-  p->next     = NULL;
+  p->thread   = nullptr;
+  p->next     = nullptr;
   p->src      = here->rank;
   p->size     = len;
   p->offset   = 0;
@@ -245,8 +245,8 @@ hpx_parcel_t *parcel_clone(const hpx_parcel_t *p) {
   size_t n = parcel_size(p);
   auto clone = static_cast<hpx_parcel_t *>(as_memalign(AS_REGISTERED, HPX_CACHELINE_SIZE, n));
   memcpy(clone, p, n);
-  clone->ustack = NULL;
-  clone->next = NULL;
+  clone->thread = nullptr;
+  clone->next = nullptr;
   parcel_set_state(clone, PARCEL_SERIALIZED);
   return clone;
 }
@@ -293,15 +293,13 @@ void parcel_delete(hpx_parcel_t *p) {
   as_free(AS_REGISTERED, p);
 }
 
-struct ustack* parcel_swap_stack(hpx_parcel_t *p, struct ustack *next) {
-  assert((uintptr_t)next % sizeof(void*) == 0);
+Thread* parcel_set_thread(hpx_parcel_t *p, Thread *next) {
   // This can detect races in the scheduler when two threads try and process the
   // same parcel.
 #ifdef ENABLE_DEBUG
-    return sync_swap(&p->ustack, next, SYNC_ACQ_REL);
+    return sync_swap(&p->thread, next, SYNC_ACQ_REL);
 #else
-    struct ustack *old = p->ustack;
-    p->ustack = next;
-    return old;
+    std::swap(p->thread, next);
+    return next;
 #endif
 }
