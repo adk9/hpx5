@@ -31,13 +31,6 @@
 #include <unistd.h>
 #include <mutex>
 
-static char *
-_get_hostname(char *hostname, int size)
-{
-  gethostname(hostname, size);
-  return hostname;
-}
-
 static void
 __print(FILE *file, unsigned line, const char *filename, const char *func,
         const char *fmt, va_list *list)
@@ -175,7 +168,10 @@ dbg_wait(void)
 {
   int i = 0;
   char hostname[256];
-  _get_hostname(hostname, 255);
+  if (gethostname(hostname, 256)) {
+    fprintf(stderr, "Failed to get host name on PID %d", getpid());
+    abort();
+  }
   printf("PID %d on %s ready for attach\n", getpid(), hostname);
   fflush(stdout);
   while (0 == i)
