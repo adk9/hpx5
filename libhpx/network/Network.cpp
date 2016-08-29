@@ -27,7 +27,6 @@
 #endif
 #include "libhpx/debug.h"
 #include "libhpx/instrumentation.h"
-#include "libhpx/c_network.h"
 
 static const int LEVEL = HPX_LOG_CONFIG | HPX_LOG_NET | HPX_LOG_DEFAULT;
 
@@ -150,78 +149,4 @@ Network::Create(config_t *cfg, boot_t *boot, gas_t *gas)
   }
 
   return new InstrumentationWrapper(network);
-}
-
-int
-network_coll_init(void *obj, void **collective)
-{
-  return static_cast<Network*>(obj)->init(collective);
-}
-
-int
-network_coll_sync(void *obj, void *in, size_t in_size, void* out,
-                  void *collective)
-{
-  return static_cast<Network*>(obj)->sync(in, in_size, out, collective);
-}
-
-int
-network_memget(void *obj, void *to, hpx_addr_t from, size_t size,
-               hpx_addr_t lsync, hpx_addr_t rsync)
-{
-  static_cast<Network*>(obj)->memget(to, from, size, lsync, rsync);
-  return HPX_SUCCESS;
-}
-
-int
-network_memget_rsync(void *obj, void *to, hpx_addr_t from, size_t size,
-                     hpx_addr_t lsync)
-{
-  static_cast<Network*>(obj)->memget(to, from, size, lsync);
-  return HPX_SUCCESS;
-}
-
-int
-network_memget_lsync(void *obj, void *to, hpx_addr_t from, size_t size)
-{
-  static_cast<Network*>(obj)->memget(to, from, size);
-  return HPX_SUCCESS;
-}
-
-int
-network_memput(void *obj, hpx_addr_t to, const void *from, size_t size,
-               hpx_addr_t lsync, hpx_addr_t rsync)
-{
-  static_cast<Network*>(obj)->memput(to, from, size, lsync, rsync);
-  return HPX_SUCCESS;
-}
-
-int
-network_memput_lsync(void *obj, hpx_addr_t to, const void *from, size_t size,
-                     hpx_addr_t rsync)
-{
-  static_cast<Network*>(obj)->memput(to, from, size, rsync);
-  return HPX_SUCCESS;
-}
-
-int
-network_memput_rsync(void *obj, hpx_addr_t to, const void *from, size_t size)
-{
-  static_cast<Network*>(obj)->memput(to, from, size);
-  return HPX_SUCCESS;
-}
-
-int
-network_memcpy(void *obj, hpx_addr_t to, hpx_addr_t from, size_t size,
-               hpx_addr_t sync)
-{
-  static_cast<Network*>(obj)->memcpy(to, from, size, sync);
-  return HPX_SUCCESS;
-}
-
-int
-network_memcpy_sync(void *obj, hpx_addr_t to, hpx_addr_t from, size_t size)
-{
-  static_cast<Network*>(obj)->memcpy(to, from, size);
-  return HPX_SUCCESS;
 }

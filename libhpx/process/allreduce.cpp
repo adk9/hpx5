@@ -20,7 +20,7 @@
 #include "libhpx/debug.h"
 #include "libhpx/parcel.h"
 #include "libhpx/gas.h"
-#include "libhpx/c_network.h"
+#include "libhpx/Network.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -33,9 +33,9 @@ void allreduce_init(allreduce_t *r, size_t bytes, hpx_addr_t parent,
   r->reduce = reduce_new(bytes, id, op);
   r->id = -1;
   // allocate memory for data structure plus for rank data
-  // optimistic allocation for ranks - for all lcoalities
+  // optimistic allocation for ranks - for all localities
   int ctx_bytes = sizeof(coll_t) + sizeof(int32_t) * HPX_LOCALITIES;
-  coll_t *ctx = malloc(ctx_bytes);
+  coll_t *ctx = static_cast<coll_t*>(malloc(ctx_bytes));
   ctx->group_bytes = sizeof(int32_t) * HPX_LOCALITIES;
   memset(ctx, 0, sizeof(coll_t) + ctx->group_bytes);
   ctx->comm_bytes = 0;
@@ -63,9 +63,9 @@ int32_t allreduce_add(allreduce_t *r, hpx_action_t op, hpx_addr_t addr) {
 
   // if i am the root then add leaf node into to active locations
   if (!r->parent) {
-    coll_t *ctx = r->ctx;
+    coll_t *ctx = static_cast<coll_t*>(r->ctx);
     int i = ctx->group_sz++;
-    int32_t *ranks = (int32_t *)ctx->data;
+    int32_t *ranks = reinterpret_cast<int32_t *>(ctx->data);
     if (here->ranks > 1) {
       ranks[i] = gas_owner_of(here->gas, addr);
     } else {
@@ -125,7 +125,7 @@ void allreduce_reduce(allreduce_t *r, const void *val) {
     reduce_reset(r->reduce, in);
 
     // perform synchronized collective comm
-    network_coll_sync(here->net, in, r->bytes, output, r->ctx);
+    here->net->sync(in, r->bytes, output, r->ctx);
 
     // call all local continuations to communicate the result
     continuation_trigger(r->continuation, output);
@@ -159,7 +159,7 @@ void allreduce_bcast(allreduce_t *r, const void *value) {
 void allreduce_bcast_comm(allreduce_t *r, hpx_addr_t base, const void *coll) {
   log_coll("broadcasting comm ranks from root %p\n", r);
 
-  const coll_t *ctx = r->ctx;
+  const coll_t *ctx = static_cast<const coll_t*>(r->ctx);
   size_t bytes = sizeof(coll_t) + ctx->group_bytes;
 
   // boradcast my comm group to all leaves
@@ -167,12 +167,12 @@ void allreduce_bcast_comm(allreduce_t *r, hpx_addr_t base, const void *coll) {
   if (coll == NULL) {
     int n = here->ranks;
     hpx_addr_t target = HPX_NULL;
-    hpx_addr_t and = hpx_lco_and_new(n);
+    hpx_addr_t lco = hpx_lco_and_new(n);
     for (int i = 0; i < n; ++i) {
-      if (here->rank != i) {
+      if (here->rank != unsigned(i)) {
         target = hpx_addr_add(base, i * sizeof(allreduce_t),
                               sizeof(allreduce_t));
-        hpx_call(target, allreduce_bcast_comm_async, and, ctx, bytes);
+        hpx_call(target, allreduce_bcast_comm_async, lco, ctx, bytes);
       }
     }
 
@@ -181,19 +181,19 @@ void allreduce_bcast_comm(allreduce_t *r, hpx_addr_t base, const void *coll) {
     // order sends to remote rank first and local rank then; here
     // provided network is flushed ,this will facilitate blocking call
     // for a collective group creation in bcast_comm
-    hpx_call(target, allreduce_bcast_comm_async, and, ctx, bytes);
+    hpx_call(target, allreduce_bcast_comm_async, lco, ctx, bytes);
 
-    hpx_lco_wait(and);
-    hpx_lco_delete_sync(and);
+    hpx_lco_wait(lco);
+    hpx_lco_delete_sync(lco);
 
     return;
   }
 
   // set the collective context in current leaf node
   // this is executed only in leaves
-  const coll_t *c = coll;
+  const coll_t *c = static_cast<const coll_t*>(coll);
   bytes = sizeof(*c) + c->group_bytes;
-  dbg_assert(ctx->group_bytes >= bytes);
+  dbg_assert(ctx->group_bytes >= 0 && size_t(ctx->group_bytes) >= bytes);
   memcpy(r->ctx, c, bytes);
 
   int32_t *ranks = (int32_t *)ctx->data;
@@ -202,5 +202,5 @@ void allreduce_bcast_comm(allreduce_t *r, hpx_addr_t base, const void *coll) {
     ranks[i] = copy_ranks[i];
   }
   // perform collective initialization for all leaf nodes here
-  dbg_check(network_coll_init(here->net, &r->ctx));
+  dbg_check(here->net->init(&r->ctx));
 }

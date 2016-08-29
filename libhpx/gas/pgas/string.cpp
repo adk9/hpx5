@@ -19,27 +19,25 @@
 #include <hpx/hpx.h>
 #include <libhpx/gpa.h>
 #include <libhpx/locality.h>
-#include <libhpx/c_network.h>
+#include <libhpx/Network.h>
 #include "pgas.h"
 
 int pgas_memcpy(void *gas, hpx_addr_t to, hpx_addr_t from, size_t n,
                 hpx_addr_t sync) {
   if (!n) {
-    return HPX_SUCCESS;
   }
-
-  if (gpa_to_rank(to) != here->rank) {
-    return network_memcpy(here->net, to, from, n, sync);
+  else if (gpa_to_rank(to) != here->rank) {
+    here->net->memcpy(to, from, n, sync);
   }
-
-  if (gpa_to_rank(from) != here->rank) {
-    return network_memcpy(here->net, to, from, n, sync);
+  else if (gpa_to_rank(from) != here->rank) {
+    here->net->memcpy(to, from, n, sync);
   }
-
-  void *lto = pgas_gpa_to_lva(to);
-  void *lfrom = pgas_gpa_to_lva(from);
-  memcpy(lto, lfrom, n);
-  hpx_lco_error(sync, HPX_SUCCESS, HPX_NULL);
+  else {
+    void *lto = pgas_gpa_to_lva(to);
+    void *lfrom = pgas_gpa_to_lva(from);
+    memcpy(lto, lfrom, n);
+    hpx_lco_error(sync, HPX_SUCCESS, HPX_NULL);
+  }
   return HPX_SUCCESS;
 }
 
@@ -62,49 +60,46 @@ int pgas_memput(void *gas, hpx_addr_t to, const void *from, size_t n,
   if (!n) {
     hpx_lco_error(lsync, HPX_SUCCESS, HPX_NULL);
     hpx_lco_error(rsync, HPX_SUCCESS, HPX_NULL);
-    return HPX_SUCCESS;
   }
-
-  if (gpa_to_rank(to) == here->rank) {
+  else if (gpa_to_rank(to) == here->rank) {
     void *lto = pgas_gpa_to_lva(to);
     memcpy(lto, from, n);
     hpx_lco_error(lsync, HPX_SUCCESS, HPX_NULL);
     hpx_lco_error(rsync, HPX_SUCCESS, HPX_NULL);
-    return HPX_SUCCESS;
   }
-
-  return network_memput(here->net, to, from, n, lsync, rsync);
+  else {
+    here->net->memput(to, from, n, lsync, rsync);
+  }
+  return HPX_SUCCESS;
 }
 
 int pgas_memput_lsync(void *gas, hpx_addr_t to, const void *from, size_t n,
                       hpx_addr_t rsync) {
   if (!n) {
     hpx_lco_error(rsync, HPX_SUCCESS, HPX_NULL);
-    return HPX_SUCCESS;
   }
-
-  if (gpa_to_rank(to) == here->rank) {
+  else if (gpa_to_rank(to) == here->rank) {
     void *lto = pgas_gpa_to_lva(to);
     memcpy(lto, from, n);
     hpx_lco_set(rsync, 0, NULL, HPX_NULL, HPX_NULL);
-    return HPX_SUCCESS;
   }
-
-  return network_memput_lsync(here->net, to, from, n, rsync);
+  else {
+    here->net->memput(to, from, n, rsync);
+  }
+  return HPX_SUCCESS;
 }
 
 int pgas_memput_rsync(void *gas, hpx_addr_t to, const void *from, size_t n) {
   if (!n) {
-    return HPX_SUCCESS;
   }
-
-  if (gpa_to_rank(to) == here->rank) {
+  else if (gpa_to_rank(to) == here->rank) {
     void *lto = pgas_gpa_to_lva(to);
     memcpy(lto, from, n);
-    return HPX_SUCCESS;
   }
-
-  return network_memput_rsync(here->net, to, from, n);
+  else {
+    here->net->memput(to, from, n);
+  }
+  return HPX_SUCCESS;
 }
 
 int pgas_memget(void *gas, void *to, hpx_addr_t from, size_t n,
@@ -112,47 +107,45 @@ int pgas_memget(void *gas, void *to, hpx_addr_t from, size_t n,
   if (!n) {
     hpx_lco_error(lsync, HPX_SUCCESS, HPX_NULL);
     hpx_lco_error(rsync, HPX_SUCCESS, HPX_NULL);
-    return HPX_SUCCESS;
   }
-
-  if (gpa_to_rank(from) == here->rank) {
+  else if (gpa_to_rank(from) == here->rank) {
     void *lfrom = pgas_gpa_to_lva(from);
     memcpy(to, lfrom, n);
     hpx_lco_error(lsync, HPX_SUCCESS, HPX_NULL);
     hpx_lco_error(rsync, HPX_SUCCESS, HPX_NULL);
-    return HPX_SUCCESS;
   }
-
-  return network_memget(here->net, to, from, n, lsync, rsync);
+  else {
+    here->net->memget(to, from, n, lsync, rsync);
+  }
+  return HPX_SUCCESS;
 }
 
 int pgas_memget_rsync(void *gas, void *to, hpx_addr_t from, size_t n,
                       hpx_addr_t lsync) {
   if (!n) {
     hpx_lco_error(lsync, HPX_SUCCESS, HPX_NULL);
-    return HPX_SUCCESS;
   }
-
-  if (gpa_to_rank(from) == here->rank) {
+  else if (gpa_to_rank(from) == here->rank) {
     const void *lfrom = pgas_gpa_to_lva(from);
     memcpy(to, lfrom, n);
     hpx_lco_set(lsync, 0, NULL, HPX_NULL, HPX_NULL);
-    return HPX_SUCCESS;
   }
-
-  return network_memget_rsync(here->net, to, from, n, lsync);
+  else {
+    here->net->memget(to, from, n, lsync);
+  }
+  return HPX_SUCCESS;
 }
 
 int pgas_memget_lsync(void *gas, void *to, hpx_addr_t from, size_t n) {
   if (!n) {
-    return HPX_SUCCESS;
   }
-
-  if (gpa_to_rank(from) == here->rank) {
+  else if (gpa_to_rank(from) == here->rank) {
     const void *lfrom = pgas_gpa_to_lva(from);
     memcpy(to, lfrom, n);
     return HPX_SUCCESS;
   }
-
-  return network_memget_lsync(here->net, to, from, n);
+  else {
+    here->net->memget(to, from, n);
+  }
+  return HPX_SUCCESS;
 }

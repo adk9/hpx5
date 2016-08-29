@@ -15,7 +15,6 @@ noinst_HEADERS = action.h \
                  locality.h \
                  memory.h \
                  MemoryOps.h \
-                 c_network.h \
                  Network.h \
                  padding.h \
                  parcel.h \
