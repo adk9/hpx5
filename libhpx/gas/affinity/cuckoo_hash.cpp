@@ -25,8 +25,11 @@
 #include <libhpx/Scheduler.h>
 #include "cuckoo_hash.h"
 
+namespace {
+using libhpx::Scheduler;
 using libhpx::gas::Affinity;
 using libhpx::gas::CuckooHash;
+}
 
 CuckooHash::CuckooHash() : map_()
 {

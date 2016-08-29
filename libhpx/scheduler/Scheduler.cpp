@@ -23,6 +23,7 @@
 #include <cstring>
 
 namespace {
+using libhpx::Scheduler;
 using libhpx::Worker;
 LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, SetOutput,
               Scheduler::SetOutputHandler, HPX_POINTER, HPX_SIZE_T);
@@ -31,20 +32,20 @@ LIBHPX_ACTION(HPX_DEFAULT, 0, TerminateSPMD, Scheduler::TerminateSPMDHandler);
 }
 
 Scheduler::Scheduler(const config_t* cfg)
-    : lock(PTHREAD_MUTEX_INITIALIZER),
-      stopped(PTHREAD_COND_INITIALIZER),
+    : lock_(PTHREAD_MUTEX_INITIALIZER),
+      stopped_(PTHREAD_COND_INITIALIZER),
       state_(STOP),
       nextTlsId_(0),
       code_(HPX_SUCCESS),
-      n_active(cfg->threads),
+      nActive_(cfg->threads),
       spmdCount_(0),
       nWorkers_(cfg->threads),
-      n_target(cfg->threads),
+      nTarget_(cfg->threads),
       epoch_(0),
       spmd_(0),
       nsWait_(100000000),
       output_(nullptr),
-      workers(nWorkers_)
+      workers_(nWorkers_)
 {
   Thread::SetStackSize(cfg->stacksize);
 
@@ -56,10 +57,10 @@ Scheduler::Scheduler(const config_t* cfg)
 
 Scheduler::~Scheduler()
 {
-  for (int i = 0, e = nWorkers_; i < e; ++i) {
-    if (workers[i]) {
-      workers[i]->shutdown();
-      delete workers[i];
+  for (auto&& w : workers_) {
+    if (w) {
+      w->shutdown();
+      delete w;
     }
   }
   as_leave();
@@ -73,7 +74,7 @@ Scheduler::start(int spmd, hpx_action_t act, void *out, int n, va_list *args)
   // Create the worker threads for the first epoch.
   if (epoch_ == 0) {
     for (int i = 0, e = nWorkers_; i < e; ++i) {
-      workers[i] = new Worker(i);
+      workers_[i] = new Worker(i);
     }
   }
 
@@ -84,30 +85,30 @@ Scheduler::start(int spmd, hpx_action_t act, void *out, int n, va_list *args)
   if (spmd_ || here->rank == 0) {
     hpx_parcel_t *p = action_new_parcel_va(act, HPX_HERE, 0, 0, n, args);
     parcel_prepare(p);
-    workers[0]->pushMail(p);
+    workers_[0]->pushMail(p);
   }
 
   // switch the state and then start all the workers
   setCode(HPX_SUCCESS);
   setState(RUN);
-  for (auto&& w : workers) {
+  for (auto&& w : workers_) {
     w->start();
   }
 
   // wait for someone to stop the scheduler
-  pthread_mutex_lock(&lock);
+  pthread_mutex_lock(&lock_);
   while (getState() == RUN) {
     wait();
   }
-  pthread_mutex_unlock(&lock);
+  pthread_mutex_unlock(&lock_);
 
   // stop all of the worker threads
-  for (auto&& w : workers) {
+  for (auto&& w : workers_) {
     w->stop();
   }
 
   // Use sched crude barrier to wait for the worker threads to stop.
-  while (n_active.load(std::memory_order_acquire)) {
+  while (nActive_.load(std::memory_order_acquire)) {
   }
 
   // return the exit code
@@ -130,12 +131,12 @@ Scheduler::wait()
 {
 #ifdef HAVE_APEX
   int n = std::min(apex_get_thread_cap(), nWorkers_);
-  int prev = n_target;
+  int prev = nTarget_;
   log_sched("apex adjusting from %d to %d workers\n", prev, n);
-  n_target = n;
+  nTarget_ = n;
   auto op = (n < prev) ? Worker::stop : Worker::start;
   for (int i = std::max(prev, n), e = std::min(prev, n); i >= e; --i) {
-    op(&workers[i]);
+    op(&workers_[i]);
   }
 
   struct timeval tv;
@@ -144,9 +145,9 @@ Scheduler::wait()
     .tv_sec = tv.tv_sec + 0,
     .tv_nsec = nsWait_                          // todo: be adaptive here
   };
-  pthread_cond_timedwait(&stopped, &lock, &ts);
+  pthread_cond_timedwait(&stopped_, &lock_, &ts);
 #else
-  pthread_cond_wait(&stopped, &lock);
+  pthread_cond_wait(&stopped_, &lock_);
 #endif
 }
 
@@ -155,20 +156,20 @@ Scheduler::setOutput(size_t bytes, const void* value)
 {
   if (!bytes) return;
   if (!output_) return;
-  pthread_mutex_lock(&lock);
+  pthread_mutex_lock(&lock_);
   memcpy(output_, value, bytes);
-  pthread_mutex_unlock(&lock);
+  pthread_mutex_unlock(&lock_);
 }
 
 void
 Scheduler::stop(uint64_t code)
 {
-  pthread_mutex_lock(&lock);
+  pthread_mutex_lock(&lock_);
   dbg_assert(code < UINT64_MAX);
   setCode(int(code));
   setState(Scheduler::STOP);
-  pthread_cond_broadcast(&stopped);
-  pthread_mutex_unlock(&lock);
+  pthread_cond_broadcast(&stopped_);
+  pthread_mutex_unlock(&lock_);
 }
 
 void

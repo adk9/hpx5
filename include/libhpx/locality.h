@@ -31,11 +31,12 @@
 #include <hpx/hpx.h>
 
 #ifdef __cplusplus
-struct Scheduler;
 namespace libhpx {
 class Network;
+class Scheduler;
 }
 using libhpx::Network;
+using libhpx::Scheduler;
 extern "C" {
 #else
 #define Network void

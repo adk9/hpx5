@@ -11,14 +11,15 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
-#ifndef LIBHPX_C_SCHEDULER_H
-#define LIBHPX_C_SCHEDULER_H
+#ifndef LIBHPX_SCHEDULER_H
+#define LIBHPX_SCHEDULER_H
 
 #include "libhpx/Worker.h"
 #include "libhpx/util/Aligned.h"
 #include <atomic>
 #include <vector>
 
+namespace libhpx {
 /// The scheduler class.
 ///
 /// The scheduler class represents the shared-memory state of the entire
@@ -32,7 +33,7 @@
 /// by updating the worker's scheduler pointer and the scheduler's worker
 /// table, though all of the functionality that is required to make this work is
 /// not implemented.
-struct Scheduler : public libhpx::util::Aligned<HPX_CACHELINE_SIZE> {
+class Scheduler : public libhpx::util::Aligned<HPX_CACHELINE_SIZE> {
  public:
   enum State {
     SHUTDOWN,
@@ -103,11 +104,11 @@ struct Scheduler : public libhpx::util::Aligned<HPX_CACHELINE_SIZE> {
   }
 
   void addActive() {
-    n_active += 1;
+    nActive_ += 1;
   }
 
   void subActive() {
-    n_active -= 1;
+    nActive_ -= 1;
   }
 
   int getCode() const {
@@ -131,12 +132,12 @@ struct Scheduler : public libhpx::util::Aligned<HPX_CACHELINE_SIZE> {
   }
 
   std::vector<libhpx::Worker*>& getWorkers() {
-    return workers;
+    return workers_;
   }
 
   libhpx::Worker* getWorker(int i) {
-    assert(0 <= i && i < nWorkers_ && workers[i]);
-    return workers[i];
+    assert(0 <= i && i < nWorkers_ && workers_[i]);
+    return workers_[i];
   }
 
   static int SetOutputHandler(const void* value, size_t bytes);
@@ -163,21 +164,20 @@ struct Scheduler : public libhpx::util::Aligned<HPX_CACHELINE_SIZE> {
   /// Exit a spmd epoch.
   void exitSPMD(size_t size, const void* out);
 
- public:
-  pthread_mutex_t     lock;                  //!< lock for running condition
-  pthread_cond_t   stopped;                  //!< the running condition
-  std::atomic<State>       state_;            //!< the run state
-  std::atomic<int> nextTlsId_;                  //!< lightweight thread ids
-  std::atomic<int>        code_;                  //!< the exit code
-  std::atomic<int>    n_active;                  //!< active number of workers
-  std::atomic<unsigned>  spmdCount_;                  //!< barrier count for spmd
-  const int            nWorkers_;                  //!< total number of workers
-  int             n_target;                  //!< target number of workers
-  int                epoch_;                  //!< current scheduler epoch
-  int                 spmd_;                  //!< 1 if the current epoch is spmd
-  long             nsWait_;                  //!< nanoseconds to wait in start()
-  void             *output_;                  //!< the output slot
-  std::vector<libhpx::Worker*>  workers;     //!< array of worker data
+  pthread_mutex_t                 lock_;     //!< lock for running condition
+  pthread_cond_t               stopped_;     //!< the running condition
+  std::atomic<State>             state_;     //!< the run state
+  std::atomic<int>           nextTlsId_;     //!< lightweight thread ids
+  std::atomic<int>                code_;     //!< the exit code
+  std::atomic<int>             nActive_;     //!< active number of workers
+  std::atomic<unsigned>      spmdCount_;     //!< barrier count for spmd
+  const int                   nWorkers_;     //!< total number of workers
+  int                          nTarget_;     //!< target number of workers
+  int                            epoch_;     //!< current scheduler epoch
+  int                             spmd_;     //!< 1 if the current epoch is spmd
+  long                          nsWait_;     //!< nanoseconds to wait in start()
+  void                         *output_;     //!< the output slot
+  std::vector<libhpx::Worker*> workers_;     //!< array of worker data
 };
-
-#endif // LIBHPX_C_SCHEDULER_H
+} // namespace libhpx
+#endif // LIBHPX_SCHEDULER_H

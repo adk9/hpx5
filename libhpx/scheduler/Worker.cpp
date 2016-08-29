@@ -34,8 +34,8 @@
 #endif
 
 namespace {
-using libhpx::Worker;
 using libhpx::self;
+using libhpx::Worker;
 using libhpx::scheduler::Condition;
 using libhpx::scheduler::LCO;
 using libhpx::scheduler::Thread;
@@ -464,7 +464,7 @@ Worker::stealRandomNode()
     cpu = rand(n);
     id = here->topology->numa_to_cpus[numaNode_][cpu];
   }
-  return stealFrom(here->sched->workers[id]);
+  return stealFrom(here->sched->getWorker(id));
 }
 
 hpx_parcel_t*
@@ -542,7 +542,7 @@ Worker::stealHierarchical()
 
   int        idx = rand(here->topology->cpus_per_node);
   int        cpu = here->topology->numa_to_cpus[nn][idx];
-  Worker* victim = here->sched->workers[cpu];
+  Worker* victim = here->sched->getWorker(cpu);
   Worker*    src = this;
   hpx_parcel_t* p = action_new_parcel(StealHalf, // action
                                       HPX_HERE,  // target
