@@ -19,8 +19,7 @@
 namespace libhpx {
 namespace network {
 
-class SMPNetwork final : public Network, public CollectiveOps, public LCOOps,
-                         public MemoryOps, public ParcelOps, public StringOps
+class SMPNetwork final : public Network
 {
  public:
   SMPNetwork(boot_t *boot);
@@ -29,12 +28,6 @@ class SMPNetwork final : public Network, public CollectiveOps, public LCOOps,
   void progress(int n);
   hpx_parcel_t* probe(int);
   void flush();
-
-  CollectiveOps& collectiveOpsProvider();
-  LCOOps& lcoOpsProvider();
-  MemoryOps& memoryOpsProvider();
-  ParcelOps& parcelOpsProvider();
-  StringOps& stringOpsProvider();
 
   void deallocate(const hpx_parcel_t* p);
   int send(hpx_parcel_t* p, hpx_parcel_t* ssync);
@@ -58,7 +51,6 @@ class SMPNetwork final : public Network, public CollectiveOps, public LCOOps,
 
   void memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync);
   void memcpy(hpx_addr_t to, hpx_addr_t from, size_t size);
-
 };
 
 } // namespace network

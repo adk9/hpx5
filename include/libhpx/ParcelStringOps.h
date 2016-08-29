@@ -18,7 +18,7 @@
 
 namespace libhpx {
 namespace network {
-class ParcelStringOps : public StringOps {
+class ParcelStringOps : public virtual StringOps {
  public:
   void memget(void *dest, hpx_addr_t src, size_t n, hpx_addr_t lsync, hpx_addr_t rsync);
   void memget(void *dest, hpx_addr_t src, size_t n, hpx_addr_t lsync);

@@ -25,104 +25,120 @@ class NetworkWrapper : public Network
  public:
   virtual ~NetworkWrapper();
 
-  int
-  type() const
+  int type() const
   {
     return impl_->type();
   }
-  void
-  progress(int n)
-  {
+
+  void progress(int n) {
     impl_->progress(n);
   }
 
-  hpx_parcel_t*
-  probe(int n)
-  {
+  hpx_parcel_t* probe(int n) {
     return impl_->probe(n);
   }
 
-  void
-  flush()
-  {
+  void flush() {
     impl_->flush();
   }
 
-  CollectiveOps&
-  collectiveOpsProvider()
-  {
-    return impl_->collectiveOpsProvider();
+  void deallocate(const hpx_parcel_t* p) {
+    impl_->deallocate(p);
   }
 
-  LCOOps&
-  lcoOpsProvider()
-  {
-    return impl_->lcoOpsProvider();
+  int send(hpx_parcel_t* p, hpx_parcel_t* ssync) {
+    return impl_->send(p, ssync);
   }
 
-  MemoryOps&
-  memoryOpsProvider()
-  {
-    return impl_->memoryOpsProvider();
+  void pin(const void *base, size_t bytes, void *key) {
+    impl_->pin(base, bytes, key);
   }
 
-  ParcelOps&
-  parcelOpsProvider()
-  {
-    return impl_->parcelOpsProvider();
+  void unpin(const void *base, size_t bytes) {
+    impl_->unpin(base, bytes);
   }
 
-  StringOps&
-  stringOpsProvider()
-  {
-    return impl_->stringOpsProvider();
+  int init(void **collective) {
+    return impl_->init(collective);
+  }
+
+  int sync(void *in, size_t in_size, void* out, void *collective) {
+    return impl_->sync(in, in_size, out, collective);
+  }
+
+  int wait(hpx_addr_t lco, int reset) {
+    return impl_->wait(lco, reset);
+  }
+
+  int get(hpx_addr_t lco, size_t n, void *to, int reset) {
+    return impl_->get(lco, n, to, reset);
+  }
+
+  void memget(void *to, hpx_addr_t from, size_t size, hpx_addr_t lsync,
+              hpx_addr_t rsync) {
+    impl_->memget(to, from, size, lsync, rsync);
+  }
+
+  void memget(void *to, hpx_addr_t from, size_t size, hpx_addr_t lsync){
+    impl_->memget(to, from, size, lsync);
+  }
+
+  void memget(void *to, hpx_addr_t from, size_t size) {
+    impl_->memget(to, from, size);
+  }
+
+  void memput(hpx_addr_t to, const void *from, size_t size, hpx_addr_t lsync,
+              hpx_addr_t rsync) {
+    impl_->memput(to, from, size, lsync, rsync);
+  }
+
+  void memput(hpx_addr_t to, const void *from, size_t size, hpx_addr_t rsync) {
+    impl_->memput(to, from, size, rsync);
+  }
+
+  void memput(hpx_addr_t to, const void *from, size_t size) {
+    impl_->memput(to, from, size);
+  }
+
+  void memcpy(hpx_addr_t to, hpx_addr_t from, size_t size, hpx_addr_t sync) {
+    impl_->memcpy(to, from, size, sync);
+  }
+
+  void memcpy(hpx_addr_t to, hpx_addr_t from, size_t size) {
+    impl_->memcpy(to, from, size);
   }
 
  protected:
   NetworkWrapper(Network* impl);
 
- private:
   Network* impl_;
 };
 
-class InstrumentationWrapper final : public NetworkWrapper, public ParcelOps {
+class InstrumentationWrapper final : public NetworkWrapper {
  public:
   InstrumentationWrapper(Network* impl);
 
   void progress(int n);
   hpx_parcel_t* probe(int);
-  void deallocate(const hpx_parcel_t* p);
   int send(hpx_parcel_t* p, hpx_parcel_t* ssync);
-  ParcelOps& parcelOpsProvider();
-
- private:
-  ParcelOps& next_;
 };
 
-class CompressionWrapper final : public NetworkWrapper, public ParcelOps {
+class CompressionWrapper final : public NetworkWrapper {
  public:
   CompressionWrapper(Network* impl);
-  void deallocate(const hpx_parcel_t* p);
   int send(hpx_parcel_t* p, hpx_parcel_t* ssync);
-  ParcelOps& parcelOpsProvider();
-
- private:
-  ParcelOps& next_;
 };
 
-class CoalescingWrapper final : public NetworkWrapper, public ParcelOps {
+class CoalescingWrapper final : public NetworkWrapper {
  public:
   CoalescingWrapper(Network* impl, const config_t *cfg, gas_t *gas);
   void progress(int n);
   void flush();
-  void deallocate(const hpx_parcel_t* p);
   int send(hpx_parcel_t* p, hpx_parcel_t* ssync);
-  ParcelOps& parcelOpsProvider();
 
  private:
   void send(unsigned n);
 
-  ParcelOps&                  next_;
   gas_t* const                 gas_;
   const unsigned              size_;
   std::atomic<unsigned>       prev_;

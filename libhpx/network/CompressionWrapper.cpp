@@ -27,7 +27,6 @@
 // 2. compression and coalescing.
 
 namespace {
-using libhpx::ParcelOps;
 using libhpx::Network;
 using libhpx::network::NetworkWrapper;
 using libhpx::network::CompressionWrapper;
@@ -56,15 +55,8 @@ LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, Decompress, DecompressHandler,
 } // namespace
 
 CompressionWrapper::CompressionWrapper(Network* impl)
-    : NetworkWrapper(impl),
-      next_(impl->parcelOpsProvider())
+    : NetworkWrapper(impl)
 {
-}
-
-void
-CompressionWrapper::deallocate(const hpx_parcel_t* p)
-{
-  next_.deallocate(p);
 }
 
 int
@@ -83,11 +75,5 @@ CompressionWrapper::send(hpx_parcel_t *p, hpx_parcel_t *ssync)
     }
     parcel_delete(q);
   }
-  return next_.send(p, ssync);
-}
-
-ParcelOps&
-CompressionWrapper::parcelOpsProvider()
-{
-  return *this;
+  return impl_->send(p, ssync);
 }

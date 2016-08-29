@@ -146,7 +146,7 @@ void parcel_launch(hpx_parcel_t *p) {
     self->spawn(p);
   }
   else {
-    int e = here->net->parcelOpsProvider().send(p, NULL);
+    int e = here->net->send(p, NULL);
     dbg_check(e, "failed to perform a network send\n");
   }
 }
@@ -286,8 +286,7 @@ void parcel_delete(hpx_parcel_t *p) {
 
   if (parcel_block_allocated(state)) {
     dbg_assert(parcel_serialized(state));
-    libhpx::Network* network = static_cast<libhpx::Network*>(here->net);
-    network->parcelOpsProvider().deallocate(p);
+    here->net->deallocate(p);
     return;
   }
 

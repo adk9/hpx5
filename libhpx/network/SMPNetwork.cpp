@@ -33,37 +33,6 @@ SMPNetwork::SMPNetwork(boot_t *boot)
   }
 }
 
-libhpx::CollectiveOps&
-SMPNetwork::collectiveOpsProvider()
-{
-  return *this;
-}
-
-libhpx::LCOOps&
-SMPNetwork::lcoOpsProvider()
-{
-  return *this;
-}
-
-libhpx::MemoryOps&
-SMPNetwork::memoryOpsProvider()
-{
-  return *this;
-}
-
-libhpx::ParcelOps&
-SMPNetwork::parcelOpsProvider()
-{
-  return *this;
-}
-
-libhpx::StringOps&
-SMPNetwork::stringOpsProvider()
-{
-  return *this;
-}
-
-
 void
 SMPNetwork::memget(void *to, hpx_addr_t from, size_t size, hpx_addr_t lsync,
                    hpx_addr_t rsync)

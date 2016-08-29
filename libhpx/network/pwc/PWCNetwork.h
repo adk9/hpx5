@@ -19,13 +19,13 @@
 #include "Peer.h"
 #include "PhotonTransport.h"
 #include "libhpx/parcel.h"
+#include "libhpx/ParcelStringOps.h"
 #include <mutex>
 
 namespace libhpx {
 namespace network {
 namespace pwc {
-class PWCNetwork final : public Network, public CollectiveOps, public LCOOps,
-                         public MemoryOps, public ParcelOps
+class PWCNetwork : public Network
 {
  public:
   /// Allocate a PWCNetwork instance.
@@ -47,12 +47,6 @@ class PWCNetwork final : public Network, public CollectiveOps, public LCOOps,
   hpx_parcel_t* probe(int);
   void flush();
 
-  CollectiveOps& collectiveOpsProvider();
-  LCOOps& lcoOpsProvider();
-  MemoryOps& memoryOpsProvider();
-  ParcelOps& parcelOpsProvider();
-  StringOps& stringOpsProvider();
-
   void deallocate(const hpx_parcel_t* p);
   int send(hpx_parcel_t* p, hpx_parcel_t* ssync);
 
@@ -65,21 +59,21 @@ class PWCNetwork final : public Network, public CollectiveOps, public LCOOps,
   int init(void **collective);
   int sync(void *in, size_t in_size, void* out, void *collective);
 
-  void put(hpx_addr_t to, const void *lva, size_t n, const Command& lcmd,
-           const Command& rcmd);
-
-  void get(void *lva, hpx_addr_t from, size_t n, const Command& lcmd,
-           const Command& rcmd);
-
   /// Reload an eager buffer.
   void reload(unsigned src, size_t n);
 
   /// Progress the send buffer for a particular rank.
   void progressSends(unsigned rank);
 
+  void put(hpx_addr_t to, const void *lva, size_t n, const Command& lcmd,
+           const Command& rcmd);
+
+  void get(void *lva, hpx_addr_t from, size_t n, const Command& lcmd,
+           const Command& rcmd);
+
   static PWCNetwork& Instance();
 
- private:
+ protected:
   /// Perform a rendezvous parcel send operation.
   ///
   /// For normal size parcels, we use the set of one-to-one pre-allocated eager
@@ -98,12 +92,30 @@ class PWCNetwork final : public Network, public CollectiveOps, public LCOOps,
   const unsigned     rank_;
   const unsigned    ranks_;
   const size_t  eagerSize_;
-  StringOps*       string_;
   gas_t* const        gas_;
   boot_t* const      boot_;
   std::mutex progressLock_;
   std::mutex    probeLock_;
   std::unique_ptr<Peer[]> peers_;
+};
+
+class PGASNetwork final : public PWCNetwork {
+ public:
+  PGASNetwork(const config_t *cfg, boot_t *boot, gas_t *gas);
+
+  void memget(void *dest, hpx_addr_t src, size_t n, hpx_addr_t lsync, hpx_addr_t rsync);
+  void memget(void *dest, hpx_addr_t src, size_t n, hpx_addr_t lsync);
+  void memget(void *dest, hpx_addr_t src, size_t n);
+  void memput(hpx_addr_t dest, const void *src, size_t n, hpx_addr_t lsync, hpx_addr_t rsync);
+  void memput(hpx_addr_t dest, const void *src, size_t n, hpx_addr_t rsync);
+  void memput(hpx_addr_t dest, const void *src, size_t n);
+  void memcpy(hpx_addr_t dest, hpx_addr_t src, size_t n, hpx_addr_t sync);
+  void memcpy(hpx_addr_t dest, hpx_addr_t src, size_t n);
+};
+
+class AGASNetwork : public PWCNetwork, public ParcelStringOps {
+ public:
+  AGASNetwork(const config_t *cfg, boot_t *boot, gas_t *gas);
 };
 
 } // namespace pwc

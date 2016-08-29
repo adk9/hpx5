@@ -25,9 +25,7 @@
 namespace libhpx {
 namespace network {
 namespace isir {
-class FunneledNetwork : public Network, public CollectiveOps, public LCOOps,
-                        public MemoryOps, public ParcelOps,
-                        public ParcelStringOps
+class FunneledNetwork : public Network, public ParcelStringOps
 {
  public:
   FunneledNetwork(const config_t *cfg, boot_t *boot, gas_t *gas);
@@ -37,12 +35,6 @@ class FunneledNetwork : public Network, public CollectiveOps, public LCOOps,
   void progress(int);
   hpx_parcel_t* probe(int);
   void flush();
-
-  CollectiveOps& collectiveOpsProvider();
-  LCOOps& lcoOpsProvider();
-  MemoryOps& memoryOpsProvider();
-  ParcelOps& parcelOpsProvider();
-  StringOps& stringOpsProvider();
 
   void deallocate(const hpx_parcel_t* p);
   int send(hpx_parcel_t* p, hpx_parcel_t* ssync);

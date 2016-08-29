@@ -25,7 +25,8 @@
 
 namespace libhpx {
 
-class Network {
+class Network : public virtual StringOps, public CollectiveOps, public LCOOps,
+                public MemoryOps, public ParcelOps {
  public:
   virtual ~Network();
 
@@ -52,11 +53,8 @@ class Network {
   /// Probe the network for received parcels.
   virtual hpx_parcel_t* probe(int rank) = 0;
 
-  virtual CollectiveOps& collectiveOpsProvider() = 0;
-  virtual LCOOps& lcoOpsProvider() = 0;
-  virtual MemoryOps& memoryOpsProvider() = 0;
-  virtual ParcelOps& parcelOpsProvider() = 0;
-  virtual StringOps& stringOpsProvider() = 0;
+ protected:
+  Network();
 };
 
 } // namespace libhpx

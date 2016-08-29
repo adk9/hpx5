@@ -19,14 +19,12 @@
 #include "libhpx/events.h"
 
 namespace {
-using libhpx::ParcelOps;
 using libhpx::network::NetworkWrapper;
 using libhpx::network::InstrumentationWrapper;
 }
 
 InstrumentationWrapper::InstrumentationWrapper(Network* impl)
-    : NetworkWrapper(impl),
-      next_(impl->parcelOpsProvider())
+    : NetworkWrapper(impl)
 {
 }
 
@@ -34,34 +32,22 @@ void
 InstrumentationWrapper::progress(int n)
 {
   EVENT_NETWORK_PROGRESS_BEGIN();
-  NetworkWrapper::progress(n);
+  impl_->progress(n);
   EVENT_NETWORK_PROGRESS_END();
-}
-
-void
-InstrumentationWrapper::deallocate(const hpx_parcel_t* p)
-{
-  next_.deallocate(p);
 }
 
 int
 InstrumentationWrapper::send(hpx_parcel_t *p, hpx_parcel_t *ssync)
 {
   EVENT_NETWORK_SEND();
-  return next_.send(p, ssync);
+  return impl_->send(p, ssync);
 }
 
 hpx_parcel_t*
 InstrumentationWrapper::probe(int nrx)
 {
   EVENT_NETWORK_PROBE_BEGIN();
-  hpx_parcel_t *p = NetworkWrapper::probe(nrx);
+  hpx_parcel_t *p = impl_->probe(nrx);
   EVENT_NETWORK_PROBE_END();
   return p;
-}
-
-ParcelOps&
-InstrumentationWrapper::parcelOpsProvider()
-{
-  return *this;
 }

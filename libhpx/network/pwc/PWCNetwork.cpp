@@ -16,22 +16,14 @@
 #endif
 
 #include "PWCNetwork.h"
-#include "DMAStringOps.h"
 #include "libhpx/collective.h"
 #include "libhpx/gpa.h"
 #include "libhpx/libhpx.h"
-#include "libhpx/ParcelStringOps.h"
 #include <exception>
 
 namespace {
-using libhpx::CollectiveOps;
-using libhpx::LCOOps;
 using libhpx::MemoryOps;
-using libhpx::ParcelOps;
-using libhpx::StringOps;
-using libhpx::network::ParcelStringOps;
 using libhpx::network::pwc::PWCNetwork;
-using libhpx::network::pwc::DMAStringOps;
 using Op = libhpx::network::pwc::PhotonTransport::Op;
 using Key = libhpx::network::pwc::PhotonTransport::Key;
 constexpr int ANY_SOURCE = libhpx::network::pwc::PhotonTransport::ANY_SOURCE;
@@ -46,12 +38,10 @@ PWCNetwork& PWCNetwork::Instance()
 }
 
 PWCNetwork::PWCNetwork(const config_t *cfg, boot_t *boot, gas_t *gas)
-    : rank_(boot_rank(boot)),
+    : Network(),
+      rank_(boot_rank(boot)),
       ranks_(boot_n_ranks(boot)),
       eagerSize_(cfg->pwc_parcelbuffersize),
-      string_((gas->type == HPX_GAS_AGAS) ?
-              static_cast<StringOps*>(new ParcelStringOps()) :
-              static_cast<StringOps*>(new DMAStringOps(*this, rank_))),
       gas_(gas),
       boot_(boot),
       progressLock_(),
@@ -121,7 +111,6 @@ PWCNetwork::~PWCNetwork()
 
   // Unpin my heap.
   gas_->unpinHeap(gas_, static_cast<MemoryOps*>(this));
-  delete string_;
   Instance_ = nullptr;
 }
 
@@ -166,36 +155,6 @@ PWCNetwork::probe(int n)
     }
   }
   return stack;
-}
-
-CollectiveOps&
-PWCNetwork::collectiveOpsProvider()
-{
-  return *this;
-}
-
-LCOOps&
-PWCNetwork::lcoOpsProvider()
-{
-  return *this;
-}
-
-MemoryOps&
-PWCNetwork::memoryOpsProvider()
-{
-  return *this;
-}
-
-ParcelOps&
-PWCNetwork::parcelOpsProvider()
-{
-  return *this;
-}
-
-StringOps&
-PWCNetwork::stringOpsProvider()
-{
-  return *string_;
 }
 
 void

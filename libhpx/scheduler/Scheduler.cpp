@@ -194,7 +194,7 @@ Scheduler::terminateSPMD()
 
     parcel_prepare(p);
     parcel_prepare(q);
-    dbg_check( here->net->parcelOpsProvider().send(p, q) );
+    dbg_check( here->net->send(p, q) );
   }
   dbg_check( hpx_lco_wait(sync) );
   hpx_lco_delete_sync(sync);
@@ -233,7 +233,7 @@ Scheduler::exitDiffuse(size_t size, const void *out)
 
     parcel_prepare(p);
     parcel_prepare(q);
-    dbg_check( here->net->parcelOpsProvider().send(p, q) );
+    dbg_check( here->net->send(p, q) );
   }
   dbg_check( hpx_lco_wait(sync) );
   hpx_lco_delete_sync(sync);

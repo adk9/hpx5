@@ -36,6 +36,15 @@ using namespace libhpx;
 using namespace libhpx::network;
 }
 
+Network::Network()
+    : StringOps(),
+      CollectiveOps(),
+      LCOOps(),
+      MemoryOps(),
+      ParcelOps()
+{
+}
+
 Network::~Network()
 {
 }
@@ -89,7 +98,12 @@ Network::Create(config_t *cfg, boot_t *boot, gas_t *gas)
   switch (type) {
    case HPX_NETWORK_PWC:
 #ifdef HAVE_PHOTON
-    network = new libhpx::network::pwc::PWCNetwork(cfg, boot, gas);
+    if (gas->type == HPX_GAS_AGAS) {
+      network = new libhpx::network::pwc::AGASNetwork(cfg, boot, gas);
+    }
+    else {
+      network = new libhpx::network::pwc::PGASNetwork(cfg, boot, gas);
+    }
 #else
     log_level(LEVEL, "PWC network unavailable (no network configured)\n");
 #endif
@@ -141,24 +155,21 @@ Network::Create(config_t *cfg, boot_t *boot, gas_t *gas)
 int
 network_coll_init(void *obj, void **collective)
 {
-  CollectiveOps& coll = static_cast<Network*>(obj)->collectiveOpsProvider();
-  return coll.init(collective);
+  return static_cast<Network*>(obj)->init(collective);
 }
 
 int
 network_coll_sync(void *obj, void *in, size_t in_size, void* out,
                   void *collective)
 {
-  CollectiveOps& coll = static_cast<Network*>(obj)->collectiveOpsProvider();
-  return coll.sync(in, in_size, out, collective);
+  return static_cast<Network*>(obj)->sync(in, in_size, out, collective);
 }
 
 int
 network_memget(void *obj, void *to, hpx_addr_t from, size_t size,
                hpx_addr_t lsync, hpx_addr_t rsync)
 {
-  StringOps& string = static_cast<Network*>(obj)->stringOpsProvider();
-  string.memget(to, from, size, lsync, rsync);
+  static_cast<Network*>(obj)->memget(to, from, size, lsync, rsync);
   return HPX_SUCCESS;
 }
 
@@ -166,16 +177,14 @@ int
 network_memget_rsync(void *obj, void *to, hpx_addr_t from, size_t size,
                      hpx_addr_t lsync)
 {
-  StringOps& string = static_cast<Network*>(obj)->stringOpsProvider();
-  string.memget(to, from, size, lsync);
+  static_cast<Network*>(obj)->memget(to, from, size, lsync);
   return HPX_SUCCESS;
 }
 
 int
 network_memget_lsync(void *obj, void *to, hpx_addr_t from, size_t size)
 {
-  StringOps& string = static_cast<Network*>(obj)->stringOpsProvider();
-  string.memget(to, from, size);
+  static_cast<Network*>(obj)->memget(to, from, size);
   return HPX_SUCCESS;
 }
 
@@ -183,8 +192,7 @@ int
 network_memput(void *obj, hpx_addr_t to, const void *from, size_t size,
                hpx_addr_t lsync, hpx_addr_t rsync)
 {
-  StringOps& string = static_cast<Network*>(obj)->stringOpsProvider();
-  string.memput(to, from, size, lsync, rsync);
+  static_cast<Network*>(obj)->memput(to, from, size, lsync, rsync);
   return HPX_SUCCESS;
 }
 
@@ -192,16 +200,14 @@ int
 network_memput_lsync(void *obj, hpx_addr_t to, const void *from, size_t size,
                      hpx_addr_t rsync)
 {
-  StringOps& string = static_cast<Network*>(obj)->stringOpsProvider();
-  string.memput(to, from, size, rsync);
+  static_cast<Network*>(obj)->memput(to, from, size, rsync);
   return HPX_SUCCESS;
 }
 
 int
 network_memput_rsync(void *obj, hpx_addr_t to, const void *from, size_t size)
 {
-  StringOps& string = static_cast<Network*>(obj)->stringOpsProvider();
-  string.memput(to, from, size);
+  static_cast<Network*>(obj)->memput(to, from, size);
   return HPX_SUCCESS;
 }
 
@@ -209,15 +215,13 @@ int
 network_memcpy(void *obj, hpx_addr_t to, hpx_addr_t from, size_t size,
                hpx_addr_t sync)
 {
-  StringOps& string = static_cast<Network*>(obj)->stringOpsProvider();
-  string.memcpy(to, from, size, sync);
+  static_cast<Network*>(obj)->memcpy(to, from, size, sync);
   return HPX_SUCCESS;
 }
 
 int
 network_memcpy_sync(void *obj, hpx_addr_t to, hpx_addr_t from, size_t size)
 {
-  StringOps& string = static_cast<Network*>(obj)->stringOpsProvider();
-  string.memcpy(to, from, size);
+  static_cast<Network*>(obj)->memcpy(to, from, size);
   return HPX_SUCCESS;
 }

@@ -12,8 +12,9 @@ libpwc_la_SOURCES  = Peer.cpp \
                      lco_wait.cpp \
                      Commands.cpp \
                      rendezvous_send.cpp \
-                     DMAStringOps.cpp \
                      PWCNetwork.cpp \
+                     AGASNetwork.cpp \
+                     PGASNetwork.cpp \
                      PhotonTransport.cpp
 
 if HAVE_JEMALLOC

@@ -16,30 +16,28 @@
 #endif
 
 #include "PWCNetwork.h"
-#include "DMAStringOps.h"
 #include "Commands.h"
 #include "libhpx/action.h"
 #include "libhpx/gpa.h"
 #include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
-#include "libhpx/c_network.h"
+#include "libhpx/Network.h"
 #include "libhpx/Worker.h"
 
 namespace {
 using libhpx::network::pwc::Command;
-using libhpx::network::pwc::DMAStringOps;
+using libhpx::network::pwc::PGASNetwork;
 using libhpx::network::pwc::PWCNetwork;
 }
 
-DMAStringOps::DMAStringOps(PWCNetwork& pwc, unsigned rank)
-    : pwc_(pwc),
-      rank_(rank)
+PGASNetwork::PGASNetwork(const config_t *cfg, boot_t *boot, gas_t *gas)
+    : PWCNetwork(cfg, boot, gas)
 {
 }
 
 void
-DMAStringOps::memget(void *to, hpx_addr_t from, size_t size, hpx_addr_t lsync,
-                     hpx_addr_t rsync)
+PGASNetwork::memget(void *to, hpx_addr_t from, size_t size, hpx_addr_t lsync,
+                    hpx_addr_t rsync)
 {
   auto lcmd = Command::Nop();
   auto rcmd = Command::Nop();
@@ -68,7 +66,7 @@ DMAStringOps::memget(void *to, hpx_addr_t from, size_t size, hpx_addr_t lsync,
     }
   }
 
-  pwc_.get(to, from, size, lcmd, rcmd);
+  get(to, from, size, lcmd, rcmd);
 }
 
 /// The remote-synchronous memget operation.
@@ -112,7 +110,7 @@ _pwc_memget_rsync_continuation(hpx_parcel_t *p, void *env)
 }
 
 void
-DMAStringOps::memget(void *to, hpx_addr_t from, size_t n, hpx_addr_t lsync)
+PGASNetwork::memget(void *to, hpx_addr_t from, size_t n, hpx_addr_t lsync)
 {
   _pwc_memget_rsync_env_t env = {
     .to     = to,
@@ -146,7 +144,7 @@ _pwc_memget_lsync_continuation(hpx_parcel_t *p, void *env)
 }
 
 void
-DMAStringOps::memget(void *to, hpx_addr_t from, size_t size)
+PGASNetwork::memget(void *to, hpx_addr_t from, size_t size)
 {
   _pwc_memget_lsync_env_t env = {
     .to = to,
@@ -169,8 +167,8 @@ DMAStringOps::memget(void *to, hpx_addr_t from, size_t size)
 /// small. This would trade off the extra hop for a bit of extra bandwidth.
 /// @{
 void
-DMAStringOps::memput(hpx_addr_t to, const void *from, size_t size,
-                     hpx_addr_t lsync, hpx_addr_t rsync)
+PGASNetwork::memput(hpx_addr_t to, const void *from, size_t size,
+                    hpx_addr_t lsync, hpx_addr_t rsync)
 {
   auto lcmd = Command::Nop();
   auto rcmd = Command::Nop();
@@ -199,7 +197,7 @@ DMAStringOps::memput(hpx_addr_t to, const void *from, size_t size,
     }
   }
 
-  pwc_.put(to, from, size, lcmd, rcmd);
+  put(to, from, size, lcmd, rcmd);
 }
 /// @}
 
@@ -253,8 +251,7 @@ _pwc_memput_lsync_continuation(hpx_parcel_t *p, void *env)
 }
 
 void
-DMAStringOps::memput(hpx_addr_t to, const void *from, size_t n,
-                     hpx_addr_t rsync)
+PGASNetwork::memput(hpx_addr_t to, const void *from, size_t n, hpx_addr_t rsync)
 {
   _pwc_memput_lsync_continuation_env_t env = {
     .to = to,
@@ -289,7 +286,7 @@ _pwc_memput_rsync_continuation(hpx_parcel_t *p, void *env)
 }
 
 void
-DMAStringOps::memput(hpx_addr_t to, const void *from, size_t n)
+PGASNetwork::memput(hpx_addr_t to, const void *from, size_t n)
 {
   _pwc_memput_rsync_continuation_env_t env = {
     .to = to,
@@ -304,13 +301,14 @@ DMAStringOps::memput(hpx_addr_t to, const void *from, size_t n)
 static int
 _pwc_memcpy_handler(const void *from, hpx_addr_t to, size_t n, hpx_addr_t sync)
 {
-  return network_memput_lsync(here->net, to, from, n, sync);
+  here->net->memput(to, from, n, sync);
+  return HPX_SUCCESS;
 }
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _pwc_memcpy, _pwc_memcpy_handler,
                        HPX_POINTER, HPX_ADDR, HPX_SIZE_T, HPX_ADDR);
 
 void
-DMAStringOps::memcpy(hpx_addr_t to, hpx_addr_t from, size_t n, hpx_addr_t sync)
+PGASNetwork::memcpy(hpx_addr_t to, hpx_addr_t from, size_t n, hpx_addr_t sync)
 {
   action_call_lsync(_pwc_memcpy, from, 0, 0, 3, &to, &n, &sync);
 }
@@ -319,14 +317,15 @@ DMAStringOps::memcpy(hpx_addr_t to, hpx_addr_t from, size_t n, hpx_addr_t sync)
 static int
 _pwc_memcpy_rsync_handler(const void *from, hpx_addr_t to, size_t n)
 {
-  return network_memput_rsync(here->net, to, from, n);
+  here->net->memput(to, from, n);
+  return HPX_SUCCESS;
 }
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, _pwc_memcpy_rsync,
                        _pwc_memcpy_rsync_handler, HPX_POINTER, HPX_ADDR,
                        HPX_SIZE_T);
 
 void
-DMAStringOps::memcpy(hpx_addr_t to, hpx_addr_t from, size_t n)
+PGASNetwork::memcpy(hpx_addr_t to, hpx_addr_t from, size_t n)
 {
   action_call_rsync(_pwc_memcpy_rsync, from, NULL, 0, 2, &to, &n);
 }

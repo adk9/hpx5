@@ -24,7 +24,6 @@
 #include <cstring>
 
 namespace {
-using libhpx::ParcelOps;
 using libhpx::network::NetworkWrapper;
 using libhpx::network::CoalescingWrapper;
 
@@ -56,7 +55,7 @@ class CoalescingBuffer {
     bytes_ += parcel_size(p);
   }
 
-  void finish(hpx_addr_t target, ParcelOps& parcels) {
+  void finish(hpx_addr_t target, Network* net) {
     if (!bytes_) return;
     auto fat = action_new_parcel(Demultiplex, target, 0, 0, 2, NULL, bytes_);
     char *next = static_cast<char*>(hpx_parcel_get_data(fat));
@@ -66,7 +65,7 @@ class CoalescingBuffer {
       parcel_delete(p);
       next += parcel_size(p);
     }
-    if (parcels.send(fat, ssync_)) {
+    if (net->send(fat, ssync_)) {
       throw std::exception();
     }
   }
@@ -90,12 +89,6 @@ class Coalescing {
 };
 }
 
-void
-CoalescingWrapper::deallocate(const hpx_parcel_t* p)
-{
-  next_.deallocate(p);
-}
-
 /// Send parcels from the coalesced network.
 void
 CoalescingWrapper::send(unsigned n) {
@@ -111,7 +104,7 @@ CoalescingWrapper::send(unsigned n) {
   }
 
   for (auto i = 0, e = HPX_LOCALITIES; i < e; ++i) {
-    buffers[i].finish(HPX_THERE(i), next_);
+    buffers[i].finish(HPX_THERE(i), impl_);
   }
 }
 
@@ -119,7 +112,7 @@ int
 CoalescingWrapper::send(hpx_parcel_t *p, hpx_parcel_t *ssync)
 {
   if (!action_is_coalesced(p->action)) {
-    return next_.send(p, ssync);
+    return impl_->send(p, ssync);
   }
 
   // Coalesce on demand as long as we have enough parcels available.
@@ -169,7 +162,6 @@ CoalescingWrapper::flush() {
 CoalescingWrapper::CoalescingWrapper(Network* impl, const config_t *cfg,
                                      gas_t *gas)
     : NetworkWrapper(impl),
-      next_(impl->parcelOpsProvider()),
       gas_(gas),
       size_(cfg->coalescing_buffersize),
       prev_(0),
@@ -178,11 +170,4 @@ CoalescingWrapper::CoalescingWrapper(Network* impl, const config_t *cfg,
       sends_()
 {
   log_net("Created coalescing network\n");
-}
-
-
-ParcelOps&
-CoalescingWrapper::parcelOpsProvider()
-{
-  return *this;
 }

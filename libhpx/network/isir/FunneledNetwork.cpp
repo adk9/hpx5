@@ -21,21 +21,12 @@
 
 namespace {
 using libhpx::Network;
-using libhpx::CollectiveOps;
-using libhpx::LCOOps;
-using libhpx::MemoryOps;
-using libhpx::ParcelOps;
-using libhpx::StringOps;
 using libhpx::network::ParcelStringOps;
 using libhpx::network::isir::FunneledNetwork;
 }
 
 FunneledNetwork::FunneledNetwork(const config_t *cfg, boot_t *boot, gas_t *gas)
     : Network(),
-      CollectiveOps(),
-      LCOOps(),
-      MemoryOps(),
-      ParcelOps(),
       ParcelStringOps(),
       sends_(),
       recvs_(),
@@ -179,34 +170,4 @@ FunneledNetwork::progress(int)
     }
     sendAll();
   }
-}
-
-CollectiveOps&
-FunneledNetwork::collectiveOpsProvider()
-{
-  return *this;
-}
-
-LCOOps&
-FunneledNetwork::lcoOpsProvider()
-{
-  return *this;
-}
-
-MemoryOps&
-FunneledNetwork::memoryOpsProvider()
-{
-  return *this;
-}
-
-ParcelOps&
-FunneledNetwork::parcelOpsProvider()
-{
-  return *this;
-}
-
-StringOps&
-FunneledNetwork::stringOpsProvider()
-{
-  return *this;
 }
