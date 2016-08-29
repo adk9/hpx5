@@ -18,15 +18,14 @@
 /// @file libhpx/scheduler/lco.cpp
 
 #include "LCO.h"
-#include "thread.h"                             //<! struct ustack
+#include "Thread.h"                             //<! struct ustack
 #include "libhpx/action.h"
 #include "libhpx/attach.h"
 #include "libhpx/debug.h"
 #include "libhpx/instrumentation.h"
 #include "libhpx/memory.h"
-#include "libhpx/c_network.h"
-#include "libhpx/scheduler.h"
-#include "libhpx/worker.h"
+#include "libhpx/Network.h"
+#include "libhpx/Worker.h"
 #include "libhpx/parcel.h"
 
 namespace {
@@ -212,7 +211,7 @@ LCO::WaitHandler(LCO *lco, int reset)
 int
 LCO::AttachHandler(LCO *lco, hpx_parcel_t *p, size_t size)
 {
-  hpx_parcel_t *parent = self->current;
+  hpx_parcel_t *parent = self->getCurrentParcel();
   dbg_assert(hpx_parcel_get_data(parent) == p);
   log_lco("pinning %p, nesting %p\n", (void*)parent, (void*)p);
   parcel_pin(parent);
@@ -225,15 +224,13 @@ LCO::lock(hpx_parcel_t* p)
 {
   lock_.lock();
   log_lco("%p acquired lco %p\n", p, this);
-  dbg_assert(p->ustack->lco_depth == 0);
-  p->ustack->lco_depth = 1;
+  p->thread->enterLCO(this);
 }
 
 void
 LCO::unlock(hpx_parcel_t* p)
 {
-  dbg_assert(p->ustack->lco_depth == 1);
-  p->ustack->lco_depth = 0;
+  p->thread->leaveLCO(this);
   log_lco("%p released lco %p\n", p, this);
   lock_.unlock();
 }
@@ -241,13 +238,13 @@ LCO::unlock(hpx_parcel_t* p)
 void
 LCO::lock()
 {
-  lock(self->current);
+  lock(self->getCurrentParcel());
 }
 
 void
 LCO::unlock()
 {
-  unlock(self->current);
+  unlock(self->getCurrentParcel());
 }
 
 short
@@ -281,6 +278,12 @@ short
 LCO::getUser() const
 {
   return (state_ & USER_MASK);
+}
+
+hpx_status_t
+LCO::waitFor(Condition& cond)
+{
+  return self->wait(*this, cond);
 }
 
 void
@@ -521,7 +524,7 @@ hpx_lco_get(hpx_addr_t target, size_t size, void *value)
   dbg_assert(value);
   LCO *lco = nullptr;
   if (!hpx_gas_try_pin(target, (void**)&lco)) {
-    return network_lco_get(self->network, target, size, value, 0);
+    return here->net->lcoOpsProvider().get(target, size, value, 0);
   }
 
   hpx_status_t status = lco->get(size, value, 0);
@@ -539,7 +542,7 @@ hpx_lco_get_reset(hpx_addr_t target, size_t size, void *value)
   dbg_assert(value);
   LCO *lco = nullptr;
   if (!hpx_gas_try_pin(target, (void**)&lco)) {
-    return network_lco_get(self->network, target, size, value, 1);
+    return here->net->lcoOpsProvider().get(target, size, value, 1);
   }
 
   hpx_status_t status = lco->get(size, value, 1);
@@ -562,7 +565,7 @@ hpx_lco_getref(hpx_addr_t target, size_t size, void **out)
     return hpx_lco_get(target, size, *out);
   }
 
-  int unpin;
+  int unpin = 0;
   hpx_status_t e = lco->getRef(size, out, &unpin);
   if (unpin) {
     hpx_gas_unpin(target);

@@ -22,7 +22,7 @@
 #include "libhpx/locality.h"
 #include "libhpx/c_network.h"
 #include "libhpx/rebalancer.h"
-#include "libhpx/worker.h"
+#include "libhpx/Worker.h"
 #include "hpx/hpx.h"
 #include <cinttypes>
 #include <cstdlib>
@@ -167,9 +167,8 @@ hpx_addr_t hpx_gas_calloc_user_attr(size_t n, size_t bsize, uint32_t boundary,
 static hpx_addr_t _gas_local_search(size_t n, size_t bsize, uint32_t boundary,
                                     uint32_t attr, hpx_action_t act) {
   hpx_addr_t addr = HPX_NULL;
-  unsigned *seed = &self->seed;
   for (int i = 0, e = here->ranks; i < e; ++i) {
-    int j = rand_r(seed) % e;
+    int j = libhpx::self->rand(e);
     hpx_addr_t l = HPX_THERE(j);
     dbg_check ( hpx_call_sync(l, act, &addr, sizeof(addr), &n, &bsize,
                               &boundary, &attr),

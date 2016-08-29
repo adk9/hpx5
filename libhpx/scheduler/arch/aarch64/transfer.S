@@ -16,8 +16,7 @@
 
         // @param x0 - a pointer to the stack pointer to transfer to
         // @param x1 - the continuation to call after the sp exchange
-        // @param x2 - the environment for the continutation
-        // @returns x0  -  from the continuation call
+        // @param x2 - the worker pointer
         .file "libhpx/scheduler/arch/aarch64/transfer.S"
         .text
         .type thread_transfer, STT_FUNC
@@ -40,16 +39,14 @@ LABEL(thread_transfer)
         vmrs x5, fpscr
         str x5, [sp, #104]
 #endif
-        // We want to call cont(p, sp, env).
-        // p is already in x0 and env is already in x2,
-        // but we need to move the new sp to x1.
-        mov x4, x1                              // cont          x4 = x1
-        ldr x1, [x0]                            // p->ustack     x1 = (x0)
-        ldr x1, [x1]                            // p->ustack->sp  x1 = (x1)
-        mov x5, sp                              // swap sp and x1
-        mov sp, x1                              // ... cont.
-        mov x1, x5                              // ... cont.
-        blr x4                                  // cont(p, sp, env)
+        // We want to call cont(p, f, w, sp).
+        // p is already in x0, f is already in x1, w is in x2
+        // but we need to move the new sp to x3.
+        mov x3, sp                              // prepare for the call
+        ldr x4, [x0]                            // p->ustack      x3 = (x0)
+        ldr x4, [x4]                            // p->ustack->sp  x3 = (x3)
+        mov sp, x4                              // swap the stack
+        bl worker_checkpoint
 #ifdef __VFP_FP__
         ldr r5, [sp, #104]
 #endif

@@ -44,8 +44,8 @@ DecompressHandler(const Args& args, size_t)
   auto *p = parcel_alloc(args.bytes);
   auto *buffer = reinterpret_cast<char*>(p);
   LZ4_decompress_fast(args.data, buffer, args.bytes);
-  p->ustack = NULL;
-  p->next = NULL;
+  p->thread = nullptr;
+  p->next = nullptr;
   parcel_set_state(p, PARCEL_SERIALIZED);
   parcel_launch(p);
   return HPX_SUCCESS;

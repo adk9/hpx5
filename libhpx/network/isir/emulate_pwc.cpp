@@ -20,8 +20,12 @@
 #include <libhpx/gas.h>
 #include <libhpx/locality.h>
 #include <libhpx/parcel.h>
-#include <libhpx/scheduler.h>
+#include <libhpx/Worker.h>
 #include <string.h>
+
+namespace {
+using libhpx::self;
+}
 
 /// Emulate a put-with-completion operation.
 ///
@@ -62,7 +66,7 @@ static int _gwc_request_handler(void *from, size_t n, hpx_addr_t to, void *lva)
   p->action = _gwc_reply;
 
   // *take* the current continuation
-  hpx_parcel_t *current = scheduler_current_parcel();
+  hpx_parcel_t *current = self->getCurrentParcel();
   p->c_target = current->c_target;
   p->c_action = current->c_action;
   current->c_target = HPX_NULL;

@@ -34,10 +34,11 @@
 #include <libhpx/locality.h>
 #include <libhpx/instrumentation.h>
 #include <libhpx/memory.h>
-#include <libhpx/c_network.h>
+// #include <libhpx/c_network.h>
+#include <libhpx/Network.h>
 #include <libhpx/percolation.h>
 #include <libhpx/process.h>
-#include <libhpx/scheduler.h>
+#include <libhpx/Scheduler.h>
 #include <libhpx/system.h>
 #include <libhpx/time.h>
 #include <libhpx/topology.h>
@@ -59,22 +60,18 @@ static void _cleanup(locality_t *l) {
     l->tracer = NULL;
   }
 
-  if (l->sched) {
-    scheduler_delete(l->sched);
-    l->sched = NULL;
-  }
+  delete l->sched;
+  l->sched = NULL;
 
 #ifdef HAVE_APEX
   apex_finalize();
 #endif
 
-  if (l->net) {
-    network_delete(l->net);
-    l->net = NULL;
-  }
+  delete l->net;
+  l->net = NULL;
 
   if (l->percolation) {
-    percolation_delete(l->percolation);
+    percolation_deallocate(l->percolation);
     l->percolation = NULL;
   }
 
@@ -106,11 +103,12 @@ static void _cleanup(locality_t *l) {
 
 int hpx_init(int *argc, char ***argv) {
   int status = HPX_SUCCESS;
+  int cores;
 
   // Start the internal clock
   libhpx_time_start();
 
-  here = malloc(sizeof(*here));
+  here = static_cast<locality_t*>(malloc(sizeof(*here)));
   if (!here) {
     status = log_error("failed to allocate a locality.\n");
     goto unwind0;
@@ -190,7 +188,7 @@ int hpx_init(int *argc, char ***argv) {
     goto unwind1;
   }
 
-  int cores = system_get_available_cores();
+  cores = system_get_available_cores();
   dbg_assert(cores > 0);
 
   if (!here->config->threads) {
@@ -199,7 +197,7 @@ int hpx_init(int *argc, char ***argv) {
   log_dflt("HPX running %d worker threads on %d cores\n", here->config->threads,
            cores);
 
-  here->net = network_new(here->config, here->boot, here->gas);
+  here->net = Network::Create(here->config, here->boot, here->gas);
   if (!here->net) {
     status = log_error("failed to create network.\n");
     goto unwind1;
@@ -212,7 +210,7 @@ int hpx_init(int *argc, char ***argv) {
 #endif
 
   // thread scheduler
-  here->sched = scheduler_new(here->config);
+  here->sched = new Scheduler(here->config);
   if (!here->sched) {
     status = log_error("failed to create scheduler.\n");
     goto unwind1;
@@ -239,7 +237,7 @@ int hpx_init(int *argc, char ***argv) {
 static int
 _run(int spmd, hpx_action_t act, void *out, int n, va_list *args)
 {
-  int status = scheduler_start(here->sched, spmd, act, out, n, args);
+  int status = here->sched->start(spmd, act, out, n, args);
   boot_barrier(here->boot);
   return status;
 }
@@ -273,19 +271,7 @@ int hpx_get_num_ranks(void) {
 }
 
 int hpx_get_num_threads(void) {
-  return (here && here->sched) ? here->sched->n_workers : -1;
-}
-
-int hpx_is_active(void) {
-  return (self->current != NULL);
-}
-
-/// Called by the application to terminate the scheduler and network.
-void
-hpx_exit(size_t size, const void *out)
-{
-  assert(here && self);
-  scheduler_exit(here->sched, size, out);
+  return (here && here->sched) ? here->sched->getNWorkers() : -1;
 }
 
 /// Called by the application to shutdown the scheduler and network. May be

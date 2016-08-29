@@ -18,7 +18,7 @@
 #include <cassert>
 #include <libhpx/libhpx.h>
 #include <libhpx/parcel.h>
-#include <libhpx/scheduler.h>
+#include <libhpx/c_scheduler.h>
 #include <cuckoohash_map.hh>
 #include <city_hasher.hh>
 #include "rebalancer.h"

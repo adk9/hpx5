@@ -35,7 +35,14 @@ typedef struct chase_lev_ws_deque {
   struct chase_lev_ws_deque_buffer* volatile buffer;
   const char _PADA[64 - 24];
   volatile uint64_t top;
+
+#ifdef __cplusplus
+ chase_lev_ws_deque() : bottom(1), top_bound(1), buffer(nullptr), _PADA(),
+    top(1) {
+ }
+#endif
 } chase_lev_ws_deque_t;
+
 
 #define SYNC_CHASE_LEV_WS_DEQUE_INIT {          \
     .PADA = {0},\
@@ -59,7 +66,7 @@ void sync_chase_lev_ws_deque_delete(chase_lev_ws_deque_t *d) HPX_PUBLIC;
 ///
 /// This is a good estimate of the size of the deque, as it will sync_load the
 /// bottom and the top. This will not update the top bound.
-uint64_t sync_chase_lev_ws_deque_size(chase_lev_ws_deque_t *d)
+uint64_t sync_chase_lev_ws_deque_size(const chase_lev_ws_deque_t *d)
   HPX_NON_NULL(1) HPX_PUBLIC;
 
 /// Pushes an item onto the deque.

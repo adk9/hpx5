@@ -110,7 +110,7 @@ Semaphore::wait(int reset)
 {
   std::lock_guard<LCO> _(*this);
   while (count_ == 0) {
-    if (auto status = nonZero_.wait(this)) {
+    if (auto status = waitFor(nonZero_)) {
       return status;
     }
   }

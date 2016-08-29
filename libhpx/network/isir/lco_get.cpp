@@ -19,10 +19,11 @@
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/parcel.h"
-#include "libhpx/scheduler.h"
+#include "libhpx/Worker.h"
 #include <cstring>
 
 namespace {
+using libhpx::self;
 using libhpx::network::isir::FunneledNetwork;
 }
 
@@ -38,7 +39,7 @@ _isir_lco_get_reply_handler(_isir_lco_get_reply_args_t *args, size_t n) {
   if (bytes) {
     memcpy(args->out, args->data, bytes);
   }
-  scheduler_spawn(args->p);
+  self->spawn(args->p);
   return HPX_SUCCESS;
 }
 static LIBHPX_ACTION(HPX_INTERRUPT, HPX_MARSHALLED, _isir_lco_get_reply,
@@ -105,6 +106,6 @@ FunneledNetwork::get(hpx_addr_t lco, size_t n, void *out, int reset) {
     .reset = reset
   };
 
-  scheduler_suspend(_lco_get_continuation, &env);
+  self->suspend(_lco_get_continuation, &env);
   return HPX_SUCCESS;
 }

@@ -38,17 +38,6 @@ struct transport;
 
 typedef void network_t;
 
-network_t *network_new(struct config *cfg, struct boot *boot, struct gas *gas)
-  HPX_MALLOC;
-
-/// Delete a network object.
-///
-/// This does not synchronize. The caller is required to ensure that no other
-/// threads may be operating on the network before making this call.
-///
-/// @param      obj The network to delete.
-void network_delete(void *obj);
-
 /// Perform one network progress operation.
 ///
 /// This is not synchronized at this point, and must be synchronized

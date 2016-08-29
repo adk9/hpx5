@@ -15,12 +15,13 @@
 # include "config.h"
 #endif
 
-#include <stdlib.h>
-#include <libhpx/debug.h>
-#include <libhpx/locality.h>
-#include <libhpx/padding.h>
-#include <libhpx/scheduler.h>
 #include "allreduce.h"
+#include "libhpx/debug.h"
+#include "libhpx/locality.h"
+#include "libhpx/padding.h"
+#include "libhpx/Scheduler.h"
+#include "libhpx/Worker.h"
+#include <stdlib.h>
 
 struct reduce {
   volatile int i;
@@ -39,10 +40,10 @@ reduce_t *reduce_new(size_t bytes, hpx_monoid_id_t id, hpx_monoid_op_t op) {
   reduce_t *r = NULL;
 
   // allocate enough space so that each
-  int workers = here->sched->n_workers;
+  int workers = here->sched->getNWorkers();
   size_t padded = _BYTES(HPX_CACHELINE_SIZE, bytes) + bytes;
   size_t size = sizeof(*r) + padded * workers;
-  if (posix_memalign((void*)&r, HPX_CACHELINE_SIZE, size)) {
+  if (posix_memalign((void**)&r, HPX_CACHELINE_SIZE, size)) {
     dbg_error("could not allocate aligned reduction\n");
   }
 
@@ -81,14 +82,14 @@ int reduce_remove(reduce_t *r) {
 }
 
 int reduce_join(reduce_t *r, const void *in) {
-  void *buffer = r->values + self->id * r->padded;
+  void *buffer = r->values + libhpx::self->getId() * r->padded;
   r->op(buffer, in, r->bytes);
   return (sync_addf(&r->i, -1, SYNC_ACQ_REL) == 0);
 }
 
 void reduce_reset(reduce_t *r, void *out) {
   r->id(out, r->bytes);
-  for (int i = 0, e = here->sched->n_workers; i < e; ++i) {
+  for (int i = 0, e = here->sched->getNWorkers(); i < e; ++i) {
     void *value = r->values + i * r->padded;
     r->op(out, value, r->bytes);
     r->id(value, r->bytes);

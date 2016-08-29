@@ -39,7 +39,7 @@ static void *_dummy_prepare(const void *obj, const char *key, const char *kern)
   return NULL;
 }
 
-static void _dummy_delete(void* obj) {
+static void _dummy_deallocate(void* obj) {
 }
 
 static int _dummy_execute(const void *obj, void *o, int n, void **v, size_t *s)
@@ -53,7 +53,7 @@ static void _dummy_destroy(const void *obj, void *o) {
 static percolation_t _dummy = {
   .id = _dummy_id,
   .prepare = _dummy_prepare,
-  .delete = _dummy_delete,
+  .deallocate = _dummy_deallocate,
   .execute = _dummy_execute,
   .destroy = _dummy_destroy
 };

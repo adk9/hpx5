@@ -31,14 +31,22 @@
 #include <hpx/hpx.h>
 
 #ifdef __cplusplus
+struct Scheduler;
+namespace libhpx {
+class Network;
+}
+using libhpx::Network;
 extern "C" {
+#else
+#define Network void
+#define Scheduler void
 #endif
 
 /// Forward declarations.
 /// @{
 struct boot;
 struct config;
-struct scheduler;
+struct gas;
 struct topology;
 struct tracer;
 /// @}
@@ -51,13 +59,13 @@ typedef struct locality {
   struct boot           *boot; //!< The bootstrap object. This provides rank
                                //!< and ranks, as well as some basic, IP-based
                                //!< networking functionality.
-  void                   *gas; //!< The global address space object. This
+  struct gas             *gas; //!< The global address space object. This
                                //!< provides global memory allocation and
                                //!< address space functionality.
-  void                  *net; //!< The network layer. This provides an active
+  Network                *net; //!< The network layer. This provides an active
                                //!< message interface targeting global
                                //!< addresses.
-  struct scheduler     *sched; //!< The lightweight thread scheduler. This
+  Scheduler            *sched; //!< The lightweight thread scheduler. This
                                //!< provides the infrastructure required to
                                //!< create lightweight threads, and to deal
                                //!< with inter-thread data and control
@@ -81,6 +89,8 @@ extern locality_t *here HPX_PUBLIC;
 
 #ifdef __cplusplus
 }
+#else
+# undef Scheduler
 #endif
 
 #endif // LIBHPX_LOCALITY_H

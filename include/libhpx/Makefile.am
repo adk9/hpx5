@@ -1,5 +1,6 @@
-noinst_HEADERS = \
-                 action.h \
+SUBDIRS = util
+
+noinst_HEADERS = action.h \
                  attach.h \
                  bitmap.h \
                  boot.h \
@@ -23,11 +24,13 @@ noinst_HEADERS = \
                  percolation.h \
                  process.h \
                  rebalancer.h \
-                 scheduler.h \
+                 Scheduler.h\
                  StringOps.h \
                  system.h \
                  termination.h \
                  time.h \
                  topology.h \
                  utils.h \
-                 worker.h
+                 Worker.h
+
+

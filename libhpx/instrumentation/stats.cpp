@@ -30,25 +30,29 @@
 #include <hpx/hpx.h>
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
-#include <libhpx/scheduler.h>
+#include <libhpx/Scheduler.h>
+#include "libhpx/Worker.h"
 #include "metadata.h"
 
+namespace {
+using libhpx::Worker;
+}
+
 static void _vappend(int UNUSED, int n, int id, ...) {
-  self->stats[id]++;
+  libhpx::self->stats[id]++;
 }
 
 static void _start(void) {
-  for (int k = 0; k < HPX_THREADS; ++k) {
-    worker_t *w = scheduler_get_worker(here->sched, k);
-    w->stats = calloc(TRACE_NUM_EVENTS, sizeof(uint64_t));
+  for (auto&& w : here->sched->getWorkers()) {
+    w->stats = static_cast<uint64_t*>(calloc(TRACE_NUM_EVENTS, sizeof(uint64_t)));
   }
 }
 
 static void _destroy(void) {
-  worker_t *master = scheduler_get_worker(here->sched, 0);
+  Worker *master = here->sched->getWorker(0);
   for (int k = 1; k < HPX_THREADS; ++k) {
-    worker_t *w = scheduler_get_worker(here->sched, k);
-    for (int i = 0; i < TRACE_NUM_EVENTS; ++i) {
+    Worker *w = here->sched->getWorker(k);
+    for (unsigned i = 0; i < TRACE_NUM_EVENTS; ++i) {
       int c = TRACE_EVENT_TO_CLASS[i];
       if (inst_trace_class(c)) {
         master->stats[i] += w->stats[i];
@@ -57,10 +61,10 @@ static void _destroy(void) {
     free(w->stats);
   }
 
-  for (int i = 0; i < TRACE_NUM_EVENTS; ++i) {
+  for (unsigned i = 0; i < TRACE_NUM_EVENTS; ++i) {
     int c = TRACE_EVENT_TO_CLASS[i];
     if (inst_trace_class(c)) {
-             printf("%d,%s,%"PRIu64"\n",
+             printf("%d,%s,%" PRIu64 "\n",
              here->rank,
              TRACE_EVENT_TO_STRING[i],
              master->stats[i]);
@@ -70,7 +74,7 @@ static void _destroy(void) {
 }
 
 trace_t *trace_stats_new(const config_t *cfg) {
-  trace_t *trace = malloc(sizeof(*trace));
+  trace_t *trace = static_cast<trace_t*>(malloc(sizeof(*trace)));
   dbg_assert(trace);
 
   trace->type        = HPX_TRACE_BACKEND_STATS;

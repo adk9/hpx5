@@ -25,5 +25,5 @@ endif
 
 if HAVE_REBALANCING
 noinst_HEADERS     += rebalancer.h
-libagas_la_SOURCES += rebalancer.c partitioning.c bst.cc
+libagas_la_SOURCES += rebalancer.cpp partitioning.c bst.cpp
 endif

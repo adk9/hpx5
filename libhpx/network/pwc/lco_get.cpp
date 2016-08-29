@@ -19,9 +19,10 @@
 #include "Commands.h"
 #include "libhpx/debug.h"
 #include "libhpx/memory.h"
-#include "libhpx/scheduler.h"
+#include "libhpx/Worker.h"
 
 namespace {
+using libhpx::self;
 using libhpx::network::pwc::Command;
 using libhpx::network::pwc::PhotonTransport;
 using libhpx::network::pwc::PWCNetwork;
@@ -74,7 +75,7 @@ _get_reply(_pwc_lco_get_request_args_t *args, const void *ref, Command remote)
 
   // Issue the pwc and wait for synchronous local completion so that the ref
   // buffer doesn't move during the underlying rdma, if there is any
-  scheduler_suspend(_get_reply_continuation, &op);
+  self->suspend(_get_reply_continuation, &op);
   return HPX_SUCCESS;
 }
 
@@ -241,7 +242,7 @@ PWCNetwork::get(hpx_addr_t lco, size_t n, void *out, int reset)
   }
 
   // Perform the get operation synchronously.
-  scheduler_suspend(_pwc_lco_get_continuation, &env);
+  self->suspend(_pwc_lco_get_continuation, &env);
 
   // If we registered the output buffer dynamically, then we need to de-register
   // it now.

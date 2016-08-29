@@ -37,7 +37,7 @@
 /// Derived OpenCL percolation class
 typedef struct {
   const char *(*id)(void);
-  void (*delete)(void*);
+  void (*deallocate)(void*);
   void *(*prepare)(const void*, const char *, const char *);
   int (*execute)(const void*, void *, int, void **, size_t *);
   void (*destroy)(const void*, void *);
@@ -52,7 +52,7 @@ static HPX_RETURNS_NON_NULL const char *_id(void) {
   return "OpenCL";
 }
 
-static void _delete(void *percolation) {
+static void _deallocate(void *percolation) {
   _opencl_percolation_t *cl = percolation;
   clReleaseCommandQueue(cl->queue);
   clReleaseContext(cl->context);
@@ -143,15 +143,15 @@ static void _destroy(const void *percolation, void *obj) {
 }
 
 static _opencl_percolation_t _opencl_percolation_class = {
-  .id        = _id,
-  .delete    = _delete,
-  .prepare   = _prepare,
-  .execute   = _execute,
-  .destroy   = _destroy,
-  .device    = NULL,
-  .platform  = NULL,
-  .context   = NULL,
-  .queue     = NULL
+  .id         = _id,
+  .deallocate = _deallocate,
+  .prepare    = _prepare,
+  .execute    = _execute,
+  .destroy    = _destroy,
+  .device     = NULL,
+  .platform   = NULL,
+  .context    = NULL,
+  .queue      = NULL
 };
 
 /// Create a new percolation object.

@@ -28,10 +28,15 @@
 
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
-#include <libhpx/scheduler.h>
+#include <libhpx/Scheduler.h>
+#include "libhpx/Worker.h"
 #include <hpx/hpx.h>
 #include "metadata.h"
 #include "file.h"
+
+namespace {
+using libhpx::Worker;
+}
 
 #ifndef HOST_NAME_MAX
 # define HOST_NAME_MAX 255
@@ -76,7 +81,7 @@ static const char *_log_path;
 static char *_concat_path(const char *lhs, const char *rhs) {
   // length is +1 for '/' and +1 for \00
   int bytes = strlen(lhs) + strlen(rhs) + 2;
-  char *out = malloc(bytes);
+  char *out = static_cast<char*>(malloc(bytes));
   snprintf(out, bytes, "%s/%s", lhs, rhs);
   return out;
 }
@@ -206,11 +211,11 @@ static void _dump_actions(void) {
 /// @param           lt The log table to initialize.
 /// @param     filename The name of the file to create and map.
 /// @param         size The number of bytes to allocate.
-/// @param        class The event class.
+/// @param         type The event class.
 /// @param     event_id The event type.
 /// @param    worker_id ID of the current worker
 static void logtable_init(logtable_t *log, const char* filename, size_t size,
-                   int class, int event_id, int worker_id) {
+                   int type, int event_id, int worker_id) {
   log->fd = -1;
   log->event_id = event_id;
   log->record_bytes = 0;
@@ -227,7 +232,7 @@ static void logtable_init(logtable_t *log, const char* filename, size_t size,
     return;
   }
 
-  log->buffer = malloc(size);
+  log->buffer = static_cast<char*>(malloc(size));
   if (!log->buffer) {
     log_error("problem allocating buffer for %s\n", filename);
     close(log->fd);
@@ -238,9 +243,9 @@ static void logtable_init(logtable_t *log, const char* filename, size_t size,
   log->record_bytes = sizeof(record_t) + fields * sizeof(uint64_t);
   log->next = log->buffer - log->record_bytes;
 
-  char *buffer = calloc(1, 32768);
-  log->header_size = write_trace_header(buffer, class, event_id, worker_id);
-  if (write(log->fd, buffer, log->header_size) != log->header_size) {
+  char *buffer = static_cast<char*>(calloc(1, 32768));
+  log->header_size = write_trace_header(buffer, type, event_id, worker_id);
+  if (write(log->fd, buffer, log->header_size) != (ssize_t)log->header_size) {
     log_error("failed to write header to file\n");
   }
   free(buffer);
@@ -265,14 +270,14 @@ static void logtable_fini(logtable_t *log) {
   }
 }
 
-static void _create_logtable(worker_t *w, int class, int event_id, size_t size) {
+static void _create_logtable(Worker *w, int type, int event_id, size_t size) {
   char filename[256];
   snprintf(filename, 256, "%05d.%03d.event.%03d.%s.log",
-           hpx_get_my_rank(), w->id, event_id, 
+           hpx_get_my_rank(), w->getId(), event_id,
            TRACE_EVENT_TO_STRING[event_id]);
 
   char *path = _concat_path(_log_path, filename);
-  logtable_init(&w->logs[event_id], path, size, class, event_id, w->id);
+  logtable_init(&w->logs[event_id], path, size, type, event_id, w->getId());
   free(path);
 }
 
@@ -289,12 +294,13 @@ static void _vappend(int UNUSED, int n, int id, ...) {
   va_list vargs;
   va_start(vargs, id);
 
-  dbg_assert(self->logs);
-  logtable_t *log = &self->logs[id];
+  dbg_assert(libhpx::self->logs);
+  logtable_t *log = &libhpx::self->logs[id];
   dbg_assert(log);
   uint64_t time = hpx_time_from_start_ns(hpx_time_now());
   char *next = log->next + log->record_bytes;
-  if (next - log->buffer > log->max_size) {
+  dbg_assert(next > log->buffer);
+  if ((size_t)(next - log->buffer) > log->max_size) {
     EVENT_TRACE_FILE_IO_BEGIN();
     write(log->fd, log->buffer, log->next - log->buffer);
     EVENT_TRACE_FILE_IO_END();
@@ -312,14 +318,13 @@ static void _vappend(int UNUSED, int n, int id, ...) {
 }
 
 static void _start(void) {
-  for (int k = 0; k < here->sched->n_workers; ++k) {
-    worker_t *w = scheduler_get_worker(here->sched, k);
+  for (auto&& w : here->sched->getWorkers()) {
     // Allocate memory for pointers to the logs
-    w->logs = calloc(TRACE_NUM_EVENTS, sizeof(logtable_t));
+    w->logs = static_cast<logtable_t*>(calloc(TRACE_NUM_EVENTS, sizeof(logtable_t)));
 
     // Scan through each trace event and create logs for the associated
     // events that that we are going to be tracing.
-    for (int i = 0; i < TRACE_NUM_EVENTS; ++i) {
+    for (unsigned i = 0; i < TRACE_NUM_EVENTS; ++i) {
       int c = TRACE_EVENT_TO_CLASS[i];
       if (inst_trace_class(c)) {
         _create_logtable(w, c, i, here->config->trace_buffersize);
@@ -346,8 +351,7 @@ static void _destroy(void) {
     _log_path = NULL;
   }
 
-  for (int k = 0; k < here->sched->n_workers; ++k) {
-    worker_t *w = scheduler_get_worker(here->sched, k);
+  for (auto&& w : here->sched->getWorkers()) {
     if (w->logs) {
       // deallocate the log tables
       for (int i = 0, e = TRACE_NUM_EVENTS; i < e; ++i) {
@@ -367,7 +371,7 @@ trace_t *trace_file_new(const config_t *cfg) {
     return NULL;
   }
 
-  trace_t *trace = malloc(sizeof(*trace));
+  trace_t *trace = static_cast<trace_t*>(malloc(sizeof(*trace)));
   dbg_assert(trace);
 
   trace->type        = HPX_TRACE_BACKEND_FILE;

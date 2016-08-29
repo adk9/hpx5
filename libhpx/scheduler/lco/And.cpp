@@ -120,7 +120,7 @@ And::wait(int reset)
 
   // wait for the lco if its not triggered
   if (!getTriggered()) {
-    status = barrier_.wait(this);
+    status = waitFor(barrier_);
     log_lco("%p resuming in lco %p (reset=%d)\n", hpx_thread_current_parcel(),
             (void*)this, reset);
   }

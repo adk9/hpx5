@@ -225,7 +225,7 @@ UserLCO::get(size_t size, void *out, int reset)
 
   std::lock_guard<LCO> _(*this);
   while (!getTriggered()) {
-    if (auto status = cvar_.wait(this)) {
+    if (auto status = waitFor(cvar_)) {
       return status;
     }
   }

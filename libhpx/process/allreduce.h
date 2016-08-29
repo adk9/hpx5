@@ -17,6 +17,10 @@
 #include <hpx/hpx.h>
 #include <libsync/locks.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct continuation continuation_t;
 
 continuation_t *continuation_new(size_t bytes);
@@ -74,5 +78,9 @@ extern HPX_ACTION_DECL(allreduce_join_async);
 extern HPX_ACTION_DECL(allreduce_bcast_async);
 
 extern HPX_ACTION_DECL(allreduce_bcast_comm_async);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIBHPX_PROCESS_ALLREDUCE_H

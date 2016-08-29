@@ -19,11 +19,12 @@
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/parcel.h"
-#include "libhpx/scheduler.h"
+#include "libhpx/Worker.h"
 #include <alloca.h>
 #include <cstring>
 
 namespace {
+using libhpx::self;
 using libhpx::network::isir::FunneledNetwork;
 }
 
@@ -47,10 +48,10 @@ static LIBHPX_ACTION(HPX_INTERRUPT, 0, _isir_lco_launch_parcel,
 /// @returns            HPX_SUCCESS
 static int _isir_lco_wait_handler(int reset, void *parcel) {
   if (reset) {
-    dbg_check( hpx_lco_wait_reset(self->current->target) );
+    dbg_check( hpx_lco_wait_reset(self->getCurrentParcel()->target) );
   }
   else {
-    dbg_check( hpx_lco_wait(self->current->target) );
+    dbg_check( hpx_lco_wait(self->getCurrentParcel()->target) );
   }
 
   return hpx_thread_continue(parcel);
@@ -80,6 +81,6 @@ FunneledNetwork::wait(hpx_addr_t lco, int reset) {
     .lco = lco,
     .reset = reset
   };
-  scheduler_suspend(_isir_lco_wait_continuation, &env);
+  self->suspend(_isir_lco_wait_continuation, &env);
   return HPX_SUCCESS;
 }

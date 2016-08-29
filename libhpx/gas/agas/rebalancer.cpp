@@ -25,7 +25,7 @@
 #include <libhpx/memory.h>
 #include <libhpx/parcel.h>
 #include <libhpx/rebalancer.h>
-#include <libhpx/scheduler.h>
+#include <libhpx/c_scheduler.h>
 #include <libhpx/worker.h>
 #include <uthash.h>
 #include "agas.h"
@@ -118,7 +118,7 @@ void rebalancer_finalize(void) {
 // This function takes the thread-local BST and merges it with the
 // per-node global BST.
 int _local_to_global_bst(int id, void *UNUSED) {
-  worker_t *w = scheduler_get_worker(here->sched, id);
+  worker_t *w = here->sched->getWorker(id);
   dbg_assert(w);
 
   agas_bst_t **bst = (agas_bst_t **)&w->bst;

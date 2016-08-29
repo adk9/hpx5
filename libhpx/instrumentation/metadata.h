@@ -19,6 +19,10 @@
 #include <libhpx/instrumentation.h>
 #include <libhpx/events.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // Event data
 typedef struct record {
   uint64_t ns;
@@ -27,8 +31,8 @@ typedef struct record {
 
 // Type options currently used.  A full list is the keys of numpy.sctypeDict
 typedef struct inst_type_info {
-  const char  code[3];
-  const int   width;
+  char  code[3];
+  int   width;
 } inst_type_info_t;
 
 #define METADATA_TYPE_BYTE   {.code="b", .width=1}
@@ -42,26 +46,26 @@ typedef struct inst_type_info {
 #define METADATA_TYPE_DOUBLE {.code="f8", .width=8}
 
 typedef struct inst_named_value {
-  const uint32_t value;
-  const char     type[3];   //A numpy type code
-  const char     name[8];
+  uint32_t value;
+  char     type[3];   //A numpy type code
+  char     name[8];
 } HPX_PACKED inst_named_value_t;
 
 typedef struct inst_event_col_metadata {
-  const inst_type_info_t data_type;
-  const unsigned int offset; 
-  const char name[256];
+  inst_type_info_t data_type;
+  unsigned int offset;
+  char name[256];
 } inst_event_col_metadata_t;
 
 #define METADATA_NS                           \
   { .data_type   = METADATA_TYPE_INT64,       \
     .offset      = offsetof(record_t, ns),    \
-    .name        = "nanoseconds"}
+    "nanoseconds"}
 
-#define METADATA_int(_name, off)              \
-  { .data_type   = METADATA_TYPE_INT64,       \
-    .offset      = offsetof(record_t, user)+(off*8),\
-    .name        = _name}
+#define METADATA_int(_name, off)                \
+  { .data_type = METADATA_TYPE_INT64,           \
+    .offset = offsetof(record_t, user)+(off*8), \
+    _name }
 
 
 //TODO: WHY are all values packaged as int64?  There are other data types...
@@ -78,14 +82,14 @@ typedef struct inst_event_col_metadata {
 /// In theory the number of columns need not match the number of fields in
 /// an event. In practice, right now they do.
 typedef struct inst_event_metadata {
-  const int num_cols;
-  const inst_event_col_metadata_t *col_metadata;
+  int num_cols;
+  inst_event_col_metadata_t *col_metadata;
 } inst_event_metadata_t;
 
-#define _ENTRY(...) {                                       \
+#define _ENTRY(...) {                                               \
   .num_cols = __HPX_NARGS(__VA_ARGS__)+2,                           \
   .col_metadata =                                                   \
-    (const inst_event_col_metadata_t[__HPX_NARGS(__VA_ARGS__)+2]) { \
+    (inst_event_col_metadata_t[__HPX_NARGS(__VA_ARGS__)+2]) { \
     METADATA_NS,                                                    \
     __VA_ARGS__                                                     \
   }                                                                 \
@@ -120,5 +124,9 @@ static const inst_event_metadata_t INST_EVENT_METADATA[] =
 # undef _ARGSN
 # undef _MD
 };
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

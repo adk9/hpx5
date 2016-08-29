@@ -33,8 +33,8 @@
 #include "libhpx/Network.h"
 #include <libhpx/padding.h>
 #include <libhpx/parcel.h>
-#include <libhpx/scheduler.h>
 #include <libhpx/topology.h>
+#include "libhpx/Worker.h"
 #include <libsync/sync.h>
 #include <hpx/hpx.h>
 #include <ffi.h>
@@ -42,6 +42,10 @@
 #include <cinttypes>
 #include <cstdlib>
 #include <cstring>
+
+namespace {
+using libhpx::self;
+}
 
 // this will only be used during instrumentation
 __thread uint64_t parcel_count = 1;
@@ -66,7 +70,7 @@ void parcel_prepare(hpx_parcel_t *p) {
   }
 
   if (p->pid && !p->credit) {
-    hpx_parcel_t *parent = scheduler_current_parcel();
+    hpx_parcel_t *parent = self->getCurrentParcel();
     dbg_assert(parent->pid == p->pid);
     p->credit = ++parent->credit;
   }
@@ -131,7 +135,7 @@ void parcel_launch(hpx_parcel_t *p) {
              p->c_target);
 
   EVENT_PARCEL_SEND(p->id, p->action, p->size,
-                    (self && self->current) ? self->current->target : HPX_NULL,
+                    hpx_thread_current_target(),
                     p->target);
 
   // do a local send through loopback, bypassing the network, otherwise dump the
@@ -140,10 +144,10 @@ void parcel_launch(hpx_parcel_t *p) {
   if (target == here->rank) {
     // instrument local "receives"
     EVENT_PARCEL_RECV(p->id, p->action, p->size, p->src, p->target);
-    scheduler_spawn(p);
+    self->spawn(p);
   }
   else {
-    int e = network_send(self->network, p, NULL);
+    int e = network_send(here->net, p, NULL);
     dbg_check(e, "failed to perform a network send\n");
   }
 }
@@ -166,7 +170,7 @@ void parcel_launch_error(hpx_parcel_t *p, int error) {
 void parcel_launch_through(hpx_parcel_t *p, hpx_addr_t gate) {
   dbg_assert(gate);
   parcel_prepare(p);
-  hpx_pid_t pid = self->current->pid;
+  hpx_pid_t pid = hpx_thread_current_pid();
   p = parcel_new(gate, lco_attach, 0, 0, pid, p, parcel_size(p));
   parcel_launch(p);
 }
@@ -175,8 +179,8 @@ void parcel_init(hpx_addr_t target, hpx_action_t action, hpx_addr_t c_target,
                  hpx_action_t c_action, hpx_pid_t pid, const void *data,
                  size_t len, hpx_parcel_t *p)
 {
-  p->ustack   = NULL;
-  p->next     = NULL;
+  p->thread   = nullptr;
+  p->next     = nullptr;
   p->src      = here->rank;
   p->size     = len;
   p->offset   = 0;
@@ -228,10 +232,14 @@ hpx_parcel_t *parcel_alloc(size_t payload) {
 hpx_parcel_t *parcel_new(hpx_addr_t target, hpx_action_t action,
                          hpx_addr_t c_target, hpx_action_t c_action,
                          hpx_pid_t pid, const void *data, size_t len) {
-  hpx_parcel_t *p = parcel_alloc(len);
+  hpx_parcel_t* p = parcel_alloc(len);
   parcel_init(target, action, c_target, c_action, pid, data, len, p);
-  EVENT_PARCEL_CREATE(p->id, p->action, p->size,
-                      ((self && self->current) ? self->current->id : 0));
+  if (libhpx::Worker* w = libhpx::self) {
+    EVENT_PARCEL_CREATE(p->id, p->action, p->size, w->getCurrentParcel()->id);
+  }
+  else {
+    EVENT_PARCEL_CREATE(p->id, p->action, p->size, 0);
+  }
   return p;
 }
 
@@ -240,8 +248,8 @@ hpx_parcel_t *parcel_clone(const hpx_parcel_t *p) {
   size_t n = parcel_size(p);
   auto clone = static_cast<hpx_parcel_t *>(as_memalign(AS_REGISTERED, HPX_CACHELINE_SIZE, n));
   memcpy(clone, p, n);
-  clone->ustack = NULL;
-  clone->next = NULL;
+  clone->thread = nullptr;
+  clone->next = nullptr;
   parcel_set_state(clone, PARCEL_SERIALIZED);
   return clone;
 }
@@ -288,15 +296,13 @@ void parcel_delete(hpx_parcel_t *p) {
   as_free(AS_REGISTERED, p);
 }
 
-struct ustack* parcel_swap_stack(hpx_parcel_t *p, struct ustack *next) {
-  assert((uintptr_t)next % sizeof(void*) == 0);
+Thread* parcel_set_thread(hpx_parcel_t *p, Thread *next) {
   // This can detect races in the scheduler when two threads try and process the
   // same parcel.
 #ifdef ENABLE_DEBUG
-    return sync_swap(&p->ustack, next, SYNC_ACQ_REL);
+    return sync_swap(&p->thread, next, SYNC_ACQ_REL);
 #else
-    struct ustack *old = p->ustack;
-    p->ustack = next;
-    return old;
+    std::swap(p->thread, next);
+    return next;
 #endif
 }

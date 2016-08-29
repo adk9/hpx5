@@ -15,50 +15,53 @@
 # include "config.h"
 #endif
 
-#include <stddef.h>
-#include <stdio.h>
-#include <libhpx/debug.h>
-#include "../../thread.h"
+#include "Thread.h"
 #include "../common/asm.h"
+#include "libhpx/parcel.h"
+#include <new>
+
+namespace {
+using libhpx::scheduler::Thread;
 
 /// A structure describing the initial frame on a stack.
 ///
 /// This must match the transfer.S asm file usage.
 ///
 /// This should be managed in an asm-specific manner.
-typedef struct HPX_PACKED {
-  thread_entry_t    x19; //!< used to hold f(), called by align_stack_trampoline
-  void             *x20; //!< we use this to hold the parcel that is passed to f()
-  void         *regs[8]; //!< x21-x28
-  void             *x29; //!< The frame pointer
-  void     (*x30)(void); //!< return address - set to align_stack_trampoline
-  void   *vfp_alignment;
-  void           *fpscr;
-  void      *vfpregs[8];
-  void         *top_x19;
-  void (*top_x30)(void);
-} _frame_t;
+class [[ gnu::packed ]] TransferFrame
+{
+ public:
+  TransferFrame(hpx_parcel_t* p, Thread::Entry f)
+    : x19_(f),
+      x20_(p),
+      regs_(),
+      x29_(),
+      x30_(align_stack_trampoline),
+      vfp_alignment_(),
+      fpscr_(),
+      vfpregs_(),
+      top_x19_(nullptr),
+      top_x30_(nullptr)
+  {
+  }
 
-void *transfer_frame_init(void *top, hpx_parcel_t *p, thread_entry_t f) {
-  // wants 16 byte alignment, so we adjust the top pointer if necessary
-  top = reinterpret_cast<void*>((uintptr_t)top & ~(15));
+ private:
+  Thread::Entry   x19_;        //!< used to hold f
+  void           *x20_;        //!< the parcel that is passed to f
+  void          *regs_[8];     //!< x21-x28
+  void           *x29_;        //!< The frame pointer
+  void          (*x30_)(void); //!< return address - set to align_stack_trampoline
+  void *vfp_alignment_;
+  void         *fpscr_;
+  void       *vfpregs_[8];
+  void       *top_x19_;
+  void      (*top_x30_)(void);
+};
+}
 
-  // Stack frame addresses go "down" while C struct addresses go "up, so compute
-  // the frame base from the top of the frame using the size of the frame
-  // structure. After this, we can just write values to the frame structure and
-  // they'll be in the right place for the initial return from transfer.
-  _frame_t *frame = reinterpret_cast<_frame_t*>((char*)top - sizeof(*frame));
-  assert((uintptr_t)frame % 16 == 0);
-
-  // register must be the same as the one in align_stack_trampoline
-  frame->x19      = f;
-  frame->x20      = p;
-  frame->x30      = align_stack_trampoline;
-
-#ifdef ENABLE_DEBUG
-  frame->top_x19 = NULL;
-  frame->top_x30 = NULL;
-#endif
-
-  return frame;
+void
+Thread::initTransferFrame(Entry f)
+{
+  void *addr = top() - sizeof(TransferFrame);
+  sp_ = new(addr) TransferFrame(parcel_, f);
 }

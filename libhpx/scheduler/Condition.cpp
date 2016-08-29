@@ -20,10 +20,10 @@
 /// ----------------------------------------------------------------------------
 
 #include "Condition.h"
-#include "thread.h"
+#include "Thread.h"
 #include "libhpx/debug.h"
 #include "libhpx/parcel.h"
-#include "libhpx/scheduler.h"
+#include "libhpx/Worker.h"
 #include <cstdint>
 
 namespace {
@@ -143,26 +143,20 @@ Condition::empty() const
   return (top_ == nullptr);
 }
 
-hpx_status_t
-Condition::wait(LCO* lco)
-{
-  return scheduler_wait(lco, this);
-}
-
 void
 Condition::signal()
 {
-  scheduler_signal(this);
+  parcel_launch_all(pop());
 }
 
 void
 Condition::signalAll()
 {
-  scheduler_signal_all(this);
+  parcel_launch_all(popAll());
 }
 
 void
 Condition::signalError(hpx_status_t code)
 {
-  scheduler_signal_error(this, code);
+  parcel_launch_all(setError(code));
 }

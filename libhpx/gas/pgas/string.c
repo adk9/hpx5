@@ -20,7 +20,6 @@
 #include <libhpx/gpa.h>
 #include <libhpx/locality.h>
 #include <libhpx/c_network.h>
-#include <libhpx/worker.h>
 #include "pgas.h"
 
 int pgas_memcpy(void *gas, hpx_addr_t to, hpx_addr_t from, size_t n,
@@ -30,11 +29,11 @@ int pgas_memcpy(void *gas, hpx_addr_t to, hpx_addr_t from, size_t n,
   }
 
   if (gpa_to_rank(to) != here->rank) {
-    return network_memcpy(self->network, to, from, n, sync);
+    return network_memcpy(here->net, to, from, n, sync);
   }
 
   if (gpa_to_rank(from) != here->rank) {
-    return network_memcpy(self->network, to, from, n, sync);
+    return network_memcpy(here->net, to, from, n, sync);
   }
 
   void *lto = pgas_gpa_to_lva(to);
@@ -74,7 +73,7 @@ int pgas_memput(void *gas, hpx_addr_t to, const void *from, size_t n,
     return HPX_SUCCESS;
   }
 
-  return network_memput(self->network, to, from, n, lsync, rsync);
+  return network_memput(here->net, to, from, n, lsync, rsync);
 }
 
 int pgas_memput_lsync(void *gas, hpx_addr_t to, const void *from, size_t n,
@@ -91,7 +90,7 @@ int pgas_memput_lsync(void *gas, hpx_addr_t to, const void *from, size_t n,
     return HPX_SUCCESS;
   }
 
-  return network_memput_lsync(self->network, to, from, n, rsync);
+  return network_memput_lsync(here->net, to, from, n, rsync);
 }
 
 int pgas_memput_rsync(void *gas, hpx_addr_t to, const void *from, size_t n) {
@@ -105,7 +104,7 @@ int pgas_memput_rsync(void *gas, hpx_addr_t to, const void *from, size_t n) {
     return HPX_SUCCESS;
   }
 
-  return network_memput_rsync(self->network, to, from, n);
+  return network_memput_rsync(here->net, to, from, n);
 }
 
 int pgas_memget(void *gas, void *to, hpx_addr_t from, size_t n,
@@ -124,7 +123,7 @@ int pgas_memget(void *gas, void *to, hpx_addr_t from, size_t n,
     return HPX_SUCCESS;
   }
 
-  return network_memget(self->network, to, from, n, lsync, rsync);
+  return network_memget(here->net, to, from, n, lsync, rsync);
 }
 
 int pgas_memget_rsync(void *gas, void *to, hpx_addr_t from, size_t n,
@@ -141,7 +140,7 @@ int pgas_memget_rsync(void *gas, void *to, hpx_addr_t from, size_t n,
     return HPX_SUCCESS;
   }
 
-  return network_memget_rsync(self->network, to, from, n, lsync);
+  return network_memget_rsync(here->net, to, from, n, lsync);
 }
 
 int pgas_memget_lsync(void *gas, void *to, hpx_addr_t from, size_t n) {
@@ -155,5 +154,5 @@ int pgas_memget_lsync(void *gas, void *to, hpx_addr_t from, size_t n) {
     return HPX_SUCCESS;
   }
 
-  return network_memget_lsync(self->network, to, from, n);
+  return network_memget_lsync(here->net, to, from, n);
 }

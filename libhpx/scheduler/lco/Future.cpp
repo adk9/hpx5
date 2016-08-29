@@ -90,7 +90,7 @@ class Future final : public LCO
   ///
   /// This must be called while holding the LCO lock.
   hpx_status_t waitFull() {
-    return (getTriggered()) ? full_.getError() : full_.wait(this);
+    return (getTriggered()) ? full_.getError() : waitFor(full_);
   }
 
   Condition full_;
