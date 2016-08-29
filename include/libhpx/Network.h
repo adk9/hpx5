@@ -41,7 +41,9 @@ class Network {
   /// Get the HPX configuration type of the base network implementation.
   virtual int type() const = 0;
 
-  /// Progress the network.
+  /// Perform one network progress operation.
+  ///
+  /// @param       n The id to use when progressing the network.
   virtual void progress(int n) = 0;
 
   /// Flush the network.

@@ -417,7 +417,7 @@ int
 hpx_register_memory(const void *buffer, size_t bytes)
 {
   dbg_assert(here && here->net);
-  network_register_dma(here->net, buffer, bytes, NULL);
+  here->net->memoryOpsProvider().pin(buffer, bytes, nullptr);
   return HPX_SUCCESS;
 }
 
@@ -425,6 +425,6 @@ int
 hpx_deregister_memory(const void *buffer, size_t bytes)
 {
   dbg_assert(here && here->net);
-  network_release_dma(here->net, buffer, bytes);
+  here->net->memoryOpsProvider().unpin(buffer, bytes);
   return HPX_SUCCESS;
 }

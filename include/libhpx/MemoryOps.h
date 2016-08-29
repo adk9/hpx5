@@ -20,7 +20,26 @@ namespace libhpx {
 class MemoryOps {
  public:
   virtual ~MemoryOps();
+
+  /// Register a memory region for dma access.
+  ///
+  /// Network registration is a limited resource. Currently, we handle
+  /// registration failures as unrecoverable. In the future it will make sense
+  /// to implement a registration cache or other mechanism for resource
+  /// management.
+  ///
+  /// @param         base The beginning of the region to register.
+  /// @param        bytes The number of bytes to register.
+  /// @param          key The key to use when registering dma.
   virtual void pin(const void *base, size_t bytes, void *key) = 0;
+
+  /// Release a registered memory region.
+  ///
+  /// The region denotated by @p segment, @p bytes must correspond to a region
+  /// previously registered.
+  ///
+  /// @param         base The beginning of the region to release.
+  /// @param        bytes The number of bytes to release.
   virtual void unpin(const void *base, size_t bytes) = 0;
 };
 }

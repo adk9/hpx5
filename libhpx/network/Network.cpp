@@ -138,42 +138,6 @@ Network::Create(config_t *cfg, boot_t *boot, gas_t *gas)
   return new InstrumentationWrapper(network);
 }
 
-void
-network_progress(void *obj, int id)
-{
-  static_cast<Network*>(obj)->progress(id);
-}
-
-hpx_parcel_t *
-network_probe(void *obj, int rank) {
-  return static_cast<Network*>(obj)->probe(rank);
-}
-
-void
-network_flush(void *obj)
-{
-  return static_cast<Network*>(obj)->flush();
-}
-
-int
-network_send(void *obj, hpx_parcel_t *p, hpx_parcel_t *ssync)
-{
-  ParcelOps& parcel = static_cast<Network*>(obj)->parcelOpsProvider();
-  return parcel.send(p, ssync);
-}
-
-void
-network_register_dma(void *obj, const void *base, size_t bytes, void *key)
-{
-  static_cast<Network*>(obj)->memoryOpsProvider().pin(base, bytes, key);
-}
-
-void
-network_release_dma(void *obj, const void *base, size_t bytes)
-{
-  static_cast<Network*>(obj)->memoryOpsProvider().unpin(base, bytes);
-}
-
 int
 network_coll_init(void *obj, void **collective)
 {
@@ -187,20 +151,6 @@ network_coll_sync(void *obj, void *in, size_t in_size, void* out,
 {
   CollectiveOps& coll = static_cast<Network*>(obj)->collectiveOpsProvider();
   return coll.sync(in, in_size, out, collective);
-}
-
-int
-network_lco_get(void *obj, hpx_addr_t gva, size_t n, void *out, int reset)
-{
-  LCOOps& lco = static_cast<Network*>(obj)->lcoOpsProvider();
-  return lco.get(gva, n, out, reset);
-}
-
-int
-network_lco_wait(void *obj, hpx_addr_t gva, int reset)
-{
-  LCOOps& lco = static_cast<Network*>(obj)->lcoOpsProvider();
-  return lco.wait(gva, reset);
 }
 
 int

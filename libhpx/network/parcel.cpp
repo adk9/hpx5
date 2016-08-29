@@ -29,7 +29,6 @@
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
-#include <libhpx/c_network.h>
 #include "libhpx/Network.h"
 #include <libhpx/padding.h>
 #include <libhpx/parcel.h>
@@ -147,7 +146,7 @@ void parcel_launch(hpx_parcel_t *p) {
     self->spawn(p);
   }
   else {
-    int e = network_send(here->net, p, NULL);
+    int e = here->net->parcelOpsProvider().send(p, NULL);
     dbg_check(e, "failed to perform a network send\n");
   }
 }

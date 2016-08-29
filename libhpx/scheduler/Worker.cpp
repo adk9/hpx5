@@ -25,7 +25,7 @@
 #include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
 #include "libhpx/memory.h"
-#include "libhpx/c_network.h"
+#include "libhpx/Network.h"
 #include "libhpx/Scheduler.h"
 #include "libhpx/topology.h"
 #include <cstring>
@@ -121,9 +121,9 @@ Worker::handleNetwork()
   // don't do work first scheduling in the network
   int wf = workFirst_;
   workFirst_ = -1;
-  network_progress(here->net, 0);
+  here->net->progress(0);
 
-  hpx_parcel_t *stack = network_probe(here->net, 0);
+  hpx_parcel_t *stack = here->net->probe(0);
   workFirst_ = wf;
 
   while (hpx_parcel_t *p = parcel_stack_pop(&stack)) {
