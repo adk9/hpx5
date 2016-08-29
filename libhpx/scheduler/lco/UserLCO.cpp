@@ -127,11 +127,7 @@ class UserLCO final : public LCO {
   const hpx_action_t        id_;                //<! The id handler
   const hpx_action_t        op_;                //<! The operation
   const hpx_action_t predicate_;                //<! The predicate
-  const char _pad[_BYTES(8,
-                         sizeof(LCO) + sizeof(cvar_) + sizeof(size_) +
-                         sizeof(initData_) + sizeof(initSize_) + sizeof(id_) +
-                         sizeof(op_) + sizeof(predicate_))];
-  char                userData_[];              //<! The user data and init data
+  alignas(8) char     userData_[];              //<! The user data and init data
 };
 
 /// Function object class to deal with the variable-length nature of the
@@ -184,8 +180,7 @@ UserLCO::UserLCO(size_t size, hpx_action_t id, hpx_action_t op,
       initSize_(initSize),
       id_(id),
       op_(op),
-      predicate_(predicate),
-      _pad()
+      predicate_(predicate)
 {
   dbg_assert(size_);
   dbg_assert(id_);

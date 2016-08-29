@@ -23,7 +23,6 @@
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/memory.h"
-#include "libhpx/padding.h"
 #include <mutex>
 #include <cstring>
 
@@ -103,11 +102,7 @@ struct Reduce final : public LCO {
   const hpx_action_t       op_;
   const unsigned       inputs_;
   volatile unsigned remaining_;
-  const char _pad[_BYTES(16,
-                         sizeof(LCO) + sizeof(barrier_) + sizeof(size_) +
-                         sizeof(id_) + sizeof(op_) + sizeof(inputs_) +
-                         sizeof(remaining_))];
-  char                  value_[];
+  alignas(16) char      value_[];
 };
 
 LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, New, Reduce::NewHandler, HPX_POINTER,
@@ -121,9 +116,7 @@ Reduce::Reduce(unsigned inputs, size_t size, hpx_action_t id, hpx_action_t op)
       id_(id),
       op_(op),
       inputs_(inputs),
-      remaining_(inputs),
-      _pad(),
-      value_()
+      remaining_(inputs)
 {
   dbg_assert(!size_ || op_);
   dbg_assert(!size_ || id_);

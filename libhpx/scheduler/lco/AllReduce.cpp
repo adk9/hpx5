@@ -23,7 +23,6 @@
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/memory.h"
-#include "libhpx/padding.h"
 #include "libhpx/Worker.h"
 #include <cstring>
 #include <mutex>
@@ -154,18 +153,14 @@ class AllReduce final : public LCO {
   /// @returns          HPX_SUCCESS
   hpx_status_t getInner(size_t size, void *value, int reset);
 
-  Condition       epoch_;
-  const size_t  readers_;
-  const size_t  writers_;
-  const hpx_action_t id_;
-  const hpx_action_t op_;
-  size_t          count_;
-  volatile int    phase_;
-  const char _pad[_BYTES(16,
-                         sizeof(LCO) + sizeof(epoch_) + sizeof(readers_) +
-                         sizeof(writers_) + sizeof(id_) + sizeof(op_) +
-                         sizeof(count_) + sizeof(phase_))];
-  char         value_[];
+  Condition        epoch_;
+  const size_t   readers_;
+  const size_t   writers_;
+  const hpx_action_t  id_;
+  const hpx_action_t  op_;
+  size_t           count_;
+  volatile int     phase_;
+  alignas(16) char value_[];
 };
 
 LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, New, AllReduce::NewHandler,
@@ -280,9 +275,7 @@ AllReduce::AllReduce(size_t writers, size_t readers, size_t size,
       id_(id),
       op_(op),
       count_(writers),
-      phase_(REDUCING),
-      _pad(),
-      value_()
+      phase_(REDUCING)
 {
   if (size) {
     assert(id);

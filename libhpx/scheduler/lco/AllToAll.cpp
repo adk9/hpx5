@@ -71,7 +71,6 @@
 #include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/memory.h"
-#include "libhpx/padding.h"
 #include "libhpx/Worker.h"
 #include <mutex>
 #include <cstring>
@@ -156,14 +155,11 @@ class AllToAll final : public LCO {
   /// @}
 
  private:
-  Condition        wait_;
-  const unsigned inputs_;
-  unsigned        count_;
-  volatile int    phase_;
-  const char _pad[_BYTES(16,
-                         sizeof(LCO) + sizeof(wait_) + sizeof(inputs_) +
-                         sizeof(count_) + sizeof(phase_))];
-  char            value_[];
+  Condition         wait_;
+  const unsigned  inputs_;
+  unsigned         count_;
+  volatile int     phase_;
+  alignas(16) char value_[];
 };
 
 LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED, New, AllToAll::NewHandler, HPX_POINTER,
@@ -180,7 +176,6 @@ AllToAll::AllToAll(unsigned inputs)
       inputs_(inputs),
       count_(inputs),
       phase_(GATHERING),
-      _pad(),
       value_()
 {
 }
