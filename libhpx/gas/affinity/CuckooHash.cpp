@@ -14,24 +14,19 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
-
+#include "libhpx/gas/Affinity.h"
+#include "libhpx/debug.h"
+#include "libhpx/locality.h"
+#include "libhpx/Scheduler.h"
 #include <cinttypes>
-#include <cuckoohash_map.hh>
-#include <city_hasher.hh>
-#include <hpx/hpx.h>
-#include <libhpx/debug.h>
-#include <libhpx/gas.h>
-#include <libhpx/locality.h>
-#include <libhpx/Scheduler.h>
-#include "cuckoo_hash.h"
 
 namespace {
 using libhpx::Scheduler;
 using libhpx::gas::Affinity;
-using libhpx::gas::CuckooHash;
+using libhpx::gas::affinity::CuckooHash;
 }
 
-CuckooHash::CuckooHash() : map_()
+CuckooHash::CuckooHash() : Affinity(), map_()
 {
 }
 
@@ -40,11 +35,11 @@ CuckooHash::~CuckooHash()
 }
 
 void
-CuckooHash::set(hpx_addr_t gva, int worker)
+CuckooHash::setAffinity(hpx_addr_t gva, int worker)
 {
-  DEBUG_IF(gas_owner_of(here->gas, gva) != here->rank) {
+  DEBUG_IF(here->gas->ownerOf(gva) != here->rank) {
     dbg_error("Attempt to set affinity of %" PRIu64 " at %d (owned by %d)\n",
-              gva, here->rank, gas_owner_of(here->gas, gva));
+              gva, here->rank, here->gas->ownerOf(gva));
   }
   DEBUG_IF(worker < 0 || here->sched->getNWorkers() <= worker) {
     dbg_error("Attempt to set affinity of %" PRIu64
@@ -58,17 +53,17 @@ CuckooHash::set(hpx_addr_t gva, int worker)
 }
 
 void
-CuckooHash::clear(hpx_addr_t gva)
+CuckooHash::clearAffinity(hpx_addr_t gva)
 {
-  DEBUG_IF(gas_owner_of(here->gas, gva) != here->rank) {
+  DEBUG_IF(here->gas->ownerOf(gva) != here->rank) {
     dbg_error("Attempt to clear affinity of %" PRIu64 " at %d (owned by %d)\n",
-              gva, here->rank, gas_owner_of(here->gas, gva));
+              gva, here->rank, here->gas->ownerOf(gva));
   }
   map_.erase(gva);
 }
 
 int
-CuckooHash::get(hpx_addr_t gva) const
+CuckooHash::getAffinity(hpx_addr_t gva) const
 {
   int worker = -1;
   map_.find(gva, worker);

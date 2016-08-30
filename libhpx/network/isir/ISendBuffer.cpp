@@ -131,7 +131,7 @@ ISendBuffer::start(unsigned long id)
   unsigned i = _index_of(id, size_);
   hpx_parcel_t *p = records_[i].parcel;
   void *from = isir_network_offset(p);
-  unsigned to = gas_owner_of(gas_, p->target);
+  unsigned to = gas_->ownerOf(p->target);
   unsigned n = payload_size_to_isir_bytes(p->size);
   int tag = PayloadSizeToTag(p->size);
   log_net("starting a parcel send: tag %d, %d bytes\n", tag, n);
@@ -277,7 +277,7 @@ ISendBuffer::cancelAll()
   return p;
 }
 
-ISendBuffer::ISendBuffer(const config_t *cfg, gas_t *gas, Transport &xport)
+ISendBuffer::ISendBuffer(const config_t *cfg, GAS *gas, Transport &xport)
     : gas_(gas),
       xport_(xport),
       limit_(cfg->isir_sendlimit),

@@ -37,7 +37,7 @@ PWCNetwork& PWCNetwork::Instance()
   return *Instance_;
 }
 
-PWCNetwork::PWCNetwork(const config_t *cfg, boot_t *boot, gas_t *gas)
+PWCNetwork::PWCNetwork(const config_t *cfg, boot_t *boot, GAS *gas)
     : Network(),
       rank_(boot_rank(boot)),
       ranks_(boot_n_ranks(boot)),
@@ -78,9 +78,7 @@ PWCNetwork::PWCNetwork(const config_t *cfg, boot_t *boot, gas_t *gas)
 
   local.peer.addr = peers_.get();
   local.peer.key = PhotonTransport::FindKey(peers_.get(), ranks_*sizeof(Peer));
-  local.heap.addr = static_cast<char*>(gas->pinHeap(gas_,
-                                                    static_cast<MemoryOps*>(this),
-                                                    &local.heap.key));
+  local.heap.addr = static_cast<char*>(gas_->pinHeap(this, &local.heap.key));
 
   std::unique_ptr<Exchange[]> remotes(new Exchange[ranks_]);
   boot_allgather(boot, &local, &remotes[0], sizeof(Exchange));
@@ -110,7 +108,7 @@ PWCNetwork::~PWCNetwork()
   boot_barrier(boot_);
 
   // Unpin my heap.
-  gas_->unpinHeap(gas_, static_cast<MemoryOps*>(this));
+  gas_->unpinHeap(this);
   Instance_ = nullptr;
 }
 
@@ -177,7 +175,7 @@ PWCNetwork::send(hpx_parcel_t *p, hpx_parcel_t *ssync)
     return rendezvousSend(p);
   }
   else {
-    int rank = gas_owner_of(gas_, p->target);
+    int rank = gas_->ownerOf(p->target);
     peers_[rank].send(p);
     return HPX_SUCCESS;
   }

@@ -19,7 +19,6 @@
 #include "libhpx/collective.h"
 #include "libhpx/debug.h"
 #include "libhpx/parcel.h"
-#include "libhpx/gas.h"
 #include "libhpx/Network.h"
 #include <stdlib.h>
 #include <string.h>
@@ -67,7 +66,7 @@ int32_t allreduce_add(allreduce_t *r, hpx_action_t op, hpx_addr_t addr) {
     int i = ctx->group_sz++;
     int32_t *ranks = reinterpret_cast<int32_t *>(ctx->data);
     if (here->ranks > 1) {
-      ranks[i] = gas_owner_of(here->gas, addr);
+      ranks[i] = here->gas->ownerOf(addr);
     } else {
       // smp mode
       ranks[i] = 0;

@@ -15,30 +15,18 @@
 # include "config.h"
 #endif
 
-#include "none.h"
+/// Provide a home for the None vtable.
 
-using libhpx::gas::None;
+#include "libhpx/gas/Affinity.h"
 
-None::None()
-{
+namespace {
+using libhpx::gas::Affinity;
+using libhpx::gas::affinity::None;
+}
+
+None::None() : Affinity() {
 }
 
 None::~None()
 {
-}
-
-void
-None::set(hpx_addr_t gva, int worker)
-{
-}
-
-void
-None::clear(hpx_addr_t gva)
-{
-}
-
-int
-None::get(hpx_addr_t gva) const
-{
-  return -1;
 }

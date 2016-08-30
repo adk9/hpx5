@@ -11,12 +11,13 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
-#ifndef LIBHPX_GAS_SMP_SMP_H
-#define LIBHPX_GAS_SMP_SMP_H
-
-struct gas;
-struct config;
-
-struct gas *gas_smp_new(const struct config *config);
-
+#ifdef HAVE_CONFIG_H
+# include "config.h"
 #endif
+
+#include "libhpx/gas/Allocator.h"
+
+/// Provide a place for the compiler to put the affinity vtable.
+libhpx::gas::Allocator::~Allocator()
+{
+}

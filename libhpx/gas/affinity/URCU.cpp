@@ -15,17 +15,17 @@
 # include "config.h"
 #endif
 
+#include "libhpx/gas/Affinity.h"
 #include <city_hasher.hh>
 #include <urcu-qsbr.h>
 #include <urcu/rculfhash.h>
 #include <stdexcept>
 #include <vector>
-#include "urcu_map.h"
-
-using libhpx::gas::Affinity;
-using libhpx::gas::URCUMap;
 
 namespace {
+using libhpx::gas::Affinity;
+using libhpx::gas::affinity::URCU;
+
 /// Map to the correct CityHash handler.
 /// @{
 template <size_t N = sizeof(unsigned long)>
@@ -42,15 +42,19 @@ unsigned long Hash<4>(hpx_addr_t gva) {
 }
 /// @}
 
-/// Simple RCU lock guard
-struct RCULockGuard {
-  RCULockGuard() { rcu_read_lock(); }
-  ~RCULockGuard() { rcu_read_unlock(); }
+struct RCUReadScope {
+  RCUReadScope() {
+    rcu_read_lock();
+  }
+
+  ~RCUReadScope() {
+    rcu_read_unlock();
+  }
 };
 }
 
 /// A hash table node, inherits from the RCU hash table node type.
-struct URCUMap::Node : public cds_lfht_node {
+struct URCU::Node : public cds_lfht_node {
   Node(hpx_addr_t k, int v) : key(k), value(v) {
     cds_lfht_node_init(this);
   }
@@ -68,12 +72,13 @@ struct URCUMap::Node : public cds_lfht_node {
   hpx_addr_t value;
 };
 
-URCUMap::URCUMap()
-  : ht(cds_lfht_new(1, 1, 0, CDS_LFHT_AUTO_RESIZE, NULL))
+URCU::URCU()
+    : Affinity(),
+      ht(cds_lfht_new(1, 1, 0, CDS_LFHT_AUTO_RESIZE, NULL))
 {
 }
 
-URCUMap::~URCUMap()
+URCU::~URCU()
 {
   std::vector<Node*> nodes;
   removeAll(nodes);
@@ -89,7 +94,7 @@ URCUMap::~URCUMap()
 }
 
 void
-URCUMap::set(hpx_addr_t k, int v)
+URCU::setAffinity(hpx_addr_t k, int v)
 {
   if (Node *n = insert(Hash(k), new Node(k, v))) {
     synchronize_rcu();
@@ -98,13 +103,13 @@ URCUMap::set(hpx_addr_t k, int v)
 }
 
 int
-URCUMap::get(hpx_addr_t k) const
+URCU::getAffinity(hpx_addr_t k) const
 {
   return lookup(Hash(k), k);
 }
 
 void
-URCUMap::clear(hpx_addr_t k)
+URCU::clearAffinity(hpx_addr_t k)
 {
   if (Node *n = remove(Hash(k), k)) {
     synchronize_rcu();
@@ -112,19 +117,19 @@ URCUMap::clear(hpx_addr_t k)
   }
 }
 
-URCUMap::Node*
-URCUMap::insert(hash_t hash, URCUMap::Node *node)
+URCU::Node*
+URCU::insert(hash_t hash, URCU::Node *node)
 {
-  RCULockGuard _;
+  RCUReadScope _;
   hpx_addr_t key = node->key;
   void *n = cds_lfht_add_replace(ht, hash, Node::Match, &key, node);
   return static_cast<Node*>(n);
 }
 
-URCUMap::Node*
-URCUMap::remove(hash_t hash, hpx_addr_t key)
+URCU::Node*
+URCU::remove(hash_t hash, hpx_addr_t key)
 {
-  RCULockGuard _;
+  RCUReadScope _;
   struct cds_lfht_iter it;
   cds_lfht_lookup(ht, hash, Node::Match, &key, &it);
   if (Node *n = static_cast<Node*>(cds_lfht_iter_get_node(&it))) {
@@ -136,11 +141,11 @@ URCUMap::remove(hash_t hash, hpx_addr_t key)
 }
 
 void
-URCUMap::removeAll(std::vector<URCUMap::Node*>& nodes)
+URCU::removeAll(std::vector<URCU::Node*>& nodes)
 {
+  RCUReadScope _;
   struct cds_lfht_iter it;
   struct cds_lfht_node *node;
-  RCULockGuard _;
   cds_lfht_for_each(ht, &it, node) {
     if (cds_lfht_del(ht, node) != 0) {
       throw std::runtime_error("Failed to delete node\n");
@@ -150,9 +155,9 @@ URCUMap::removeAll(std::vector<URCUMap::Node*>& nodes)
 }
 
 int
-URCUMap::lookup(hash_t hash, hpx_addr_t key) const
+URCU::lookup(hash_t hash, hpx_addr_t key) const
 {
-  RCULockGuard _;
+  RCUReadScope _;
   struct cds_lfht_iter it;
   cds_lfht_lookup(ht, hash, Node::Match, &key, &it);
   Node *n = static_cast<Node*>(cds_lfht_iter_get_node(&it));

@@ -29,7 +29,7 @@ class PWCNetwork : public Network
 {
  public:
   /// Allocate a PWCNetwork instance.
-  PWCNetwork(const config_t *cfg, boot_t *boot, gas_t *gas);
+  PWCNetwork(const config_t *cfg, boot_t *boot, GAS *gas);
 
   /// Delete a PWNetwork instace.
   ~PWCNetwork();
@@ -101,7 +101,7 @@ class PWCNetwork : public Network
 
 class PGASNetwork final : public PWCNetwork {
  public:
-  PGASNetwork(const config_t *cfg, boot_t *boot, gas_t *gas);
+  PGASNetwork(const config_t *cfg, boot_t *boot, GAS *gas);
 
   void memget(void *dest, hpx_addr_t src, size_t n, hpx_addr_t lsync, hpx_addr_t rsync);
   void memget(void *dest, hpx_addr_t src, size_t n, hpx_addr_t lsync);
@@ -115,7 +115,7 @@ class PGASNetwork final : public PWCNetwork {
 
 class AGASNetwork : public PWCNetwork, public ParcelStringOps {
  public:
-  AGASNetwork(const config_t *cfg, boot_t *boot, gas_t *gas);
+  AGASNetwork(const config_t *cfg, boot_t *boot, GAS *gas);
 };
 
 } // namespace pwc

@@ -3,17 +3,18 @@ SUBDIRS = affinity
 # LT Utility libraries
 noinst_LTLIBRARIES = libgas.la
 
-EXTRA_DIST = smp/smp.h
+EXTRA_DIST = smp/SMP.h
 
 # libgas files and flags
 libgas_la_CPPFLAGS = -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
 libgas_la_CFLAGS   = $(LIBHPX_CFLAGS)
 libgas_la_CXXFLAGS = $(LIBHPX_CXXFLAGS)
 libgas_la_SOURCES  = hpx_gas_glue.cpp \
-                     gas.c \
+                     GAS.cpp \
                      gpa.c \
-                     smp/smp.c \
-                     bcast.c
+                     smp/SMP.cpp \
+                     bcast.c \
+                     Allocator.cpp
 libgas_la_LIBADD   = affinity/libaffinity.la
 
 if HAVE_NETWORK

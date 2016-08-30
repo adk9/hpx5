@@ -1,4 +1,4 @@
-SUBDIRS = util
+SUBDIRS = util gas
 
 noinst_HEADERS = action.h \
                  attach.h \
@@ -7,7 +7,7 @@ noinst_HEADERS = action.h \
                  CollectiveOps.h \
                  debug.h \
                  events.h \
-                 gas.h \
+                 GAS.h \
                  gpa.h \
                  instrumentation.h \
                  lco.h \

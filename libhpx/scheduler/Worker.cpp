@@ -27,6 +27,7 @@
 #include "libhpx/memory.h"
 #include "libhpx/Network.h"
 #include "libhpx/Scheduler.h"
+#include "libhpx/system.h"
 #include "libhpx/topology.h"
 #include <cstring>
 #ifdef HAVE_URCU
@@ -380,7 +381,7 @@ Worker::spawn(hpx_parcel_t* p)
   dbg_assert(actions[p->action].handler != NULL);
 
   // If the target has affinity then send the parcel to that worker.
-  int affinity = gas_get_affinity(here->gas, p->target);
+  int affinity = here->gas->getAffinity(p->target);
   if (0 <= affinity && affinity != id_) {
     here->sched->getWorker(affinity)->pushMail(p);
     return;

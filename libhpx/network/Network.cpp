@@ -49,7 +49,7 @@ Network::~Network()
 }
 
 Network*
-Network::Create(config_t *cfg, boot_t *boot, gas_t *gas)
+Network::Create(config_t *cfg, boot_t *boot, GAS *gas)
 {
 #ifndef HAVE_NETWORK
   // if we didn't build a network we need to default to SMP

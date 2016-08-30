@@ -37,6 +37,7 @@ AC_DEFUN([HPX_DO_AC_CONFIG_FILES], [
    include/Makefile
    include/libhpx/Makefile
    include/libhpx/util/Makefile
+   include/libhpx/gas/Makefile
    include/libsync/queues.h
    examples/Makefile])
 
