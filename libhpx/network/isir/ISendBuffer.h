@@ -93,7 +93,7 @@ class ISendBuffer {
                      struct hpx_parcel** ssync);
   unsigned long testAll(struct hpx_parcel** ssync);
 
-  struct gas*      gas_;
+  GAS&             gas_;
   Transport&     xport_;
   unsigned       limit_;
   unsigned        twin_;

@@ -33,8 +33,8 @@ class GAS : public virtual libhpx::gas::Affinity, public StringOps,
   virtual libhpx_gas_t type() const = 0;
   virtual uint64_t maxBlockSize() const = 0;
 
-  virtual void *pinHeap(MemoryOps& memOps, void* key) = 0;
-  virtual void unpinHeap(MemoryOps&) = 0;
+  virtual void* pinHeap(MemoryOps& memOps, void* key) const = 0;
+  virtual void unpinHeap(MemoryOps&) const = 0;
 
   virtual hpx_gas_ptrdiff_t sub(hpx_addr_t lhs, hpx_addr_t rhs, size_t bsize) const = 0;
   virtual hpx_addr_t add(hpx_addr_t gva, hpx_gas_ptrdiff_t n, size_t bsize) const = 0;
@@ -48,7 +48,7 @@ class GAS : public virtual libhpx::gas::Affinity, public StringOps,
   virtual void move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) = 0;
 };
 
-static const char* const HPX_GAS_ATTR_TO_STRING[] = {
+static const char* const GAS_ATTR_TO_STRING[] = {
   "NONE",
   "READONLY",
   "LOAD-BALANCE",

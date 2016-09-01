@@ -28,7 +28,7 @@ class AGAS final : public GAS {
   libhpx_gas_t type() const;
   uint64_t maxBlockSize() const;
 
-  void *pinHeap(MemoryOps& memOps, void* key);
+  void* pinHeap(MemoryOps& memOps, void* key);
   void unpinHeap(MemoryOps&);
 
   hpx_gas_ptrdiff_t sub(hpx_addr_t lhs, hpx_addr_t rhs, size_t bsize) const;

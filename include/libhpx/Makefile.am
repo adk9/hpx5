@@ -2,7 +2,6 @@ SUBDIRS = util gas
 
 noinst_HEADERS = action.h \
                  attach.h \
-                 bitmap.h \
                  boot.h \
                  CollectiveOps.h \
                  debug.h \

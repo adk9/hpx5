@@ -97,7 +97,7 @@ Network::Create(config_t *cfg, boot_t *boot, GAS *gas)
   switch (type) {
    case HPX_NETWORK_PWC:
 #ifdef HAVE_PHOTON
-    if (gas->type == HPX_GAS_AGAS) {
+    if (gas->type() == HPX_GAS_AGAS) {
       network = new libhpx::network::pwc::AGASNetwork(cfg, boot, gas);
     }
     else {

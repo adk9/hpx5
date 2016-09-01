@@ -18,6 +18,7 @@
 #include "Commands.h"
 #include "Peer.h"
 #include "PhotonTransport.h"
+#include "libhpx/GAS.h"
 #include "libhpx/parcel.h"
 #include "libhpx/ParcelStringOps.h"
 #include <mutex>
@@ -92,7 +93,7 @@ class PWCNetwork : public Network
   const unsigned     rank_;
   const unsigned    ranks_;
   const size_t  eagerSize_;
-  gas_t* const        gas_;
+  const   GAS&        gas_;
   boot_t* const      boot_;
   std::mutex progressLock_;
   std::mutex    probeLock_;

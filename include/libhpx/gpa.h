@@ -20,6 +20,10 @@
 #include <hpx/hpx.h>
 #include <libhpx/debug.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define   GPA_RANK_BITS 16
 #define GPA_OFFSET_BITS 48
 
@@ -120,5 +124,8 @@ int64_t gpa_sub_cyclic(hpx_addr_t lhs, hpx_addr_t rhs, uint32_t bsize);
 ///                     from @p gpa.
 hpx_addr_t gpa_add_cyclic(hpx_addr_t gpa, int64_t bytes, uint32_t bsize);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIBHPX_GPA_H

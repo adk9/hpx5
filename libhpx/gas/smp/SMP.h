@@ -30,11 +30,11 @@ class SMP : public GAS {
     return UINT64_MAX;
   }
 
-  void *pinHeap(MemoryOps&, void*) {
+  void* pinHeap(MemoryOps&, void*) const {
     dbg_error("SMP execution should not call this function\n");
   }
 
-  void unpinHeap(MemoryOps&) {
+  void unpinHeap(MemoryOps&) const {
     dbg_error("SMP execution should not call this function\n");
   }
 
