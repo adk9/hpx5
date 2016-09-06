@@ -15,6 +15,7 @@
 # include "config.h"
 #endif
 
+#include <cinttypes>
 #include <fcntl.h>
 #include <inttypes.h>
 #include <pwd.h>
