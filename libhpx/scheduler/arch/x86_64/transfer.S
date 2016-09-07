@@ -68,7 +68,7 @@ LABEL(thread_transfer)
         mov (%rcx), %rcx                        // p->stack->sp
         xchg %rsp, %rcx
 	CFA_REGISTER(rcx)
-        call worker_checkpoint@PLT
+        call PLT_SYMBOL(worker_checkpoint)
 	CFA_DEF(rsp,64)
         ldmxcsr	(%rsp)
         fldcw 4(%rsp)

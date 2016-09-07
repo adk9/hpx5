@@ -40,6 +40,7 @@
 #if defined(__APPLE__)
 # define SYMBOL(S) _##S
 # define GLOBAL(S) .globl SYMBOL(S)
+# define PLT_SYMBOL(S) _##S
 # define LABEL(S) SYMBOL(S):
 # define INTERNAL(S) .private_extern SYMBOL(S)
 # define SIZE(S)
@@ -47,6 +48,7 @@
 # define SECTION(S)
 #elif defined(__linux__)
 # define SYMBOL(S) S
+# define PLT_SYMBOL(S) S##@PLT
 #if defined(__x86_64__) || defined(__ARMEL__)
 # define GLOBAL(S) .globl SYMBOL(S)
 #elif defined(__aarch64__)

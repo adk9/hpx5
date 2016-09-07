@@ -30,6 +30,13 @@
 struct logtable;
 /// @}
 
+#if defined(__APPLE__)
+# define STRINGIFY(S) #S
+# define SYMBOL(S) STRINGIFY(_##S)
+#else
+# define SYMBOL(S) #S
+#endif
+
 namespace libhpx {
 
 namespace scheduler {
@@ -320,7 +327,7 @@ class Worker : public libhpx::util::Aligned<HPX_CACHELINE_SIZE>
   /// @param          w The worker structure.
   /// @param         sp The stack pointer we transferred from.
   static void Checkpoint(hpx_parcel_t* p, Continuation& f, Worker* w, void *sp)
-    asm("worker_checkpoint");
+    asm(SYMBOL(worker_checkpoint));
 
   /// This performs the context switch.
   ///
@@ -337,7 +344,7 @@ class Worker : public libhpx::util::Aligned<HPX_CACHELINE_SIZE>
   /// @param          f A function to call as a continuation.
   /// @param          w The worker structure.
   static void ContextSwitch(hpx_parcel_t* p, Continuation& f, Worker* w)
-    asm("thread_transfer");
+    asm(SYMBOL(thread_transfer));
 
   /// The thread transfer call.
   ///
