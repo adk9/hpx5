@@ -14,9 +14,9 @@
 #ifndef LIBHPX_GAS_PGAS_H
 #define LIBHPX_GAS_PGAS_H
 
-#include "libhpx/GAS.h"
 #include "Allocator.h"
 #include "HeapSegment.h"
+#include "libhpx/GAS.h"
 #include "libhpx/boot.h"
 #include "libhpx/debug.h"
 #include "libhpx/gpa.h"

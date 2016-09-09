@@ -47,7 +47,7 @@ GlobalAllocator::GlobalAllocator(int rank)
 {
   HeapSegment* segment = HeapSegment::Instance();
   size_t offset = ceil_div(segment->getNBytes(), size_t(2));
-  size_t bytes = segment->getNBytes()- - offset;
+  size_t bytes = segment->getNBytes() - offset;
   void* base = static_cast<char*>(segment->getBase()) + offset;
   mspaces[AS_GLOBAL] = create_mspace_with_base(base, bytes, 1);
 }

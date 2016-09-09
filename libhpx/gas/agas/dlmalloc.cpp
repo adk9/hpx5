@@ -15,32 +15,35 @@
 # include "config.h"
 #endif
 
-#include <string.h>
-#include <libhpx/config.h>
-#include <libhpx/debug.h>
-#include <libhpx/libhpx.h>
-#include <libhpx/memory.h>
+#include "AGAS.h"
+#include "libhpx/config.h"
+#include "libhpx/locality.h"
+#include "libhpx/memory.h"
+#include "libhpx/util/math.h"
 #include <malloc-2.8.6.h>
-#include "agas.h"
-#include "chunk_table.h"
 
-void _agas_allocator_init(agas_t *agas, int id) {
+namespace {
+using libhpx::util::ceil_div;
+using libhpx::gas::agas::AGAS;
+}
+
+static void
+_init_allocator(int id)
+{
   dbg_assert(id < AS_COUNT);
-  const libhpx_config_t *cfg = libhpx_get_config();
-  size_t bytes = ceil_div_size_t(cfg->heapsize, 2);
-  void *base = system_mmap(NULL, NULL, bytes, agas->chunk_size);
+  size_t bytes = ceil_div(here->config->heapsize, size_t(2));
+  size_t align = as_bytes_per_chunk();
+  bool cyclic = (id == AS_CYCLIC);
+  void *base = AGAS::Instance()->chunkAllocate(nullptr, bytes, align, cyclic);
   dbg_assert(base);
-  chunk_table_insert(agas->chunk_table, base, 0);
   mspaces[id] = create_mspace_with_base(base, bytes, 1);
 }
 
 void
-agas_cyclic_allocator_init(agas_t *agas) {
-  _agas_allocator_init(agas, AS_CYCLIC);
+AGAS::initAllocators(unsigned rank)
+{
+  if (rank == 0) {
+    _init_allocator(AS_CYCLIC);
+  }
+  _init_allocator(AS_GLOBAL);
 }
-
-void
-agas_global_allocator_init(agas_t *agas) {
-  _agas_allocator_init(agas, AS_GLOBAL);
-}
-

@@ -750,5 +750,5 @@ hpx_addr_t
 hpx_lco_array_at(hpx_addr_t array, int i, size_t size)
 {
   size_t lco_bytes = hpx_lco_size(array, size);
-  return hpx_addr_add(array, i * lco_bytes, UINT32_MAX);
+  return hpx_addr_add(array, i * lco_bytes, lco_bytes);
 }

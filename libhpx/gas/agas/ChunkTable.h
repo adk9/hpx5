@@ -1,4 +1,4 @@
-// =============================================================================
+// ==================================================================-*- C++ -*-
 //  High Performance ParalleX Library (libhpx)
 //
 //  Copyright (c) 2013-2016, Trustees of Indiana University,
@@ -14,21 +14,36 @@
 #ifndef LIBHPX_GAS_AGAS_CHUNK_TABLE_H
 #define LIBHPX_GAS_AGAS_CHUNK_TABLE_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <cuckoohash_map.hh>
+#include <city_hasher.hh>
+#include <cstddef>
 
 /// The chunk table provides inverse mapping from an lva chunk to its base
 /// offset in the virtual address space.
+namespace libhpx {
+namespace gas {
+namespace agas {
 
-void *chunk_table_new(size_t size);
-void chunk_table_delete(void *table);
-uint64_t chunk_table_lookup(void *table, void *chunk);
-void chunk_table_insert(void *table, void *chunk, uint64_t base);
-void chunk_table_remove(void *table, void *chunk);
+class ChunkTable {
+  using Map = cuckoohash_map<const void*, uint64_t, CityHasher<const void*>>;
 
-#ifdef __cplusplus
-}
-#endif
+ public:
+  ChunkTable(size_t size);
+  ~ChunkTable();
+
+  /// Lookup the base offset of a global virtual address.
+  uint64_t offsetOf(const void* addr) const;
+
+  void insert(const void* chunk, uint64_t base);
+  void remove(const void* chunk);
+
+ private:
+  const uintptr_t chunkMask_;
+  Map map_;
+};
+
+} // namespace agas
+} // namespace gas
+} // namespace libhpx
 
 #endif // LIBHPX_GAS_AGAS_CHUNK_TABLE_H

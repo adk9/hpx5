@@ -25,7 +25,9 @@ namespace {
 using libhpx::network::pwc::PhotonTransport;
 }
 
-void *dl_mmap_wrapper(size_t length) {
+extern "C" void*
+dl_mmap_wrapper(size_t length)
+{
   if (void *base = system_mmap_huge_pages(NULL, NULL, length, 1)) {
     PhotonTransport::Pin(base, length, NULL);
     log_mem("mapped %zu registered bytes at %p\n", length, base);
@@ -36,14 +38,17 @@ void *dl_mmap_wrapper(size_t length) {
   return NULL;
 }
 
-void dl_munmap_wrapper(void *ptr, size_t length) {
+extern "C" void
+dl_munmap_wrapper(void *ptr, size_t length)
+{
   if (length) {
-    _PhotonTransport::Unpin(ptr, length);
+    PhotonTransport::Unpin(ptr, length);
     system_munmap_huge_pages(NULL, ptr, length);
   }
 }
 
 void
-libhpx::network::pwc::registered_allocator_init(void) {
+libhpx::network::pwc::registered_allocator_init(void)
+{
   mspaces[AS_REGISTERED] = create_mspace(0, 1);
 }
