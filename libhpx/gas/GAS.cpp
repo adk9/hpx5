@@ -18,7 +18,7 @@
 #include "libhpx/GAS.h"
 #include "smp/SMP.h"
 #include "pgas/PGAS.h"
-#include "agas/agas.h"
+#include "agas/AGAS.h"
 #include "libhpx/debug.h"
 #include "libhpx/gas/Affinity.h"
 
@@ -27,7 +27,7 @@ const int LEVEL = HPX_LOG_CONFIG | HPX_LOG_GAS;
 
 using libhpx::gas::SMP;
 using libhpx::gas::pgas::PGAS;
-using libhpx::gas::AGAS;
+using libhpx::gas::agas::AGAS;
 using libhpx::gas::affinity::None;
 using libhpx::gas::affinity::CuckooHash;
 using libhpx::gas::affinity::URCU;

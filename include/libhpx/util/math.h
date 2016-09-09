@@ -22,21 +22,21 @@ struct CeilLog2;
 
 template <typename T>
 struct CeilLog2<T, 4> {
-  static T op(T val) {
+  static constexpr T op(T val) {
     return ((sizeof(val) * 8 - 1) - clz(val)) + (!!(val & (val - 1)));
   }
 };
 
 template <typename T>
 struct CeilLog2<T, 8> {
-  static T op(T val) {
+  static constexpr T op(T val) {
     return ((sizeof(val) * 8 - 1) - clzl(val)) + (!!(val & (val - 1)));
   }
 };
 }
 
 template <typename T>
-inline T ceil_log2(T val) {
+inline constexpr T ceil_log2(T val) {
   return detail::CeilLog2<T>::op(val);
 }
 
