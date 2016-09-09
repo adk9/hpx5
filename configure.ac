@@ -167,6 +167,7 @@ HPX_CONFIG_UTHASH([contrib/uthash])
 HPX_CONFIG_VALGRIND([contrib/valgrind])
 HPX_CONFIG_LIBFFI([contrib/$libffi_contrib_dir], [libffi])
 HPX_CONFIG_AGAS
+HPX_CONFIG_TASKSCALES([taskscales], [$have_agas_rebalancing])
 HPX_CONFIG_METIS([metis], [$have_agas_rebalancing])
 HPX_CONFIG_CITYHASH([contrib/libcuckoo])
 HPX_CONFIG_LIBCUCKOO([contrib/libcuckoo], [yes])
