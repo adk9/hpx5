@@ -29,7 +29,7 @@ namespace agas {
 class AGAS : public GAS {
   using GVA = GlobalVirtualAddress;
   static constexpr uint64_t THERE_OFFSET = uint64_t(4398046511103);
-  static constexpr uint64_t HEAP_SIZE = uint64_t(1) << GlobalVirtualAddress::OFFSET_BITS;
+  static constexpr uint64_t HEAP_SIZE = uint64_t(1) << GVA_OFFSET_BITS;
   static constexpr uint64_t HEAP_ALIGN = util::ceil_log2(HEAP_SIZE);
 
  public:

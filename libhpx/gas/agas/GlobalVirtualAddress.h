@@ -22,20 +22,20 @@
 namespace libhpx {
 namespace gas {
 namespace agas {
+static constexpr int GVA_RANK_BITS = 16;
+static constexpr int GVA_SIZE_BITS = 5;
+static constexpr int GVA_OFFSET_BITS = 42;
+
 union GlobalVirtualAddress {
  private:
   hpx_addr_t addr_;                         //!< the underlying hpx address bits
 
  public:
-  static constexpr int RANK_BITS = 16;
-  static constexpr int SIZE_BITS = 5;
-  static constexpr int OFFSET_BITS = 42;
-
   struct {
-    uint64_t offset : OFFSET_BITS;             //!< the actual address
-    uint64_t   size : SIZE_BITS;               //!< ceil_log2 of the block size
+    uint64_t offset : GVA_OFFSET_BITS;         //!< the actual address
+    uint64_t   size : GVA_SIZE_BITS;           //!< ceil_log2 of the block size
     uint64_t cyclic : 1;                       //!< interpret the home as cyclic
-    uint64_t   home : RANK_BITS;               //!< home rank for the address
+    uint64_t   home : GVA_RANK_BITS;           //!< home rank for the address
   };
 
   GlobalVirtualAddress() : addr_(HPX_NULL) {
