@@ -67,6 +67,7 @@ Worker::Worker(int id)
       workId_(0),
       queues_(),
       inbox_(),
+      fifo_(here->config->sched_wfthreshold),
       thread_([this]() { enter(); })
 {
 }
@@ -78,6 +79,10 @@ Worker::~Worker() {
   }
 
   while (hpx_parcel_t* p = popLIFO()) {
+    parcel_delete(p);
+  }
+
+  while (hpx_parcel_t* p = popFIFO()) {
     parcel_delete(p);
   }
 
@@ -116,6 +121,24 @@ Worker::popLIFO()
   return p;
 }
 
+void
+Worker::pushFIFO(hpx_parcel_t* p)
+{
+  if (workFirst_ < 0) {
+    fifo_.push(p);
+  }
+  else {
+    auto threshold = here->config->sched_wfthreshold;
+    workFirst_ = (threshold < fifo_.push(p));
+  }
+}
+
+hpx_parcel_t*
+Worker::popFIFO()
+{
+  return fifo_.pop();
+}
+
 hpx_parcel_t *
 Worker::handleNetwork()
 {
@@ -128,10 +151,12 @@ Worker::handleNetwork()
   workFirst_ = wf;
 
   while (hpx_parcel_t *p = parcel_stack_pop(&stack)) {
-    pushLIFO(p);
+    // pushLIFO(p);
+    pushFIFO(p);
   }
 
-  return popLIFO();
+  // return popLIFO();
+  return popFIFO();
 }
 
 hpx_parcel_t*
@@ -149,7 +174,8 @@ Worker::handleMail()
       dbg_assert(next != current_);
       EVENT_SCHED_MAIL(prev->id);
       log_sched("got mail %p\n", prev);
-      pushLIFO(prev);
+      // pushLIFO(prev);
+      pushFIFO(prev);
       prev = next;
     }
   } while ((parcels = inbox_.dequeue()));
@@ -211,6 +237,9 @@ Worker::schedule(Continuation& f)
     transfer(p, f);
   }
   else if (hpx_parcel_t *p = popLIFO()) {
+    transfer(p, f);
+  }
+  else if (hpx_parcel_t *p = popFIFO()) {
     transfer(p, f);
   }
   else {
@@ -294,11 +323,13 @@ Worker::sleep()
   std::unique_lock<std::mutex> _(lock_);
   while (state_ == STOP) {
     while (hpx_parcel_t *p = queues_[1 - workId_].pop()) {
-      pushLIFO(p);
+      // pushLIFO(p);
+      pushFIFO(p);
     }
 
     if (hpx_parcel_t *p = handleMail()) {
-      pushLIFO(p);
+      // pushLIFO(p);
+      pushFIFO(p);
     }
 
     // go back to sleep
@@ -357,6 +388,9 @@ Worker::run()
     else if (hpx_parcel_t *p = popLIFO()) {
       transfer(p, null);
     }
+    else if (hpx_parcel_t *p = popFIFO()) {
+      transfer(p, null);
+    }
     else if (hpx_parcel_t *p = handleEpoch()) {
       transfer(p, null);
     }
@@ -390,27 +424,31 @@ Worker::spawn(hpx_parcel_t* p)
   // If we're not running then push the parcel and return. This prevents an
   // infinite spawn from inhibiting termination.
   if (state_ != RUN) {
-    pushLIFO(p);
+    // pushLIFO(p);
+    pushFIFO(p);
     return;
   }
 
   // If we're not in work-first mode, then push the parcel for later.
   if (workFirst_ < 1) {
-    pushLIFO(p);
+    // pushLIFO(p);
+    pushFIFO(p);
     return;
   }
 
   // If we're holding a lock then we have to push the spawn for later
   // processing, or we could end up causing a deadlock.
   if (current_->thread->inLCO()) {
-    pushLIFO(p);
+    // pushLIFO(p);
+    pushFIFO(p);
     return;
   }
 
   // If we are currently running an interrupt, then we can't work-first since we
   // don't have our own stack to suspend.
   if (action_is_interrupt(current_->action)) {
-    pushLIFO(p);
+    // pushLIFO(p);
+    pushFIFO(p);
     return;
   }
 
@@ -422,7 +460,10 @@ Worker::spawn(hpx_parcel_t* p)
     transfer(p, [](hpx_parcel_t*) {});
   }
   else {
-    transfer(p, [this](hpx_parcel_t* p) { pushLIFO(p); });
+    transfer(p, [this](hpx_parcel_t* p) {
+        // pushLIFO(p);
+        pushFIFO(p);
+      });
   }
   self->EVENT_THREAD_RESUME(current_);          // re-read self
 }
@@ -438,7 +479,8 @@ Worker::StealHalfHandler(Worker* src)
 
 hpx_parcel_t*
 Worker::stealFrom(Worker* victim) {
-  hpx_parcel_t *p = victim->queues_[victim->workId_].steal();
+  // hpx_parcel_t *p = victim->queues_[victim->workId_].steal();
+  hpx_parcel_t* p = victim->fifo_.steal();
   lastVictim_ = (p) ? victim : nullptr;
   EVENT_SCHED_STEAL((p) ? p->id : 0, victim->getId());
   return p;
@@ -562,6 +604,7 @@ Worker::handleSteal()
   if (here->sched->getNWorkers() == 1) {
     return NULL;
   }
+  return stealRandom();
 
   libhpx_sched_policy_t policy = here->config->sched_policy;
   switch (policy) {

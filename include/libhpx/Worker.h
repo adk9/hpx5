@@ -18,6 +18,7 @@
 #include "libhpx/util/Aligned.h"
 #include "libhpx/util/ChaseLevDeque.h"
 #include "libhpx/util/TwoLockQueue.h"
+#include "libhpx/util/WorkstealingQueue.h"
 #include "hpx/hpx.h"
 #include <thread>
 #include <atomic>
@@ -59,6 +60,7 @@ class Worker : public libhpx::util::Aligned<HPX_CACHELINE_SIZE>
   using Continuation = std::function<void(hpx_parcel_t*)>;
   using Mailbox = libhpx::util::TwoLockQueue<hpx_parcel_t>;
   using Deque = libhpx::util::ChaseLevDeque<hpx_parcel_t>;
+  using FIFO = libhpx::util::WorkstealingQueue<hpx_parcel_t>;
 
   /// Event handlers.
   ///
@@ -255,6 +257,11 @@ class Worker : public libhpx::util::Aligned<HPX_CACHELINE_SIZE>
   /// Push a parcel into the lifo queue.
   void pushLIFO(hpx_parcel_t *p);
 
+  /// Push a parcel into the fifo queue.
+  void pushFIFO(hpx_parcel_t* p);
+
+  hpx_parcel_t* popFIFO();
+
   /// All of the steal functionality.
   ///
   /// @todo We should extract stealing policies into a policy class that is
@@ -420,7 +427,8 @@ class Worker : public libhpx::util::Aligned<HPX_CACHELINE_SIZE>
   std::atomic<int>         workId_;             //!< which queue are we using
   Deque                    queues_[2];          //!< work and yield queues
   Mailbox                   inbox_;             //!< mail sent to me
-  std::thread              thread_;//!< this worker's native thread
+  FIFO                       fifo_;             //!< fifo work
+  std::thread              thread_;             //!< this worker's native thread
 };
 
 extern thread_local Worker * volatile self;
