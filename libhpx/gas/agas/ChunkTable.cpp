@@ -25,7 +25,7 @@ using libhpx::gas::agas::ChunkTable;
 
 ChunkTable::ChunkTable(size_t size)
     : chunkMask_(~(as_bytes_per_chunk() - 1)),
-      map_(size)
+      map_()
 {
 }
 

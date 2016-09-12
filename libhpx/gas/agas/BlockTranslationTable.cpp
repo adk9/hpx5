@@ -31,7 +31,7 @@ LIBHPX_ACTION(HPX_DEFAULT, 0, UpdateOwner, BTT::UpdateOwnerHandler, HPX_ADDR,
 
 BTT::BlockTranslationTable(size_t size)
     : rank_(here->rank),
-      map_(size)
+      map_()
 {
 }
 
