@@ -28,7 +28,7 @@ namespace isir {
 class FunneledNetwork : public Network, public ParcelStringOps
 {
  public:
-  FunneledNetwork(const config_t *cfg, boot_t *boot, gas_t *gas);
+  FunneledNetwork(const config_t *cfg, boot_t *boot, GAS *gas);
   ~FunneledNetwork();
 
   int type() const;

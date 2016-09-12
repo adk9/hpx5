@@ -16,7 +16,7 @@
 
 #include "MPITransport.h"
 #include "libhpx/config.h"
-#include "libhpx/gas.h"
+#include "libhpx/GAS.h"
 #include "libhpx/parcel.h"
 
 namespace libhpx {
@@ -32,7 +32,7 @@ class ISendBuffer {
   /// @param       config The current configuration.
   /// @param          gas The global address space.
   /// @param        xport The isir xport to use.
-  ISendBuffer(const config_t *confg, gas_t *gas, Transport &xport);
+  ISendBuffer(const config_t *confg, GAS *gas, Transport &xport);
 
   /// Finalize a send buffer.
   ~ISendBuffer();
@@ -93,7 +93,7 @@ class ISendBuffer {
                      struct hpx_parcel** ssync);
   unsigned long testAll(struct hpx_parcel** ssync);
 
-  struct gas*      gas_;
+  GAS&             gas_;
   Transport&     xport_;
   unsigned       limit_;
   unsigned        twin_;

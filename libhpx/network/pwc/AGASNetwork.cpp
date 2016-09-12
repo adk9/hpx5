@@ -18,12 +18,13 @@
 #include "PWCNetwork.h"
 
 namespace {
+using libhpx::GAS;
 using libhpx::network::ParcelStringOps;
 using libhpx::network::pwc::PWCNetwork;
 using libhpx::network::pwc::AGASNetwork;
 }
 
-AGASNetwork::AGASNetwork(const config_t *cfg, boot_t *boot, gas_t *gas)
+AGASNetwork::AGASNetwork(const config_t *cfg, boot_t *boot, GAS *gas)
     : PWCNetwork(cfg, boot, gas),
       ParcelStringOps()
 {

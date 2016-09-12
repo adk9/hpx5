@@ -24,7 +24,7 @@
 #include <libhpx/attach.h>
 #include <libhpx/debug.h>
 #include <libhpx/events.h>
-#include <libhpx/gas.h>
+#include <libhpx/GAS.h>
 #include <libhpx/instrumentation.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
@@ -139,7 +139,7 @@ void parcel_launch(hpx_parcel_t *p) {
 
   // do a local send through loopback, bypassing the network, otherwise dump the
   // parcel out to the network
-  uint32_t target = gas_owner_of(here->gas, p->target);
+  uint32_t target = here->gas->ownerOf(p->target);
   if (target == here->rank) {
     // instrument local "receives"
     EVENT_PARCEL_RECV(p->id, p->action, p->size, p->src, p->target);

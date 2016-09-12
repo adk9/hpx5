@@ -25,7 +25,7 @@ using libhpx::network::ParcelStringOps;
 using libhpx::network::isir::FunneledNetwork;
 }
 
-FunneledNetwork::FunneledNetwork(const config_t *cfg, boot_t *boot, gas_t *gas)
+FunneledNetwork::FunneledNetwork(const config_t *cfg, boot_t *boot, GAS *gas)
     : Network(),
       ParcelStringOps(),
       sends_(),

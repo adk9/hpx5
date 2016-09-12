@@ -25,12 +25,13 @@
 #include "libhpx/Worker.h"
 
 namespace {
+using libhpx::GAS;
 using libhpx::network::pwc::Command;
 using libhpx::network::pwc::PGASNetwork;
 using libhpx::network::pwc::PWCNetwork;
 }
 
-PGASNetwork::PGASNetwork(const config_t *cfg, boot_t *boot, gas_t *gas)
+PGASNetwork::PGASNetwork(const config_t *cfg, boot_t *boot, GAS *gas)
     : PWCNetwork(cfg, boot, gas)
 {
 }

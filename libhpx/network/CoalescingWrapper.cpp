@@ -99,7 +99,7 @@ CoalescingWrapper::send(unsigned n) {
 
   for (auto i = 0u, e = n; i < e; ++i) {
     auto p = sends_.dequeue();
-    auto target = gas_owner_of(gas_, p->target);
+    auto target = gas_.ownerOf(p->target);
     buffers[target].record(p);
   }
 
@@ -160,9 +160,9 @@ CoalescingWrapper::flush() {
 }
 
 CoalescingWrapper::CoalescingWrapper(Network* impl, const config_t *cfg,
-                                     gas_t *gas)
+                                     GAS *gas)
     : NetworkWrapper(impl),
-      gas_(gas),
+      gas_(*gas),
       size_(cfg->coalescing_buffersize),
       prev_(0),
       count_(0),

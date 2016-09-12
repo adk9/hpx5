@@ -29,7 +29,6 @@
 #include <libhpx/boot.h>
 #include <libhpx/config.h>
 #include <libhpx/debug.h>
-#include <libhpx/gas.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
 #include <libhpx/instrumentation.h>
@@ -74,10 +73,8 @@ static void _cleanup(locality_t *l) {
     l->percolation = NULL;
   }
 
-  if (l->gas) {
-    gas_dealloc(l->gas);
-    l->gas = NULL;
-  }
+  delete l->gas;
+  l->gas = NULL;
 
   dbg_fini();
 
@@ -174,7 +171,7 @@ int hpx_init(int *argc, char ***argv) {
   }
 
   // Allocate the global heap.
-  here->gas = gas_new(here->config, here->boot);
+  here->gas = libhpx::GAS::Create(here->config, here->boot);
   if (!here->gas) {
     status = log_error("failed to create the global address space.\n");
     goto unwind1;

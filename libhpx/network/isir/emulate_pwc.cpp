@@ -16,12 +16,10 @@
 #endif
 
 #include "emulate_pwc.h"
-#include <libhpx/action.h>
-#include <libhpx/gas.h>
-#include <libhpx/locality.h>
-#include <libhpx/parcel.h>
-#include <libhpx/Worker.h>
-#include <string.h>
+#include "libhpx/action.h"
+#include "libhpx/parcel.h"
+#include "libhpx/Worker.h"
+#include <cstring>
 
 namespace {
 using libhpx::self;
@@ -32,7 +30,7 @@ using libhpx::self;
 /// This will copy the data buffer into the correct place, and then continue to
 /// the completion handler.
 int isir_emulate_pwc_handler(void *to, const void *buffer, size_t n) {
-  memcpy(to, buffer, n);
+  std::memcpy(to, buffer, n);
   return HPX_SUCCESS;
 }
 LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, isir_emulate_pwc,
@@ -46,7 +44,7 @@ typedef struct {
 /// The reply half of a get-with-completion.
 ///
 static int _gwc_reply_handler(const _gwc_reply_args_t *args, size_t n) {
-  memcpy(args->lva, args->bytes, n - sizeof(*args));
+  std::memcpy(args->lva, args->bytes, n - sizeof(*args));
   return HPX_SUCCESS;
 }
 static LIBHPX_ACTION(HPX_TASK, HPX_MARSHALLED, _gwc_reply,
@@ -74,7 +72,7 @@ static int _gwc_request_handler(void *from, size_t n, hpx_addr_t to, void *lva)
 
   args = static_cast<_gwc_reply_args_t*>(hpx_parcel_get_data(p));
   args->lva = lva;
-  memcpy(args->bytes, from, n);
+  std::memcpy(args->bytes, from, n);
   hpx_parcel_send(p, HPX_NULL);
   return HPX_SUCCESS;
 }

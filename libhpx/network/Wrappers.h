@@ -131,7 +131,7 @@ class CompressionWrapper final : public NetworkWrapper {
 
 class CoalescingWrapper final : public NetworkWrapper {
  public:
-  CoalescingWrapper(Network* impl, const config_t *cfg, gas_t *gas);
+  CoalescingWrapper(Network* impl, const config_t *cfg, GAS *gas);
   void progress(int n);
   void flush();
   int send(hpx_parcel_t* p, hpx_parcel_t* ssync);
@@ -139,10 +139,10 @@ class CoalescingWrapper final : public NetworkWrapper {
  private:
   void send(unsigned n);
 
-  gas_t* const                 gas_;
-  const unsigned              size_;
-  std::atomic<unsigned>       prev_;
-  std::atomic<unsigned>      count_;
+  GAS& gas_;
+  const unsigned size_;
+  std::atomic<unsigned> prev_;
+  std::atomic<unsigned> count_;
   std::atomic<unsigned> coalescing_;
   libsync::TwoLockQueue<hpx_parcel_t*> sends_;
 };

@@ -49,7 +49,7 @@ Network::~Network()
 }
 
 Network*
-Network::Create(config_t *cfg, boot_t *boot, gas_t *gas)
+Network::Create(config_t *cfg, boot_t *boot, GAS *gas)
 {
 #ifndef HAVE_NETWORK
   // if we didn't build a network we need to default to SMP
@@ -97,7 +97,7 @@ Network::Create(config_t *cfg, boot_t *boot, gas_t *gas)
   switch (type) {
    case HPX_NETWORK_PWC:
 #ifdef HAVE_PHOTON
-    if (gas->type == HPX_GAS_AGAS) {
+    if (gas->type() == HPX_GAS_AGAS) {
       network = new libhpx::network::pwc::AGASNetwork(cfg, boot, gas);
     }
     else {

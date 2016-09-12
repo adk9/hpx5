@@ -17,7 +17,7 @@
 #include "libhpx/boot.h"
 #include "libhpx/CollectiveOps.h"
 #include "libhpx/config.h"
-#include "libhpx/gas.h"
+#include "libhpx/GAS.h"
 #include "libhpx/LCOOps.h"
 #include "libhpx/MemoryOps.h"
 #include "libhpx/ParcelOps.h"
@@ -37,7 +37,7 @@ class Network : public virtual StringOps, public CollectiveOps, public LCOOps,
   /// @param          gas The global address space.
   ///
   /// @returns            The network object, or NULL if there was an issue.
-  static Network* Create(config_t *config, boot_t *boot, gas_t *gas);
+  static Network* Create(config_t *config, boot_t *boot, GAS *gas);
 
   /// Get the HPX configuration type of the base network implementation.
   virtual int type() const = 0;

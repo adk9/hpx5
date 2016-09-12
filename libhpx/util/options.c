@@ -31,7 +31,6 @@
 #include <libhpx/action.h>
 #include <libhpx/boot.h>
 #include <libhpx/config.h>
-#include <libhpx/gas.h>
 #include <libhpx/debug.h>
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>

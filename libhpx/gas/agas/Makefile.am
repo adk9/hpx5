@@ -1,29 +1,26 @@
 # The AGAS library
 noinst_LTLIBRARIES  = libagas.la
 
-noinst_HEADERS      = agas.h btt.h chunk_table.h gva.h
+noinst_HEADERS      = AGAS.h BlockTranslationTable.h ChunkTable.h GlobalVirtualAddress.h
 libagas_la_CPPFLAGS = -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
-libagas_la_CFLAGS   = $(LIBHPX_CFLAGS)
-libagas_la_SOURCES  = agas.c btt.cpp chunk_table.cpp string.cpp local.c \
-                      cyclic.c lva.c free.c move.c user.c
+libagas_la_CXXFLAGS = $(LIBHPX_CXXFLAGS)
+libagas_la_SOURCES  = BlockTranslationTable.cpp ChunkTable.cpp \
+                      ChunkAllocator.cpp AGAS.cpp
 
 if HAVE_JEMALLOC
-libagas_la_SOURCES += jemalloc_cyclic.c jemalloc_global.c
+libagas_la_SOURCES += jemalloc.cpp
 endif
 
 if HAVE_TBBMALLOC
-noinst_LTLIBRARIES         += libtbbmalloc.la
-libtbbmalloc_la_CPPFLAGS    = -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
-libtbbmalloc_la_CXXFLAGS    = $(LIBHPX_CXXFLAGS)
-libtbbmalloc_la_SOURCES     = tbbmalloc_cyclic.cpp tbbmalloc_global.cpp
-libagas_la_LIBADD           = libtbbmalloc.la
+libagas_la_SOURCES += tbbmalloc.cpp
 endif
 
 if HAVE_DLMALLOC
-libagas_la_SOURCES += dlmalloc.c
+libagas_la_SOURCES += dlmalloc.cpp
 endif
 
 if HAVE_REBALANCING
+libagas_la_CFLAGS = $(LIBHPX_CFLAGS)
 noinst_HEADERS     += rebalancer.h
 libagas_la_SOURCES += rebalancer.cpp partitioning.c bst.cpp
 endif
