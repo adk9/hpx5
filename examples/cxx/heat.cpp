@@ -251,6 +251,7 @@ static int _updateGrid_action(
   if (domain->rank == 0) {
     printf("Max Execution time =  %.3lf sec\n", max_time);
   }
+  hpx_gas_unpin(local);
   return hpx::SUCCESS;
 }
 auto _updateGrid = hpx::make_action(_updateGrid_action);
