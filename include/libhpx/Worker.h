@@ -16,7 +16,6 @@
 
 #include "libhpx/Network.h"
 #include "libhpx/util/Aligned.h"
-#include "libhpx/util/ChaseLevDeque.h"
 #include "libhpx/util/TwoLockQueue.h"
 #include "libhpx/util/WorkstealingQueue.h"
 #include "hpx/hpx.h"
@@ -59,7 +58,6 @@ class Worker : public libhpx::util::Aligned<HPX_CACHELINE_SIZE>
  public:
   using Continuation = std::function<void(hpx_parcel_t*)>;
   using Mailbox = libhpx::util::TwoLockQueue<hpx_parcel_t>;
-  using Deque = libhpx::util::ChaseLevDeque<hpx_parcel_t>;
   using FIFO = libhpx::util::WorkstealingQueue<hpx_parcel_t>;
 
   /// Event handlers.
@@ -197,10 +195,6 @@ class Worker : public libhpx::util::Aligned<HPX_CACHELINE_SIZE>
     inbox_.enqueue(p);
   }
 
-  void pushYield(hpx_parcel_t* p) {
-    queues_[1 - workId_].push(p);
-  }
-
   /// The non-blocking schedule operation.
   ///
   /// This will schedule new work relatively quickly, in order to avoid delaying
@@ -235,12 +229,6 @@ class Worker : public libhpx::util::Aligned<HPX_CACHELINE_SIZE>
   /// @returns          A parcel from the mailbox if there is one.
   hpx_parcel_t* handleMail();
 
-  /// Handle anything we need to do between epochs.
-  hpx_parcel_t* handleEpoch() {
-    workId_ = 1 - workId_;
-    return nullptr;
-  }
-
   /// Handle the network.
   ///
   /// This will return a parcel from the network if it finds any. It will also
@@ -250,12 +238,6 @@ class Worker : public libhpx::util::Aligned<HPX_CACHELINE_SIZE>
   hpx_parcel_t* handleNetwork();
 
   hpx_parcel_t* handleSteal();
-
-  /// Pop the next available parcel from our lifo work queue.
-  hpx_parcel_t* popLIFO();
-
-  /// Push a parcel into the lifo queue.
-  void pushLIFO(hpx_parcel_t *p);
 
   /// Push a parcel into the fifo queue.
   void pushFIFO(hpx_parcel_t* p);
@@ -425,7 +407,6 @@ class Worker : public libhpx::util::Aligned<HPX_CACHELINE_SIZE>
   std::condition_variable running_;             //!< local condition for sleep
   std::atomic<State>        state_;             //!< what state are we in
   std::atomic<int>         workId_;             //!< which queue are we using
-  Deque                    queues_[2];          //!< work and yield queues
   Mailbox                   inbox_;             //!< mail sent to me
   FIFO                       fifo_;             //!< fifo work
   std::thread              thread_;             //!< this worker's native thread

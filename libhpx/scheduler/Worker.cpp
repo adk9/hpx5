@@ -65,7 +65,6 @@ Worker::Worker(int id)
       running_(),
       state_(STOP),
       workId_(0),
-      queues_(),
       inbox_(),
       fifo_(here->config->sched_wfthreshold),
       thread_([this]() { enter(); })
@@ -75,10 +74,6 @@ Worker::Worker(int id)
 Worker::~Worker() {
   thread_.join();
   if (hpx_parcel_t* p = handleMail()) {
-    parcel_delete(p);
-  }
-
-  while (hpx_parcel_t* p = popLIFO()) {
     parcel_delete(p);
   }
 
@@ -93,7 +88,7 @@ Worker::~Worker() {
 }
 
 void
-Worker::pushLIFO(hpx_parcel_t* p)
+Worker::pushFIFO(hpx_parcel_t* p)
 {
   dbg_assert(p->target != HPX_NULL);
   dbg_assert(actions[p->action].handler != NULL);
@@ -103,27 +98,6 @@ Worker::pushLIFO(hpx_parcel_t* p)
 #elif defined(ENABLE_INSTRUMENTATION)
   EVENT_GAS_ACCESS(p->src, here->rank, p->target, p->size);
 #endif
-  uint64_t size = queues_[workId_].push(p);
-  if (workFirst_ >= 0) {
-    workFirst_ = (here->config->sched_wfthreshold < size);
-  }
-}
-
-hpx_parcel_t*
-Worker::popLIFO()
-{
-  hpx_parcel_t *p = queues_[workId_].pop();
-  dbg_assert(!p || p != current_);
-  INST_IF (p) {
-    EVENT_SCHED_POP_LIFO(p->id);
-    EVENT_SCHED_WQSIZE(queues_[workId_].size());
-  }
-  return p;
-}
-
-void
-Worker::pushFIFO(hpx_parcel_t* p)
-{
   if (workFirst_ < 0) {
     fifo_.push(p);
   }
@@ -136,7 +110,13 @@ Worker::pushFIFO(hpx_parcel_t* p)
 hpx_parcel_t*
 Worker::popFIFO()
 {
-  return fifo_.pop();
+  auto p = fifo_.pop();
+  dbg_assert(!p || p != current_);
+  INST_IF (p) {
+    EVENT_SCHED_POP_LIFO(p->id);
+    EVENT_SCHED_WQSIZE(fifo_.size());
+  }
+  return p;
 }
 
 hpx_parcel_t *
@@ -151,11 +131,9 @@ Worker::handleNetwork()
   workFirst_ = wf;
 
   while (hpx_parcel_t *p = parcel_stack_pop(&stack)) {
-    // pushLIFO(p);
     pushFIFO(p);
   }
 
-  // return popLIFO();
   return popFIFO();
 }
 
@@ -174,7 +152,6 @@ Worker::handleMail()
       dbg_assert(next != current_);
       EVENT_SCHED_MAIL(prev->id);
       log_sched("got mail %p\n", prev);
-      // pushLIFO(prev);
       pushFIFO(prev);
       prev = next;
     }
@@ -234,9 +211,6 @@ Worker::schedule(Continuation& f)
     transfer(system_, f);
   }
   else if (hpx_parcel_t *p = handleMail()) {
-    transfer(p, f);
-  }
-  else if (hpx_parcel_t *p = popLIFO()) {
     transfer(p, f);
   }
   else if (hpx_parcel_t *p = popFIFO()) {
@@ -322,13 +296,7 @@ Worker::sleep()
 {
   std::unique_lock<std::mutex> _(lock_);
   while (state_ == STOP) {
-    while (hpx_parcel_t *p = queues_[1 - workId_].pop()) {
-      // pushLIFO(p);
-      pushFIFO(p);
-    }
-
     if (hpx_parcel_t *p = handleMail()) {
-      // pushLIFO(p);
       pushFIFO(p);
     }
 
@@ -385,13 +353,7 @@ Worker::run()
     if (hpx_parcel_t *p = handleMail()) {
       transfer(p, null);
     }
-    else if (hpx_parcel_t *p = popLIFO()) {
-      transfer(p, null);
-    }
     else if (hpx_parcel_t *p = popFIFO()) {
-      transfer(p, null);
-    }
-    else if (hpx_parcel_t *p = handleEpoch()) {
       transfer(p, null);
     }
     else if (hpx_parcel_t *p = handleNetwork()) {
@@ -424,14 +386,12 @@ Worker::spawn(hpx_parcel_t* p)
   // If we're not running then push the parcel and return. This prevents an
   // infinite spawn from inhibiting termination.
   if (state_ != RUN) {
-    // pushLIFO(p);
     pushFIFO(p);
     return;
   }
 
   // If we're not in work-first mode, then push the parcel for later.
   if (workFirst_ < 1) {
-    // pushLIFO(p);
     pushFIFO(p);
     return;
   }
@@ -439,7 +399,6 @@ Worker::spawn(hpx_parcel_t* p)
   // If we're holding a lock then we have to push the spawn for later
   // processing, or we could end up causing a deadlock.
   if (current_->thread->inLCO()) {
-    // pushLIFO(p);
     pushFIFO(p);
     return;
   }
@@ -447,7 +406,6 @@ Worker::spawn(hpx_parcel_t* p)
   // If we are currently running an interrupt, then we can't work-first since we
   // don't have our own stack to suspend.
   if (action_is_interrupt(current_->action)) {
-    // pushLIFO(p);
     pushFIFO(p);
     return;
   }
@@ -461,7 +419,6 @@ Worker::spawn(hpx_parcel_t* p)
   }
   else {
     transfer(p, [this](hpx_parcel_t* p) {
-        // pushLIFO(p);
         pushFIFO(p);
       });
   }
@@ -479,7 +436,6 @@ Worker::StealHalfHandler(Worker* src)
 
 hpx_parcel_t*
 Worker::stealFrom(Worker* victim) {
-  // hpx_parcel_t *p = victim->queues_[victim->workId_].steal();
   hpx_parcel_t* p = victim->fifo_.steal();
   lastVictim_ = (p) ? victim : nullptr;
   EVENT_SCHED_STEAL((p) ? p->id : 0, victim->getId());
@@ -513,24 +469,7 @@ Worker::stealRandomNode()
 hpx_parcel_t*
 Worker::stealHalf()
 {
-  int qsize = queues_[workId_].size();
-  if (qsize < MAGIC_STEAL_HALF_THRESHOLD) {
-    return nullptr;
-  }
-
-  hpx_parcel_t *parcels = nullptr;
-  for (int i = 0, e = qsize / 2; i < e; ++i) {
-    hpx_parcel_t *p = popLIFO();
-    if (!p) {
-      break;
-    }
-    if (p->action == StealHalf) {
-      parcel_delete(p);
-      continue;
-    }
-    parcel_stack_push(&parcels, p);
-  }
-  return parcels;
+  return nullptr;
 }
 
 /// Hierarchical work-stealing policy.
@@ -685,7 +624,7 @@ Worker::yield()
   EVENT_SCHED_YIELD();
   EVENT_THREAD_SUSPEND(current_);
   schedule([this](hpx_parcel_t* p) {
-      pushYield(p);
+      pushFIFO(p);
     });
 
   // `this` is volatile across the scheduler call but we can't actually indicate
