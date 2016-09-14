@@ -59,7 +59,7 @@ GAS* make_hosted(config_t* cfg, Args... args) {
 #else
     // log_error("URCU not supported on the current platform, "
     //           "using --hpx-gas-affinity=none\n");
-    return Hosted<GAS, None>(args...);
+    return new Hosted<GAS, None>(args...);
 #endif
   }
 }

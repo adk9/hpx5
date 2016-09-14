@@ -314,7 +314,7 @@ class AGAS : public GAS {
   /// This thread local is used to pass block sizes through to the chunk
   /// allocator, because we need to know if the chunk needs to have a very large
   /// alignment, however the callback interface used by jemalloc can't help us.
-  static thread_local size_t BlockSizePassthrough_;
+  static __thread size_t BlockSizePassthrough_;
 
   BlockTranslationTable btt_;                   //!< maps gva to lva
   ChunkTable         chunks_;                   //!< maps from chunk to gva

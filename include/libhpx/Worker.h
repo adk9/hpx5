@@ -423,7 +423,7 @@ class Worker : public libhpx::util::Aligned<HPX_CACHELINE_SIZE>
   std::thread              thread_;//!< this worker's native thread
 };
 
-extern thread_local Worker * volatile self;
+extern __thread Worker * volatile self;
 
 } // namespace libhpx
 
