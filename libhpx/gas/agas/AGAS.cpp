@@ -54,7 +54,7 @@ LIBHPX_ACTION(HPX_DEFAULT, 0, AllocateCyclic, AGAS::AllocateCyclicHandler,
               HPX_SIZE_T, HPX_SIZE_T, HPX_UINT32, HPX_UINT32, HPX_INT);
 }
 
-thread_local size_t AGAS::BlockSizePassthrough_;
+__thread size_t AGAS::BlockSizePassthrough_;
 AGAS* AGAS::Instance_;
 
 AGAS::AGAS(const config_t* config, boot_t* boot)

@@ -45,7 +45,7 @@ LIBHPX_ACTION(HPX_INTERRUPT, 0, StealHalf, Worker::StealHalfHandler,
 }
 
 /// Storage for the thread-local worker pointer.
-thread_local Worker * volatile libhpx::self;
+__thread Worker * volatile libhpx::self;
 
 Worker::Worker(int id)
     : id_(id),
