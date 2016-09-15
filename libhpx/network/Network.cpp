@@ -97,12 +97,7 @@ Network::Create(config_t *cfg, boot_t *boot, GAS *gas)
   switch (type) {
    case HPX_NETWORK_PWC:
 #ifdef HAVE_PHOTON
-    if (gas->type() == HPX_GAS_AGAS) {
-      network = new libhpx::network::pwc::AGASNetwork(cfg, boot, gas);
-    }
-    else {
-      network = new libhpx::network::pwc::PGASNetwork(cfg, boot, gas);
-    }
+    network = libhpx::network::pwc::PWCNetwork::Create(cfg, boot, gas);
 #else
     log_level(LEVEL, "PWC network unavailable (no network configured)\n");
 #endif

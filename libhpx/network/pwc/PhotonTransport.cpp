@@ -104,7 +104,6 @@ PhotonTransport::Initialize(const config_t *cfg, boot_t *boot) {
   if (photon_init(&pcfg) != PHOTON_OK) {
     dbg_error("failed to initialize transport.\n");
   }
-
   registered_allocator_init();
 }
 

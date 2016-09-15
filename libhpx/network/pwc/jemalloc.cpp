@@ -20,11 +20,14 @@
 #include "libhpx/debug.h"
 #include "libhpx/memory.h"
 #include "libhpx/system.h"
+#include "libhpx/util/LRUCache.h"
 #include <cstring>
 
 namespace {
 using libhpx::network::pwc::PhotonTransport;
 }
+
+static libhpx::util::LRUCache _chunks(8);
 
 /// @file  libhpx/gas/pgas/registered.c
 /// @brief This file implements the address-space allocator interface for
@@ -38,7 +41,9 @@ _registered_chunk_alloc(void *addr, size_t n, size_t align, bool *zero,
 {
   dbg_assert(zero);
   dbg_assert(commit);
-  void *chunk = system_mmap_huge_pages(nullptr, addr, n, align);
+  void *chunk = _chunks.get(n, [=]() {
+      return system_mmap_huge_pages(nullptr, addr, n, align);
+    });
   if (!chunk) {
     return nullptr;
   }
@@ -66,8 +71,10 @@ _registered_chunk_alloc(void *addr, size_t n, size_t align, bool *zero,
 static bool
 _registered_chunk_free(void *chunk, size_t n, bool committed, unsigned arena)
 {
-  PhotonTransport::Unpin(chunk, n);
-  system_munmap_huge_pages(nullptr, chunk, n);
+  _chunks.put(chunk, n, [n](void* chunk, size_t bytes) {
+      PhotonTransport::Unpin(chunk, bytes);
+      system_munmap_huge_pages(nullptr, chunk, bytes);
+    });
   return 0;
 }
 
