@@ -23,14 +23,14 @@ struct CeilLog2;
 template <typename T>
 struct CeilLog2<T, 4> {
   static constexpr T op(T val) {
-    return ((sizeof(val) * 8 - 1) - clz(val)) + (!!(val & (val - 1)));
+    return ((sizeof(val) * 4 - 1) - __builtin_clz(val)) + (!!(val & (val - 1)));
   }
 };
 
 template <typename T>
 struct CeilLog2<T, 8> {
   static constexpr T op(T val) {
-    return ((sizeof(val) * 8 - 1) - clzl(val)) + (!!(val & (val - 1)));
+    return ((sizeof(val) * 8 - 1) - __builtin_clzl(val)) + (!!(val & (val - 1)));
   }
 };
 }
@@ -38,6 +38,11 @@ struct CeilLog2<T, 8> {
 template <typename T>
 inline constexpr T ceil_log2(T val) {
   return detail::CeilLog2<T>::op(val);
+}
+
+template <typename T>
+inline constexpr T ceil2(T val) {
+  return T(1) << ceil_log2(val);
 }
 
 template <typename T>
