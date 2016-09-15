@@ -18,17 +18,7 @@
 #include "libhpx/parcel.h"
 #include "hpx/hpx.h"
 #include <cuckoohash_map.hh>
-#include <city_hasher.hh>
 #include <cinttypes>
-
-template <>
-class CityHasher<libhpx::gas::agas::GlobalVirtualAddress> {
- public:
-  size_t operator()(const libhpx::gas::agas::GlobalVirtualAddress& gva) const {
-    uint64_t key = gva.toKey();
-    return CityHash64(reinterpret_cast<const char*>(&key), sizeof(key));
-  }
-};
 
 namespace libhpx {
 namespace gas {
