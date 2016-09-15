@@ -20,12 +20,6 @@ extern "C" {
 
 #include <hpx/hpx.h>
     
-// Block Statistics Table (BST) API
-void *bst_new(size_t size);
-void bst_delete(void *bst);
-void bst_upsert(void *obj, uint64_t block, uint64_t *counts, uint64_t *sizes);
-size_t bst_serialize_to_parcel(void* obj, hpx_parcel_t **parcel);
-
 // AGAS Graph Partitioning API
 hpx_addr_t agas_graph_new(void);
 void agas_graph_delete(hpx_addr_t graph);

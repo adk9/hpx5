@@ -25,13 +25,19 @@
 #include <libhpx/memory.h>
 #include <libhpx/parcel.h>
 #include <libhpx/rebalancer.h>
-#include <libhpx/c_scheduler.h>
-#include <libhpx/worker.h>
+#include <libhpx/Scheduler.h>
+#include <libhpx/Worker.h>
 #include <uthash.h>
-#include "agas.h"
-#include "btt.h"
-#include "gva.h"
+#include "GlobalVirtualAddress.h"
+#include "BlockTranslationTable.h"
+#include "BlockStatisticsTable.h"
 #include "rebalancer.h"
+
+namespace {
+using libhpx::self;
+using GVA = libhpx::gas::agas::GlobalVirtualAddress;
+using BST = libhpx::gas::agas::BlockStatisticsTable;
+}
 
 // Block Statistics Table (BST) entry.
 //
@@ -53,7 +59,7 @@ typedef struct agas_bst {
 //
 // During statistics aggration, all of the thread-local BSTs are
 // aggregated into a per-locality BST.
-static void *_global_bst = NULL;
+static BST *_global_bst = NULL;
 
 // Add an entry to the rebalancer's (thread-local) BST table.
 ///
@@ -68,15 +74,11 @@ void rebalancer_add_entry(int src, int dst, hpx_addr_t block, size_t size) {
     return;
   }
 
-  const agas_t *agas = here->gas;
-  dbg_assert(agas && agas->btt);
-
   // ignore this block if it does not have the "load-balance"
   // (HPX_GAS_ATTR_LB) attribute
-  gva_t gva = { .addr = block };
-  uint32_t attr = 0;
-  bool found = btt_get_attr(agas->btt, gva, &attr);
-  if (likely(!found || !(attr & HPX_GAS_ATTR_LB))) {
+  GVA gva(block);
+  uint32_t attr = here->gas->getAttribute(gva);
+  if (likely(!(attr & HPX_GAS_ATTR_LB))) {
     return;
   }
 
@@ -85,11 +87,11 @@ void rebalancer_add_entry(int src, int dst, hpx_addr_t block, size_t size) {
   agas_bst_t **bst = (agas_bst_t**)&self->bst;
   HASH_FIND(hh, *bst, &block, sizeof(uint64_t), entry);
   if (!entry) {
-    entry = malloc(sizeof(*entry));
+    entry = (agas_bst_t*)std::malloc(sizeof(*entry));
     dbg_assert(entry);
     entry->block = block;
-    entry->counts = calloc(here->ranks, sizeof(uint64_t));
-    entry->sizes = calloc(here->ranks, sizeof(uint64_t));
+    entry->counts = (uint64_t*)calloc(here->ranks, sizeof(uint64_t));
+    entry->sizes = (uint64_t*)calloc(here->ranks, sizeof(uint64_t));
     HASH_ADD(hh, *bst, block, sizeof(uint64_t), entry);
   }
 
@@ -100,7 +102,7 @@ void rebalancer_add_entry(int src, int dst, hpx_addr_t block, size_t size) {
 
 // Initialize the AGAS-based rebalancer.
 int rebalancer_init(void) {
-  _global_bst = bst_new(0);
+  _global_bst = new BST(0);
   dbg_assert(_global_bst);
 
   log_gas("GAS rebalancer initialized\n");
@@ -110,7 +112,7 @@ int rebalancer_init(void) {
 // Finalize the AGAS-based rebalancer.
 void rebalancer_finalize(void) {
   if (_global_bst) {
-    bst_delete(_global_bst);
+    delete _global_bst;
     _global_bst = NULL;
   }
 }
@@ -118,9 +120,7 @@ void rebalancer_finalize(void) {
 // This function takes the thread-local BST and merges it with the
 // per-node global BST.
 int _local_to_global_bst(int id, void *UNUSED) {
-  worker_t *w = here->sched->getWorker(id);
-  dbg_assert(w);
-
+  libhpx::Worker* w = here->sched->getWorker(id);
   agas_bst_t **bst = (agas_bst_t **)&w->bst;
   if (*bst == NULL) {
     return HPX_SUCCESS;
@@ -129,7 +129,7 @@ int _local_to_global_bst(int id, void *UNUSED) {
   log_gas("Added %u entries to global BST.\n", HASH_COUNT(*bst));
   agas_bst_t *entry, *tmp;
   HASH_ITER(hh, *bst, entry, tmp) {
-    bst_upsert(_global_bst, entry->block, entry->counts, entry->sizes);
+    _global_bst->upsert(entry->block, entry->counts, entry->sizes);
     HASH_DEL(*bst, entry);
     free(entry);
   }
@@ -158,21 +158,20 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _aggregate_global_bst,
 // forwards it along to the generated parcel.
 static int _aggregate_bst_handler(hpx_addr_t graph) {
   hpx_par_for_sync(_local_to_global_bst, 0, HPX_THREADS, NULL);
-  hpx_parcel_t *p = NULL;
-  size_t size = bst_serialize_to_parcel(_global_bst, &p);
-  log_gas("Global BST size: %lu bytes.\n", size);
-  if (!size) {
+  hpx_parcel_t *p = _global_bst->serializeToParcel();
+  log_gas("Global BST size: %lu bytes.\n", p->size);
+  if (!p || !p->size) {
     return HPX_SUCCESS;
   }
   p->target = graph;
   p->action = _aggregate_global_bst;
 
   // *take* the current continuation
-  hpx_parcel_t *this = scheduler_current_parcel();
-  p->c_target = this->c_target;
-  p->c_action = this->c_action;
-  this->c_target = HPX_NULL;
-  this->c_action = HPX_ACTION_NULL;
+  hpx_parcel_t *curr = self->getCurrentParcel();
+  p->c_target = curr->c_target;
+  p->c_action = curr->c_action;
+  curr->c_target = HPX_NULL;
+  curr->c_action = HPX_ACTION_NULL;
 
   hpx_parcel_send(p, HPX_NULL);
   return HPX_SUCCESS;
@@ -184,8 +183,8 @@ static LIBHPX_ACTION(HPX_DEFAULT, 0, _aggregate_bst, _aggregate_bst_handler,
 // Move blocks in bulk to their new owners.
 static int
 _bulk_move_handler(int n, void *args[], size_t sizes[]) {
-  uint64_t      *vtxs = args[0];
-  uint64_t *partition = args[1];
+  uint64_t      *vtxs = static_cast<uint64_t*>(args[0]);
+  uint64_t *partition = static_cast<uint64_t*>(args[1]);
 
   size_t bytes = sizes[0];
   uint64_t count = bytes/sizeof(uint64_t);
