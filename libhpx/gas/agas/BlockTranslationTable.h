@@ -79,7 +79,8 @@ class BlockTranslationTable
   uint16_t getOwner(GVA gva) const;
   uint16_t getOwner(GVA gva, bool& cached) const;
 
-  // bool getAttr(GVA gva, uint32_t* attr) const;
+  /// Get the attributes associated with a GVA.
+  uint32_t getAttr(GVA gva) const;
 
   /// Set the attributes stored with a global virtual address.
   void setAttr(GVA gva, uint32_t attr);

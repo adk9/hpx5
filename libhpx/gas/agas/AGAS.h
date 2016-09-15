@@ -83,6 +83,10 @@ class AGAS : public GAS {
     btt_.unpin(gva);
   }
 
+  uint32_t getAttribute(hpx_addr_t gva) const {
+    return btt_.getAttr(GVA(gva));
+  }
+
   void setAttribute(hpx_addr_t gva, uint32_t attr) {
     btt_.setAttr(GVA(gva), attr);
   }

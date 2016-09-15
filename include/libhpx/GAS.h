@@ -44,6 +44,7 @@ class GAS : public virtual libhpx::gas::Affinity, public StringOps,
   virtual bool tryPin(hpx_addr_t gva, void **local) = 0;
   virtual void unpin(hpx_addr_t gva) = 0;
   virtual void free(hpx_addr_t gca, hpx_addr_t rsync) = 0;
+  virtual uint32_t getAttribute(hpx_addr_t gva) const = 0;
   virtual void setAttribute(hpx_addr_t gva, uint32_t attr) = 0;
   virtual void move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) = 0;
 };
