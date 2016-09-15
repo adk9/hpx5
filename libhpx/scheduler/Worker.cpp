@@ -33,6 +33,9 @@
 #ifdef HAVE_URCU
 # include <urcu-qsbr.h>
 #endif
+#if defined(HAVE_AGAS) && defined(HAVE_REBALANCING)
+# include "libhpx/rebalancer.h"
+#endif
 
 namespace {
 using libhpx::self;

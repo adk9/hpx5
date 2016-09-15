@@ -24,9 +24,6 @@
 #include <libhpx/memory.h>
 #include <libsync/locks.h>
 #include <utstring.h>
-#include "agas.h"
-#include "btt.h"
-#include "gva.h"
 
 #ifdef HAVE_METIS
 #include <metis.h>
@@ -189,7 +186,7 @@ static void _deserialize_bst(char *buf, size_t size, uint64_t *nvtxs,
 
 // Construct a new AGAS graph from a deserialized buffer @p buf of
 // size @p size bytes.
-int agas_graph_construct(hpx_addr_t graph, char *buf, size_t size,
+int agas_graph_construct(hpx_addr_t graph, void *buf, size_t size,
                          int owner) {
   uint64_t nvtxs;
   uint64_t nedges;
