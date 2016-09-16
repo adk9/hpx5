@@ -82,6 +82,9 @@ LT_INIT([disable-shared])
 LIBHPX_CPPFLAGS="-I\$(srcdir) -I\$(top_builddir)/include"
 HPX_APPS_CPPFLAGS="-I\$(srcdir) -I\$(top_builddir)/include"
 
+# Prefer the statically built .la libraries when they're available.
+HPX_APPS_LDFLAGS="-static-libtool-libs"
+
 HPX_CONFIG_COMPILER
 HPX_CONFIG_HOST
 HPX_PE_ENV
