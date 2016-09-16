@@ -27,6 +27,7 @@ AC_DEFUN([_HAVE_HWLOC], [
 ])
 
 AC_DEFUN([_BUILD_HWLOC], [
+  AC_DEFINE([BUILD_HWLOC], [1], [We have hwloc support])
   build_hwloc=yes
  _HAVE_HWLOC
 ])

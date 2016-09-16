@@ -49,38 +49,38 @@ static int _get_resources_by_affinity(topology_t *topology,
   return n;
 }
 
-static hwloc_cpuset_t *_cpu_affinity_map_new(topology_t *topology,
+static libhpx_hwloc_cpuset_t *_cpu_affinity_map_new(topology_t *topology,
                                              libhpx_thread_affinity_t policy) {
   int resources = _get_resources_by_affinity(topology, policy);
   if (!resources) {
     return NULL;
   }
-  hwloc_cpuset_t *cpu_affinity_map = calloc(resources, sizeof(*cpu_affinity_map));
+  libhpx_hwloc_cpuset_t *cpu_affinity_map = calloc(resources, sizeof(*cpu_affinity_map));
 
   for (int r = 0; r < resources; ++r) {
-    hwloc_cpuset_t cpuset = cpu_affinity_map[r] = hwloc_bitmap_alloc();
+    libhpx_hwloc_cpuset_t cpuset = cpu_affinity_map[r] = libhpx_hwloc_bitmap_alloc();
     switch (policy) {
      case HPX_THREAD_AFFINITY_DEFAULT:
      case HPX_THREAD_AFFINITY_NUMA:
        for (int i = 0; i < topology->ncpus; ++i) {
          if (r == topology->cpu_to_numa[i]) {
-           hwloc_bitmap_set(cpuset, i);
+           libhpx_hwloc_bitmap_set(cpuset, i);
          }
        }
        break;
      case HPX_THREAD_AFFINITY_CORE:
        for (int i = 0; i < topology->ncpus; ++i) {
          if (r == topology->cpu_to_core[i]) {
-           hwloc_bitmap_set(cpuset, i);
+           libhpx_hwloc_bitmap_set(cpuset, i);
          }
        }
        break;
      case HPX_THREAD_AFFINITY_HWTHREAD:
-       hwloc_bitmap_set(cpuset, r);
-       hwloc_bitmap_singlify(cpuset);
+       libhpx_hwloc_bitmap_set(cpuset, r);
+       libhpx_hwloc_bitmap_singlify(cpuset);
        break;
      case HPX_THREAD_AFFINITY_NONE:
-       hwloc_bitmap_set_range(cpuset, 0, topology->ncpus-1);
+       libhpx_hwloc_bitmap_set_range(cpuset, 0, topology->ncpus-1);
        break;
      default:
        log_error("unknown thread affinity policy\n");
@@ -93,7 +93,7 @@ static hwloc_cpuset_t *_cpu_affinity_map_new(topology_t *topology,
 static void _cpu_affinity_map_delete(topology_t *topology) {
   int resources = _get_resources_by_affinity(topology, here->config->thread_affinity);
   for (int r = 0; r < resources; ++r) {
-    hwloc_bitmap_free(topology->cpu_affinity_map[r]);
+    libhpx_hwloc_bitmap_free(topology->cpu_affinity_map[r]);
   }
   free(topology->cpu_affinity_map);
 }
@@ -118,14 +118,14 @@ topology_t *topology_new(const struct config *config) {
   topo->cpu_affinity_map = NULL;
 
   // Initialize the hwloc infrastructure.
-  hwloc_topology_t *hwloc = &topo->hwloc_topology;
-  if (hwloc_topology_init(hwloc)) {
+  libhpx_hwloc_topology_t *hwloc = &topo->hwloc_topology;
+  if (libhpx_hwloc_topology_init(hwloc)) {
     log_error("failed to initialize HWLOC topology.\n");
     topology_delete(topo);
     return NULL;
   }
 
-  if (hwloc_topology_load(*hwloc)) {
+  if (libhpx_hwloc_topology_load(*hwloc)) {
     log_error("failed to load HWLOC topology.\n");
     topology_delete(topo);
     return NULL;
@@ -133,14 +133,14 @@ topology_t *topology_new(const struct config *config) {
 
   // Query the hwloc object for cpus, cores, and numa nodes---"fix" nnodes if
   // hwloc returns something unpleasant
-  topo->ncpus = hwloc_get_nbobjs_by_type(*hwloc, HWLOC_OBJ_PU);
-  topo->ncores = hwloc_get_nbobjs_by_type(*hwloc, HWLOC_OBJ_CORE);
-  topo->nnodes = hwloc_get_nbobjs_by_type(*hwloc, HWLOC_OBJ_NODE);
+  topo->ncpus = libhpx_hwloc_get_nbobjs_by_type(*hwloc, LIBHPX_HWLOC_OBJ_PU);
+  topo->ncores = libhpx_hwloc_get_nbobjs_by_type(*hwloc, LIBHPX_HWLOC_OBJ_CORE);
+  topo->nnodes = libhpx_hwloc_get_nbobjs_by_type(*hwloc, LIBHPX_HWLOC_OBJ_NUMANODE);
   topo->nnodes = (topo->nnodes > 0) ? topo->nnodes : 1;
   topo->cpus_per_node = topo->ncpus / topo->nnodes;
 
   // Allocate our secondary arrays.
-  topo->allowed_cpus = hwloc_bitmap_alloc();
+  topo->allowed_cpus = libhpx_hwloc_bitmap_alloc();
   if (!topo->allowed_cpus) {
     log_error("failed to allocate memory for cpuset.\n");
     topology_delete(topo);
@@ -203,11 +203,11 @@ topology_t *topology_new(const struct config *config) {
   }
 
   if (cores) {
-    hwloc_bitmap_set_range(topo->allowed_cpus, 0, cores - 1);
+    libhpx_hwloc_bitmap_set_range(topo->allowed_cpus, 0, cores - 1);
   }
-  else if (hwloc_get_cpubind(*hwloc, topo->allowed_cpus, HWLOC_CPUBIND_PROCESS))
+  else if (libhpx_hwloc_get_cpubind(*hwloc, topo->allowed_cpus, LIBHPX_HWLOC_CPUBIND_PROCESS))
   {
-    hwloc_bitmap_set_range(topo->allowed_cpus, 0, topo->ncpus - 1);
+    libhpx_hwloc_bitmap_set_range(topo->allowed_cpus, 0, topo->ncpus - 1);
   }
 
   // We want to be able to map from a numa domain to its associated cpus, but we
@@ -217,14 +217,14 @@ topology_t *topology_new(const struct config *config) {
   int numa_to_cpus_next[topo->nnodes];
   memset(numa_to_cpus_next, 0, sizeof(numa_to_cpus_next));
 
-  hwloc_obj_t cpu = NULL;
-  hwloc_obj_t core = NULL;
-  hwloc_obj_t numa_node = NULL;
+  libhpx_hwloc_obj_t cpu = NULL;
+  libhpx_hwloc_obj_t core = NULL;
+  libhpx_hwloc_obj_t numa_node = NULL;
   for (int i = 0, e = topo->ncpus; i < e; ++i) {
     // get the hwloc tree nodes for the cpu, core, and numa node
-    cpu = hwloc_get_next_obj_by_type(*hwloc, HWLOC_OBJ_PU, cpu);
-    core = hwloc_get_ancestor_obj_by_type(*hwloc, HWLOC_OBJ_CORE, cpu);
-    numa_node = hwloc_get_ancestor_obj_by_type(*hwloc, HWLOC_OBJ_NODE, cpu);
+    cpu = libhpx_hwloc_get_next_obj_by_type(*hwloc, LIBHPX_HWLOC_OBJ_PU, cpu);
+    core = libhpx_hwloc_get_ancestor_obj_by_type(*hwloc, LIBHPX_HWLOC_OBJ_CORE, cpu);
+    numa_node = libhpx_hwloc_get_ancestor_obj_by_type(*hwloc, LIBHPX_HWLOC_OBJ_NUMANODE, cpu);
 
     // get integer indexes for the cpu, core, and numa node
     int index = cpu->os_index;
@@ -285,7 +285,7 @@ void topology_delete(topology_t *topology) {
   }
 
   if (topology->allowed_cpus) {
-    hwloc_bitmap_free(topology->allowed_cpus);
+    libhpx_hwloc_bitmap_free(topology->allowed_cpus);
     topology->allowed_cpus = NULL;
   }
 
@@ -294,6 +294,6 @@ void topology_delete(topology_t *topology) {
     topology->cpu_affinity_map  = NULL;
   }
 
-  hwloc_topology_destroy(topology->hwloc_topology);
+  libhpx_hwloc_topology_destroy(topology->hwloc_topology);
   free(topology);
 }
