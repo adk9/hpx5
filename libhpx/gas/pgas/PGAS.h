@@ -74,6 +74,7 @@ class PGAS : public GAS, public HeapSegment {
 
   uint32_t getAttribute(hpx_addr_t gva) const {
     log_error("PGAS setAttribute unimplemented");
+    return HPX_ATTR_NONE;
   }
 
   void setAttribute(hpx_addr_t gva, uint32_t attr) {
