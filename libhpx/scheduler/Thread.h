@@ -46,9 +46,9 @@ class Thread {
   /// Destroy a thread.
   ~Thread();
 
-  void* operator new(size_t bytes);
-  void* operator new(size_t bytes, void* addr) { return addr; }
-  void operator delete(void* ptr);
+  static void* operator new(size_t bytes);
+  static void* operator new(size_t bytes, void* addr) { return addr; }
+  static void operator delete(void* ptr);
 
   void setSp(void *sp) {
     sp_ = sp;

@@ -29,6 +29,7 @@
 #include "libhpx/Scheduler.h"
 #include "libhpx/system.h"
 #include "libhpx/topology.h"
+#include "libhpx/util/math.h"
 #include <cstring>
 #ifdef HAVE_URCU
 # include <urcu-qsbr.h>
@@ -55,7 +56,6 @@ Worker::Worker(int id)
       numaNode_(here->topology->cpu_to_numa[id % here->topology->ncpus]),
       seed_(id),
       workFirst_(0),
-      nthreads_(0),
       lastVictim_(nullptr),
       profiler_(nullptr),
       bst(nullptr),
@@ -84,8 +84,8 @@ Worker::~Worker() {
     parcel_delete(p);
   }
 
-  while (Thread* thread = threads_) {
-    threads_ = thread->getNext();
+  while (auto* thread = threads_) {
+    threads_ = thread->next;
     delete thread;
   }
 }
@@ -163,12 +163,12 @@ Worker::handleMail()
 void
 Worker::bind(hpx_parcel_t *p)
 {
-  // try and get a stack from the freelist, otherwise allocate a new one
-  Thread *thread = threads_;
-  if (thread) {
-    threads_ = thread->getNext();
-    --nthreads_;
-    thread = new(thread) Thread(p, ExecuteUserThread);
+  dbg_assert(!p->thread);
+
+  Thread* thread;
+  if (void* buffer = threads_) {
+    threads_ = threads_->next;
+    thread = new(buffer) Thread(p, ExecuteUserThread);
   }
   else {
     thread = new Thread(p, ExecuteUserThread);
@@ -184,23 +184,25 @@ Worker::bind(hpx_parcel_t *p)
 void
 Worker::unbind(hpx_parcel_t* p)
 {
-  int32_t limit = here->config->sched_stackcachelimit;
-  if (Thread* thread  = parcel_set_thread(p, nullptr)) {
-    thread->setNext(threads_);
-    threads_ = thread;
-    threads_->~Thread();
-    ++nthreads_;
+  if (Thread* thread = parcel_set_thread(p, nullptr)) {
+    thread->~Thread();
+    threads_ = new(thread) FreelistNode(threads_);
   }
-
-  if (limit < 0 || nthreads_ < limit) {
+  else {
     return;
   }
 
-  for (const int e = ceil_div_32(limit, 2); e < nthreads_; --nthreads_) {
-    Thread* thread = threads_->getNext();
+  const auto limit = here->config->sched_stackcachelimit;
+  if (limit < 0 || threads_->depth < limit) {
+    return;
+  }
+
+  for (auto i = 0, e = util::ceil_div(limit, 2); i < e; ++i) {
+    auto* thread = threads_->next;
     delete threads_;
     threads_ = thread;
   }
+  assert(!threads_ || threads_->depth == util::ceil_div(limit, 2));
 }
 
 void
@@ -687,4 +689,16 @@ Worker::wait(LCO& lco, Condition& cond)
   self->EVENT_THREAD_RESUME(p);
   lco.lock(p);
   return cond.getError();
+}
+
+Worker::FreelistNode::FreelistNode(FreelistNode* n)
+    : next(n),
+      depth((n) ? n->depth + 1 : 1)
+{
+}
+
+void
+Worker::FreelistNode::operator delete(void* obj)
+{
+  Thread::operator delete(obj);
 }
