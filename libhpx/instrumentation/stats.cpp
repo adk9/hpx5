@@ -78,10 +78,10 @@ trace_t *trace_stats_new(const config_t *cfg) {
   trace_t *trace = static_cast<trace_t*>(malloc(sizeof(*trace)));
   dbg_assert(trace);
 
-  trace->type        = HPX_TRACE_BACKEND_STATS;
-  trace->start       = _start;
-  trace->destroy     = _destroy;
-  trace->vappend     = _vappend;
-  sync_store(&trace->active, !cfg->trace_off, SYNC_RELAXED);
+  trace->type    = HPX_TRACE_BACKEND_STATS;
+  trace->start   = _start;
+  trace->destroy = _destroy;
+  trace->vappend = _vappend;
+  trace->active  = !cfg->trace_off;
   return trace;
 }

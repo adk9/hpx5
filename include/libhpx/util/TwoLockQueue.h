@@ -1,4 +1,4 @@
-//
+// ==================================================================-*- C++ -*-
 //  Copyright (c) 2013-2016, Trustees of Indiana University,
 //  All rights reserved.
 //
@@ -13,37 +13,77 @@
 #define LIBHPX_UTIL_TWO_LOCK_QUEUE_H
 
 #include "libhpx/util/Aligned.h"             // template Align
-#include "libsync/queues.h"                  // two_lock_queue
 #include "hpx/hpx.h"                         // HPX_CACHELINE_SIZE, hpx_parcel_t
-#include <cassert>                           // assert
-#include <cstdint>                           // uintptr_t
+#include <mutex>
 
 namespace libhpx {
 namespace util {
 
+/// M&S two lock queue from
+/// http://www.cs.rochester.edu/u/scott/papers/1996_PODC_queues.pdf, implemented
+/// based on
+/// https://www.cs.rochester.edu/research/synchronization/pseudocode/queues.html#tlq
 template <typename T>
 class TwoLockQueue : public Aligned<HPX_CACHELINE_SIZE>
 {
+  struct Node {
+    Node() : next(nullptr), value(nullptr) {
+    }
+
+    Node(T* val) : next(nullptr), value(val) {
+    }
+
+    Node* next;
+    T* value;
+  };
+
  public:
-  TwoLockQueue() : queue_() {
-    assert((uintptr_t)&queue_ % HPX_CACHELINE_SIZE == 0);
-    sync_two_lock_queue_init(&queue_, NULL);
+  TwoLockQueue() : headLock_(), head_(new Node()), tailLock_(), tail_(head_) {
   }
 
   ~TwoLockQueue() {
-    sync_two_lock_queue_fini(&queue_);
+    while (Node* node = dequeueNode()) {
+      delete node;
+    }
   }
 
   T* dequeue() {
-    return static_cast<T*>(sync_two_lock_queue_dequeue(&queue_));
+    T* value = nullptr;
+    if (Node* node = dequeueNode()) {
+      value = node->value;
+      delete node;
+    }
+    return value;
   }
 
   void enqueue(T* t) {
-    sync_two_lock_queue_enqueue(&queue_, t);
+    enqueueNode(new Node(t));
   }
 
  private:
-  two_lock_queue_t queue_;
+  Node* dequeueNode() {
+    std::lock_guard<std::mutex> _(headLock_);
+    Node* head = head_;
+    Node* next = head->next;
+    if (!next) {
+      return nullptr;
+    }
+
+    head->value = next->value;
+    head_ = next;
+    return head;
+  }
+
+  void enqueueNode(Node* node) {
+    std::lock_guard<std::mutex> _(tailLock_);
+    tail_->next = node;
+    tail_ = node;
+  }
+
+  std::mutex headLock_;
+  Node* head_;
+  alignas(HPX_CACHELINE_SIZE) std::mutex tailLock_;
+  Node* tail_;
 };
 
 } // namespace util
