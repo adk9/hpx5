@@ -21,6 +21,9 @@
 #include "libhpx/memory.h"
 #include "libhpx/Network.h"
 #include <cstring>
+#ifdef HAVE_APEX
+#include <sys/time.h>
+#endif
 
 namespace {
 using libhpx::Scheduler;
@@ -130,13 +133,21 @@ void
 Scheduler::wait()
 {
 #ifdef HAVE_APEX
-  int n = std::min(apex_get_thread_cap(), nWorkers_);
+  using std::min;
+  using std::max;
   int prev = nTarget_;
-  log_sched("apex adjusting from %d to %d workers\n", prev, n);
-  nTarget_ = n;
-  auto op = (n < prev) ? Worker::stop : Worker::start;
-  for (int i = std::max(prev, n), e = std::min(prev, n); i >= e; --i) {
-    op(&workers_[i]);
+  nTarget_ = min(apex_get_thread_cap(), nWorkers_);
+  if (prev != nTarget_) {
+    log_sched("apex adjusting from %d to %d workers\n", prev, nTarget_);
+  }
+  for (int i = min(prev, nTarget_), e = max(prev, nTarget_); i < e; ++i) {
+    dbg_assert(workers_[i]);
+    if (nTarget_ < prev) {
+      workers_[i]->stop();
+    }
+    else {
+      workers_[i]->start();
+    }
   }
 
   struct timeval tv;

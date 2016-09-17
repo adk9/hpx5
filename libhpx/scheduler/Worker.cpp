@@ -26,6 +26,7 @@
 #include "libhpx/locality.h"
 #include "libhpx/memory.h"
 #include "libhpx/Network.h"
+#include "libhpx/rebalancer.h"
 #include "libhpx/Scheduler.h"
 #include "libhpx/system.h"
 #include "libhpx/topology.h"
@@ -33,9 +34,6 @@
 #include <cstring>
 #ifdef HAVE_URCU
 # include <urcu-qsbr.h>
-#endif
-#if defined(HAVE_AGAS) && defined(HAVE_REBALANCING)
-# include "libhpx/rebalancer.h"
 #endif
 
 namespace {
@@ -275,8 +273,8 @@ Worker::enter()
 
 #ifdef HAVE_APEX
   // finish whatever the last thing we were doing was
-  if (profiler) {
-    apex_stop(profiler);
+  if (profiler_) {
+    apex_stop(profiler_);
   }
   // let APEX know the thread is exiting
   apex_exit_thread();
