@@ -14,30 +14,59 @@
 #ifndef HPX_UTIL_MATH_H
 #define HPX_UTIL_MATH_H
 
+#include <type_traits>
+
 namespace libhpx {
 namespace util {
 namespace detail {
 template <typename T, size_t Bytes = sizeof(T)>
-struct CeilLog2;
+struct CountLeadingZeros;
 
 template <typename T>
-struct CeilLog2<T, 4> {
-  static constexpr T op(T val) {
-    return ((sizeof(val) * 4 - 1) - __builtin_clz(val)) + (!!(val & (val - 1)));
+struct CountLeadingZeros<T, sizeof(unsigned int)> {
+  static constexpr int op(T val) {
+    return __builtin_clz(val);
   }
 };
 
 template <typename T>
-struct CeilLog2<T, 8> {
-  static constexpr T op(T val) {
-    return ((sizeof(val) * 8 - 1) - __builtin_clzl(val)) + (!!(val & (val - 1)));
+struct CountLeadingZeros<T, sizeof(unsigned long)> {
+  static constexpr int op(T val) {
+    return __builtin_clzl(val);
+  }
+};
+
+template <>
+struct CountLeadingZeros<unsigned int, sizeof(unsigned int)> {
+  static constexpr int op(unsigned int val) {
+    return __builtin_clz(val);
+  }
+};
+
+template <>
+struct CountLeadingZeros<unsigned long, sizeof(unsigned long)> {
+  static constexpr int op(unsigned long val) {
+    return __builtin_clzl(val);
+  }
+};
+
+template <>
+struct CountLeadingZeros<unsigned long long, sizeof(unsigned long long)> {
+  static constexpr int op(unsigned long long val) {
+    return __builtin_clzll(val);
   }
 };
 }
 
 template <typename T>
+inline constexpr char clz(T val) {
+  return detail::CountLeadingZeros<T>::op(val);
+}
+
+template <typename T>
 inline constexpr T ceil_log2(T val) {
-  return detail::CeilLog2<T>::op(val);
+  static_assert(std::is_unsigned<T>::value, "log2 of signed type undefined\n");
+  return (T(sizeof(val) * 8 - 1) - clz(val)) + (!!(val & (val - 1)));
 }
 
 template <typename T>
@@ -49,7 +78,7 @@ template <typename T>
 static inline T ceil_div(T num, T denom) {
   return (num / denom) + ((num % denom) ? 1 : 0);
 }
-}
-}
+} // namespace util
+} // namespace libhpx
 
 #endif // HPX_UTIL_MATH_H
