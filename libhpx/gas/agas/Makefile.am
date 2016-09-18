@@ -22,5 +22,5 @@ endif
 if HAVE_REBALANCING
 libagas_la_CFLAGS = $(LIBHPX_CFLAGS)
 noinst_HEADERS     += rebalancer.h BlockStatisticsTable.h
-libagas_la_SOURCES += rebalancer.cpp partitioning.c BlockStatisticsTable.cpp
+libagas_la_SOURCES += rebalancer.cpp partitioning.cpp BlockStatisticsTable.cpp
 endif

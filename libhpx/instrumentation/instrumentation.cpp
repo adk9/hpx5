@@ -15,6 +15,8 @@
 # include "config.h"
 #endif
 
+#include "Trace.h"
+
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -28,9 +30,7 @@
 #include <pwd.h>
 
 #include <hpx/hpx.h>
-#include <libsync/sync.h>
 #include <libhpx/action.h>
-#include <libhpx/config.h>
 #include <libhpx/debug.h>
 #include <libhpx/events.h>
 #include <libhpx/instrumentation.h>
@@ -40,7 +40,43 @@
 #include <libhpx/Worker.h>
 #include "file.h"
 
-trace_t *trace_new(const config_t *cfg) {
+namespace {
+using libhpx::instrumentation::Trace;
+constexpr auto RELAXED = std::memory_order_relaxed;
+}
+
+Trace::Trace(const config_t* cfg) : active(!cfg->trace_off) {
+}
+
+Trace::~Trace() {
+}
+
+void
+trace_start(void* obj)
+{
+  if (auto trace = static_cast<Trace*>(obj)) {
+    trace->start();
+  }
+}
+
+void
+trace_destroy(void* obj)
+{
+  if (auto trace = static_cast<Trace*>(obj)) {
+    trace->destroy();
+  }
+}
+
+void
+trace_vappend(void* obj, int UNUSED, int n, int id, ...)
+{
+  va_list vargs;
+  va_start(vargs, id);
+  static_cast<Trace*>(obj)->vappend(UNUSED, n, id, vargs);
+  va_end(vargs);
+}
+
+void* trace_new(const config_t *cfg) {
 #ifndef ENABLE_INSTRUMENTATION
   return NULL;
 #endif
@@ -64,23 +100,24 @@ trace_t *trace_new(const config_t *cfg) {
 }
 
 void libhpx_inst_phase_begin() {
-  if (here->tracer != NULL) {
-    sync_store(&here->tracer->active, true, SYNC_RELAXED);
+  if (auto trace = static_cast<Trace*>(here->tracer)) {
+    trace->active.store(true, RELAXED);
   }
 }
 
 void libhpx_inst_phase_end() {
-  if (here->tracer != NULL) {
-    sync_store(&here->tracer->active, false, SYNC_RELAXED);
+  if (auto trace = static_cast<Trace*>(here->tracer)) {
+    trace->active.store(false, RELAXED);
   }
 }
 
 bool libhpx_inst_tracer_active() {
   dbg_assert(here && here->tracer);
-  return sync_load(&here->tracer->active, SYNC_RELAXED);
+  auto trace = static_cast<Trace*>(here->tracer);
+  return trace->active.load(RELAXED);
 }
 
-int inst_check_vappend(int id, ...) {;
+int inst_check_vappend(int id, ...) {
   if (!here) {
     return 0;
   }

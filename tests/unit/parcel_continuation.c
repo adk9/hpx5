@@ -16,7 +16,6 @@
 #include <unistd.h>
 #include "hpx/hpx.h"
 #include "tests.h"
-#include "libsync/sync.h"
 
 // Testcase to test the parcel continuation
 static int _get_cont_value_handler(uint64_t *args, size_t n) {

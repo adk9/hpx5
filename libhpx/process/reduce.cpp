@@ -22,9 +22,17 @@
 #include "libhpx/Scheduler.h"
 #include "libhpx/Worker.h"
 #include <stdlib.h>
+#include <atomic>
+
+namespace {
+constexpr auto ACQUIRE = std::memory_order_acquire;
+constexpr auto RELEASE = std::memory_order_release;
+constexpr auto RELAXED = std::memory_order_relaxed;
+constexpr auto ACQ_REL = std::memory_order_acq_rel;
+}
 
 struct reduce {
-  volatile int i;
+  std::atomic<int> i;
   int n;
   size_t bytes;
   size_t padded;
@@ -52,7 +60,7 @@ reduce_t *reduce_new(size_t bytes, hpx_monoid_id_t id, hpx_monoid_op_t op) {
   r->padded = padded;
   r->id = id;
   r->op = op;
-  sync_store(&r->i, 0, SYNC_RELEASE);
+  r->i = 0;
   for (int i = 0, e = workers; i < e; ++i) {
     void *value = r->values + i * r->padded;
     r->id(value, r->bytes);
@@ -68,23 +76,23 @@ void reduce_delete(reduce_t *r) {
 }
 
 int reduce_add(reduce_t *r) {
-  dbg_assert(sync_load(&r->i, SYNC_ACQUIRE) == r->n);
+  dbg_assert(r->i.load(ACQUIRE) == r->n);
   int i = ++r->n;
-  sync_store(&r->i, i, SYNC_RELEASE);
+  r->i.store(i, RELEASE);
   return (i == 1);
 }
 
 int reduce_remove(reduce_t *r) {
-  dbg_assert(sync_load(&r->i, SYNC_ACQUIRE) == r->n);
+  dbg_assert(r->i.load(ACQUIRE) == r->n);
   int i = --r->n;
-  sync_store(&r->i, i, SYNC_RELEASE);
+  r->i.store(i, RELEASE);
   return (i == 0);
 }
 
 int reduce_join(reduce_t *r, const void *in) {
   void *buffer = r->values + libhpx::self->getId() * r->padded;
   r->op(buffer, in, r->bytes);
-  return (sync_addf(&r->i, -1, SYNC_ACQ_REL) == 0);
+  return (r->i.fetch_sub(1, ACQ_REL) == 1);
 }
 
 void reduce_reset(reduce_t *r, void *out) {
@@ -95,5 +103,5 @@ void reduce_reset(reduce_t *r, void *out) {
     r->id(value, r->bytes);
   }
 
-  sync_store(&r->i, r->n, SYNC_RELEASE);
+  r->i.store(r->n, RELEASE);
 }

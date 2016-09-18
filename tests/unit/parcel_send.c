@@ -15,22 +15,21 @@
 # include "config.h"
 #endif
 
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include "hpx/hpx.h"
 #include "tests.h"
-#include "libsync/sync.h"
 
-static volatile int counter HPX_USED = 0;
+static _Atomic int counter HPX_USED = 0;
 
 // This testcase tests hpx_parcel_send function, which sends a parcel with
 // asynchronout local completion symantics, hpx_parcel_set_cont_action - set
 // the continuous action, hpx_pargel_set_cont_target - set the continuous
 // address for a parcel.
 static int _recv_handler(double *args, size_t n) {
-  //printf("recv %d\n", sync_fadd(&counter, 1, SYNC_ACQ_REL));
-  sync_fadd(&counter, 1, SYNC_ACQ_REL);
+  atomic_fetch_add_explicit(&counter, 1, memory_order_acq_rel);
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _recv, _recv_handler);

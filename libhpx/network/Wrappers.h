@@ -15,7 +15,7 @@
 #define LIBHPX_NETWORK_WRAPPERS_H
 
 #include "libhpx/Network.h"
-#include "libsync/queues.hpp"
+#include "libhpx/util/TwoLockQueue.h"
 #include <atomic>
 
 namespace libhpx {
@@ -144,7 +144,7 @@ class CoalescingWrapper final : public NetworkWrapper {
   std::atomic<unsigned> prev_;
   std::atomic<unsigned> count_;
   std::atomic<unsigned> coalescing_;
-  libsync::TwoLockQueue<hpx_parcel_t*> sends_;
+  util::TwoLockQueue<hpx_parcel_t*> sends_;
 };
 
 } // namespace network

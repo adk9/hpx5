@@ -16,24 +16,7 @@ nobase_include_HEADERS = hpx/action.h \
                          hpx/time.h \
                          hpx/topology.h \
                          hpx/types.h \
-                         libapex/apex_global_hpx.h \
-                         libsync/backoff.h \
-                         libsync/barriers.h \
-                         libsync/cptr.h \
-                         libsync/deques.h \
-                         libsync/generic.h \
-                         libsync/locks.h \
-                         libsync/lockable_ptr.h \
-                         libsync/queues.h \
-                         libsync/queues.hpp \
-                         libsync/sync.h \
-                         libsync/types.def \
-                         libsync/gcc/sync.h \
-                         libsync/gcc/atomic.h \
-                         libsync/craycc/sync.h \
-                         libhpx/libhpx.h \
-                         libhpx/config.h \
-                         libhpx/options.def
+                         libapex/apex_global_hpx.h 
 
 if HAVE_HPXPP
 nobase_include_HEADERS += hpx/hpx++.h \

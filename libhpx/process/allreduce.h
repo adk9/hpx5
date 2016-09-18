@@ -15,7 +15,6 @@
 #define LIBHPX_PROCESS_ALLREDUCE_H
 
 #include <hpx/hpx.h>
-#include <libsync/locks.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -78,6 +77,7 @@ extern HPX_ACTION_DECL(allreduce_join_async);
 extern HPX_ACTION_DECL(allreduce_bcast_async);
 
 extern HPX_ACTION_DECL(allreduce_bcast_comm_async);
+
 
 #ifdef __cplusplus
 }

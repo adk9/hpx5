@@ -15,18 +15,18 @@
 # include "config.h"
 #endif
 
+#include "libhpx/debug.h"
+#include "libhpx/system.h"
 #include <errno.h>
 #ifdef HAVE_HUGETLBFS
-# include <stddef.h>
+# include <cstddef>
 # include <hugetlbfs.h>
 #endif
-#include <inttypes.h>
-#include <string.h>
+#include <cinttypes>
+#include <cstring>
 #include <unistd.h>
 #include <sys/mman.h>
-#include <libsync/sync.h>
-#include <libhpx/debug.h>
-#include <libhpx/system.h>
+#include <atomic>
 
 /// We use the hugetlbfs interface. In order to avoid locking around the huge
 /// page fd, we simply open the file once at startup.
@@ -52,14 +52,14 @@ static void HPX_DESTRUCTOR _system_fini(void) {
 #endif
 
 #ifdef ENABLE_DEBUG
-static uintptr_t _total = 0;
+static std::atomic<uintptr_t> _total(0);
 #endif
 
 static uintptr_t HPX_USED _update_total(intptr_t n) {
 #ifndef ENABLE_DEBUG
   return 0;
 #else
-  return sync_addf(&_total, n, SYNC_ACQ_REL);
+  return _total.fetch_add(n, std::memory_order_acq_rel) + n;
 #endif
 }
 
@@ -82,7 +82,7 @@ static uintptr_t HPX_USED _update_total(intptr_t n) {
 /// @returns The properly-aligned mapped region, or NULL if there was an error.
 static void *_mmap_aligned(void *addr, size_t n, int prot, int flags, int fd,
                            int off, size_t align) {
-  char *buffer = mmap(addr, n + align, prot, flags, fd, off);
+  char *buffer = static_cast<char*>(mmap(addr, n + align, prot, flags, fd, off));
   if (buffer == MAP_FAILED) {
     dbg_error("could not map %zu bytes with %zu alignment\n", n, align);
   }

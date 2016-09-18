@@ -16,31 +16,31 @@
 #endif
 
 /// @file libhpx/scheduler/process.c
-#include <assert.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <string.h>
+#include "Bitmap.h"
+#include "libhpx/action.h"
+#include "libhpx/debug.h"
+#include "libhpx/events.h"
+#include "libhpx/locality.h"
+#include "libhpx/parcel.h"
+#include "libhpx/process.h"
+#include <cassert>
+#include <cstdlib>
+#include <cstring>
+#include <atomic>
 
-#include <libsync/sync.h>
-#include <libhpx/action.h>
-#include <libhpx/debug.h>
-#include <libhpx/events.h>
-#include <libhpx/locality.h>
-#include <libhpx/parcel.h>
-#include <libhpx/process.h>
-#include <libhpx/termination.h>
+namespace {
+constexpr auto ACQUIRE = std::memory_order_acquire;
+constexpr auto RELEASE = std::memory_order_release;
+constexpr auto ACQ_REL = std::memory_order_acq_rel;
+constexpr auto RELAXED = std::memory_order_relaxed;
+using libhpx::process::Bitmap;
 
 typedef struct {
-  volatile uint64_t    credit;               // credit balance
-  bitmap_t              *debt;               // the credit that was recovered
-  hpx_addr_t      termination;               // the termination LCO
+  std::atomic<uint64_t> credit;                 // credit balance
+  Bitmap                 *debt;                 // the credit that was recovered
+  hpx_addr_t       termination;                 // the termination LCO
 } _process_t;
-
-
-/// Remote action interface to a process.
-static HPX_ACTION_DECL(_proc_call);
-static HPX_ACTION_DECL(_proc_delete);
-static HPX_ACTION_DECL(_proc_return_credit);
+}
 
 static bool HPX_USED _is_tracked(_process_t *p) {
   return (p->termination != HPX_NULL);
@@ -52,7 +52,7 @@ static void _free(_process_t *p) {
     return;
   }
 
-  cr_bitmap_delete(p->debt);
+  delete p->debt;
 
   // set the termination LCO if the process is being deleted
   // if (_is_tracked(p))
@@ -61,9 +61,8 @@ static void _free(_process_t *p) {
 
 /// Initialize a process.
 static void _init(_process_t *p, hpx_addr_t termination) {
-  sync_store(&p->credit, 0, SYNC_RELEASE);
-  p->debt = cr_bitmap_new();
-  assert(p->debt);
+  p->credit.store(0, RELEASE);
+  p->debt = new Bitmap();
   p->termination = termination;
 }
 
@@ -74,7 +73,7 @@ static int _proc_call_handler(hpx_parcel_t *arg, size_t n) {
     return HPX_RESEND;
   }
 
-  uint64_t credit = sync_addf(&p->credit, 1, SYNC_ACQ_REL);
+  uint64_t credit = p->credit.fetch_add(1, ACQ_REL) + 1;
   hpx_gas_unpin(process);
 
   hpx_pid_t pid = hpx_process_getpid(process);
@@ -98,12 +97,12 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_PINNED | HPX_MARSHALLED, _proc_delete,
 
 static int _proc_return_credit_handler(_process_t *p, uint64_t *args, size_t size) {
   // add credit to the credit-accounting bitmap
-  uint64_t debt = cr_bitmap_add_and_test(p->debt, *args);
+  uint64_t debt = p->debt->addAndTest(*args);
   for (;;) {
-    uint64_t credit = sync_load(&p->credit, SYNC_ACQUIRE);
+    uint64_t credit = p->credit.load(ACQUIRE);
     if ((credit != 0) && ~(debt | ((UINT64_C(1) << (64-credit)) - 1)) == 0) {
       // log("detected quiescence...\n");
-      if (!sync_cas(&p->credit, &credit, -credit, SYNC_RELEASE, SYNC_RELAXED)) {
+      if (!p->credit.compare_exchange_weak(credit, 0 - credit, RELEASE, RELAXED)) {
         continue;
       }
       dbg_assert(_is_tracked(p));

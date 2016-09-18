@@ -15,6 +15,7 @@
 # include "config.h"
 #endif
 
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -22,7 +23,6 @@
 #include "hpx/hpx.h"
 #include "tests.h"
 #include "libhpx/locality.h"
-#include "libsync/queues.h"
 
 #define NUM_THREADS 5
 #define ARRAY_SIZE 100
@@ -33,14 +33,14 @@ const int SET_CONT_VALUE = 1234;
 
 // hpx_thread_yield()
 struct _yield_args {
-  size_t *counter;
+  _Atomic size_t *counter;
   size_t limit;
   double time_limit;
 };
 
 static int _yield_worker_handler(struct _yield_args *args, size_t n) {
   // int num =
-  sync_addf(args->counter, 1, SYNC_SEQ_CST);
+  atomic_fetch_add(args->counter, 1);
 
   uint64_t timeout = false;
   hpx_time_t start_time = hpx_time_now();
@@ -61,7 +61,7 @@ static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _yield_worker,
 
 static int thread_yield_handler(void) {
   int num_threads = hpx_get_num_threads();
-  size_t counter = 0;
+  _Atomic size_t counter = 0;
 
   struct _yield_args args = {
     .counter = &counter,

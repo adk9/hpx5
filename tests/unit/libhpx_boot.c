@@ -15,7 +15,7 @@
 # include "config.h"
 #endif
 
-#include <libsync/locks.h>
+#include <stdatomic.h>
 #include <hpx/hpx.h>
 #include <libhpx/boot.h>
 #include <libhpx/locality.h>
@@ -41,17 +41,18 @@ static int alltoall_handler(boot_t *boot) {
   }
 
   boot_barrier(boot);
-  static tatas_lock_t lock = SYNC_TATAS_LOCK_INIT;
-  sync_tatas_acquire(&lock);
+  static volatile atomic_flag lock = ATOMIC_FLAG_INIT;
   {
+    while (atomic_flag_test_and_set(&lock))
+      ;
     printf("src@%d { ", here->rank);
     for (int i = 0; i < NLOC; ++i) {
       printf("{%d,%d} ", src[i][0], src[i][1]);
     }
     printf("}\n");
     fflush(stdout);
+    atomic_flag_clear(&lock);
   }
-  sync_tatas_release(&lock);
 
   boot_barrier(boot);
   int e = boot_alltoall(boot, dst, src, 1*sizeof(int), 2*sizeof(int));
@@ -59,16 +60,17 @@ static int alltoall_handler(boot_t *boot) {
     FAIL(dst, "boot_alltoall returned failure code\n");
   }
 
-  sync_tatas_acquire(&lock);
   {
+    while (atomic_flag_test_and_set(&lock))
+      ;
     printf("dst@%d { ", here->rank);
     for (int i = 0; i < NLOC; ++i) {
       printf("{%d,%d} ", dst[i][0], dst[i][1]);
     }
     printf("}\n");
     fflush(stdout);
+    atomic_flag_clear(&lock);
   }
-  sync_tatas_release(&lock);
   boot_barrier(boot);
 
   for (int i = 0; i < NLOC; ++i) {

@@ -12,8 +12,8 @@ ACLOCAL_AMFLAGS = -I config -I contrib/hwloc/config
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = hpx.pc
 
-SUBDIRS       = contrib libsync libhpx include examples
-DIST_SUBDIRS  = contrib libsync libhpx include examples libapex docs tests
+SUBDIRS       = contrib libhpx include examples
+DIST_SUBDIRS  = contrib libhpx include examples libapex docs tests
 
 if HAVE_APEX
 SUBDIRS      += libapex

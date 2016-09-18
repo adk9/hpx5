@@ -18,13 +18,15 @@
 
 namespace libhpx {
 namespace util {
+template <typename T>
+class TwoLockQueue;
 
 /// M&S two lock queue from
 /// http://www.cs.rochester.edu/u/scott/papers/1996_PODC_queues.pdf, implemented
 /// based on
 /// https://www.cs.rochester.edu/research/synchronization/pseudocode/queues.html#tlq
 template <typename T>
-class TwoLockQueue : public Aligned<HPX_CACHELINE_SIZE>
+class TwoLockQueue<T*> : public Aligned<HPX_CACHELINE_SIZE>
 {
   struct Node {
     Node() : next(nullptr), value(nullptr) {

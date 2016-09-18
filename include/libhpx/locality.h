@@ -51,7 +51,6 @@ extern "C" {
 struct boot;
 struct config;
 struct topology;
-struct tracer;
 /// @}
 
 /// The locality object.
@@ -80,7 +79,7 @@ typedef struct locality {
                                //!< defaults.
   struct topology   *topology; //!< The topology information.
   void           *percolation; //!< An interface for dealing with GPU backends.
-  struct trace        *tracer; //!< Reference to the tracer object
+  void                *tracer; //!< Reference to the tracer object
   sigset_t               mask; //!< The default signal mask.
 } locality_t;
 

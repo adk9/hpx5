@@ -23,6 +23,9 @@
 namespace libhpx {
 namespace util {
 
+template <typename T>
+class ChaseLevDeque;
+
 /// Class representing a worker thread's state.
 ///
 /// Worker threads are "object-oriented" insofar as that goes, but each native
@@ -32,7 +35,7 @@ namespace util {
 ///
 /// @{
 template <typename T>
-class ChaseLevDeque : public Aligned<HPX_CACHELINE_SIZE>
+class ChaseLevDeque<T*> : public Aligned<HPX_CACHELINE_SIZE>
 {
   // even on 32 bit platforms we want 64 bit index (to avoid overflow)
   using Index = std::uint64_t;

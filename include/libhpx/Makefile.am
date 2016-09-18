@@ -9,7 +9,6 @@ noinst_HEADERS = action.h \
                  GAS.h \
                  gpa.h \
                  instrumentation.h \
-                 lco.h \
                  LCOOps.h \
                  locality.h \
                  memory.h \
@@ -25,7 +24,6 @@ noinst_HEADERS = action.h \
                  Scheduler.h\
                  StringOps.h \
                  system.h \
-                 termination.h \
                  time.h \
                  topology.h \
                  utils.h \

@@ -22,8 +22,8 @@
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
-#include <libsync/locks.h>
 #include <utstring.h>
+#include <mutex>
 
 #ifdef HAVE_METIS
 #include <metis.h>
@@ -35,7 +35,7 @@
 extern void *LIBHPX_COMM;
 #endif
 
-static tatas_lock_t _lock = SYNC_TATAS_LOCK_INIT;
+static std::mutex _lock;
 
 // The owner map for vertices in the graph.
 typedef struct _owner_map {
@@ -209,7 +209,7 @@ int agas_graph_construct(hpx_addr_t graph, void *buf, size_t size,
     return HPX_ERROR;
   }
 
-  sync_tatas_acquire(&_lock);
+  _lock.lock()
 
   // add owner map entry
   _owner_map_t *map = &g->owner_map[g->count++];
@@ -217,12 +217,12 @@ int agas_graph_construct(hpx_addr_t graph, void *buf, size_t size,
   map->owner = owner;
 
   uint64_t *gxadj = _UTBUF(g->xadj);
-  for (int i = 0; i < n; ++i) {    
+  for (int i = 0; i < n; ++i) {
     gxadj[i+1] += lsizes[i];
     for (int j = 0; j < lsizes[i]; ++j) {
       lnbrs[i][j] += g->nvtxs;
     }
-    
+
     utstring_bincpy(g->lnbrs[i], lnbrs[i], lsizes[i]*sizeof(uint64_t));
   }
 
@@ -238,9 +238,9 @@ int agas_graph_construct(hpx_addr_t graph, void *buf, size_t size,
   utstring_bincpy(g->adjncy, adjncy, esize);
   utstring_bincpy(g->adjwgt, adjwgt, esize);
 
-  sync_tatas_release(&_lock);
+  _lock.unlock();
   hpx_gas_unpin(graph);
-  
+
   return HPX_SUCCESS;
 }
 
@@ -348,7 +348,7 @@ static size_t _parmetis_partition(_agas_graph_t *g, idx_t nparts,
 // the final adjacency array. We also fix the xadj array to reflect
 // the correct positions into the adjacency array.
 static void _postprocess_graph(_agas_graph_t *g) {
-  // aggregate the locality nbrs array  
+  // aggregate the locality nbrs array
   UT_string *tmp;
   utstring_new(tmp);
   for (int i = 0; i < here->ranks; ++i) {
