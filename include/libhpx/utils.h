@@ -14,6 +14,10 @@
 #ifndef LIBHPX_UTILS_H
 #define LIBHPX_UTILS_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /// Hash a string @p str of length @p len.
 uint32_t libhpx_hash_string(const char *str, size_t len);
 
@@ -24,5 +28,9 @@ char *libhpx_getenv_str(const char * const key);
 /// Get a numeric value from a environment variable @p key, returning
 /// @p default_num if the variable is not found.
 int libhpx_getenv_num(const char * const key, int default_num);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIBHPX_UTILS_H

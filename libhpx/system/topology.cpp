@@ -55,7 +55,7 @@ static libhpx_hwloc_cpuset_t *_cpu_affinity_map_new(topology_t *topology,
   if (!resources) {
     return NULL;
   }
-  libhpx_hwloc_cpuset_t *cpu_affinity_map = calloc(resources, sizeof(*cpu_affinity_map));
+  libhpx_hwloc_cpuset_t *cpu_affinity_map = new libhpx_hwloc_cpuset_t[resources];
 
   for (int r = 0; r < resources; ++r) {
     libhpx_hwloc_cpuset_t cpuset = cpu_affinity_map[r] = libhpx_hwloc_bitmap_alloc();
@@ -95,12 +95,12 @@ static void _cpu_affinity_map_delete(topology_t *topology) {
   for (int r = 0; r < resources; ++r) {
     libhpx_hwloc_bitmap_free(topology->cpu_affinity_map[r]);
   }
-  free(topology->cpu_affinity_map);
+  delete [] topology->cpu_affinity_map;
 }
 
 topology_t *topology_new(const struct config *config) {
   // Allocate the topology structure/
-  topology_t *topo = malloc(sizeof(*topo));
+  topology_t *topo = new topology_t(); // malloc(sizeof(*topo));
   if (!topo) {
     log_error("failed to allocate topology structure\n");
     return NULL;
@@ -147,35 +147,35 @@ topology_t *topology_new(const struct config *config) {
     return NULL;
   }
 
-  topo->cpus = calloc(topo->ncpus, sizeof(topo->cpus[0]));
+  topo->cpus = new libhpx_hwloc_obj_t[topo->ncpus]();
   if (!topo->cpus) {
     log_error("failed to allocate memory for cpu objects.\n");
     topology_delete(topo);
     return NULL;
   }
 
-  topo->cpu_to_core = calloc(topo->ncpus, sizeof(topo->cpu_to_core[0]));
+  topo->cpu_to_core = new int[topo->ncpus]();
   if (!topo->cpu_to_core) {
     log_error("failed to allocate memory for the core map.\n");
     topology_delete(topo);
     return NULL;
   }
 
-  topo->cpu_to_numa = calloc(topo->ncpus, sizeof(topo->cpu_to_numa[0]));
+  topo->cpu_to_numa = new int[topo->ncpus]();
   if (!topo->cpu_to_numa) {
     log_error("failed to allocate memory for the NUMA map.\n");
     topology_delete(topo);
     return NULL;
   }
 
-  topo->numa_nodes = calloc(topo->nnodes, sizeof(topo->numa_nodes[0]));
+  topo->numa_nodes = new libhpx_hwloc_obj_t[topo->nnodes]();
   if (!topo->numa_nodes) {
     log_error("failed to allocate memory for numa node objects.\n");
     topology_delete(topo);
     return NULL;
   }
 
-  topo->numa_to_cpus = calloc(topo->nnodes, sizeof(topo->numa_to_cpus[0]));
+  topo->numa_to_cpus = new int*[topo->nnodes]();
   if (!topo->numa_to_cpus) {
     log_error("failed to allocate memory for the reverse NUMA map.\n");
     topology_delete(topo);
@@ -183,7 +183,7 @@ topology_t *topology_new(const struct config *config) {
   }
 
   for (int i = 0, e = topo->nnodes; i < e; ++i) {
-    topo->numa_to_cpus[i] = calloc(topo->cpus_per_node, sizeof(int));
+    topo->numa_to_cpus[i] = new int[topo->cpus_per_node]();
     if (!topo->numa_to_cpus[i]) {
       log_error("failed to allocate memory for the reverse NUMA map.\n");
       topology_delete(topo);
@@ -255,32 +255,32 @@ void topology_delete(topology_t *topology) {
   }
 
   if (topology->cpus) {
-    free(topology->cpus);
+    delete [] topology->cpus;
     topology->cpus = NULL;
   }
 
   if (topology->numa_nodes) {
-    free(topology->numa_nodes);
+    delete [] topology->numa_nodes;
     topology->numa_nodes = NULL;
   }
 
   if (topology->cpu_to_core) {
-    free(topology->cpu_to_core);
+    delete [] topology->cpu_to_core;
     topology->cpu_to_core = NULL;
   }
 
   if (topology->cpu_to_numa) {
-    free(topology->cpu_to_numa);
+    delete [] topology->cpu_to_numa;
     topology->cpu_to_numa = NULL;
   }
 
   if (topology->numa_to_cpus) {
     for (int i = 0; i < topology->nnodes; ++i) {
       if (topology->numa_to_cpus[i]) {
-        free(topology->numa_to_cpus[i]);
+        delete [] topology->numa_to_cpus[i];
       }
     }
-    free(topology->numa_to_cpus);
+    delete [] topology->numa_to_cpus;
     topology->numa_to_cpus = NULL;
   }
 
@@ -295,5 +295,5 @@ void topology_delete(topology_t *topology) {
   }
 
   libhpx_hwloc_topology_destroy(topology->hwloc_topology);
-  free(topology);
+  delete topology;
 }

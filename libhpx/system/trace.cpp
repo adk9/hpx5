@@ -36,7 +36,7 @@ void system_print_trace(void *fd) {
   size = backtrace (array, 10);
   strings = backtrace_symbols (array, size);
 
-  fprintf (fd, "Obtained %zd stack frames.\n", size);
+  fprintf (static_cast<FILE*>(fd), "Obtained %zd stack frames.\n", size);
 
   for (i = 0; i < size; i++) {
     printf ("%s\n", strings[i]);
