@@ -43,7 +43,8 @@ class Bitmap : public util::Aligned<HPX_CACHELINE_SIZE> {
  public:
   typedef uint64_t Word;
 
-  Bitmap() : pages_() {
+  Bitmap() // : pages_()      Workaround for icc ICE
+  {
     pages_[0].store(new Page(), RELEASE);
   }
 

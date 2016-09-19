@@ -15,21 +15,21 @@
 # include "config.h"
 #endif
 
-#include <stdatomic.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include "hpx/hpx.h"
 #include "tests.h"
+#include "hpx/hpx.h"
+#include <cstdio>
+#include <cstdlib>
+#include <unistd.h>
+#include <atomic>
 
-static _Atomic int counter HPX_USED = 0;
+static std::atomic<int> counter;
 
 // This testcase tests hpx_parcel_send function, which sends a parcel with
 // asynchronout local completion symantics, hpx_parcel_set_cont_action - set
 // the continuous action, hpx_pargel_set_cont_target - set the continuous
 // address for a parcel.
 static int _recv_handler(double *args, size_t n) {
-  atomic_fetch_add_explicit(&counter, 1, memory_order_acq_rel);
+  ++counter;
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _recv, _recv_handler);
@@ -41,7 +41,7 @@ static int parcel_send_handler(void) {
 
   for (int i = 0; i < 4; i++) {
     size_t size = sizeof(double) * buffer[i];
-    double *buf = malloc(size);
+    double *buf = new double[buffer[i]];
     for (int j = 0; j < buffer[i]; j++) {
       buf[j] = rand() % 10000;
     }
@@ -78,7 +78,7 @@ static int parcel_send_handler(void) {
 
     double elapsed = hpx_time_elapsed_ms(t1);
     printf("Elapsed: %g\n", elapsed/avg);
-    free(buf);
+    delete [] buf;
   }
   return HPX_SUCCESS;
 }

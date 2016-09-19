@@ -67,6 +67,8 @@ endif
 
 # For some reason I need to explicitly set C++ source files
 cxx_raii_SOURCES                    = cxx_raii.cpp
+parcel_send_SOURCES                 = parcel_send.cpp
+thread_yield_SOURCES                = thread_yield.cpp
 
 # Override libhpx tests so that they have the right paths and flags, which are
 # the LIBHPX versions rather than the HPX_APPS version.

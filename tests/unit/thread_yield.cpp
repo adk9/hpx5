@@ -15,14 +15,14 @@
 # include "config.h"
 #endif
 
-#include <stdatomic.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <inttypes.h>
-#include "hpx/hpx.h"
 #include "tests.h"
 #include "libhpx/locality.h"
+#include "hpx/hpx.h"
+#include <cstdio>
+#include <cstdlib>
+#include <unistd.h>
+#include <cinttypes>
+#include <atomic>
 
 #define NUM_THREADS 5
 #define ARRAY_SIZE 100
@@ -33,14 +33,14 @@ const int SET_CONT_VALUE = 1234;
 
 // hpx_thread_yield()
 struct _yield_args {
-  _Atomic size_t *counter;
+  std::atomic<size_t> *counter;
   size_t limit;
   double time_limit;
 };
 
 static int _yield_worker_handler(struct _yield_args *args, size_t n) {
   // int num =
-  atomic_fetch_add(args->counter, 1);
+  args->counter->fetch_add(1);
 
   uint64_t timeout = false;
   hpx_time_t start_time = hpx_time_now();
@@ -61,14 +61,14 @@ static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _yield_worker,
 
 static int thread_yield_handler(void) {
   int num_threads = hpx_get_num_threads();
-  _Atomic size_t counter = 0;
+  std::atomic<size_t> counter;
 
   struct _yield_args args = {
     .counter = &counter,
     .limit = num_threads + 1,
     .time_limit = 5000.0
   };
-  hpx_addr_t *done = malloc(sizeof(hpx_addr_t) * (num_threads + 1));
+  hpx_addr_t *done = new hpx_addr_t [num_threads + 1];
 
 
   // now spawn num_threads + 1 num_threads
@@ -93,7 +93,7 @@ static int thread_yield_handler(void) {
   }
   assert_msg(any_timeouts == false, "Threads did not yield.");
 
-  free(done);
+  delete [] done;
   return HPX_SUCCESS;
 }
 static HPX_ACTION(HPX_DEFAULT, 0, thread_yield, thread_yield_handler);
