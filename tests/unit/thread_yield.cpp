@@ -60,7 +60,7 @@ static HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _yield_worker,
                   _yield_worker_handler, HPX_POINTER, HPX_SIZE_T);
 
 static int thread_yield_handler(void) {
-  int num_threads = hpx_get_num_threads();
+  unsigned num_threads = (unsigned)hpx_get_num_threads();
   std::atomic<size_t> counter;
 
   struct _yield_args args = {
