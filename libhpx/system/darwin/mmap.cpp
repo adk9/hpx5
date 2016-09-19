@@ -41,7 +41,7 @@
 /// @returns The properly-aligned mapped region, or NULL if there was an error.
 static void *_mmap_aligned(void *addr, size_t n, int prot, int flags, int fd,
                            int off, size_t align) {
-  char *buffer = mmap(addr, n + align, prot, flags, fd, off);
+  char *buffer = (char*)mmap(addr, n + align, prot, flags, fd, off);
   if (buffer == MAP_FAILED) {
     dbg_error("could not map %zu bytes with %zu alignment\n", n, align);
   }
@@ -107,7 +107,7 @@ void *system_mmap_huge_pages(void *UNUSED, void *addr, size_t n, size_t align) {
 void system_munmap(void *UNUSED, void *addr, size_t size) {
   int e = munmap(addr, size);
   if (e < 0) {
-    dbg_error("munmap failed: %s.  addr is %"PRIuPTR", and size is %zu\n",
+    dbg_error("munmap failed: %s.  addr is %" PRIuPTR", and size is %zu\n",
           strerror(errno), (uintptr_t)addr, size);
   }
 }
