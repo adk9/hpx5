@@ -23,23 +23,16 @@ template <typename T, size_t Bytes = sizeof(T)>
 struct CountLeadingZeros;
 
 template <typename T>
-struct CountLeadingZeros<T, sizeof(unsigned int)> {
+struct CountLeadingZeros<T, 4> {
   static constexpr int op(T val) {
     return __builtin_clz(val);
   }
 };
 
 template <typename T>
-struct CountLeadingZeros<T, sizeof(unsigned long)> {
+struct CountLeadingZeros<T, 8> {
   static constexpr int op(T val) {
-    return __builtin_clzl(val);
-  }
-};
-
-template <>
-struct CountLeadingZeros<unsigned int, sizeof(unsigned int)> {
-  static constexpr int op(unsigned int val) {
-    return __builtin_clz(val);
+    return __builtin_clzll(val);
   }
 };
 
@@ -47,13 +40,6 @@ template <>
 struct CountLeadingZeros<unsigned long, sizeof(unsigned long)> {
   static constexpr int op(unsigned long val) {
     return __builtin_clzl(val);
-  }
-};
-
-template <>
-struct CountLeadingZeros<unsigned long long, sizeof(unsigned long long)> {
-  static constexpr int op(unsigned long long val) {
-    return __builtin_clzll(val);
   }
 };
 }
