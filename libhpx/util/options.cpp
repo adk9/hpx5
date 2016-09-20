@@ -35,7 +35,8 @@
 #include <cstdlib>
 #include <cstring>
 #include <unistd.h>
-#include <utstring.h>
+#include <string>
+#include <sstream>
 
 typedef struct hpx_options_t hpx_options_t;
 
@@ -63,7 +64,7 @@ static const config_t _default_cfg = {
 /// @param          var The key we are looking for in the environment.
 /// @param          opt The key we will use for gengetopt.
 /// @param         flag Indicates if the option key is a flag or not.
-static void _from_env(UT_string *str, const char * const var,
+static void _from_env(std::stringstream& ss, const char * const var,
                       const char * const arg, bool flag) {
   const char *c = libhpx_getenv_str(var);
   if (!c) {
@@ -71,9 +72,9 @@ static void _from_env(UT_string *str, const char * const var,
   }
 
   if (flag) {
-    utstring_printf(str, "--%s ", arg);
+    ss << "--" << arg << " ";
   } else {
-    utstring_printf(str, "--%s=%s ", arg, c);
+    ss << "--" << arg << "=" << c << " ";
   }
 }
 
@@ -82,7 +83,7 @@ static void _from_env(UT_string *str, const char * const var,
 /// We need the key for the environment and the key for gengetopt as separate
 /// things in the -from_env call. The function takes the env key, copies it, and
 /// replaces underscores with hyphens.
-static void _xform_string(UT_string *str, const char *env, bool flag) {
+static void _xform_string(std::stringstream& str, const char *env, bool flag) {
   char *opt = strdup(env);
   dbg_assert(opt);
   for (int i = 0, e = strlen(env); i < e; ++i) {
@@ -101,7 +102,7 @@ static void _xform_string(UT_string *str, const char *env, bool flag) {
 /// a form that can be parsed by the gengetopt infrastructure.
 ///
 /// @param[out]     str This will contain the collected values.
-static void _from_env_all(UT_string *str) {
+static void _from_env_all(std::stringstream& str) {
 #define LIBHPX_OPT_FLAG(g, id, u3) _xform_string(str, "hpx_"#g#id, true);
 #define LIBHPX_OPT(g, id, u3, u4) _xform_string(str, "hpx_"#g#id, false);
 # include "libhpx/options.def"
@@ -116,17 +117,16 @@ static void _from_env_all(UT_string *str) {
 ///
 /// @param[out]    opts The option structure we will fill from the environment.
 static void _process_env(hpx_options_t *opts) {
-  UT_string *hpx_opts = NULL;
-  utstring_new(hpx_opts);
+  std::stringstream hpx_opts;
   _from_env_all(hpx_opts);
 
-  const char *cmdline = utstring_body(hpx_opts);
+  const std::string s = hpx_opts.str();
+  const char *cmdline = s.c_str();
   if (cmdline) {
     const char *progname = system_get_program_name();
     int e = hpx_option_parser_string(cmdline, opts, progname);
     dbg_check(e, "failed to parse environment options: %s.\n", cmdline);
   }
-  utstring_free(hpx_opts);
 }
 
 /// Accumulate configuration options from the command line.
@@ -140,28 +140,26 @@ static void _process_env(hpx_options_t *opts) {
 static void _process_cmdline(hpx_options_t *opts, int *argc, char ***argv) {
   // Split the arguments into those that should be parsed as --hpx- options
   // and those that are application level options
-  UT_string *hpx_opts = NULL;
-  utstring_new(hpx_opts);
+  std::string hpx_opts, tmp;
   for (int i = 0, n = 0, e = *argc; i < e; ++i) {
-    UT_string *tmp = NULL;
-    utstring_new(tmp);
-    utstring_printf(tmp, "%s ", (*argv)[i]);
-    if (utstring_find(tmp, 0, "--hpx-", 6) < 0) {
+    tmp += (*argv)[i];
+    tmp += " ";
+    std::size_t found = tmp.find("--hpx-");
+    if (found == std::string::npos) {
       (*argv)[n++] = (*argv)[i];
     }
     else {
-      utstring_concat(hpx_opts, tmp);
+      hpx_opts += tmp;
       *argc = *argc - 1;
     }
-    utstring_free(tmp);
+    tmp.clear();
   }
 
-  const char *cmdline = utstring_body(hpx_opts);
+  const char *cmdline = hpx_opts.c_str();
   if (cmdline) {
     int e = hpx_option_parser_string(cmdline, opts, argv[0][0]);
     dbg_check(e, "failed to parse command-line options %s.\n", cmdline);
   }
-  utstring_free(hpx_opts);
 }
 
 /// Process a bitvector opt.
