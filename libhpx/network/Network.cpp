@@ -33,6 +33,7 @@ static const int LEVEL = HPX_LOG_CONFIG | HPX_LOG_NET | HPX_LOG_DEFAULT;
 namespace {
 using namespace libhpx;
 using namespace libhpx::network;
+using BootNetwork = libhpx::boot::Network;
 }
 
 Network::Network()
@@ -49,7 +50,7 @@ Network::~Network()
 }
 
 Network*
-Network::Create(config_t *cfg, boot_t *boot, GAS *gas)
+Network::Create(config_t *cfg, const BootNetwork& boot, GAS *gas)
 {
 #ifndef HAVE_NETWORK
   // if we didn't build a network we need to default to SMP
@@ -57,7 +58,7 @@ Network::Create(config_t *cfg, boot_t *boot, GAS *gas)
 #endif
 
   libhpx_network_t type = cfg->network;
-  int ranks = boot_n_ranks(boot);
+  int ranks = boot.getNRanks();
   Network* network = nullptr;
 
   // default to HPX_NETWORK_SMP for SMP execution
@@ -105,7 +106,7 @@ Network::Create(config_t *cfg, boot_t *boot, GAS *gas)
 
    case HPX_NETWORK_ISIR:
 #ifdef HAVE_MPI
-    network = new libhpx::network::isir::FunneledNetwork(cfg, boot, gas);
+    network = new libhpx::network::isir::FunneledNetwork(cfg, gas);
 #else
     log_level(LEVEL, "ISIR network unavailable (no network configured)\n");
 #endif

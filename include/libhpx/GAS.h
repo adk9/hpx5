@@ -14,19 +14,19 @@
 #ifndef LIBHPX_GAS_H
 #define LIBHPX_GAS_H
 
-#include "libhpx/boot.h"
 #include "libhpx/config.h"
 #include "libhpx/MemoryOps.h"
 #include "libhpx/StringOps.h"
 #include "libhpx/gas/Affinity.h"
 #include "libhpx/gas/Allocator.h"
+#include "libhpx/boot/Network.h"
 
 namespace libhpx {
 class GAS : public virtual libhpx::gas::Affinity, public StringOps,
             public gas::Allocator
 {
  public:
-  static GAS* Create(config_t *cfg, struct boot *boot);
+  static GAS* Create(config_t *cfg, const boot::Network* const boot);
 
   virtual ~GAS();
 

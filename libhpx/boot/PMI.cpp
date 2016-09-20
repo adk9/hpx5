@@ -15,24 +15,20 @@
 #include <config.h>
 #endif
 
-#include <stdlib.h>
-#include <arpa/inet.h>
-#include <stdio.h>
-#include <string.h>
-#include <inttypes.h>
-#include <assert.h>
+#include "libhpx/BootstrapNetwork.h"
+#include "libhpx/debug.h"
+#include "libhpx/libhpx.h"
 #include <pmi.h>
-
-#include <libhpx/boot.h>
-#include <libhpx/locality.h>
-#include <libhpx/debug.h>
-#include <libhpx/libhpx.h>
-
+#include <cstdlib>
+#include <arpa/inet.h>
+#include <cstdio>
+#include <cstring>
+#include <inttypes.h>
+#include <cassert>
 
 static HPX_RETURNS_NON_NULL const char *_id(void) {
   return "PMI";
 }
-
 
 static void _deallocate(boot_t *boot) {
   PMI_Finalize();
@@ -144,17 +140,17 @@ static int HPX_USED _put_buffer(char *kvs, int rank, void *buffer, size_t len)
     log_error("pmi: failed to get max key length.\n");
     length = pmi_maxlen;
   }
-  char *key = malloc(sizeof(*key) * length);
+  char *key = new char[length];
   snprintf(key, length, "%d", rank);
 
   // allocate value
   e = PMI_KVS_Get_value_length_max(&length);
   if (e != PMI_SUCCESS) {
-    free(key);
+    delete [] key;
     log_error("pmi: failed to get max value length.\n");
     length = pmi_maxlen;
   }
-  char *value = malloc(sizeof(*value) * length);
+  char *value = new char[length];
   if ((_encode(buffer, len, value, (size_t*)&length)) != LIBHPX_OK) {
     goto error;
   }
@@ -169,13 +165,13 @@ static int HPX_USED _put_buffer(char *kvs, int rank, void *buffer, size_t len)
   }
 
   PMI_Barrier();
-  free(key);
-  free(value);
+  delete [] key;
+  delete [] value;
   return length;
 
 error:
-  free(key);
-  free(value);
+  delete [] key;
+  delete [] value;
   return log_error("pmi: failed to put buffer in PMI's KVS.\n");
 }
 
@@ -191,37 +187,37 @@ static int HPX_USED _get_buffer(char *kvs, int rank, void *buffer, size_t len)
   int e = PMI_KVS_Get_key_length_max(&length);
   if (e != PMI_SUCCESS)
     return log_error("pmi: failed to get max key length.\n");
-  char *key = malloc(sizeof(*key) * length);
+  char *key = new char[length];
   snprintf(key, length, "%d", rank);
 
   // allocate value
   e = PMI_KVS_Get_value_length_max(&length);
   if (e != PMI_SUCCESS) {
-    free(key);
+    delete [] key;
     return log_error("pmi: failed to get max value length.\n");
   }
-  char *value = malloc(sizeof(*value) * length);
+  char *value = new char[length];
   if ((PMI_KVS_Get(kvs, key, value, length)) != PMI_SUCCESS)
     goto error;
 
   if ((_decode(value, strlen(value), buffer, len)) != LIBHPX_OK)
     goto error;
 
-  free(key);
-  free(value);
+  delete [] key;
+  delete [] value;
   return LIBHPX_OK;
 
 error:
-  free(key);
-  free(value);
+  delete [] key;
+  delete [] value;
   return log_error("pmi: failed to put buffer in PMI's KVS.\n");
 }
 
 
-static int _allgather(const boot_t *boot, const void *restrict cin,
-                      void *restrict out, int n) {
-  int rank = here->rank;
-  int nranks = here->ranks;
+static int _allgather(const boot_t *boot, const void *cin,
+                      void *out, int n) {
+  int rank = _rank(boot);
+  int nranks = _n_ranks(boot);
   void *in = (void*)cin;
 
 #if HAVE_PMI_CRAY_EXT
@@ -229,9 +225,9 @@ static int _allgather(const boot_t *boot, const void *restrict cin,
   // order. Here, we assume that the ordering is, at least,
   // deterministic for all allgather invocations.
 
-  int *ranks = malloc(sizeof(rank) * nranks);
+  int *ranks = new int[nranks]();
   if ((PMI_Allgather(&rank, ranks, sizeof(rank))) != PMI_SUCCESS) {
-    free(ranks);
+    delete [] ranks;
     return log_error("pmi: failed in PMI_Allgather.\n");
   }
 
@@ -239,7 +235,7 @@ static int _allgather(const boot_t *boot, const void *restrict cin,
   assert(buf != NULL);
   if ((PMI_Allgather(in, buf, n)) != PMI_SUCCESS) {
     free(buf);
-    free(ranks);
+    delete [] ranks;
     return log_error("pmi: failed in PMI_Allgather.\n");
   }
 
@@ -248,7 +244,7 @@ static int _allgather(const boot_t *boot, const void *restrict cin,
   }
 
   free(buf);
-  free(ranks);
+  delete [] ranks;
 #else
   int length;
 
@@ -257,10 +253,10 @@ static int _allgather(const boot_t *boot, const void *restrict cin,
   if (e != PMI_SUCCESS) {
     return log_error("pmi: failed to get max name length.\n");
   }
-  char *name = malloc(sizeof(*name) * length);
+  char *name = new char[length];
   e = PMI_KVS_Get_my_name(name, length);
   if (e != PMI_SUCCESS) {
-    free(name);
+    delete [] name;
     return log_error("pmi: failed to get kvs name.\n");
   }
 
@@ -273,8 +269,9 @@ static int _allgather(const boot_t *boot, const void *restrict cin,
   return LIBHPX_OK;
 }
 
-static int _pmi_alltoall(const void *boot, void *restrict dest,
-                         const void *restrict src, int n, int stride) {
+static int
+_pmi_alltoall(const void *boot, void *dest, const void *src, int n, int stride)
+{
   // Emulate alltoall with allgather for now.
   const boot_t *pmi = boot;
   int rank = pmi->rank(pmi);
@@ -294,7 +291,7 @@ static int _pmi_alltoall(const void *boot, void *restrict dest,
   }
 
   // Copy out the data
-  const char *from = gather;
+  const char *from = static_cast<const char*>(gather);
   char *to = dest;
   for (int i = 0, e = nranks; i < e; ++i) {
     int offset = (i * nranks * stride) + (rank * stride);

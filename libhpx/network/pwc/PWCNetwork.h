@@ -30,7 +30,8 @@ namespace pwc {
 class PWCNetwork : public Network
 {
  public:
-  static PWCNetwork* Create(const config_t *cfg, boot_t *boot, GAS *gas);
+  static PWCNetwork* Create(const config_t *cfg, const boot::Network& boot,
+                            GAS *gas);
 
   /// Delete a PWNetwork instace.
   ~PWCNetwork();
@@ -68,7 +69,7 @@ class PWCNetwork : public Network
 
  protected:
   /// Allocate a PWCNetwork instance.
-  PWCNetwork(const config_t *cfg, boot_t *boot, GAS *gas);
+  PWCNetwork(const config_t *cfg, const boot::Network& boot, GAS *gas);
 
   /// Perform a rendezvous parcel send operation.
   ///
@@ -89,7 +90,7 @@ class PWCNetwork : public Network
   const unsigned          ranks_;
   const size_t        eagerSize_;
   const GAS&                gas_;
-  boot_t* const            boot_;
+  const boot::Network&     boot_;
   std::unique_ptr<Peer[]> peers_;
   std::mutex       progressLock_;
   std::mutex          probeLock_;
@@ -97,7 +98,7 @@ class PWCNetwork : public Network
 
 class PGASNetwork final : public PWCNetwork, public util::Aligned<HPX_CACHELINE_SIZE> {
  public:
-  PGASNetwork(const config_t *cfg, boot_t *boot, GAS *gas);
+  PGASNetwork(const config_t *cfg, const boot::Network& boot, GAS *gas);
 
   void memget(void *dest, hpx_addr_t src, size_t n, hpx_addr_t lsync, hpx_addr_t rsync);
   void memget(void *dest, hpx_addr_t src, size_t n, hpx_addr_t lsync);
@@ -112,7 +113,7 @@ class PGASNetwork final : public PWCNetwork, public util::Aligned<HPX_CACHELINE_
 class AGASNetwork final : public PWCNetwork, public ParcelStringOps,
                           public util::Aligned<HPX_CACHELINE_SIZE> {
  public:
-  AGASNetwork(const config_t *cfg, boot_t *boot, GAS *gas);
+  AGASNetwork(const config_t *cfg, const boot::Network& boot, GAS *gas);
 };
 
 } // namespace pwc

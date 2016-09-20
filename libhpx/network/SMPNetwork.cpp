@@ -23,12 +23,13 @@
 namespace {
 using libhpx::Network;
 using libhpx::network::SMPNetwork;
+using BootNetwork = libhpx::boot::Network;
 }
 
-SMPNetwork::SMPNetwork(boot_t *boot)
+SMPNetwork::SMPNetwork(const BootNetwork& boot)
     : Network()
 {
-  if (boot_n_ranks(boot) > 1) {
+  if (boot.getNRanks() > 1) {
     dbg_error("SMP network does not support multiple ranks.\n");
   }
 }

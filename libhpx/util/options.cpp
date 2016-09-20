@@ -19,26 +19,23 @@
 /// @brief Implements libhpx configuration parsing and handling.
 ///
 
-#include <assert.h>
-#include <ctype.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <utstring.h>
-
-#include <hpx/builtins.h>
-#include <hpx/hpx.h>
-#include <libhpx/action.h>
-#include <libhpx/boot.h>
-#include <libhpx/config.h>
-#include <libhpx/debug.h>
-#include <libhpx/libhpx.h>
-#include <libhpx/locality.h>
-#include <libhpx/parcel.h>
-#include <libhpx/system.h>
-#include <libhpx/utils.h>
 
 #include "parser.h"
+#include "libhpx/action.h"
+#include "libhpx/config.h"
+#include "libhpx/debug.h"
+#include "libhpx/libhpx.h"
+#include "libhpx/locality.h"
+#include "libhpx/parcel.h"
+#include "libhpx/system.h"
+#include "libhpx/utils.h"
+#include "hpx/hpx.h"
+#include <cassert>
+#include <ctype.h>
+#include <cstdlib>
+#include <cstring>
+#include <unistd.h>
+#include <utstring.h>
 
 typedef struct hpx_options_t hpx_options_t;
 
@@ -174,7 +171,7 @@ static void _process_cmdline(hpx_options_t *opts, int *argc, char ***argv) {
 /// @param          all An arg that we should interpret as meaning "all bits".
 ///
 /// @returns            A bitvector set with the bits specified in @p args.
-static uint64_t _merge_bitvector(int n, uint32_t args[n], uint64_t all) {
+static uint64_t _merge_bitvector(int n, uint32_t args[], uint64_t all) {
   uint64_t bits = 0;
   for (int i = 0; i < n; ++i) {
     if (args[i] == all) {
@@ -194,8 +191,8 @@ static uint64_t _merge_bitvector(int n, uint32_t args[n], uint64_t all) {
 ///
 /// @returns            A @p term-terminated vector populated with the @p
 ///                       args. This vector must be deleted at shutdown.
-static int *_merge_vector(int n, int args[n], int init, int term) {
-  int *vector = calloc(n + 1, sizeof(int));
+static int *_merge_vector(int n, int args[], int init, int term) {
+  int *vector = new int[n + 1];
   for (int i = 0; i < n; ++i) {
     vector[i] = args[i];
   }
@@ -298,7 +295,7 @@ void hpx_print_help(void) {
 config_t *config_new(int *argc, char ***argv) {
 
   // first, initialize to the default configuration
-  config_t *cfg = malloc(sizeof(*cfg));
+  config_t *cfg = new config_t();
   dbg_assert(cfg);
   *cfg = _default_cfg;
 
@@ -416,8 +413,8 @@ void config_print(const config_t *cfg, FILE *f) {
   fprintf(f, "  trace buffer size\t%zu\n", cfg->trace_buffersize);
   fprintf(f, "  trace classes\t\t");
   for (int i = 0, e = _HPX_NELEM(HPX_TRACE_CLASS_TO_STRING); i < e; ++i) {
-    uint64_t class = (1lu << i);
-    if (cfg->trace_classes & class) {
+    uint64_t type = (1lu << i);
+    if (cfg->trace_classes & type) {
       fprintf(f, "\"%s\", ", HPX_TRACE_CLASS_TO_STRING[i]);
     }
   }
@@ -490,5 +487,5 @@ void config_delete(config_t *cfg) {
     free(cfg->dbg_waitat);
   }
 
-  free(cfg);
+  delete cfg;
 }

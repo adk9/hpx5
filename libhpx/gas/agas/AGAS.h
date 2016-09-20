@@ -19,7 +19,6 @@
 #include "ChunkTable.h"
 #include "GlobalVirtualAddress.h"
 #include "libhpx/GAS.h"
-#include "libhpx/boot.h"
 #include "libhpx/util/Bitmap.h"
 #include "libhpx/util/math.h"
 
@@ -33,7 +32,7 @@ class AGAS : public GAS {
   static constexpr uint64_t HEAP_ALIGN = util::ceil_log2(HEAP_SIZE);
 
  public:
-  AGAS(const config_t* config, boot_t* boot);
+  AGAS(const config_t* config, const boot::Network* const boot);
   ~AGAS();
 
   /// Interpret the here->gas as an AGAS instance.

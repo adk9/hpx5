@@ -1,4 +1,4 @@
-// =============================================================================
+// ==================================================================-*- C++ -*-
 //  High Performance ParalleX Library (libhpx)
 //
 //  Copyright (c) 2013-2016, Trustees of Indiana University,
@@ -35,20 +35,24 @@ namespace libhpx {
 class GAS;
 class Network;
 class Scheduler;
+namespace boot {
+class Network;
+}
 }
 using libhpx::GAS;
 using libhpx::Network;
 using libhpx::Scheduler;
+using BootNetwork = libhpx::boot::Network;
 extern "C" {
 #else
 #define GAS void
 #define Network void
 #define Scheduler void
+#define BootNetwork void
 #endif
 
 /// Forward declarations.
 /// @{
-struct boot;
 struct config;
 struct topology;
 /// @}
@@ -58,7 +62,7 @@ typedef struct locality {
   uint32_t               rank; //!< The dense, 0-based rank of this locality.
   uint32_t              ranks; //!< The total number of ranks running the
                                //!< current job.
-  struct boot           *boot; //!< The bootstrap object. This provides rank
+  BootNetwork           *boot; //!< The bootstrap object. This provides rank
                                //!< and ranks, as well as some basic, IP-based
                                //!< networking functionality.
   GAS                    *gas; //!< The global address space object. This

@@ -15,18 +15,20 @@
 # include "config.h"
 #endif
 
-#include <stdatomic.h>
-#include <hpx/hpx.h>
-#include <libhpx/boot.h>
-#include <libhpx/locality.h>
 #include "tests.h"
+#include "libhpx/boot/Network.h"
+#include "libhpx/locality.h"
+#include "hpx/hpx.h"
+#include <mutex>
+
+using BootNetwork = libhpx::boot::Network;
 
 #define FAIL(dst, ...) do {                                 \
     fprintf(stderr, __VA_ARGS__);                           \
     exit(EXIT_FAILURE);                                     \
   } while (0)
 
-static int alltoall_handler(boot_t *boot) {
+static int alltoall_handler(const BootNetwork& boot) {
   printf("Entering alltoall_handler at %d\n", HPX_LOCALITY_ID);
   const int NLOC = HPX_LOCALITIES;
   int src[NLOC][2];
@@ -40,44 +42,37 @@ static int alltoall_handler(boot_t *boot) {
     dst[i][1] = here->rank;
   }
 
-  boot_barrier(boot);
-  static volatile atomic_flag lock = ATOMIC_FLAG_INIT;
+  boot.barrier();
+  static std::mutex lock;
   {
-    while (atomic_flag_test_and_set(&lock))
-      ;
+    std::lock_guard<std::mutex> _(lock);
     printf("src@%d { ", here->rank);
     for (int i = 0; i < NLOC; ++i) {
       printf("{%d,%d} ", src[i][0], src[i][1]);
     }
     printf("}\n");
     fflush(stdout);
-    atomic_flag_clear(&lock);
   }
 
-  boot_barrier(boot);
-  int e = boot_alltoall(boot, dst, src, 1*sizeof(int), 2*sizeof(int));
-  if (e) {
-    FAIL(dst, "boot_alltoall returned failure code\n");
-  }
+  boot.barrier();
+  boot.alltoall(dst, src, 1*sizeof(int), 2*sizeof(int));
 
   {
-    while (atomic_flag_test_and_set(&lock))
-      ;
+    std::lock_guard<std::mutex> _(lock);
     printf("dst@%d { ", here->rank);
     for (int i = 0; i < NLOC; ++i) {
       printf("{%d,%d} ", dst[i][0], dst[i][1]);
     }
     printf("}\n");
     fflush(stdout);
-    atomic_flag_clear(&lock);
   }
-  boot_barrier(boot);
+  boot.barrier();
 
   for (int i = 0; i < NLOC; ++i) {
-    if (dst[i][0] != i * NLOC + here->rank) {
+    if (dst[i][0] != int(i * NLOC + here->rank)) {
       FAIL(dst, "%d:dst[%d][0]=%d, expected %d\n", here->rank, i, dst[i][0], i * NLOC + here->rank);
     }
-    if (dst[i][1] != here->rank) {
+    if (dst[i][1] != int(here->rank)) {
       FAIL(dst, "%d:dst[%d][1]=%d, expected %d\n", here->rank, i, dst[i][1], here->rank);
     }
   }
@@ -90,9 +85,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "failed to initialize HPX.\n");
     return 1;
   }
-
-  boot_t *boot = here->boot;
-  int e = alltoall_handler(boot);
+  int e = alltoall_handler(*here->boot);
   hpx_finalize();
   return e;
 }

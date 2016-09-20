@@ -66,6 +66,7 @@ TESTS           += percolation
 endif
 
 # For some reason I need to explicitly set C++ source files
+libhpx_boot_SOURCES                 = libhpx_boot.cpp
 cxx_raii_SOURCES                    = cxx_raii.cpp
 
 # Override libhpx tests so that they have the right paths and flags, which are
