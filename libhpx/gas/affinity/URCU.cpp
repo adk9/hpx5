@@ -16,6 +16,7 @@
 #endif
 
 #include "libhpx/gas/Affinity.h"
+#include "libhpx/debug.h"
 #include <city_hasher.hh>
 #include <urcu-qsbr.h>
 #include <urcu/rculfhash.h>
