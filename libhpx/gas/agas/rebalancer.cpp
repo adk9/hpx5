@@ -27,7 +27,7 @@
 #include <libhpx/rebalancer.h>
 #include <libhpx/Scheduler.h>
 #include <libhpx/Worker.h>
-#include <uthash.h>
+#include <unordered_map>
 #include "GlobalVirtualAddress.h"
 #include "BlockTranslationTable.h"
 #include "BlockStatisticsTable.h"
@@ -49,11 +49,13 @@ using BST = libhpx::gas::agas::BlockStatisticsTable;
 // thread-local BST so that insertions into the BST don't have to be
 // synchronized.
 typedef struct agas_bst {
-  uint64_t block;
   uint64_t *counts;
   uint64_t *sizes;
-  UT_hash_handle hh;
 } agas_bst_t;
+
+namespace {
+using Map = std::unordered_map<uint64_t, agas_bst_t*>;
+}
 
 // Per-locality BST.
 //
@@ -83,21 +85,21 @@ void rebalancer_add_entry(int src, int dst, hpx_addr_t block, size_t size) {
   }
 
   // insert the block if it does not already exist
-  agas_bst_t *entry = NULL;
-  agas_bst_t **bst = (agas_bst_t**)&self->bst;
-  HASH_FIND(hh, *bst, &block, sizeof(uint64_t), entry);
-  if (!entry) {
-    entry = (agas_bst_t*)std::malloc(sizeof(*entry));
-    dbg_assert(entry);
-    entry->block = block;
-    entry->counts = (uint64_t*)calloc(here->ranks, sizeof(uint64_t));
-    entry->sizes = (uint64_t*)calloc(here->ranks, sizeof(uint64_t));
-    HASH_ADD(hh, *bst, block, sizeof(uint64_t), entry);
+  Map *m = static_cast<Map*>(self->bst);
+  if (!m) {
+    return;
   }
-
-  // otherwise, simply update the counts and sizes
-  entry->counts[src]++;
-  entry->sizes[src] += size;
+  agas_bst_t *entry = (*m)[block];
+  if (entry) {
+    // otherwise, simply update the counts and sizes
+    entry->counts[src]++;
+    entry->sizes[src] += size;
+  } else {
+    agas_bst_t *e = static_cast<agas_bst_t*>(malloc(sizeof(*e)));
+    e->counts = static_cast<uint64_t*>(calloc(here->ranks, sizeof(uint64_t)));
+    e->sizes = static_cast<uint64_t*>(calloc(here->ranks, sizeof(uint64_t)));
+    (*m)[block] = e;
+  }
 }
 
 // Initialize the AGAS-based rebalancer.
@@ -105,12 +107,21 @@ int rebalancer_init(void) {
   _global_bst = new BST(0);
   dbg_assert(_global_bst);
 
+  for (auto&& w : here->sched->getWorkers()) {
+    w->bst = new Map;
+  }
+
   log_gas("GAS rebalancer initialized\n");
   return HPX_SUCCESS;
 }
 
 // Finalize the AGAS-based rebalancer.
 void rebalancer_finalize(void) {
+  for (auto&& w : here->sched->getWorkers()) {
+    Map *m = static_cast<Map*>(w->bst);
+    delete m;
+  }
+
   if (_global_bst) {
     delete _global_bst;
     _global_bst = NULL;
@@ -121,20 +132,19 @@ void rebalancer_finalize(void) {
 // per-node global BST.
 int _local_to_global_bst(int id, void *UNUSED) {
   libhpx::Worker* w = here->sched->getWorker(id);
-  agas_bst_t **bst = (agas_bst_t **)&w->bst;
-  if (*bst == NULL) {
+  Map *m = static_cast<Map*>(w->bst);
+  if (!m) {
     return HPX_SUCCESS;
   }
 
-  log_gas("Added %u entries to global BST.\n", HASH_COUNT(*bst));
-  agas_bst_t *entry, *tmp;
-  HASH_ITER(hh, *bst, entry, tmp) {
-    _global_bst->upsert(entry->block, entry->counts, entry->sizes);
-    HASH_DEL(*bst, entry);
+  unsigned count = m->size();
+  log_gas("Added %u entries to global BST.\n", count);
+  for (auto it = m->begin(); it != m->end(); ++it) {
+    agas_bst_t *entry = it->second;
+    _global_bst->upsert(it->first, entry->counts, entry->sizes);
     free(entry);
   }
-  HASH_CLEAR(hh, *bst);
-  *bst = NULL;
+  m->clear();
   return HPX_SUCCESS;
 }
 
@@ -159,7 +169,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _aggregate_global_bst,
 static int _aggregate_bst_handler(hpx_addr_t graph) {
   hpx_par_for_sync(_local_to_global_bst, 0, HPX_THREADS, NULL);
   hpx_parcel_t *p = _global_bst->serializeToParcel();
-  log_gas("Global BST size: %lu bytes.\n", p->size);
+  log_gas("Global BST size: %u bytes.\n", p->size);
   if (!p || !p->size) {
     return HPX_SUCCESS;
   }
@@ -190,8 +200,8 @@ _bulk_move_handler(int n, void *args[], size_t sizes[]) {
   uint64_t count = bytes/sizeof(uint64_t);
 
   hpx_addr_t done = hpx_lco_and_new(count);
-  for (int i = 0; i < count; ++i) {
-    int new_owner = partition[i];
+  for (unsigned i = 0; i < count; ++i) {
+    unsigned new_owner = partition[i];
     if (new_owner != here->rank) {
       log_gas("move block 0x%lx from %d to %d\n", vtxs[i], here->rank, new_owner);
       hpx_gas_move(vtxs[i], HPX_THERE(new_owner), done);
@@ -215,7 +225,7 @@ static int _rebalance_sync(uint64_t *partition, hpx_addr_t graph, void *g) {
   if (nvtxs > 0 && partition) {
     // rebalance blocks in each partition
     hpx_addr_t done = hpx_lco_and_new(here->ranks);
-    for (int i = 0; i < here->ranks; ++i) {
+    for (unsigned i = 0; i < here->ranks; ++i) {
       int start, end, owner;
       agas_graph_get_owner_entry(g, i, &start, &end, &owner);
       size_t bytes = (end-start)*sizeof(uint64_t);
