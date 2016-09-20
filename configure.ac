@@ -167,7 +167,6 @@ HPX_CONFIG_HWLOC_POST_SETUP_CORE
 HPX_CONFIG_HWLOC([hwloc])
 
 HPX_CONFIG_HUGETLBFS([hugetlbfs])
-HPX_CONFIG_UTHASH([contrib/uthash])
 HPX_CONFIG_VALGRIND([contrib/valgrind])
 HPX_CONFIG_LIBFFI([contrib/$libffi_contrib_dir], [libffi])
 HPX_CONFIG_AGAS
