@@ -23,11 +23,11 @@ extern "C" {
 // AGAS Graph Partitioning API
 hpx_addr_t agas_graph_new(void);
 void agas_graph_delete(hpx_addr_t graph);
-int agas_graph_construct(hpx_addr_t graph, void* data, size_t size,
+int agas_graph_construct(hpx_addr_t graph, void* input, size_t size,
                          int owner);
 size_t agas_graph_partition(void *g, int nparts, uint64_t **partition);
 size_t agas_graph_get_vtxs(void *graph, uint64_t **vtxs);
-void agas_graph_get_owner_entry(void *graph, int id, int *start,
+void agas_graph_get_owner_entry(void *graph, unsigned id, int *start,
                                 int *end, int *owner);
 
 #ifdef __cplusplus
