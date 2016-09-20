@@ -78,6 +78,12 @@ class PMI final : public Network {
   void barrier() const;
   void allgather(const void* src, void* dest, int n) const;
   void alltoall(void * dest, const void * src, int n, int stride) const;
+
+ private:
+  static void encode(const void *src, size_t slen, char *dst, size_t *dlen); 
+  static void decode(const char *src, size_t slen, void *dst, size_t dlen) ;
+  static void putBuffer(char *kvs, int rank, void *buffer, size_t len);
+  static void getBuffer(char *kvs, int rank, void *buffer, size_t len);
 };
 #endif
 }

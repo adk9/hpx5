@@ -13,7 +13,7 @@ libboot_la_LIBADD   = @MPI_LIBS@
 endif
 
 if HAVE_PMI
-libboot_la_CXXFLAGS	+= @PMI_CXXFLAGS@
+libboot_la_CXXFLAGS	+= @PMI_CFLAGS@
 libboot_la_SOURCES 	+= PMI.cpp
 libboot_la_LIBADD   = @PMI_LIBS@
 endif
