@@ -57,13 +57,13 @@ LIBHPX_ACTION(HPX_DEFAULT, 0, AllocateCyclic, AGAS::AllocateCyclicHandler,
 __thread size_t AGAS::BlockSizePassthrough_;
 AGAS* AGAS::Instance_;
 
-AGAS::AGAS(const config_t* config, boot_t* boot)
+AGAS::AGAS(const config_t* config, const boot::Network* const boot)
     : btt_(0),
       chunks_(0),
       global_(chunks_, HEAP_SIZE),
       cyclic_(nullptr),
-      rank_(boot_rank(boot)),
-      ranks_(boot_n_ranks(boot))
+      rank_(boot->getRank()),
+      ranks_(boot->getNRanks())
 {
   dbg_assert(!Instance_);
   Instance_ = this;

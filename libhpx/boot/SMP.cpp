@@ -12,24 +12,37 @@
 // =============================================================================
 
 #ifdef HAVE_CONFIG_H
-# include "config.h"
+#include "config.h"
 #endif
 
-#include "PWCNetwork.h"
+#include "Networks.h"
+#include "libhpx/debug.h"
+#include "libhpx/libhpx.h"
+#include <cstring>
 
 namespace {
-using libhpx::GAS;
-using libhpx::network::ParcelStringOps;
-using libhpx::network::pwc::PWCNetwork;
-using libhpx::network::pwc::AGASNetwork;
-using CacheAligned = libhpx::util::Aligned<HPX_CACHELINE_SIZE>;
+using libhpx::boot::Network;
+using libhpx::boot::SMP;
 }
 
-AGASNetwork::AGASNetwork(const config_t *cfg, const boot::Network& boot,
-                         GAS *gas)
-    : PWCNetwork(cfg, boot, gas),
-      ParcelStringOps(),
-      CacheAligned()
+SMP::SMP() : Network()
+{
+  rank_ = 0;
+  nRanks_ = 1;
+}
+
+SMP::~SMP()
 {
 }
 
+void
+SMP::allgather(const void* src, void* dest, int n) const
+{
+  std::memcpy(dest, src, n);
+}
+
+void
+SMP::alltoall(void* dest, const void* src, int n, int) const
+{
+  std::memcpy(dest, src, n);
+}

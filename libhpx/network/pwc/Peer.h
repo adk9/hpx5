@@ -17,7 +17,6 @@
 #include "CircularBuffer.h"
 #include "ParcelBlock.h"
 #include "PhotonTransport.h"
-#include "libhpx/boot.h"
 #include "libhpx/config.h"
 #include "libhpx/padding.h"
 #include "libhpx/parcel.h"

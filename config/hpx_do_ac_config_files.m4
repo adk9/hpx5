@@ -34,6 +34,7 @@ AC_DEFUN([HPX_DO_AC_CONFIG_FILES], [
    libhpx/instrumentation/Makefile
    include/Makefile
    include/libhpx/Makefile
+   include/libhpx/boot/Makefile
    include/libhpx/util/Makefile
    include/libhpx/gas/Makefile
    examples/Makefile])

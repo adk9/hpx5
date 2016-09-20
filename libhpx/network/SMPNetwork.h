@@ -22,7 +22,7 @@ namespace network {
 class SMPNetwork final : public Network
 {
  public:
-  SMPNetwork(boot_t *boot);
+  SMPNetwork(const boot::Network& boot);
 
   int type() const;
   void progress(int n);

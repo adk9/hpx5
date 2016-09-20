@@ -15,53 +15,57 @@
 #include <config.h>
 #endif
 
-#include <stdlib.h>
-#include <arpa/inet.h>
-#include <stdio.h>
-#include <string.h>
-#include <inttypes.h>
-#include <assert.h>
+#include "Networks.h"
+#include "libhpx/debug.h"
+#include "libhpx/libhpx.h"
 #include <pmi.h>
+#include <cstdlib>
+#include <arpa/inet.h>
+#include <cstdio>
+#include <cstring>
+#include <cinttypes>
+#include <cassert>
 
-#include <libhpx/boot.h>
-#include <libhpx/locality.h>
-#include <libhpx/debug.h>
-#include <libhpx/libhpx.h>
-
-
-static HPX_RETURNS_NON_NULL const char *_id(void) {
-  return "PMI";
+namespace {
+  using libhpx::boot::PMI;
 }
 
+PMI::PMI() : libhpx::boot::Network()
+{
+  int init;
+  PMI_Initialized(&init);
+  assert(!init);
 
-static void _deallocate(boot_t *boot) {
+  int spawned;
+  if (PMI_Init(&spawned) ) {
+    throw log_error("unexpected PMI initialization\n");
+  }
+
+  if (PMI_Get_rank(&rank_)) {
+    throw log_error("could not get rank\n");
+  }
+
+  if (PMI_Get_size(&nRanks_)) {
+    throw log_error("could not get ranks\n");
+  }
+}
+
+PMI::~PMI() 
+{
   PMI_Finalize();
 }
 
-
-static int _rank(const boot_t *boot) {
-  int rank;
-  if (PMI_Get_rank(&rank) != PMI_SUCCESS)
-    hpx_abort();
-  return rank;
+void
+PMI::barrier() const 
+{
+  PMI_Barrier();
 }
 
-
-static int _n_ranks(const boot_t *boot) {
-  int ranks;
-  if (PMI_Get_size(&ranks) != PMI_SUCCESS)
-    hpx_abort();
-  return ranks;
-}
-
-
-static int _barrier(const boot_t *boot) {
-  return (PMI_Barrier() != PMI_SUCCESS) ? LIBHPX_ERROR : LIBHPX_OK;
-}
-
-
-static void _abort(const boot_t *boot) {
+void 
+PMI::abort() const
+{
   PMI_Abort(-6, "HPX aborted.");
+  unreachable();
 }
 
 
@@ -71,8 +75,9 @@ static void _abort(const boot_t *boot) {
 /// todo: Cray PMI does not allow characters such as /;=. We need to
 /// make the encoding function account for that.
 /// ----------------------------------------------------------------------------
-static int
-_encode(const void *src, size_t slen, char *dst, size_t *dlen) {
+void
+PMI::encode(const void *src, size_t slen, char *dst, size_t *dlen) 
+{
   assert ((dlen != NULL) || (dst != NULL));
   unsigned char *s = (unsigned char*)src;
   char *d = (char*)dst;
@@ -84,7 +89,7 @@ _encode(const void *src, size_t slen, char *dst, size_t *dlen) {
     w = *s++; w = (w << 8) | *s++; w = (w << 8) | *s++; w = (w << 8) | *s++;
     slen -= 4;
     p = stpcpy(d, l64a(htonl(w)));
-    d = mempcpy(p, "......", 6-(p-d));
+    d = (char*)mempcpy(p, "......", 6-(p-d));
   }
 
   if (slen > 0) {
@@ -97,15 +102,15 @@ _encode(const void *src, size_t slen, char *dst, size_t *dlen) {
     d = stpcpy(d, l64a(htonl(w)));
   }
   *d = '\0';
-  return LIBHPX_OK;
 }
 
 /// ----------------------------------------------------------------------------
 /// Base64 string decoding. The length of source and destination
 /// buffers is always unequal due to padding.
 /// ----------------------------------------------------------------------------
-static int
-_decode(const char *src, size_t slen, void *dst, size_t dlen) {
+void
+PMI::decode(const char *src, size_t slen, void *dst, size_t dlen) 
+{
   assert (dst != NULL);
   char *s = (char*)src;
   unsigned char *d = (unsigned char*)dst;
@@ -124,7 +129,6 @@ _decode(const char *src, size_t slen, void *dst, size_t dlen) {
   }
   // handle left-over?
 
-  return LIBHPX_OK;
 }
 
 /// ----------------------------------------------------------------------------
@@ -133,7 +137,8 @@ _decode(const char *src, size_t slen, void *dst, size_t dlen) {
 /// be a string buffer, it is first encoded using base64 encoding
 /// before doing a KVS put.
 /// ----------------------------------------------------------------------------
-static int HPX_USED _put_buffer(char *kvs, int rank, void *buffer, size_t len)
+void
+PMI::putBuffer(char *kvs, int rank, void *buffer, size_t len)
 {
   int length;
   const int pmi_maxlen = 256;
@@ -144,20 +149,18 @@ static int HPX_USED _put_buffer(char *kvs, int rank, void *buffer, size_t len)
     log_error("pmi: failed to get max key length.\n");
     length = pmi_maxlen;
   }
-  char *key = malloc(sizeof(*key) * length);
+  char *key = new char[length];
   snprintf(key, length, "%d", rank);
 
   // allocate value
   e = PMI_KVS_Get_value_length_max(&length);
   if (e != PMI_SUCCESS) {
-    free(key);
+    delete [] key;
     log_error("pmi: failed to get max value length.\n");
     length = pmi_maxlen;
   }
-  char *value = malloc(sizeof(*value) * length);
-  if ((_encode(buffer, len, value, (size_t*)&length)) != LIBHPX_OK) {
-    goto error;
-  }
+  char *value = new char[length];
+  encode(buffer, len, value, (size_t*)&length);
 
   // do the key-value pair exchange
   if ((PMI_KVS_Put(kvs, key, value)) != PMI_SUCCESS) {
@@ -169,59 +172,57 @@ static int HPX_USED _put_buffer(char *kvs, int rank, void *buffer, size_t len)
   }
 
   PMI_Barrier();
-  free(key);
-  free(value);
-  return length;
+  delete [] key;
+  delete [] value;
+  return;
 
 error:
-  free(key);
-  free(value);
-  return log_error("pmi: failed to put buffer in PMI's KVS.\n");
+  delete [] key;
+  delete [] value;
+  dbg_error("pmi: failed to put buffer in PMI's KVS.\n");
 }
 
 /// ----------------------------------------------------------------------------
 /// This retrieves a buffer from PMI's key-value store. The buffer is
 /// base64 decoded before it is returned.
 /// ----------------------------------------------------------------------------
-static int HPX_USED _get_buffer(char *kvs, int rank, void *buffer, size_t len)
+void
+PMI::getBuffer(char *kvs, int rank, void *buffer, size_t len)
 {
   int length;
 
   // allocate key
-  int e = PMI_KVS_Get_key_length_max(&length);
-  if (e != PMI_SUCCESS)
-    return log_error("pmi: failed to get max key length.\n");
-  char *key = malloc(sizeof(*key) * length);
+  if (int e = PMI_KVS_Get_key_length_max(&length)) {
+    dbg_error("pmi: failed to get max key length.\n");
+  }
+  char *key = new char[length];
   snprintf(key, length, "%d", rank);
 
   // allocate value
-  e = PMI_KVS_Get_value_length_max(&length);
-  if (e != PMI_SUCCESS) {
-    free(key);
-    return log_error("pmi: failed to get max value length.\n");
+  if (int e = PMI_KVS_Get_value_length_max(&length)) {
+    delete [] key;
+    dbg_error("pmi: failed to get max value length.\n");
   }
-  char *value = malloc(sizeof(*value) * length);
+  char *value = new char[length];
   if ((PMI_KVS_Get(kvs, key, value, length)) != PMI_SUCCESS)
     goto error;
 
-  if ((_decode(value, strlen(value), buffer, len)) != LIBHPX_OK)
-    goto error;
+  decode(value, strlen(value), buffer, len);
 
-  free(key);
-  free(value);
-  return LIBHPX_OK;
+  delete [] key;
+  delete [] value;
+  return;
 
 error:
-  free(key);
-  free(value);
-  return log_error("pmi: failed to put buffer in PMI's KVS.\n");
+  delete [] key;
+  delete [] value;
+  dbg_error("pmi: failed to put buffer in PMI's KVS.\n");
 }
 
 
-static int _allgather(const boot_t *boot, const void *restrict cin,
-                      void *restrict out, int n) {
-  int rank = here->rank;
-  int nranks = here->ranks;
+void
+PMI::allgather(const void *cin, void *out, int n)  const
+{
   void *in = (void*)cin;
 
 #if HAVE_PMI_CRAY_EXT
@@ -229,107 +230,69 @@ static int _allgather(const boot_t *boot, const void *restrict cin,
   // order. Here, we assume that the ordering is, at least,
   // deterministic for all allgather invocations.
 
-  int *ranks = malloc(sizeof(rank) * nranks);
-  if ((PMI_Allgather(&rank, ranks, sizeof(rank))) != PMI_SUCCESS) {
-    free(ranks);
-    return log_error("pmi: failed in PMI_Allgather.\n");
+  int *ranks = new int[nRanks_]();
+  if (PMI_Allgather((void*)&rank_, ranks, sizeof(rank_))) {
+    delete [] ranks;
+    dbg_error("pmi: failed in PMI_Allgather.\n");
   }
 
-  void *buf = malloc(sizeof(char) * n * nranks);
+  void *buf = malloc(sizeof(char) * n * nRanks_);
   assert(buf != NULL);
   if ((PMI_Allgather(in, buf, n)) != PMI_SUCCESS) {
     free(buf);
-    free(ranks);
-    return log_error("pmi: failed in PMI_Allgather.\n");
+    delete [] ranks;
+    dbg_error("pmi: failed in PMI_Allgather.\n");
   }
 
-  for (int i = 0; i < nranks; i++) {
+  for (int i = 0; i < nRanks_; i++) {
     memcpy((char*)out+(ranks[i]*n), (char*)buf+(i*n), n);
   }
 
   free(buf);
-  free(ranks);
+  delete [] ranks;
 #else
   int length;
 
   // allocate name for the nidpid map exchange
-  int e = PMI_KVS_Get_name_length_max(&length);
-  if (e != PMI_SUCCESS) {
-    return log_error("pmi: failed to get max name length.\n");
+  if (PMI_KVS_Get_name_length_max(&length)) {
+    dbg_error("pmi: failed to get max name length.\n");
   }
-  char *name = malloc(sizeof(*name) * length);
-  e = PMI_KVS_Get_my_name(name, length);
-  if (e != PMI_SUCCESS) {
-    free(name);
-    return log_error("pmi: failed to get kvs name.\n");
+  char *name = new char[length];
+  if (PMI_KVS_Get_my_name(name, length)) {
+    delete [] name;
+    dbg_error("pmi: failed to get kvs name.\n");
   }
 
-  _put_buffer(name, nranks, (void*)in, n);
+  putBuffer(name, nRanks_, (void*)in, n);
 
-  for (int r = 0; r < nranks; r++)
-    _get_buffer(name, r, (char*)out+(r*n), n);
+  for (int r = 0; r < nRanks_nranks; r++)
+    getBuffer(name, r, (char*)out+(r*n), n);
 
 #endif
-  return LIBHPX_OK;
 }
 
-static int _pmi_alltoall(const void *boot, void *restrict dest,
-                         const void *restrict src, int n, int stride) {
+void
+PMI::alltoall(void *dest, const void *src, int n, int stride) const
+{
   // Emulate alltoall with allgather for now.
-  const boot_t *pmi = boot;
-  int rank = pmi->rank(pmi);
-  int nranks = pmi->n_ranks(pmi);
 
   // Allocate a temporary buffer to allgather into
-  int gather_bytes = nranks * nranks * stride;
+  int gather_bytes = nRanks_ * nRanks_ * stride;
   void *gather = malloc(gather_bytes);
   if (!gather) {
     dbg_error("could not allocate enough space for PMI alltoall emulation\n");
   }
 
   // Perform the allgather
-  int e = _allgather(pmi, src, gather, nranks * stride);
-  if (LIBHPX_OK != e) {
-    dbg_error("could not gather in PMI alltoall emulation\n");
-  }
+  allgather(src, gather, nRanks_ * stride);
 
   // Copy out the data
-  const char *from = gather;
-  char *to = dest;
-  for (int i = 0, e = nranks; i < e; ++i) {
-    int offset = (i * nranks * stride) + (rank * stride);
+  const char *from = static_cast<const char*>(gather);
+  char *to = static_cast<char*>(dest);
+  for (int i = 0, e = nRanks_; i < e; ++i) {
+    int offset = (i * nRanks_ * stride) + (rank_ * stride);
     memcpy(to + (i * stride), from + offset, n);
   }
 
   free(gather);
-  return LIBHPX_OK;
-}
-
-static boot_t _pmi = {
-  .type       = HPX_BOOT_PMI,
-  .id         = _id,
-  .deallocate = _deallocate,
-  .rank       = _rank,
-  .n_ranks    = _n_ranks,
-  .barrier    = _barrier,
-  .allgather  = _allgather,
-  .alltoall   = _pmi_alltoall,
-  .abort      = _abort
-};
-
-boot_t *boot_new_pmi(void) {
-  int init;
-  PMI_Initialized(&init);
-  if (init) {
-    return &_pmi;
-  }
-
-  int spawned;
-  if (PMI_Init(&spawned) == PMI_SUCCESS) {
-    log_boot("initialized PMI boostrapper.\n");
-    return &_pmi;
-  }
-
-  log_boot("failed to initialize PMI bootstrap network\n");
-  return NULL;
 }

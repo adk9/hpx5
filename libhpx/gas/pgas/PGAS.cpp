@@ -35,7 +35,7 @@ static LIBHPX_ACTION(HPX_INTERRUPT, 0, AllocateCyclicBlocks,
 static LIBHPX_ACTION(HPX_DEFAULT, 0, Free, PGAS::FreeHandler, HPX_ADDR,
                      HPX_ADDR);
 
-PGAS::PGAS(const config_t *cfg, boot_t *boot)
+PGAS::PGAS(const config_t *cfg)
     : GAS(),
       HeapSegment(cfg->heapsize),
       global_(here->rank),

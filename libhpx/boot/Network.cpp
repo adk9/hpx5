@@ -15,34 +15,53 @@
 #include "config.h"
 #endif
 
-/// ----------------------------------------------------------------------------
-/// @file libhpx/locality/boot.c
-/// @brief Handles boot initialization.
-/// ----------------------------------------------------------------------------
-#include <libhpx/boot.h>
-#include <libhpx/debug.h>
+#include "Networks.h"
+#include "libhpx/debug.h"
+#include <cstdlib>
 
-static boot_t *_default(void) {
+namespace {
+using BootNetwork = libhpx::boot::Network;
+using libhpx::boot::SMP;
+}
+
+BootNetwork::Network() : rank_(-1), nRanks_(-1)
+{
+}
+
+BootNetwork::~Network()
+{
+}
+
+void
+BootNetwork::abort() const
+{
+  abort();
+  unreachable();
+}
+
+static BootNetwork*
+_Default()
+{
 #ifdef HAVE_PMI
-  return boot_new_pmi();
+  return new libhpx::boot::PMI();
 #endif
 
 #ifdef HAVE_MPI
-  return boot_new_mpi();
+  return new libhpx::boot::MPI();
 #endif
 
-  return boot_new_smp();
+  return new SMP();
 }
 
-boot_t *boot_new(libhpx_boot_t type) {
-  boot_t *boot = NULL;
-
+BootNetwork*
+BootNetwork::Create(libhpx_boot_t type)
+{
+  BootNetwork* boot = nullptr;
   switch (type) {
    case (HPX_BOOT_PMI):
 #ifdef HAVE_PMI
-    boot = boot_new_pmi();
-    if (boot)
-      log_boot("initialized PMI bootstrapper.\n");
+    boot = new libhpx::boot::PMI();
+    log_boot("initialized PMI bootstrapper.\n");
 #else
     dbg_error("PMI bootstrap not supported in current configuration.\n");
 #endif
@@ -50,35 +69,33 @@ boot_t *boot_new(libhpx_boot_t type) {
 
    case (HPX_BOOT_MPI):
 #ifdef HAVE_MPI
-    boot = boot_new_mpi();
-    if (boot)
-      log_boot("initialized mpirun bootstrapper.\n");
+    boot = new libhpx::boot::MPI();
+    log_boot("initialized mpirun bootstrapper.\n");
 #else
     dbg_error("MPI bootstrap not supported in current configuration.\n");
 #endif
     break;
 
    case (HPX_BOOT_SMP):
-    boot = boot_new_smp();
-    if (boot)
-      log_boot("initialized the SMP bootstrapper.\n");
+    boot = new libhpx::boot::SMP();
+    log_boot("initialized the SMP bootstrapper.\n");
     break;
 
    case HPX_BOOT_DEFAULT:
    default:
-    boot = _default();
+    boot = _Default();
     break;
   }
 
   if (!boot) {
-    boot = _default();
+    boot = _Default();
   }
 
   if (!boot) {
     dbg_error("failed to initialize the bootstrapper.\n");
   }
   else {
-    log_dflt("bootstrapped using %s.\n", boot->id());
+    log_dflt("bootstrapped using %s.\n", HPX_BOOT_TO_STRING[boot->type()]);
   }
 
   return boot;

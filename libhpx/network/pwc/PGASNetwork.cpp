@@ -32,7 +32,8 @@ using libhpx::network::pwc::PWCNetwork;
 using CacheAligned = libhpx::util::Aligned<HPX_CACHELINE_SIZE>;
 }
 
-PGASNetwork::PGASNetwork(const config_t *cfg, boot_t *boot, GAS *gas)
+PGASNetwork::PGASNetwork(const config_t *cfg, const boot::Network& boot,
+                         GAS *gas)
     : PWCNetwork(cfg, boot, gas),
       CacheAligned()
 {

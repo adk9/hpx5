@@ -1,8 +1,7 @@
-SUBDIRS = util gas
+SUBDIRS = boot util gas
 
 noinst_HEADERS = action.h \
                  attach.h \
-                 boot.h \
                  CollectiveOps.h \
                  debug.h \
                  events.h \
