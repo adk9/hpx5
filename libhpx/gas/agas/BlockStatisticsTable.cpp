@@ -26,6 +26,19 @@ namespace {
 using libhpx::self;
 using GVA = libhpx::gas::agas::GlobalVirtualAddress;
 using BST = libhpx::gas::agas::BlockStatisticsTable;
+using Entry = libhpx::gas::agas::BlockStatisticsEntry;
+}
+
+Entry::BlockStatisticsEntry(size_t n)
+{
+  counts = new uint64_t[n];
+  sizes = new uint64_t[n];
+}
+
+Entry::~BlockStatisticsEntry()
+{
+  delete[] counts;
+  delete[] sizes;
 }
 
 BST::BlockStatisticsTable(size_t size)
@@ -40,27 +53,15 @@ BST::~BlockStatisticsTable()
 }
 
 void
-BST::insert(GVA gva, uint64_t* counts, uint64_t* sizes)
+BST::upsert(GVA gva, std::unique_ptr<Entry> entry)
 {
-  dbg_assert(!map_.contains(gva));
-  if (!map_.insert(gva, Entry(counts, sizes))) {
-    dbg_error("failed to insert gva\n");
-  }
-  log_gas("inserted record for %zu at %u\n", gva.getAddr(), rank_);
-}
-
-void
-BST::upsert(GVA gva, uint64_t* counts, uint64_t* sizes)
-{
-  auto fn = [&](Entry& entry) {
+  auto fn = [&](std::unique_ptr<Entry>& e) {
     for (unsigned i = 0; i < here->ranks; ++i) {
-      entry.counts[i] += counts[i];
-      entry.sizes[i]  += sizes[i];
+      e->counts[i] += entry->counts[i];
+      e->sizes[i]  += entry->sizes[i];
     }
-    free(counts);
-    free(sizes);
   };
-  map_.upsert(gva, fn, Entry(counts, sizes));
+  map_.upsert(gva, fn, std::move(entry));
 }
 
 void
@@ -152,17 +153,19 @@ BST::serializeTo(unsigned char* output)
   {
     auto lt = map_.lock_table();
     for (const auto& item : lt) {
-      Entry entry = item.second;
+      auto& entry = item.second;
       uint64_t total_vwgt  = 0;
       uint64_t total_vsize = 0;
       int prev_nbrs = nbrs;
       for (unsigned k = 0; k < ranks; ++k) {
-        if (entry.counts[k] != 0) {
+        uint64_t count = entry->counts[k];
+        uint64_t size = entry->sizes[k];
+        if (count != 0) {
           lnbrs[k].push_back(id);
           adjncy[nbrs] = k;
-          adjwgt.push_back(entry.counts[k] * entry.sizes[k]);
-          total_vwgt  += entry.counts[k];
-          total_vsize += entry.sizes[k];
+          adjwgt.push_back(count * size);
+          total_vwgt  += count;
+          total_vsize += size;
           nbrs++;
         }
       }
@@ -172,8 +175,6 @@ BST::serializeTo(unsigned char* output)
       vsizes[id] = total_vsize;
       xadj[id]   = nbrs - prev_nbrs;
       id++;
-      free(entry.counts);
-      free(entry.sizes);
     }
   }
 

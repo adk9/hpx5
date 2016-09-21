@@ -37,24 +37,8 @@ namespace {
 using libhpx::self;
 using GVA = libhpx::gas::agas::GlobalVirtualAddress;
 using BST = libhpx::gas::agas::BlockStatisticsTable;
-}
-
-// Block Statistics Table (BST) entry.
-//
-// The BST entry maintains statistics about block accesses. In
-// particular, the number of times a block was accessed (@p counts)
-// and the size of data transferred (@p sizes) is maintained. The
-// index in the @p counts and @p sizes array represents the node which
-// accessed this block. Each worker thread maintains its own private
-// thread-local BST so that insertions into the BST don't have to be
-// synchronized.
-typedef struct agas_bst {
-  uint64_t *counts;
-  uint64_t *sizes;
-} agas_bst_t;
-
-namespace {
-using Map = std::unordered_map<uint64_t, agas_bst_t*>;
+using Entry = libhpx::gas::agas::BlockStatisticsEntry;
+using Map = std::unordered_map<uint64_t, std::unique_ptr<Entry>>;
 }
 
 // Per-locality BST.
@@ -89,16 +73,14 @@ void rebalancer_add_entry(int src, int dst, hpx_addr_t block, size_t size) {
   if (!m) {
     return;
   }
-  agas_bst_t *entry = (*m)[block];
+
+  auto& entry = (*m)[block];
   if (entry) {
     // otherwise, simply update the counts and sizes
     entry->counts[src]++;
     entry->sizes[src] += size;
   } else {
-    agas_bst_t *e = static_cast<agas_bst_t*>(malloc(sizeof(*e)));
-    e->counts = static_cast<uint64_t*>(calloc(here->ranks, sizeof(uint64_t)));
-    e->sizes = static_cast<uint64_t*>(calloc(here->ranks, sizeof(uint64_t)));
-    (*m)[block] = e;
+    (*m)[block] = std::unique_ptr<Entry>(new Entry(here->ranks));
   }
 }
 
@@ -119,6 +101,7 @@ int rebalancer_init(void) {
 void rebalancer_finalize(void) {
   for (auto&& w : here->sched->getWorkers()) {
     Map *m = static_cast<Map*>(w->bst);
+    m->clear();
     delete m;
   }
 
@@ -140,9 +123,7 @@ int _local_to_global_bst(int id, void *UNUSED) {
   unsigned count = m->size();
   log_gas("Added %u entries to global BST.\n", count);
   for (auto it = m->begin(); it != m->end(); ++it) {
-    agas_bst_t *entry = it->second;
-    _global_bst->upsert(it->first, entry->counts, entry->sizes);
-    free(entry);
+    _global_bst->upsert(it->first, std::move(it->second));
   }
   m->clear();
   return HPX_SUCCESS;

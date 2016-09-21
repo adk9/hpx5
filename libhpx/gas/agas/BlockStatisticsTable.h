@@ -25,6 +25,20 @@
 namespace libhpx {
 namespace gas {
 namespace agas {
+
+// Block Statistics Table (BST) entry.
+//
+// The BST entry maintains statistics about block accesses such as the
+// number of times a block was accessed (@p counts) and the size of
+// data transferred (@p sizes). The index in the @p counts and @p
+// sizes array represents the node which accessed this block.
+struct BlockStatisticsEntry {
+  BlockStatisticsEntry(size_t);
+  ~BlockStatisticsEntry();
+  uint64_t* counts;
+  uint64_t* sizes;
+};
+
 class BlockStatisticsTable
 {
  public:
@@ -33,11 +47,8 @@ class BlockStatisticsTable
   BlockStatisticsTable(size_t);
   ~BlockStatisticsTable();
 
-  /// Insert a block statistics record for a GVA.
-  void insert(GVA gva, uint64_t* counts, uint64_t* sizes);
-
   /// Update a block statistics record for a GVA.
-  void upsert(GVA gva, uint64_t* counts, uint64_t* sizes);
+  void upsert(GVA gva, std::unique_ptr<BlockStatisticsEntry> entry);
 
   /// Clear the block statistics table.
   void clear(void);
@@ -59,19 +70,8 @@ class BlockStatisticsTable
   // Maximum bytes required for the serialized parcel.
   size_t serializeMaxBytes();
 
-  // A block statistics record.
-  struct Entry {
-    uint64_t* counts;
-    uint64_t* sizes;
-    Entry() : counts(NULL), sizes(NULL) {
-    }
-    Entry(uint64_t* c, uint64_t* s)
-        : counts(c), sizes(s) {
-    }
-  };
-
-  using Hash = CityHasher<GlobalVirtualAddress>;
-  using Map = cuckoohash_map<GlobalVirtualAddress, Entry, Hash>;
+  using Hash = CityHasher<GVA>;
+  using Map = cuckoohash_map<GVA, std::unique_ptr<BlockStatisticsEntry>, Hash>;
 
   const unsigned rank_;                         //!< cache the local rank
   Map map_;                                     //!< the hashtable
