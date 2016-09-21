@@ -81,6 +81,7 @@
 /include/libhpx/Makefile
 /include/libhpx/event_stubs.h
 /include/libhpx/gas/Makefile
+/include/libhpx/boot/Makefile
 /include/libhpx/util/Makefile
 /include/libsync/Makefile
 /include/libsync/queues.h
