@@ -52,8 +52,8 @@ static void _dummy_destroy(const void *obj, void *o) {
 
 static percolation_t _dummy = {
   .id = _dummy_id,
-  .prepare = _dummy_prepare,
   .deallocate = _dummy_deallocate,
+  .prepare = _dummy_prepare,
   .execute = _dummy_execute,
   .destroy = _dummy_destroy
 };
@@ -68,7 +68,7 @@ percolation_t *percolation_new(void) {
 int percolation_execute_handler(int nargs, void *vargs[], size_t sizes[]) {
   const hpx_parcel_t *p = hpx_thread_current_parcel();
 
-  percolation_t *percolation = here->percolation;
+  percolation_t *percolation = static_cast<percolation_t*>(here->percolation);
   dbg_assert(percolation);
 
   CHECK_ACTION(p->action);

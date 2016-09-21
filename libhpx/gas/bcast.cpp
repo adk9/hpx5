@@ -28,19 +28,19 @@ int _va_gas_bcast_cont(hpx_action_t act, hpx_addr_t base, int n,
                        size_t offset, size_t bsize, hpx_action_t rop,
                        hpx_addr_t rsync, int nargs, va_list *vargs)
 {
-  hpx_addr_t and = hpx_lco_and_new(n);
+  hpx_addr_t done = hpx_lco_and_new(n);
   hpx_action_t set = hpx_lco_set_action;
   for (int i = 0; i < n; ++i) {
     va_list temp;
     va_copy(temp, *vargs);
     hpx_gas_ptrdiff_t off = i * bsize + offset;
     hpx_addr_t addr = hpx_addr_add(base, off, bsize);
-    int e = action_call_async_va(act, addr, and, set, rsync, rop, nargs, &temp);
+    int e = action_call_async_va(act, addr, done, set, rsync, rop, nargs, &temp);
     dbg_check(e, "failed to call action\n");
     va_end(temp);
   }
-  int e = hpx_lco_wait(and);
-  hpx_lco_delete(and, HPX_NULL);
+  int e = hpx_lco_wait(done);
+  hpx_lco_delete(done, HPX_NULL);
   return e;
 }
 

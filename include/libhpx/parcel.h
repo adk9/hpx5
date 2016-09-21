@@ -23,6 +23,7 @@ class Thread;
 using Thread = libhpx::scheduler::Thread;
 extern "C" {
 #else
+#warning included parcel.h
 #define Thread void
 #endif
 

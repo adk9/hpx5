@@ -70,7 +70,7 @@ static size_t write_header_dict(void* base, const inst_event_metadata_t *event_m
   written += cat(data, "{'descr': [");
 
   int pad_fields = 0;
-  int expected_offset = 0;
+  unsigned expected_offset = 0;
   for (int i=0; i< event_md->num_cols; i++) {
     inst_event_col_metadata_t col = event_md->col_metadata[i];
     if (strlen(col.name) == 0) {break;}
@@ -107,34 +107,26 @@ static size_t write_header_dict(void* base, const inst_event_metadata_t *event_m
 
 
 /// Write the metadata for the event to the header portion of the log
-static size_t _write_event_metadata(void* base, int class, int event_id, int worker_id) {
+static size_t _write_event_metadata(void* base, int type, int event_id, int worker_id) {
   inst_event_metadata_t const *event_md = &INST_EVENT_METADATA[event_id];
   uintptr_t curr = (uintptr_t)base;
 
   // Constants for the header
-  inst_named_value_t rank_md = {.value = hpx_get_my_rank(), 
-                                .type = "i4", 
-                                .name = "rank" };
-  inst_named_value_t worker_md = {.value = worker_id, 
-                                .type = "i4", 
-                                .name = "worker" };
-  inst_named_value_t class_md = {.value = class, 
-                                 .type = "i4", 
-                                 .name = "class"};
-  inst_named_value_t id_md = {.value = event_id, 
-                              .type = "i4", 
-                              .name = "event_id"};
-  inst_named_value_t named_values[] = {rank_md, worker_md, class_md, id_md};
-  
+  inst_named_value_t        rank_md = { (unsigned)hpx_get_my_rank(), {"i4"}, {"rank"}};
+  inst_named_value_t      worker_md = { (unsigned)worker_id, {"i4"}, {"worker"} };
+  inst_named_value_t       class_md = { (unsigned)type, {"i4"}, {"class"} };
+  inst_named_value_t          id_md = { (unsigned)event_id, {"i4"}, {"event"} };
+  inst_named_value_t named_values[] = { rank_md, worker_md, class_md, id_md };
+
   return write_header_dict((void*) curr, event_md, named_values, 4);
 }
 
 // Write the metadata for this event to the header of the log file
 // Header is padded out to 16 byte multiple length
-size_t write_trace_header(void* base, int class, int event_id, int worker_id) {
+size_t write_trace_header(void* base, int type, int event_id, int worker_id) {
   logtable_header_t *header = (logtable_header_t*)base;
   memcpy(header, &LOGTABLE_HEADER, sizeof(LOGTABLE_HEADER));
-  size_t metadata_size = _write_event_metadata(header->header_data, class, event_id, worker_id);
+  size_t metadata_size = _write_event_metadata(header->header_data, type, event_id, worker_id);
   metadata_size += 16 - (metadata_size % 16);
   header->header_len = metadata_size;
   int header_len = offsetof(logtable_header_t, header_data) + metadata_size;

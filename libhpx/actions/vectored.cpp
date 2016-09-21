@@ -31,9 +31,9 @@ static void _pack_vectored(const void *obj, hpx_parcel_t *p, int n,
   void *buffer = hpx_parcel_get_data(p);
   *(int*)buffer = n;
   size_t *sizes = (size_t*)((char*)buffer + sizeof(int));
-  void *args = (char*)sizes + (sizeof(size_t) * n);
+  char *args = (char*)sizes + (sizeof(size_t) * n);
 
-  size_t bytes = ALIGN(args - buffer, 8);
+  size_t bytes = ALIGN(args - (char*)buffer, 8);
   for (int i = 0; i < n; ++i) {
     void *arg = va_arg(*vargs, void*);
     size_t size = va_arg(*vargs, int);
@@ -49,7 +49,7 @@ static hpx_parcel_t *_new_vectored(const void *obj, hpx_addr_t addr,
   dbg_assert(n && args);
   dbg_assert_str(!(n & 1), "Vectored actions require even arg count: %d\n", n);
 
-  const action_t *action = obj;
+  const action_t *action = static_cast<const action_t *>(obj);
   hpx_action_t id = *action->id;
   hpx_pid_t pid = hpx_thread_current_pid();
 
@@ -79,7 +79,7 @@ static hpx_parcel_t *_new_vectored(const void *obj, hpx_addr_t addr,
 }
 
 static int _exec_pinned_vectored(const void *obj, hpx_parcel_t *p) {
-  const action_t *act = obj;
+  const action_t *act = static_cast<const action_t *>(obj);
 
   void *target;
   if (!hpx_gas_try_pin(p->target, &target)) {
@@ -91,8 +91,8 @@ static int _exec_pinned_vectored(const void *obj, hpx_parcel_t *p) {
   int nargs = *(int*)args;
   size_t *sizes = (size_t*)((char*)args + sizeof(int));
   void *argsp[nargs];
-  void *vargs = (char*)sizes + (nargs * sizeof(size_t));
-  argsp[0] = (char*)vargs + ALIGN(vargs-args, 8);
+  char *vargs = (char*)sizes + (nargs * sizeof(size_t));
+  argsp[0] = (char*)vargs + ALIGN((char*)vargs - (char*)args, 8);
 
   for (int i = 0, e = nargs - 1; i < e; ++i) {
     argsp[i + 1] = (char*)argsp[i] + sizes[i] + ALIGN(sizes[i], 8);
@@ -105,13 +105,13 @@ static int _exec_pinned_vectored(const void *obj, hpx_parcel_t *p) {
 }
 
 static int _exec_vectored(const void *obj, hpx_parcel_t *p) {
-  const action_t *action = obj;
+  const action_t *action = static_cast<const action_t *>(obj);
   void *args = hpx_parcel_get_data(p);
   int nargs = *(int*)args;
   size_t *sizes = (size_t*)((char*)args + sizeof(int));
   void *argsp[nargs];
-  void *vargs = (char*)sizes + (nargs * sizeof(size_t));
-  argsp[0] = (char*)vargs + ALIGN(vargs-args, 8);
+  char *vargs = (char*)sizes + (nargs * sizeof(size_t));
+  argsp[0] = (char*)vargs + ALIGN((char*)vargs - (char*)args, 8);
 
   for (int i = 0, e = nargs - 1; i < e; ++i) {
     argsp[i + 1] = (char*)argsp[i] + sizes[i] + ALIGN(sizes[i], 8);
@@ -124,12 +124,12 @@ static void _vectored_fini(void *action) {
 }
 
 static void _opencl_fini(void *act) {
-  action_t *action = act;
+  action_t *action = static_cast<action_t *>(act);
   percolation_destroy(here->percolation, action->env);
 }
 
 static void _vectored_finish(void *act) {
-  action_t *action = act;
+  action_t *action = static_cast<action_t *>(act);
   dbg_assert(here);
   dbg_assert(here->percolation);
 
@@ -150,16 +150,16 @@ static void _vectored_finish(void *act) {
 }
 
 static const parcel_management_vtable_t _vectored_vtable = {
-  .new_parcel = _new_vectored,
-  .pack_parcel = _pack_vectored,
   .exec_parcel = _exec_vectored,
+  .pack_parcel = _pack_vectored,
+  .new_parcel = _new_vectored,
   .exit = exit_action
 };
 
 static const parcel_management_vtable_t _pinned_vectored_vtable = {
-  .new_parcel = _new_vectored,
-  .pack_parcel = _pack_vectored,
   .exec_parcel = _exec_pinned_vectored,
+  .pack_parcel = _pack_vectored,
+  .new_parcel = _new_vectored,
   .exit = exit_pinned_action
 };
 

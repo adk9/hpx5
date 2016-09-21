@@ -13,7 +13,7 @@ libgas_la_SOURCES  = hpx_gas_glue.cpp \
                      GAS.cpp \
                      gpa.c \
                      smp/SMP.cpp \
-                     bcast.c \
+                     bcast.cpp \
                      Allocator.cpp
 libgas_la_LIBADD   = affinity/libaffinity.la
 

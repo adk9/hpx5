@@ -47,8 +47,8 @@ _vabcast(hpx_action_t act, hpx_addr_t lsync, hpx_addr_t rsync, int n,
     va_copy(temp, *vargs);
     hpx_addr_t loc = HPX_THERE(i);
     hpx_action_t set = hpx_lco_set_action;
-    int e = action_call_async_va(act, loc, local, set, remote, set, n, &temp);
-    dbg_check(e, "error generating parcel for bcast.\n");
+    int err = action_call_async_va(act, loc, local, set, remote, set, n, &temp);
+    dbg_check(err, "error generating parcel for bcast.\n");
     va_end(temp);
   }
   return HPX_SUCCESS;

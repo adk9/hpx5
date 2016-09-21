@@ -76,7 +76,7 @@ static int _allreduce_bcast_comm_handler(allreduce_t *r, void *value,
     return HPX_SUCCESS;
   }
 
-  coll_t *ctx = value;
+  coll_t *ctx = static_cast<coll_t *>(value);
   dbg_assert(bytes == (sizeof(coll_t) + ctx->group_bytes));
   allreduce_bcast_comm(r, HPX_NULL, ctx);
   return HPX_SUCCESS;

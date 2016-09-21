@@ -32,7 +32,7 @@ static hpx_parcel_t *_new_marshalled(const void *obj, hpx_addr_t addr,
   dbg_assert_str(!n || args);
   dbg_assert(!n || n == 2);
 
-  const action_t *action = obj;
+  const action_t *action = static_cast<const action_t *>(obj);
   hpx_action_t id = *action->id;
   hpx_pid_t pid = hpx_thread_current_pid();
   void *data = (n) ? va_arg(*args, void*) : NULL;
@@ -41,14 +41,14 @@ static hpx_parcel_t *_new_marshalled(const void *obj, hpx_addr_t addr,
 }
 
 static int _exec_marshalled(const void *obj, hpx_parcel_t *p) {
-  const action_t *action = obj;
+  const action_t *action = static_cast<const action_t *>(obj);
   hpx_action_handler_t handler = (hpx_action_handler_t)action->handler;
   void *args = hpx_parcel_get_data(p);
   return handler(args, p->size);
 }
 
 static int _exec_pinned_marshalled(const void *obj, hpx_parcel_t *p) {
-  const action_t *act = obj;
+  const action_t *act = static_cast<const action_t *>(obj);
 
   void *target;
   if (!hpx_gas_try_pin(p->target, &target)) {
@@ -63,7 +63,7 @@ static int _exec_pinned_marshalled(const void *obj, hpx_parcel_t *p) {
 }
 
 static void _marshalled_finish(void *act) {
-  action_t *action = act;
+  action_t *action = static_cast<action_t *>(act);
   log_action("%d: %s (%p) %s %x.\n", *action->id, action->key,
              (void*)(uintptr_t)action->handler,
              HPX_ACTION_TYPE_TO_STRING[action->type],
@@ -74,16 +74,16 @@ static void _marshalled_fini(void *action) {
 }
 
 static const parcel_management_vtable_t _marshalled_vtable = {
-  .new_parcel = _new_marshalled,
-  .pack_parcel = _pack_marshalled,
   .exec_parcel = _exec_marshalled,
+  .pack_parcel = _pack_marshalled,
+  .new_parcel = _new_marshalled,
   .exit = exit_action
 };
 
 static const parcel_management_vtable_t _pinned_marshalled_vtable = {
-  .new_parcel = _new_marshalled,
-  .pack_parcel = _pack_marshalled,
   .exec_parcel = _exec_pinned_marshalled,
+  .pack_parcel = _pack_marshalled,
+  .new_parcel = _new_marshalled,
   .exit = exit_pinned_action
 };
 

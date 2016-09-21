@@ -34,14 +34,12 @@ static int _n = 1;
 HPX_ALIGNED(HPX_PAGE_SIZE) action_t actions[LIBHPX_ACTION_MAX];
 
 static void HPX_CONSTRUCTOR _init_null_handler(void) {
-  actions[0] = (action_t){
-    .handler = NULL,
-    .id = NULL,
-    .key = "",
-    .type = 0,
-    .attr = UINT32_C(0),
-    .env = NULL
-  };
+  actions[0].handler = NULL;
+  actions[0].id = NULL;
+  actions[0].key = "";
+  actions[0].type = HPX_DEFAULT;
+  actions[0].attr = UINT32_C(0);
+  actions[0].env = NULL;
 }
 
 int action_table_size(void) {
@@ -70,8 +68,8 @@ void CHECK_ACTION(hpx_action_t id) {
 ///
 /// @return             The lexicographic comparison of the entries' keys.
 static int _cmp_keys(const void *lhs, const void *rhs) {
-  const action_t *el = lhs;
-  const action_t *er = rhs;
+  const action_t *el = static_cast<const action_t *>(lhs);
+  const action_t *er = static_cast<const action_t *>(rhs);
 
   // if either the left or right entry's id is NULL, that means it is
   // our reserved action (user-registered actions can never have the
@@ -147,12 +145,12 @@ static void _register_action_va(hpx_action_type_t type, uint32_t attr,
   }
 
   action_t *back = &actions[_n++];
-  if (_n >= LIBHPX_ACTION_MAX) {
+  if (unsigned(_n) >= LIBHPX_ACTION_MAX) {
     dbg_error("action table overflow\n");
   }
 
   // consume the first argument here---it's currently always a handler
-  back->handler = va_arg(*args, void*);
+  back->handler = reinterpret_cast<handler_t>(va_arg(*args, void*));
   n--;
 
   back->id = id;

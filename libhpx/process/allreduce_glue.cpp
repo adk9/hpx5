@@ -39,12 +39,12 @@ hpx_addr_t hpx_process_collective_allreduce_new(size_t bytes,
   dbg_assert(base);
 
   // initialize the array to point to the root as their parent (fat tree)
-  hpx_addr_t and = hpx_lco_and_new(n);
+  hpx_addr_t done = hpx_lco_and_new(n);
   dbg_check( hpx_gas_bcast_with_continuation(allreduce_init_async, base, n,
-                                             0, BSIZE, hpx_lco_set_action, and,
+                                             0, BSIZE, hpx_lco_set_action, done,
                                              &bytes, &root, &reset, &op) );
-  hpx_lco_wait(and);
-  hpx_lco_delete_sync(and);
+  hpx_lco_wait(done);
+  hpx_lco_delete_sync(done);
 
   // return the array
   EVENT_COLLECTIVE_NEW(base);
@@ -55,20 +55,20 @@ void hpx_process_collective_allreduce_delete(hpx_addr_t allreduce) {
   hpx_addr_t root = HPX_NULL;
   hpx_addr_t proxy = hpx_addr_add(allreduce, here->rank * BSIZE, BSIZE);
   allreduce_t *r = NULL;
-  if (!hpx_gas_try_pin(proxy, (void*)&r)) {
+  if (!hpx_gas_try_pin(proxy, reinterpret_cast<void**>(&r))) {
     dbg_error("could not pin local element for an allreduce\n");
   }
   root = r->parent;
   hpx_gas_unpin(proxy);
 
   int n = here->ranks;
-  hpx_addr_t and = hpx_lco_and_new(n + 1);
+  hpx_addr_t done = hpx_lco_and_new(n + 1);
   dbg_check( hpx_gas_bcast_with_continuation(allreduce_fini_async, allreduce,
                                              n, 0, BSIZE, hpx_lco_set_action,
-                                             and) );
-  dbg_check( hpx_call(root, allreduce_fini_async, and) );
-  hpx_lco_wait(and);
-  hpx_lco_delete_sync(and);
+                                             done) );
+  dbg_check( hpx_call(root, allreduce_fini_async, done) );
+  hpx_lco_wait(done);
+  hpx_lco_delete_sync(done);
 
   hpx_gas_free_sync(root);
   hpx_gas_free_sync(allreduce);
@@ -90,7 +90,7 @@ int hpx_process_collective_allreduce_subscribe_finalize(hpx_addr_t allreduce) {
     allreduce_t *r = NULL;
     hpx_addr_t root = HPX_NULL;
     hpx_addr_t leaf = hpx_addr_add(allreduce, here->rank * BSIZE, BSIZE);
-    if (!hpx_gas_try_pin(leaf, (void *)&r)) {
+    if (!hpx_gas_try_pin(leaf, reinterpret_cast<void**>(&r))) {
       dbg_error("could not pin local element for an allreduce\n");
     }
     root = r->parent;
@@ -113,7 +113,7 @@ int hpx_process_collective_allreduce_join(hpx_addr_t allreduce,
                                           const void *in) {
   hpx_addr_t proxy = hpx_addr_add(allreduce, here->rank * BSIZE, BSIZE);
   allreduce_t *r = NULL;
-  if (!hpx_gas_try_pin(proxy, (void*)&r)) {
+  if (!hpx_gas_try_pin(proxy, reinterpret_cast<void**>(&r))) {
     dbg_error("could not pin local element for an allreduce\n");
   }
   allreduce_reduce(r, in);

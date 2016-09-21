@@ -49,7 +49,8 @@ static int32_t _insert(continuation_t *c, hpx_action_t op, hpx_addr_t addr) {
 }
 
 static continuation_t *_expand(continuation_t *c, int capacity) {
-  c = realloc(c, sizeof(*c) + capacity * sizeof(hpx_parcel_t *));
+  auto bytes = sizeof(*c) + capacity * sizeof(hpx_parcel_t *);
+  c = static_cast<continuation_t *>(realloc(c, bytes));
   dbg_assert(c);
   c->capacity = capacity;
   memset(&c->parcels[c->n], 0, (capacity - c->n) * sizeof(hpx_parcel_t *));
@@ -61,7 +62,7 @@ static continuation_t *_try_expand(continuation_t *c) {
 }
 
 continuation_t *continuation_new(size_t bytes) {
-  continuation_t *c = malloc(sizeof(*c));
+  continuation_t *c = static_cast<continuation_t*>(malloc(sizeof(*c)));
   c->bytes = bytes;
   c->capacity = 0;
   c->n = 0;
@@ -83,7 +84,7 @@ void continuation_delete(continuation_t *c) {
 }
 
 int32_t continuation_add(continuation_t **c, hpx_action_t op, hpx_addr_t addr) {
-  log_coll("registering continuation (%d, %"PRIu64") at %p\n", op, addr, *c);
+  log_coll("registering continuation (%d, %" PRIu64") at %p\n", op, addr, *c);
   int32_t i = _insert(*c, op, addr);
   *c = _try_expand(*c);
   return i;

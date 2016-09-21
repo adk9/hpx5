@@ -17,6 +17,7 @@
 
 #include "libhpx/Worker.h"
 #include "libhpx/events.h"
+#include "libhpx/parcel.h"
 #include "hpx/hpx.h"
 
 namespace {

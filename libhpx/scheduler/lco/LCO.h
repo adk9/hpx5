@@ -15,7 +15,9 @@
 #define LIBHPX_SCHEDULER_LCO_H
 
 #include "TatasLock.h"
+#include "libhpx/parcel.h"
 #include "libhpx/events.h"
+
 #include "hpx/hpx.h"
 #include <cinttypes>
 #include <memory>
