@@ -435,6 +435,12 @@ class Worker : public libhpx::util::Aligned<HPX_CACHELINE_SIZE>
   std::thread              thread_;//!< this worker's native thread
 };
 
+
+/// NB: The use of volatile in the following declaration may not achieve the
+/// desired effect on some compilers/architectures because the address
+/// of self may be cached. See
+/// http://stackoverflow.com/questions/25673787/making-thread-local-variables-fully-volatile#
+/// for more details.
 extern __thread Worker * volatile self;
 
 } // namespace libhpx
