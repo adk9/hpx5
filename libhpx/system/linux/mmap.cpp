@@ -20,7 +20,9 @@
 #include <errno.h>
 #ifdef HAVE_HUGETLBFS
 # include <cstddef>
+extern "C" {
 # include <hugetlbfs.h>
+}
 #endif
 #include <cinttypes>
 #include <cstring>
