@@ -15,10 +15,9 @@
 # include "config.h"
 #endif
 
-#include <inttypes.h>
-#include <libhpx/action.h>
-#include <libhpx/debug.h>
 #include "init.h"
+#include "libhpx/debug.h"
+#include <cinttypes>
 
 void action_init(action_t *action, int n, va_list *args) {
   uint32_t attr = action->attr & (HPX_MARSHALLED | HPX_VECTORED);
