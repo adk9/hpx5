@@ -3,19 +3,18 @@ noinst_LTLIBRARIES	  = libmemory.la
 
 # libboot files and flags
 libmemory_la_CPPFLAGS = -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
-libmemory_la_CFLAGS   = $(LIBHPX_CFLAGS)
 libmemory_la_CXXFLAGS = $(LIBHPX_CXXFLAGS)
-libmemory_la_SOURCES  = glue.c
+libmemory_la_SOURCES  = glue.cpp
 
 if HAVE_NETWORK
 if HAVE_JEMALLOC
-libmemory_la_SOURCES += jemalloc.c
+libmemory_la_SOURCES += jemalloc.cpp
 endif
 endif
 
 if HAVE_NETWORK
 if HAVE_DLMALLOC
-libmemory_la_SOURCES += dlmalloc.c
+libmemory_la_SOURCES += dlmalloc.cpp
 endif
 endif
 

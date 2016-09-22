@@ -15,15 +15,14 @@
 # include "config.h"
 #endif
 
-#include <stdlib.h>
-#include <string.h>
-#include <sys/mman.h>
-#include <hpx/hpx.h>
-#include <libhpx/action.h>
-#include <libhpx/debug.h>
-#include <libhpx/locality.h>
-#include <libhpx/padding.h>
 #include "init.h"
+#include "libhpx/debug.h"
+#include "libhpx/locality.h"
+#include "libhpx/padding.h"
+#include "hpx/hpx.h"
+#include <sys/mman.h>
+#include <cstdlib>
+#include <cstring>
 
 /// A static action table.
 ///
