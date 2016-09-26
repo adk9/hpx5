@@ -25,7 +25,6 @@ noinst_HEADERS = action.h \
                  system.h \
                  time.h \
                  topology.h \
-                 utils.h \
                  Worker.h
 
 

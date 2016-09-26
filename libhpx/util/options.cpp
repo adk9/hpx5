@@ -19,7 +19,6 @@
 /// @brief Implements libhpx configuration parsing and handling.
 ///
 
-
 #include "parser.h"
 #include "libhpx/action.h"
 #include "libhpx/config.h"
@@ -28,7 +27,7 @@
 #include "libhpx/locality.h"
 #include "libhpx/parcel.h"
 #include "libhpx/system.h"
-#include "libhpx/utils.h"
+#include "libhpx/util/Env.h"
 #include "hpx/hpx.h"
 #include <cassert>
 #include <ctype.h>
@@ -66,16 +65,15 @@ static const config_t _default_cfg = {
 /// @param         flag Indicates if the option key is a flag or not.
 static void _from_env(std::stringstream& ss, const char * const var,
                       const char * const arg, bool flag) {
-  const char *c = libhpx_getenv_str(var);
-  if (!c) {
-    return;
+  try {
+    std::string s = libhpx::util::getEnv<std::string>(var);
+    if (flag) {
+      ss << "--" << arg << " ";
+    } else {
+      ss << "--" << arg << "=" << s << " ";
+    }
   }
-
-  if (flag) {
-    ss << "--" << arg << " ";
-  } else {
-    ss << "--" << arg << "=" << c << " ";
-  }
+  catch (const libhpx::util::NotFound&) { }
 }
 
 /// Merge the option id and the group.

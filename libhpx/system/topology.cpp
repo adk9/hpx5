@@ -15,16 +15,16 @@
 # include "config.h"
 #endif
 
+#include "libhpx/config.h"
+#include "libhpx/debug.h"
+#include "libhpx/libhpx.h"
+#include "libhpx/locality.h"
+#include "libhpx/system.h"
+#include "libhpx/topology.h"
+#include "libhpx/util/Env.h"
 #include <alloca.h>
 #include <string.h>
 #include <unistd.h>
-#include <libhpx/config.h>
-#include <libhpx/debug.h>
-#include <libhpx/libhpx.h>
-#include <libhpx/locality.h>
-#include <libhpx/system.h>
-#include <libhpx/topology.h>
-#include <libhpx/utils.h>
 #include <hwloc.h>
 
 static int _get_resources_by_affinity(topology_t *topology,
@@ -195,14 +195,19 @@ topology_t *topology_new(const struct config *config) {
   // aprun platforms, we look at the ALPS depth to figure out how many CPUs to
   // use, otherwise we try and use hwloc to figure out what the process mask is
   // set to, otherwise we just bail out and use all CPUs.
-  int cores = libhpx_getenv_num("ALPS_APP_DEPTH", 0);
-
-  // Check for slurm launcher.
-  if (!cores) {
-    cores = libhpx_getenv_num("SLURM_CPUS_PER_TASK", 0);
+  int cores = 0;
+  try {
+    cores = libhpx::util::getEnv<int>("ALPS_APP_DEPTH");
+  }
+  catch (const libhpx::util::NotFound&) {
+    // Check for the SLURM launcher.
+    try {
+      cores = libhpx::util::getEnv<int>("SLURM_CPUS_PER_TASK");
+    }
+    catch (const libhpx::util::NotFound&) { }
   }
 
-  if (cores) {
+  if (cores > 0) {
     libhpx_hwloc_bitmap_set_range(topo->allowed_cpus, 0, cores - 1);
   }
   else if (libhpx_hwloc_get_cpubind(*hwloc, topo->allowed_cpus, LIBHPX_HWLOC_CPUBIND_PROCESS))
