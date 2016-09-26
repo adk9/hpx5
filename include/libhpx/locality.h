@@ -85,6 +85,8 @@ typedef struct locality {
   void           *percolation; //!< An interface for dealing with GPU backends.
   void                *tracer; //!< Reference to the tracer object
   sigset_t               mask; //!< The default signal mask.
+  struct logtable      **logs; //!< reference to instrumentation log data
+  uint64_t            **stats; //!< reference to stats instrumentation backend
 } locality_t;
 
 /// The global locality is exposed through this "here" pointer.

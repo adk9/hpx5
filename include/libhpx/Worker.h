@@ -25,11 +25,6 @@
 #include <mutex>
 #include <functional>
 
-/// Forward declarations.
-/// @{
-struct logtable;
-/// @}
-
 #if defined(__APPLE__)
 # define STRINGIFY(S) #S
 # define SYMBOL(S) STRINGIFY(_##S)
@@ -419,8 +414,6 @@ class Worker : public libhpx::util::Aligned<HPX_CACHELINE_SIZE>
   void                  *profiler_;             //!< reference to the profiler
  public:
   void                        *bst;            //!< the block statistics table
-  struct logtable            *logs;            //!< reference to tracer data
-  uint64_t                  *stats;            //!< reference to statistics data
  private:
   hpx_parcel_t            *system_;             //!< this worker's native parcel
   hpx_parcel_t           *current_;             //!< current thread
@@ -432,7 +425,7 @@ class Worker : public libhpx::util::Aligned<HPX_CACHELINE_SIZE>
   std::atomic<int>         workId_;             //!< which queue are we using
   Deque                    queues_[2];          //!< work and yield queues
   Mailbox                   inbox_;             //!< mail sent to me
-  std::thread              thread_;//!< this worker's native thread
+  std::thread              thread_;             //!< this worker's native thread
 };
 
 

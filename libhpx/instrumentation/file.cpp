@@ -222,7 +222,6 @@ static void logtable_init(logtable_t *log, const char* filename, size_t size,
   log->event_id = event_id;
   log->record_bytes = 0;
   log->max_size = size;
-  log->buffer = NULL;
 
   if (filename == NULL || size == 0) {
     return;
@@ -272,18 +271,21 @@ static void logtable_fini(logtable_t *log) {
   }
 }
 
-static void _create_logtable(Worker *w, int type, int event_id, size_t size) {
+static
+void _create_logtable(int worker_id, int type, int event_id, size_t size) {
   char filename[256];
   snprintf(filename, 256, "%05d.%03d.event.%03d.%s.log",
-           hpx_get_my_rank(), w->getId(), event_id,
+           hpx_get_my_rank(), worker_id, event_id,
            TRACE_EVENT_TO_STRING[event_id]);
 
   char *path = _concat_path(_log_path, filename);
-  logtable_init(&w->logs[event_id], path, size, type, event_id, w->getId());
+  logtable_t *log = &here->logs[worker_id][event_id];
+  logtable_init(log, path, size, type, event_id, worker_id);
   free(path);
 }
 
 namespace {
+using libhpx::self;
 using libhpx::instrumentation::Trace;
 class FileTracer : public Trace {
  public:
@@ -306,13 +308,13 @@ class FileTracer : public Trace {
   /// @param            n The number of features to log.
   /// @param           id The event id.
   /// @param         args The features to log.
-  void vappend(int UNUSED, int n, int id, va_list& vargs) {
-    dbg_assert(libhpx::self->logs);
-    logtable_t *log = &libhpx::self->logs[id];
+  void vappend(int UNUSED, int n, int event_id, va_list& vargs) {
+    const int worker_id = self->getId();
+    logtable_t *log = &here->logs[worker_id][event_id];
     dbg_assert(log);
     uint64_t time = hpx_time_from_start_ns(hpx_time_now());
     char *next = log->next + log->record_bytes;
-    dbg_assert(next > log->buffer);
+    dbg_assert(next >= log->buffer);
     if ((size_t)(next - log->buffer) > log->max_size) {
       EVENT_TRACE_FILE_IO_BEGIN();
       write(log->fd, log->buffer, log->next - log->buffer);
@@ -329,10 +331,15 @@ class FileTracer : public Trace {
   }
 
   void start(void) {
-    for (auto&& w : here->sched->getWorkers()) {
-      // Allocate memory for pointers to the logs
-      w->logs = static_cast<logtable_t*>(calloc(TRACE_NUM_EVENTS, sizeof(logtable_t)));
-
+    // Allocate memory for pointers to the logs
+    const unsigned nworkers = here->sched->getNWorkers();
+    here->logs = new logtable_t*[nworkers];
+    for (unsigned w = 0; w < nworkers; ++w) {
+      const size_t size = sizeof(logtable_t) * TRACE_NUM_EVENTS;
+      if (posix_memalign((void**)&here->logs[w], HPX_CACHELINE_SIZE, size)) {
+        dbg_error("could not allocate aligned buffer\n");
+      }
+      memset(here->logs[w], 0, size);
       // Scan through each trace event and create logs for the associated
       // events that that we are going to be tracing.
       for (unsigned i = 0; i < TRACE_NUM_EVENTS; ++i) {
@@ -362,15 +369,17 @@ class FileTracer : public Trace {
       _log_path = NULL;
     }
 
-    for (auto&& w : here->sched->getWorkers()) {
-      if (w->logs) {
+    if (here->logs) {
+      for (int w = 0; w < here->sched->getNWorkers(); ++w) {
         // deallocate the log tables
-        for (int i = 0, e = TRACE_NUM_EVENTS; i < e; ++i) {
-          logtable_fini(&w->logs[i]);
+        for (unsigned i = 0, e = TRACE_NUM_EVENTS; i < e; ++i) {
+          logtable_fini(&here->logs[w][i]);
         }
-        free(w->logs);
-        w->logs = NULL;
+        free(here->logs[w]);
+        here->logs[w] = nullptr;
       }
+      delete[] here->logs;
+      here->logs = nullptr;
     }
   }
 };

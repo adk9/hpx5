@@ -57,8 +57,6 @@ Worker::Worker(int id)
       lastVictim_(nullptr),
       profiler_(nullptr),
       bst(nullptr),
-      logs(nullptr),
-      stats(nullptr),
       system_(nullptr),
       current_(nullptr),
       threads_(nullptr),
