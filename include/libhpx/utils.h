@@ -18,8 +18,6 @@
 extern "C" {
 #endif
 
-/// Hash a string @p str of length @p len.
-uint32_t libhpx_hash_string(const char *str, size_t len);
 
 /// Get a string value from the environment associated with a
 /// case-sensitive key @p key.
