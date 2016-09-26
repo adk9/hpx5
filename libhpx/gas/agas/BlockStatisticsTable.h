@@ -51,7 +51,7 @@ class BlockStatisticsTable
   void upsert(GVA gva, std::unique_ptr<BlockStatisticsEntry> entry);
 
   /// Clear the block statistics table.
-  void clear(void);
+  void clear();
 
   // Constructs a sparse graph in the compressed sparse row (CSR)
   // format from the global BST, and serializes it into an output
