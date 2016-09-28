@@ -15,6 +15,13 @@
 # include "config.h"
 #endif
 
+/// @brief This file implements the address-space allocator interface for
+///        registered memory management using jemalloc.
+///
+/// We bind a simple mmap-then-pin strategy to the jemalloc chunk allocation
+/// routines, augmented with a small LRU cache to try and avoid mmap and memory
+/// registration pain for frequent chunk allocation/deallocation patterns.
+
 #include "registered.h"
 #include "PhotonTransport.h"
 #include "libhpx/debug.h"
@@ -29,12 +36,16 @@ using libhpx::network::pwc::PhotonTransport;
 
 static libhpx::util::LRUCache _chunks(8);
 
-/// @file  libhpx/gas/pgas/registered.c
-/// @brief This file implements the address-space allocator interface for
-///        registered memory management.
-///
-/// In practice this is trivial. We just use these to bind the heap_chunk
-/// allocation routines to the registered_heap instance.
+static bool
+_registered_chunk_free(void *chunk, size_t n, bool committed, unsigned arena)
+{
+  _chunks.put(chunk, n, [n](void* chunk, size_t bytes) {
+      PhotonTransport::Unpin(chunk, bytes);
+      system_munmap_huge_pages(nullptr, chunk, bytes);
+    });
+  return 0;
+}
+
 static void *
 _registered_chunk_alloc(void *addr, size_t n, size_t align, bool *zero,
                         bool *commit, unsigned arena)
@@ -42,21 +53,23 @@ _registered_chunk_alloc(void *addr, size_t n, size_t align, bool *zero,
   dbg_assert(zero);
   dbg_assert(commit);
   void *chunk = _chunks.get(n, [=]() {
-      return system_mmap_huge_pages(nullptr, addr, n, align);
+      void* chunk = system_mmap_huge_pages(nullptr, addr, n, align);
+      PhotonTransport::Pin(chunk, n, nullptr);
+      return chunk;
     });
   if (!chunk) {
     return nullptr;
   }
 
   // According to the jemalloc man page, if addr is set, then we *must* return a
-  // chunk at that address.
+  // chunk at that address. When this code path fails we choose to bypass the
+  // LRU cache because we don't want to keep returning this same chunk if it's a
+  // problem.
   if (addr && addr != chunk) {
+    PhotonTransport::Unpin(chunk, n);
     system_munmap_huge_pages(nullptr, chunk, n);
     return nullptr;
   }
-
-  // Pin the memory.
-  PhotonTransport::Pin(chunk, n, nullptr);
 
   // If we are asked to zero a chunk, then we do so.
   if (*zero) {
@@ -66,16 +79,6 @@ _registered_chunk_alloc(void *addr, size_t n, size_t align, bool *zero,
   // Commit is not relevant for linux/darwin.
   *commit = true;
   return chunk;
-}
-
-static bool
-_registered_chunk_free(void *chunk, size_t n, bool committed, unsigned arena)
-{
-  _chunks.put(chunk, n, [n](void* chunk, size_t bytes) {
-      PhotonTransport::Unpin(chunk, bytes);
-      system_munmap_huge_pages(nullptr, chunk, bytes);
-    });
-  return 0;
 }
 
 void

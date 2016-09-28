@@ -148,7 +148,8 @@ PhotonTransport::Pin(const void *base, size_t n, Key *key)
     dbg_error("failed to register segment with Photon\n");
   }
   else {
-    log_net("registered segment (%p, %zu)\n", base, n);
+    static constexpr auto LEVEL= HPX_LOG_NET | HPX_LOG_MEMORY;
+    log_level(LEVEL, "pinned segment (%p, %zu)\n", base, n);
   }
 
   if (key) {
@@ -164,8 +165,10 @@ PhotonTransport::Unpin(const void *base, size_t n)
     dbg_error("unhandled error %d during release of segment (%p, %zu)\n", e,
               base, n);
   }
-  log_net("released the segment (%p, %zu)\n", base, n);
-
+  else {
+    static constexpr auto LEVEL= HPX_LOG_NET | HPX_LOG_MEMORY;
+    log_level(LEVEL, "unpinned the segment (%p, %zu)\n", base, n);
+  }
 }
 
 // async entry point for unpin

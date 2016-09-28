@@ -181,7 +181,7 @@ void system_munmap(void *UNUSED, void *addr, size_t size) {
     dbg_error("munmap failed: %s.  addr is %p, and size is %zu\n",
           strerror(errno), addr, size);
   }
-  log_mem("munmapped %zu bytes for a total of %zu\n", size,
+  log_mem("munmapped %zu bytes at %p for a total of %zu\n", size, addr,
           _update_total(-size));
 }
 
