@@ -25,21 +25,21 @@
 # include "apex.h"
 #endif
 
-#include <libhpx/action.h>
-#include <libhpx/boot.h>
-#include <libhpx/config.h>
-#include <libhpx/debug.h>
-#include <libhpx/libhpx.h>
-#include <libhpx/locality.h>
-#include <libhpx/instrumentation.h>
-#include <libhpx/memory.h>
-#include <libhpx/Network.h>
-#include <libhpx/percolation.h>
-#include <libhpx/process.h>
-#include <libhpx/Scheduler.h>
-#include <libhpx/system.h>
-#include <libhpx/time.h>
-#include <libhpx/topology.h>
+#include "libhpx/action.h"
+#include "libhpx/config.h"
+#include "libhpx/debug.h"
+#include "libhpx/libhpx.h"
+#include "libhpx/locality.h"
+#include "libhpx/instrumentation.h"
+#include "libhpx/memory.h"
+#include "libhpx/Network.h"
+#include "libhpx/percolation.h"
+#include "libhpx/process.h"
+#include "libhpx/Scheduler.h"
+#include "libhpx/system.h"
+#include "libhpx/time.h"
+#include "libhpx/topology.h"
+#include "libhpx/boot/Network.h"
 #include <hpx/hpx.h>
 #include <assert.h>
 #include <inttypes.h>
@@ -55,37 +55,27 @@ static void _cleanup(locality_t *l) {
 
   if (l->tracer) {
     trace_destroy(l->tracer);
-    l->tracer = NULL;
   }
 
   delete l->sched;
-  l->sched = NULL;
 
 #ifdef HAVE_APEX
   apex_finalize();
 #endif
 
   delete l->net;
-  l->net = NULL;
 
   if (l->percolation) {
     percolation_deallocate(l->percolation);
-    l->percolation = NULL;
   }
 
   delete l->gas;
-  l->gas = NULL;
 
   dbg_fini();
-
-  if (l->boot) {
-    boot_delete(l->boot);
-    l->boot = NULL;
-  }
+  delete l->boot;
 
   if (l->topology) {
     topology_delete(l->topology);
-    l->topology = NULL;
   }
 
   action_table_finalize();
@@ -129,13 +119,13 @@ int hpx_init(int *argc, char ***argv) {
   }
 
   // bootstrap
-  here->boot = boot_new(here->config->boot);
+  here->boot = libhpx::boot::Network::Create(here->config->boot);
   if (!here->boot) {
     status = log_error("failed to bootstrap.\n");
     goto unwind1;
   }
-  here->rank = boot_rank(here->boot);
-  here->ranks = boot_n_ranks(here->boot);
+  here->rank = here->boot->getRank();
+  here->ranks = here->boot->getNRanks();
 
   // initialize the debugging system
   // @todo We would like to do this earlier but MPI_init() for the bootstrap
@@ -193,7 +183,7 @@ int hpx_init(int *argc, char ***argv) {
   log_dflt("HPX running %d worker threads on %d cores\n", here->config->threads,
            cores);
 
-  here->net = Network::Create(here->config, here->boot, here->gas);
+  here->net = Network::Create(here->config, *here->boot, here->gas);
   if (!here->net) {
     status = log_error("failed to create network.\n");
     goto unwind1;
@@ -234,7 +224,7 @@ static int
 _run(int spmd, hpx_action_t act, void *out, int n, va_list *args)
 {
   int status = here->sched->start(spmd, act, out, n, args);
-  boot_barrier(here->boot);
+  here->boot->barrier();
   return status;
 }
 
@@ -263,7 +253,7 @@ int hpx_get_my_rank(void) {
 }
 
 int hpx_get_num_ranks(void) {
-  return (here && here->boot) ? here->ranks : -1;
+  return (here) ? here->ranks : -1;
 }
 
 int hpx_get_num_threads(void) {
@@ -279,8 +269,7 @@ hpx_abort(void)
     dbg_wait();
   }
   if (here && here->boot) {
-    assert(here->boot);
-    boot_abort(here->boot);
+    here->boot->abort();
   }
   abort();
 }

@@ -67,7 +67,7 @@ HeapSegment::HeapSegment(size_t size)
 HeapSegment::~HeapSegment()
 {
   if (base_) {
-    system_munmap_huge_pages(NULL, base_, nBytes_);
+    system_munmap_huge_pages(nullptr, base_, nBytes_);
   }
 }
 
@@ -75,8 +75,7 @@ char*
 HeapSegment::newSegment() const
 {
   size_t align = maxBlockSize();
-  void* addr = reinterpret_cast<void*>(align);
-  addr = system_mmap_huge_pages(NULL, addr, nBytes_, align);
+  void* addr = system_mmap_huge_pages(nullptr, nullptr, nBytes_, align);
   if (char* base = static_cast<char*>(addr)) {
     assert((uintptr_t)base % bytesPerChunk_ == 0);
     return base;

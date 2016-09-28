@@ -14,37 +14,57 @@
 #ifndef HPX_UTIL_MATH_H
 #define HPX_UTIL_MATH_H
 
+#include <type_traits>
+
 namespace libhpx {
 namespace util {
 namespace detail {
 template <typename T, size_t Bytes = sizeof(T)>
-struct CeilLog2;
+struct CountLeadingZeros;
 
 template <typename T>
-struct CeilLog2<T, 4> {
-  static constexpr T op(T val) {
-    return ((sizeof(val) * 8 - 1) - clz(val)) + (!!(val & (val - 1)));
+struct CountLeadingZeros<T, 4> {
+  static constexpr int op(T val) {
+    return __builtin_clz(val);
   }
 };
 
 template <typename T>
-struct CeilLog2<T, 8> {
-  static constexpr T op(T val) {
-    return ((sizeof(val) * 8 - 1) - clzl(val)) + (!!(val & (val - 1)));
+struct CountLeadingZeros<T, 8> {
+  static constexpr int op(T val) {
+    return __builtin_clzll(val);
+  }
+};
+
+template <>
+struct CountLeadingZeros<unsigned long, sizeof(unsigned long)> {
+  static constexpr int op(unsigned long val) {
+    return __builtin_clzl(val);
   }
 };
 }
 
 template <typename T>
+inline constexpr char clz(T val) {
+  return detail::CountLeadingZeros<T>::op(val);
+}
+
+template <typename T>
 inline constexpr T ceil_log2(T val) {
-  return detail::CeilLog2<T>::op(val);
+  static_assert(std::is_unsigned<T>::value, "log2 of signed type undefined\n");
+  return (T(sizeof(val) * 8 - 1) - clz(val)) + (!!(val & (val - 1)));
+}
+
+template <typename T>
+inline constexpr T ceil2(T val) {
+  return T(1) << ceil_log2(val);
 }
 
 template <typename T>
 static inline T ceil_div(T num, T denom) {
   return (num / denom) + ((num % denom) ? 1 : 0);
 }
-}
-}
+} // namespace util
+} // namespace libhpx
 
 #endif // HPX_UTIL_MATH_H

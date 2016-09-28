@@ -66,9 +66,12 @@ class SMP : public GAS {
   void unpin(hpx_addr_t gva) {
   }
 
+  uint32_t getAttribute(hpx_addr_t gva) const {
+    dbg_error("SMP execution should not call this function\n");
+  }
+
   void setAttribute(hpx_addr_t gva, uint32_t attr) {
         dbg_error("SMP execution should not call this function\n");
-
   }
 
   void move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync) {

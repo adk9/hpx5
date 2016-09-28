@@ -45,7 +45,9 @@ class Hosted : public Affinity, public GAS {
 };
 
 template <class GAS, typename... Args>
-GAS* make_hosted(config_t* cfg, Args... args) {
+GAS*
+make_hosted(config_t* cfg, Args... args)
+{
   switch (cfg->gas_affinity) {
    default:
     return new Hosted<GAS, None>(args...);
@@ -64,7 +66,9 @@ GAS* make_hosted(config_t* cfg, Args... args) {
   }
 }
 
-GAS* make_hosted(config_t* cfg, boot_t* boot) {
+GAS*
+make_hosted(config_t* cfg, const libhpx::boot::Network* boot)
+{
   switch (cfg->gas) {
    case HPX_GAS_SMP:
     return make_hosted<SMP>(cfg);
@@ -76,7 +80,7 @@ GAS* make_hosted(config_t* cfg, boot_t* boot) {
 
    case HPX_GAS_PGAS:
 #ifdef HAVE_NETWORK
-    return make_hosted<PGAS>(cfg, cfg, boot);
+    return make_hosted<PGAS>(cfg, cfg);
 #endif
 
    default:
@@ -90,13 +94,13 @@ GAS::~GAS()
 }
 
 GAS*
-GAS::Create(config_t *cfg, boot_t *boot) {
+GAS::Create(config_t *cfg, const boot::Network* const boot) {
 #ifndef HAVE_NETWORK
   // if we didn't build a network we need to default to SMP
   cfg->gas = HPX_GAS_SMP;
 #endif
 
-  int ranks = boot_n_ranks(boot);
+  int ranks = boot->getNRanks();
 
   // if we built a network, we might want to optimize for SMP
   if (ranks == 1 && cfg->opt_smp) {

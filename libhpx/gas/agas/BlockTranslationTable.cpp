@@ -177,6 +177,14 @@ BTT::getOwner(GVA gva, bool& cached) const
   return (cached) ? entry.owner : gva.home;
 }
 
+uint32_t
+BTT::getAttr(GVA gva) const
+{
+  Entry entry;
+  bool found = map_.find(gva, entry);
+  return (found) ? entry.attr : HPX_ATTR_NONE;
+}
+
 void
 BTT::setAttr(GVA gva, uint32_t attr)
 {

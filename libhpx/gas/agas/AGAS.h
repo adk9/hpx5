@@ -19,7 +19,6 @@
 #include "ChunkTable.h"
 #include "GlobalVirtualAddress.h"
 #include "libhpx/GAS.h"
-#include "libhpx/boot.h"
 #include "libhpx/util/Bitmap.h"
 #include "libhpx/util/math.h"
 
@@ -33,7 +32,7 @@ class AGAS : public GAS {
   static constexpr uint64_t HEAP_ALIGN = util::ceil_log2(HEAP_SIZE);
 
  public:
-  AGAS(const config_t* config, boot_t* boot);
+  AGAS(const config_t* config, const boot::Network* const boot);
   ~AGAS();
 
   /// Interpret the here->gas as an AGAS instance.
@@ -81,6 +80,10 @@ class AGAS : public GAS {
 
   void unpin(hpx_addr_t gva) {
     btt_.unpin(gva);
+  }
+
+  uint32_t getAttribute(hpx_addr_t gva) const {
+    return btt_.getAttr(GVA(gva));
   }
 
   void setAttribute(hpx_addr_t gva, uint32_t attr) {

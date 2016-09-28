@@ -19,7 +19,7 @@
 #include "ISendBuffer.h"
 #include "MPITransport.h"
 #include "libhpx/ParcelStringOps.h"
-#include "libsync/queues.hpp"
+#include "libhpx/util/TwoLockQueue.h"
 #include <mutex>
 
 namespace libhpx {
@@ -28,7 +28,7 @@ namespace isir {
 class FunneledNetwork : public Network, public ParcelStringOps
 {
  public:
-  FunneledNetwork(const config_t *cfg, boot_t *boot, GAS *gas);
+  FunneledNetwork(const config_t *cfg, GAS *gas);
   ~FunneledNetwork();
 
   int type() const;
@@ -53,7 +53,7 @@ class FunneledNetwork : public Network, public ParcelStringOps
   using Transport = libhpx::network::isir::MPITransport;
   using IRecvBuffer = libhpx::network::isir::IRecvBuffer;
   using ISendBuffer = libhpx::network::isir::ISendBuffer;
-  using ParcelQueue = libsync::TwoLockQueue<hpx_parcel_t*>;
+  using ParcelQueue = libhpx::util::TwoLockQueue<hpx_parcel_t*>;
 
   void sendAll();
 

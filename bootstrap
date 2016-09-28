@@ -11,17 +11,17 @@ contrib_tars=(
     "jemalloc-4.2.1.tar.bz2"
     "libffi-e9de7e3.tar.gz"
     "userspace-rcu-0.9.2-hpx.tar.bz2"
-    "hwloc-1.11.3.tar.gz"
+    "hwloc-1.11.4.tar.bz2"
 )
 
 # set matching md5sums for each tarball
 contrib_md5=(
     "038e31de21749872fe8cf6d31bb881f6" # photon
-    "59efe01436f462e5cd3a2616b802f1b8" # libcukoo
+    "3a5a1d5c906d0eb94c05c16dc129546b" # libcukoo
     "666c2f4194b583e162d9e5a112167846" # jemalloc
     "c3f381d8fd2fd611b472fb4971c4f546" # libffi
     "2abe358b18384e3a09ef3036b5886895" # liburcu
-    "c1d36a9de6028eac1d18ea4782ef958f" # hwloc
+    "865d3dfba3c173f66905c4301dfc7d73" # hwloc
 )
 
 # and matching target contrib directories

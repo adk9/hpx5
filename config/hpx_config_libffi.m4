@@ -45,15 +45,12 @@ AC_DEFUN([_HPX_CONTRIB_LIBFFI], [
  # that the test in HAVE_LIBFFI sets the declare correctly.
  _HAVE_LIBFFI([yes])
  
- # add the la dependency to libhpx and make sure it can find ffi.h
+ # Add the la dependency to libhpx and make sure it can find ffi.h, and make
+ # sure that the internal apps can as well. External apps will get them through
+ # the installed pkg-config file.
  LIBHPX_LIBADD="$LIBHPX_LIBADD \$(top_builddir)/$contrib/libffi.la"
- LIBHPX_CPPFLAGS="$LIBHPX_CPPFLAGS -I\$(top_builddir)/$contrib/include"
- LIBHPX_CFLAGS="$LIBHPX_CFLAGS $LIBFFI_CFLAGS"
-
- # And make sure our apps can find the header as well.
- HPX_APPS_CPPFLAGS="$HPX_APPS_CPPFLAGS -I\$(top_builddir)/$contrib/include"
- HPX_APPS_CFLAGS="$HPX_APPS_CFLAGS $LIBFFI_CFLAGS"
- HPX_APPS_CXXFLAGS="$HPX_APPS_CXXFLAGS $LIBFFI_CFLAGS"
+ LIBHPX_CPPFLAGS="$LIBHPX_CPPFLAGS -I\$(top_builddir)/$contrib/include $LIBFFI_CFLAGS"
+ HPX_APPS_CPPFLAGS="$HPX_APPS_CPPFLAGS -I\$(top_builddir)/$contrib/include $LIBFFI_CFLAGS"
 
  # expose the libffi package as a public dependency to clients
  HPX_PC_REQUIRES_PKGS="$HPX_PC_REQUIRES_PKGS libffi"
@@ -96,7 +93,9 @@ AC_DEFUN([_HPX_VERIFY_PKG_LIBFFI], [
 # This function checks to see if there is a libffi package that works.
 AC_DEFUN([_HPX_PKG_LIBFFI], [
  pkg=$1
- 
+
+ AC_MSG_WARN([libffi packge $pkg])
+
  # Try and find a pkg-config package for libffi. We have found that we need some
  # special-case handling even if we find the package, because it doesn't appear
  # that the package is enough for all compilers.
@@ -109,17 +108,14 @@ AC_DEFUN([_HPX_PKG_LIBFFI], [
  # symbols will appear in application binaries and must be linked directly to
  # libffi, not simply transitively through libhpx.
  AS_IF([test "x$have_libffi" == xyes],
-   [# Ensure libhpx can find the ffi.h header and has a direct dependency on 
-    # the libffi library.
-    LIBHPX_CFLAGS="$LIBHPX_CFLAGS $LIBFFI_CFLAGS"
-    LIBHPX_CXXFLAGS="$LIBHPX_CXXFLAGS $LIBFFI_CFLAGS"
-    HPX_APPS_LDADD="$HPX_APPS_LDADD $LIBFFI_LIBS"
+   [# Ensure libhpx can find the ffi.h header.
+    LIBHPX_CPPFLAGS="$LIBHPX_CPPFLAGS $LIBFFI_CFLAGS"
 
     # Ensure that the included apps can find the ffi.h header (we don't use
-    # pkg-config locally. They get the lib dependency through libhpx.la.
-    HPX_APPS_CFLAGS="$HPX_APPS_CFLAGS $LIBFFI_CFLAGS"
-    HPX_APPS_CXXFLAGS="$HPX_APPS_CXXFLAGS $LIBFFI_CFLAGS"
-    
+    # pkg-config locally.
+    HPX_APPS_CPPFLAGS="$HPX_APPS_CPPFLAGS $LIBFFI_CFLAGS"
+    HPX_APPS_LDADD="$HPX_APPS_LDADD $LIBFFI_LIBS"
+        
     # Ensure external users depend on the ffi pkg.
     HPX_PC_REQUIRES_PKGS="$HPX_PC_REQUIRES_PKGS $pkg"])
 ])

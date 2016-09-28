@@ -14,7 +14,6 @@ libhpx_la_SOURCES  = libhpx.cpp hpx.cpp call.cpp par.cpp debug.cpp version.cpp \
 
 libhpx_la_LDFLAGS  = $(LIBHPX_LDFLAGS)
 libhpx_la_LIBADD   = $(LIBHPX_LIBADD) \
-                     $(top_builddir)/libsync/libsync.la \
                      system/libsystem.la \
                      util/libutil.la \
                      boot/libboot.la \
@@ -28,7 +27,6 @@ libhpx_la_LIBADD   = $(LIBHPX_LIBADD) \
                      percolation/libpercolation.la
 
 libhpx_la_DEPENDENCIES = $(LIBHPX_LIBADD) \
-                         $(top_builddir)/libsync/libsync.la \
                          system/libsystem.la \
                          util/libutil.la \
                          boot/libboot.la \

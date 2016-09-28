@@ -22,11 +22,14 @@ using libhpx::GAS;
 using libhpx::network::ParcelStringOps;
 using libhpx::network::pwc::PWCNetwork;
 using libhpx::network::pwc::AGASNetwork;
+using CacheAligned = libhpx::util::Aligned<HPX_CACHELINE_SIZE>;
 }
 
-AGASNetwork::AGASNetwork(const config_t *cfg, boot_t *boot, GAS *gas)
+AGASNetwork::AGASNetwork(const config_t *cfg, const boot::Network& boot,
+                         GAS *gas)
     : PWCNetwork(cfg, boot, gas),
-      ParcelStringOps()
+      ParcelStringOps(),
+      CacheAligned()
 {
 }
 

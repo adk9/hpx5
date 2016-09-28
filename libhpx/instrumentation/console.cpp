@@ -15,6 +15,8 @@
 # include "config.h"
 #endif
 
+#include "Trace.h"
+
 #include <cinttypes>
 #include <fcntl.h>
 #include <inttypes.h>
@@ -34,6 +36,7 @@
 #include <libhpx/Worker.h>
 #include "metadata.h"
 
+namespace {
 /// This will output a list of action ids and names.
 static void _print_actions(void) {
   if (here->rank == 0) {
@@ -51,37 +54,44 @@ static void _print_actions(void) {
           HPX_TRACE_CLASS_TO_STRING[ceil_log2_32(c)], \
           TRACE_EVENT_TO_STRING[id], ##__VA_ARGS__)
 
-static void _vappend(int UNUSED, int n, int id, ...) {
-  va_list vargs;
-  va_start(vargs, id);
-  int c = TRACE_EVENT_TO_CLASS[id];
+using libhpx::instrumentation::Trace;
+class ConsoleTracer : public Trace {
+ public:
+  ConsoleTracer(const config_t *cfg) : Trace(cfg) {
+  }
 
-  switch (n) {
-    case 0:
+  ~ConsoleTracer() {
+  }
+
+  void vappend(int UNUSED, int n, int id, va_list& vargs) {
+    int c = TRACE_EVENT_TO_CLASS[id];
+
+    switch (n) {
+     case 0:
       _vprint_console(c, id, "");
       break;
-    case 1:
+     case 1:
       _vprint_console(c, id, ",%" PRIu64, va_arg(vargs, uint64_t));
       break;
-    case 2:
+     case 2:
       _vprint_console(c, id, ",%" PRIu64 ",%" PRIu64,
                       va_arg(vargs, uint64_t),
                       va_arg(vargs, uint64_t));
       break;
-    case 3:
+     case 3:
       _vprint_console(c, id, ",%" PRIu64 ",%" PRIu64 ",%" PRIu64,
                       va_arg(vargs, uint64_t),
                       va_arg(vargs, uint64_t),
                       va_arg(vargs, uint64_t));
       break;
-    case 4:
+     case 4:
       _vprint_console(c, id, ",%" PRIu64 ",%" PRIu64 ",%" PRIu64 ",%" PRIu64,
                       va_arg(vargs, uint64_t),
                       va_arg(vargs, uint64_t),
                       va_arg(vargs, uint64_t),
                       va_arg(vargs, uint64_t));
       break;
-    case 5:
+     case 5:
       _vprint_console(c, id, ",%" PRIu64 ",%" PRIu64 ",%" PRIu64 ",%" PRIu64
                       ",%" PRIu64,
                       va_arg(vargs, uint64_t),
@@ -90,7 +100,7 @@ static void _vappend(int UNUSED, int n, int id, ...) {
                       va_arg(vargs, uint64_t),
                       va_arg(vargs, uint64_t));
       break;
-    case 6:
+     case 6:
       _vprint_console(c, id, ",%" PRIu64 ",%" PRIu64 ",%" PRIu64 ",%" PRIu64
                       ",%" PRIu64 ",%" PRIu64,
                       va_arg(vargs, uint64_t),
@@ -100,8 +110,8 @@ static void _vappend(int UNUSED, int n, int id, ...) {
                       va_arg(vargs, uint64_t),
                       va_arg(vargs, uint64_t));
       break;
-    case 7:
-    default:
+     case 7:
+     default:
       _vprint_console(c, id, ",%" PRIu64 ",%" PRIu64 ",%" PRIu64 ",%" PRIu64
                       ",%" PRIu64 ",%" PRIu64 ",%" PRIu64,
                       va_arg(vargs, uint64_t),
@@ -112,28 +122,20 @@ static void _vappend(int UNUSED, int n, int id, ...) {
                       va_arg(vargs, uint64_t),
                       va_arg(vargs, uint64_t));
       break;
+    }
   }
 
-  va_end(vargs);
-}
-
-static void _start(void) {
-  if (inst_trace_class(HPX_TRACE_PARCEL)) {
-    _print_actions();
+  void start(void) {
+    if (inst_trace_class(HPX_TRACE_PARCEL)) {
+      _print_actions();
+    }
   }
+
+  void destroy(void) {
+  }
+};
 }
 
-static void _destroy(void) {
-}
-
-trace_t *trace_console_new(const config_t *cfg) {
-  trace_t *trace = static_cast<trace_t*>(malloc(sizeof(*trace)));
-  dbg_assert(trace);
-
-  trace->type        = HPX_TRACE_BACKEND_CONSOLE;
-  trace->start       = _start;
-  trace->destroy     = _destroy;
-  trace->vappend     = _vappend;
-  sync_store(&trace->active, !cfg->trace_off, SYNC_RELAXED);
-  return trace;
+void *trace_console_new(const config_t *cfg) {
+  return new ConsoleTracer(cfg);
 }

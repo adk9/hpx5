@@ -15,7 +15,6 @@
 #define LIBHPX_NETWORK_PWC_PHOTON_TRANSPORT_H
 
 #include "Commands.h"
-#include "libhpx/boot.h"
 #include "libhpx/config.h"
 #include <photon.h>
 
@@ -49,7 +48,7 @@ class PhotonTransport {
     int get();
   };
 
-  static void Initialize(const config_t *config, boot_t *boot);
+  static void Initialize(const config_t *config, int rank, int ranks);
 
   static int Test(Command *op, int *remaining, int id, int *src);
   static int Probe(Command *op, int *remaining, int rank, int *src);

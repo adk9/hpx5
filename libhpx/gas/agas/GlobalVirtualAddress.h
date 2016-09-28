@@ -18,6 +18,7 @@
 #include "libhpx/util/math.h"
 #include "hpx/hpx.h"
 #include <cstdint>
+#include <city_hasher.hh>
 
 namespace libhpx {
 namespace gas {
@@ -137,5 +138,14 @@ static_assert(sizeof(GlobalVirtualAddress) == sizeof(hpx_addr_t),
 } // namespace agas
 } // namespace gas
 } // namespace libhpx
+
+template <>
+class CityHasher<libhpx::gas::agas::GlobalVirtualAddress> {
+ public:
+  size_t operator()(const libhpx::gas::agas::GlobalVirtualAddress& gva) const {
+    uint64_t key = gva.toKey();
+    return CityHash64(reinterpret_cast<const char*>(&key), sizeof(key));
+  }
+};
 
 #endif // LIBHPX_GAS_AGAS_GLOBAL_VIRTUAL_ADDRESS_H

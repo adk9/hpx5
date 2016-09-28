@@ -46,7 +46,6 @@ TESTS = allreduce               \
         parcel_send_through     \
         process                 \
         runtime                 \
-        task                    \
         thread_cont_action      \
         thread_continue         \
         thread_create           \
@@ -67,7 +66,10 @@ TESTS           += percolation
 endif
 
 # For some reason I need to explicitly set C++ source files
+libhpx_boot_SOURCES                 = libhpx_boot.cpp
 cxx_raii_SOURCES                    = cxx_raii.cpp
+parcel_send_SOURCES                 = parcel_send.cpp
+thread_yield_SOURCES                = thread_yield.cpp
 
 # Override libhpx tests so that they have the right paths and flags, which are
 # the LIBHPX versions rather than the HPX_APPS version.
@@ -111,7 +113,6 @@ parcel_send_through_DEPENDENCIES    = $(HPX_APPS_DEPS)
 percolation_DEPENDENCIES            = $(HPX_APPS_DEPS)
 process_DEPENDENCIES                = $(HPX_APPS_DEPS)
 runtime_DEPENDENCIES                = $(HPX_APPS_DEPS)
-task_DEPENDENCIES                   = $(HPX_APPS_DEPS)
 thread_cont_action_DEPENDENCIES     = $(HPX_APPS_DEPS)
 thread_continue_DEPENDENCIES        = $(HPX_APPS_DEPS)
 thread_create_DEPENDENCIES          = $(HPX_APPS_DEPS)

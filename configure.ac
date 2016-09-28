@@ -82,6 +82,9 @@ LT_INIT([disable-shared])
 LIBHPX_CPPFLAGS="-I\$(srcdir) -I\$(top_builddir)/include"
 HPX_APPS_CPPFLAGS="-I\$(srcdir) -I\$(top_builddir)/include"
 
+# Prefer the statically built .la libraries when they're available.
+HPX_APPS_LDFLAGS="-static-libtool-libs"
+
 HPX_CONFIG_COMPILER
 HPX_CONFIG_HOST
 HPX_PE_ENV
@@ -157,13 +160,13 @@ HPX_CONFIG_JEMALLOC([contrib/jemalloc], ["jemalloc >= 4.0"])
 HPX_CONFIG_TBBMALLOC
 HPX_CONFIG_DLMALLOC([contrib/dlmalloc])
 
+HWLOC_SET_SYMBOL_PREFIX(libhpx_)
 HPX_CONFIG_HWLOC_PRE_SETUP_CORE
 HWLOC_SETUP_CORE([contrib/hwloc])
 HPX_CONFIG_HWLOC_POST_SETUP_CORE
 HPX_CONFIG_HWLOC([hwloc])
 
 HPX_CONFIG_HUGETLBFS([hugetlbfs])
-HPX_CONFIG_UTHASH([contrib/uthash])
 HPX_CONFIG_VALGRIND([contrib/valgrind])
 HPX_CONFIG_LIBFFI([contrib/$libffi_contrib_dir], [libffi])
 HPX_CONFIG_AGAS

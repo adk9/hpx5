@@ -15,6 +15,8 @@
 # include "config.h"
 #endif
 
+#include "Trace.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -220,7 +222,6 @@ static void logtable_init(logtable_t *log, const char* filename, size_t size,
   log->event_id = event_id;
   log->record_bytes = 0;
   log->max_size = size;
-  log->buffer = NULL;
 
   if (filename == NULL || size == 0) {
     return;
@@ -270,100 +271,121 @@ static void logtable_fini(logtable_t *log) {
   }
 }
 
-static void _create_logtable(Worker *w, int type, int event_id, size_t size) {
+static
+void _create_logtable(int worker_id, int type, int event_id, size_t size) {
   char filename[256];
   snprintf(filename, 256, "%05d.%03d.event.%03d.%s.log",
-           hpx_get_my_rank(), w->getId(), event_id,
+           hpx_get_my_rank(), worker_id, event_id,
            TRACE_EVENT_TO_STRING[event_id]);
 
   char *path = _concat_path(_log_path, filename);
-  logtable_init(&w->logs[event_id], path, size, type, event_id, w->getId());
+  logtable_t *log = &here->logs[worker_id][event_id];
+  logtable_init(log, path, size, type, event_id, worker_id);
   free(path);
 }
 
-/// Append a record to a log table.
-///
-/// Log tables have variable length record sizes based on their event type. This
-/// allows the user to log a variable number of features with each trace point.
-///
-/// @param       UNUSED Unused argument.
-/// @param            n The number of features to log.
-/// @param           id The event id.
-/// @param         args The features to log.
-static void _vappend(int UNUSED, int n, int id, ...) {
-  va_list vargs;
-  va_start(vargs, id);
-
-  dbg_assert(libhpx::self->logs);
-  logtable_t *log = &libhpx::self->logs[id];
-  dbg_assert(log);
-  uint64_t time = hpx_time_from_start_ns(hpx_time_now());
-  char *next = log->next + log->record_bytes;
-  dbg_assert(next > log->buffer);
-  if ((size_t)(next - log->buffer) > log->max_size) {
-    EVENT_TRACE_FILE_IO_BEGIN();
-    write(log->fd, log->buffer, log->next - log->buffer);
-    EVENT_TRACE_FILE_IO_END();
-    next = log->buffer;
-  }
-  log->next = next;
-
-  record_t *r = (record_t*)next;
-  r->ns = time;
-  for (int i = 0, e = n; i < e; ++i) {
-    r->user[i] = va_arg(vargs, uint64_t);
+namespace {
+using libhpx::self;
+using libhpx::instrumentation::Trace;
+class FileTracer : public Trace {
+ public:
+  FileTracer(const config_t *cfg) : Trace(cfg) {
   }
 
-  va_end(vargs);
-}
+  ~FileTracer() {
+  }
 
-static void _start(void) {
-  for (auto&& w : here->sched->getWorkers()) {
+  // int type() const {
+  //   return HPX_TRACE_BACKEND_FILE;
+  // }
+
+  /// Append a record to a log table.
+  ///
+  /// Log tables have variable length record sizes based on their event type. This
+  /// allows the user to log a variable number of features with each trace point.
+  ///
+  /// @param       UNUSED Unused argument.
+  /// @param            n The number of features to log.
+  /// @param           id The event id.
+  /// @param         args The features to log.
+  void vappend(int UNUSED, int n, int event_id, va_list& vargs) {
+    const int worker_id = self->getId();
+    logtable_t *log = &here->logs[worker_id][event_id];
+    dbg_assert(log);
+    uint64_t time = hpx_time_from_start_ns(hpx_time_now());
+    char *next = log->next + log->record_bytes;
+    dbg_assert(next >= log->buffer);
+    if ((size_t)(next - log->buffer) > log->max_size) {
+      EVENT_TRACE_FILE_IO_BEGIN();
+      write(log->fd, log->buffer, log->next - log->buffer);
+      EVENT_TRACE_FILE_IO_END();
+      next = log->buffer;
+    }
+    log->next = next;
+
+    record_t *r = (record_t*)next;
+    r->ns = time;
+    for (int i = 0, e = n; i < e; ++i) {
+      r->user[i] = va_arg(vargs, uint64_t);
+    }
+  }
+
+  void start(void) {
     // Allocate memory for pointers to the logs
-    w->logs = static_cast<logtable_t*>(calloc(TRACE_NUM_EVENTS, sizeof(logtable_t)));
-
-    // Scan through each trace event and create logs for the associated
-    // events that that we are going to be tracing.
-    for (unsigned i = 0; i < TRACE_NUM_EVENTS; ++i) {
-      int c = TRACE_EVENT_TO_CLASS[i];
-      if (inst_trace_class(c)) {
-        _create_logtable(w, c, i, here->config->trace_buffersize);
+    const unsigned nworkers = here->sched->getNWorkers();
+    here->logs = new logtable_t*[nworkers];
+    for (unsigned w = 0; w < nworkers; ++w) {
+      const size_t size = sizeof(logtable_t) * TRACE_NUM_EVENTS;
+      if (posix_memalign((void**)&here->logs[w], HPX_CACHELINE_SIZE, size)) {
+        dbg_error("could not allocate aligned buffer\n");
       }
+      memset(here->logs[w], 0, size);
+      // Scan through each trace event and create logs for the associated
+      // events that that we are going to be tracing.
+      for (unsigned i = 0; i < TRACE_NUM_EVENTS; ++i) {
+        int c = TRACE_EVENT_TO_CLASS[i];
+        if (inst_trace_class(c)) {
+          _create_logtable(w, c, i, here->config->trace_buffersize);
+        }
+      }
+    }
+
+    // If we're tracing parcels then we need to output the actions and the
+    // hostnames as well. The "_dump" actions won't do anything if we're not
+    // instrumenting locally.
+    // @todo 1. Shouldn't we dump these for all ranks, even if we're not
+    //          instrumenting *at* that rank? Otherwise we'll be missing data for
+    //          ranks that *are* instrumenting.
+    //       2. Why can't we just do this during initialization?
+    if (inst_trace_class(HPX_TRACE_PARCEL)) {
+      _dump_actions();
+      _dump_hostnames();
     }
   }
 
-  // If we're tracing parcels then we need to output the actions and the
-  // hostnames as well. The "_dump" actions won't do anything if we're not
-  // instrumenting locally.
-  // @todo 1. Shouldn't we dump these for all ranks, even if we're not
-  //          instrumenting *at* that rank? Otherwise we'll be missing data for
-  //          ranks that *are* instrumenting.
-  //       2. Why can't we just do this during initialization?
-  if (inst_trace_class(HPX_TRACE_PARCEL)) {
-    _dump_actions();
-    _dump_hostnames();
-  }
-}
+  void destroy(void) {
+    if (_log_path) {
+      free((char*)_log_path);
+      _log_path = NULL;
+    }
 
-static void _destroy(void) {
-  if (_log_path) {
-    free((char*)_log_path);
-    _log_path = NULL;
-  }
-
-  for (auto&& w : here->sched->getWorkers()) {
-    if (w->logs) {
-      // deallocate the log tables
-      for (int i = 0, e = TRACE_NUM_EVENTS; i < e; ++i) {
-        logtable_fini(&w->logs[i]);
+    if (here->logs) {
+      for (int w = 0; w < here->sched->getNWorkers(); ++w) {
+        // deallocate the log tables
+        for (unsigned i = 0, e = TRACE_NUM_EVENTS; i < e; ++i) {
+          logtable_fini(&here->logs[w][i]);
+        }
+        free(here->logs[w]);
+        here->logs[w] = nullptr;
       }
-      free(w->logs);
-      w->logs = NULL;
+      delete[] here->logs;
+      here->logs = nullptr;
     }
   }
+};
 }
 
-trace_t *trace_file_new(const config_t *cfg) {
+void *trace_file_new(const config_t *cfg) {
   // At this point we know that we'll be generating some sort of logs, so
   // prepare the path.
   _log_path = _get_log_path(cfg->trace_dir);
@@ -371,14 +393,5 @@ trace_t *trace_file_new(const config_t *cfg) {
     return NULL;
   }
 
-  trace_t *trace = static_cast<trace_t*>(malloc(sizeof(*trace)));
-  dbg_assert(trace);
-
-  trace->type        = HPX_TRACE_BACKEND_FILE;
-  trace->start       = _start;
-  trace->destroy     = _destroy;
-  trace->vappend     = _vappend;
-  sync_store(&trace->active, !cfg->trace_off, SYNC_RELAXED);
-
-  return trace;
+  return new FileTracer(cfg);
 }

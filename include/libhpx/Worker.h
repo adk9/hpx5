@@ -25,11 +25,6 @@
 #include <mutex>
 #include <functional>
 
-/// Forward declarations.
-/// @{
-struct logtable;
-/// @}
-
 #if defined(__APPLE__)
 # define STRINGIFY(S) #S
 # define SYMBOL(S) STRINGIFY(_##S)
@@ -54,10 +49,11 @@ class Worker : public libhpx::util::Aligned<HPX_CACHELINE_SIZE>
     RUN,
     STOP
   };
+  using Thread = libhpx::scheduler::Thread;
 
  public:
   using Continuation = std::function<void(hpx_parcel_t*)>;
-  using Mailbox = libhpx::util::TwoLockQueue<hpx_parcel_t>;
+  using Mailbox = libhpx::util::TwoLockQueue<hpx_parcel_t*>;
   using FIFO = libhpx::util::WorkstealingQueue<hpx_parcel_t>;
 
   /// Event handlers.
@@ -220,6 +216,18 @@ class Worker : public libhpx::util::Aligned<HPX_CACHELINE_SIZE>
   static int StealHalfHandler(Worker* src);
 
  private:
+  /// This node structure is used to freelist threads.
+  struct FreelistNode {
+    /// Push a new freelist node onto a stack.
+    FreelistNode(FreelistNode* n);
+
+    /// This will just forward to the Thread::operator delete().
+    static void operator delete(void* obj);
+
+    FreelistNode* next;
+    const int depth;
+  };
+
   /// Process a mail queue.
   ///
   /// This processes all of the parcels in the mailbox of the worker, moving them
@@ -387,21 +395,18 @@ class Worker : public libhpx::util::Aligned<HPX_CACHELINE_SIZE>
   static void ExecuteUserThread(hpx_parcel_t *p);
 
  private:
-  const int           id_;                      //!< this worker's id
-  const int      numaNode_;                     //!< this worker's numa node
-  unsigned           seed_;                     //!< my random seed
-  int           workFirst_;                     //!< this worker's mode
-  int             nthreads_;                    //!< count of freelisted threads
-  Worker*      lastVictim_;                     //!< last successful victim
+  const int                    id_;             //!< this worker's id
+  const int              numaNode_;             //!< this worker's numa node
+  unsigned                   seed_;             //!< my random seed
+  int                   workFirst_;             //!< this worker's mode
+  Worker*              lastVictim_;             //!< last successful victim
+  void                  *profiler_;             //!< reference to the profiler
  public:
-  void          *profiler_;                     //!< reference to the profiler
-  void               *bst;                      //!< the block statistics table
-  struct logtable   *logs;                      //!< reference to tracer data
-  uint64_t         *stats;                      //!< reference to statistics data
+  void                        *bst;            //!< the block statistics table
  private:
   hpx_parcel_t            *system_;             //!< this worker's native parcel
   hpx_parcel_t           *current_;             //!< current thread
-  scheduler::Thread      *threads_;             //!< freelisted threads
+  FreelistNode           *threads_;             //!< freelisted threads
   alignas(HPX_CACHELINE_SIZE)
   std::mutex                 lock_;             //!< state lock
   std::condition_variable running_;             //!< local condition for sleep
@@ -412,6 +417,12 @@ class Worker : public libhpx::util::Aligned<HPX_CACHELINE_SIZE>
   std::thread              thread_;             //!< this worker's native thread
 };
 
+
+/// NB: The use of volatile in the following declaration may not achieve the
+/// desired effect on some compilers/architectures because the address
+/// of self may be cached. See
+/// http://stackoverflow.com/questions/25673787/making-thread-local-variables-fully-volatile#
+/// for more details.
 extern __thread Worker * volatile self;
 
 } // namespace libhpx

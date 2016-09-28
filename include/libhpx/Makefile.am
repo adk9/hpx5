@@ -1,15 +1,13 @@
-SUBDIRS = util gas
+SUBDIRS = boot util gas
 
 noinst_HEADERS = action.h \
                  attach.h \
-                 boot.h \
                  CollectiveOps.h \
                  debug.h \
                  events.h \
                  GAS.h \
                  gpa.h \
                  instrumentation.h \
-                 lco.h \
                  LCOOps.h \
                  locality.h \
                  memory.h \
@@ -25,10 +23,8 @@ noinst_HEADERS = action.h \
                  Scheduler.h\
                  StringOps.h \
                  system.h \
-                 termination.h \
                  time.h \
                  topology.h \
-                 utils.h \
                  Worker.h
 
 

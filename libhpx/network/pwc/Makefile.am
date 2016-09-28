@@ -18,13 +18,13 @@ libpwc_la_SOURCES  = Peer.cpp \
                      PhotonTransport.cpp
 
 if HAVE_JEMALLOC
-libpwc_la_SOURCES += jemalloc_registered.cpp
+libpwc_la_SOURCES += jemalloc.cpp
 endif
 
 if HAVE_TBBMALLOC
-libpwc_la_SOURCES += tbbmalloc_registered.cpp
+libpwc_la_SOURCES += tbbmalloc.cpp
 endif
 
 if HAVE_DLMALLOC
-libpwc_la_SOURCES += dlmalloc_registered.cpp
+libpwc_la_SOURCES += dlmalloc.cpp
 endif

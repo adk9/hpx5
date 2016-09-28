@@ -15,6 +15,8 @@
 # include "config.h"
 #endif
 
+#include "Trace.h"
+
 #include <cinttypes>
 #include <fcntl.h>
 #include <inttypes.h>
@@ -36,52 +38,70 @@
 #include "metadata.h"
 
 namespace {
+using libhpx::self;
 using libhpx::Worker;
-}
+using libhpx::instrumentation::Trace;
 
-static void _vappend(int UNUSED, int n, int id, ...) {
-  libhpx::self->stats[id]++;
-}
-
-static void _start(void) {
-  for (auto&& w : here->sched->getWorkers()) {
-    w->stats = static_cast<uint64_t*>(calloc(TRACE_NUM_EVENTS, sizeof(uint64_t)));
+class StatsTracer : public Trace {
+ public:
+  StatsTracer(const config_t* cfg) : Trace(cfg) {
   }
-}
 
-static void _destroy(void) {
-  Worker *master = here->sched->getWorker(0);
-  for (int k = 1; k < HPX_THREADS; ++k) {
-    Worker *w = here->sched->getWorker(k);
+  ~StatsTracer() {
+  }
+
+  // int type() const {
+  //   return HPX_TRACE_BACKEND_STATS;
+  // }
+
+  void vappend(int UNUSED, int n, int event_id, va_list&) {
+    int worker_id = self->getId();
+    here->stats[worker_id][event_id]++;
+  }
+
+  void start(void) {
+    const unsigned nworkers = here->sched->getNWorkers();
+    here->stats = new uint64_t*[nworkers];
+    for (unsigned w = 0; w < nworkers; ++w) {
+      const size_t size = sizeof(uint64_t) * TRACE_NUM_EVENTS;
+      if (posix_memalign((void**)&here->stats[w], HPX_CACHELINE_SIZE, size)) {
+        dbg_error("could not allocate aligned buffer\n");
+      }
+      memset(here->stats[w], 0, size);
+    }
+  }
+
+  void destroy(void) {
+    for (int k = 1; k < HPX_THREADS; ++k) {
+      for (unsigned i = 0; i < TRACE_NUM_EVENTS; ++i) {
+        int c = TRACE_EVENT_TO_CLASS[i];
+        if (inst_trace_class(c)) {
+          here->stats[0][i] += here->stats[k][i];
+        }
+      }
+      free(here->stats[k]);
+      here->stats[k] = nullptr;
+    }
+
     for (unsigned i = 0; i < TRACE_NUM_EVENTS; ++i) {
       int c = TRACE_EVENT_TO_CLASS[i];
       if (inst_trace_class(c)) {
-        master->stats[i] += w->stats[i];
+        printf("%d,%s,%" PRIu64 "\n",
+               here->rank,
+               TRACE_EVENT_TO_STRING[i],
+               here->stats[0][i]);
       }
     }
-    free(w->stats);
+    free(here->stats[0]);
+    here->stats[0] = nullptr;
+    delete[] here->stats;
+    here->stats = nullptr;
   }
-
-  for (unsigned i = 0; i < TRACE_NUM_EVENTS; ++i) {
-    int c = TRACE_EVENT_TO_CLASS[i];
-    if (inst_trace_class(c)) {
-             printf("%d,%s,%" PRIu64 "\n",
-             here->rank,
-             TRACE_EVENT_TO_STRING[i],
-             master->stats[i]);
-    }
-  }
-  free(master->stats);
+};
 }
 
-trace_t *trace_stats_new(const config_t *cfg) {
-  trace_t *trace = static_cast<trace_t*>(malloc(sizeof(*trace)));
-  dbg_assert(trace);
-
-  trace->type        = HPX_TRACE_BACKEND_STATS;
-  trace->start       = _start;
-  trace->destroy     = _destroy;
-  trace->vappend     = _vappend;
-  sync_store(&trace->active, !cfg->trace_off, SYNC_RELAXED);
-  return trace;
+void*
+trace_stats_new(const config_t *cfg)
+{
+  return new StatsTracer(cfg);
 }

@@ -14,7 +14,6 @@
 #ifndef LIBHPX_NETWORK_CXX_H
 #define LIBHPX_NETWORK_CXX_H
 
-#include "libhpx/boot.h"
 #include "libhpx/CollectiveOps.h"
 #include "libhpx/config.h"
 #include "libhpx/GAS.h"
@@ -22,6 +21,7 @@
 #include "libhpx/MemoryOps.h"
 #include "libhpx/ParcelOps.h"
 #include "libhpx/StringOps.h"
+#include "libhpx/boot/Network.h"
 
 namespace libhpx {
 
@@ -37,7 +37,7 @@ class Network : public virtual StringOps, public CollectiveOps, public LCOOps,
   /// @param          gas The global address space.
   ///
   /// @returns            The network object, or NULL if there was an issue.
-  static Network* Create(config_t *config, boot_t *boot, GAS *gas);
+static Network* Create(config_t *config, const boot::Network& boot, GAS *gas);
 
   /// Get the HPX configuration type of the base network implementation.
   virtual int type() const = 0;

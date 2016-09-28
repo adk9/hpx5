@@ -34,7 +34,6 @@
 #include <libhpx/parcel.h>
 #include <libhpx/topology.h>
 #include "libhpx/Worker.h"
-#include <libsync/sync.h>
 #include <hpx/hpx.h>
 #include <ffi.h>
 #include <cassert>
@@ -76,15 +75,15 @@ void parcel_prepare(hpx_parcel_t *p) {
 }
 
 void parcel_set_state(hpx_parcel_t *p, parcel_state_t state) {
-  sync_store(&p->state, state, SYNC_RELEASE);
+  __atomic_store_n(&p->state, state, __ATOMIC_RELEASE);
 }
 
 parcel_state_t parcel_get_state(const hpx_parcel_t *p) {
-  return sync_load(&p->state, SYNC_ACQUIRE);
+  return __atomic_load_n(&p->state, __ATOMIC_ACQUIRE);
 }
 
 parcel_state_t parcel_exchange_state(hpx_parcel_t *p, parcel_state_t state) {
-  return sync_swap(&p->state, state, SYNC_ACQ_REL);
+  return __atomic_exchange_n(&p->state, state, __ATOMIC_ACQ_REL);
 }
 
 void parcel_pin(hpx_parcel_t *p) {
@@ -191,7 +190,7 @@ void parcel_init(hpx_addr_t target, hpx_action_t action, hpx_addr_t c_target,
   p->credit   = 0;
 
 #ifdef ENABLE_INSTRUMENTATION
-  if (inst_trace_class(HPX_TRACE_PARCEL)) {
+  if (inst_trace_class(HPX_TRACE_PARCEL) && self) {
     parcel_count++;
     int rank   = HPX_LOCALITY_ID;
     int thread = HPX_THREAD_ID;
@@ -298,7 +297,7 @@ Thread* parcel_set_thread(hpx_parcel_t *p, Thread *next) {
   // This can detect races in the scheduler when two threads try and process the
   // same parcel.
 #ifdef ENABLE_DEBUG
-    return sync_swap(&p->thread, next, SYNC_ACQ_REL);
+    return __atomic_exchange_n(&p->thread, next, __ATOMIC_ACQ_REL);
 #else
     std::swap(p->thread, next);
     return next;

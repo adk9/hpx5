@@ -12,8 +12,6 @@ AC_DEFUN([HPX_DO_AC_CONFIG_FILES], [
    Makefile
    contrib/Makefile
    contrib/lz4/Makefile
-   libsync/Makefile
-   libsync/arch/Makefile
    libhpx/Makefile
    libhpx/boot/Makefile
    libhpx/actions/Makefile
@@ -36,9 +34,9 @@ AC_DEFUN([HPX_DO_AC_CONFIG_FILES], [
    libhpx/instrumentation/Makefile
    include/Makefile
    include/libhpx/Makefile
+   include/libhpx/boot/Makefile
    include/libhpx/util/Makefile
    include/libhpx/gas/Makefile
-   include/libsync/queues.h
    examples/Makefile])
 
  AS_IF([test "x$have_hpxpp" != xno], [

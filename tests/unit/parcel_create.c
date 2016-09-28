@@ -20,7 +20,6 @@
 #include <unistd.h>
 #include "hpx/hpx.h"
 #include "tests.h"
-#include "libsync/sync.h"
 
 #define BUFFER_SIZE 128
 

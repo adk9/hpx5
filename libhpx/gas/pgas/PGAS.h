@@ -17,7 +17,6 @@
 #include "Allocator.h"
 #include "HeapSegment.h"
 #include "libhpx/GAS.h"
-#include "libhpx/boot.h"
 #include "libhpx/debug.h"
 #include "libhpx/gpa.h"
 #include "libhpx/locality.h"
@@ -27,7 +26,7 @@ namespace gas {
 namespace pgas {
 class PGAS : public GAS, public HeapSegment {
  public:
-  PGAS(const config_t* config, boot_t* boot);
+  PGAS(const config_t* config);
   ~PGAS();
 
   libhpx_gas_t type() const {
@@ -70,6 +69,11 @@ class PGAS : public GAS, public HeapSegment {
 
   void unpin(hpx_addr_t gva) {
     dbg_assert(tryPin(gva, nullptr));
+  }
+
+  uint32_t getAttribute(hpx_addr_t gva) const {
+    log_error("PGAS setAttribute unimplemented");
+    return HPX_ATTR_NONE;
   }
 
   void setAttribute(hpx_addr_t gva, uint32_t attr) {

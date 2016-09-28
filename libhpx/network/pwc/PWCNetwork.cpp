@@ -24,9 +24,12 @@
 namespace {
 using libhpx::MemoryOps;
 using libhpx::network::pwc::PWCNetwork;
-using Op = libhpx::network::pwc::PhotonTransport::Op;
-using Key = libhpx::network::pwc::PhotonTransport::Key;
-constexpr int ANY_SOURCE = libhpx::network::pwc::PhotonTransport::ANY_SOURCE;
+using libhpx::network::pwc::AGASNetwork;
+using libhpx::network::pwc::PGASNetwork;
+using libhpx::network::pwc::PhotonTransport;
+using Op = PhotonTransport::Op;
+using Key = PhotonTransport::Key;
+constexpr int ANY_SOURCE = PhotonTransport::ANY_SOURCE;
 }
 
 PWCNetwork* PWCNetwork::Instance_ = nullptr;
@@ -37,25 +40,31 @@ PWCNetwork& PWCNetwork::Instance()
   return *Instance_;
 }
 
-PWCNetwork::PWCNetwork(const config_t *cfg, boot_t *boot, GAS *gas)
+PWCNetwork*
+PWCNetwork::Create(const config_t *cfg, const boot::Network& boot, GAS *gas)
+{
+  PhotonTransport::Initialize(cfg, boot.getRank(), boot.getNRanks());
+  if (gas->type() == HPX_GAS_AGAS) {
+    return new libhpx::network::pwc::AGASNetwork(cfg, boot, gas);
+  }
+  else {
+    return new libhpx::network::pwc::PGASNetwork(cfg, boot, gas);
+  }
+}
+
+PWCNetwork::PWCNetwork(const config_t *cfg, const boot::Network& boot, GAS *gas)
     : Network(),
-      rank_(boot_rank(boot)),
-      ranks_(boot_n_ranks(boot)),
+      rank_(boot.getRank()),
+      ranks_(boot.getNRanks()),
       eagerSize_(cfg->pwc_parcelbuffersize),
       gas_(*gas),
       boot_(boot),
+      peers_(new Peer[ranks_]()),
       progressLock_(),
-      probeLock_(),
-      peers_(new Peer[ranks_]())
+      probeLock_()
 {
   assert(!Instance_);
   Instance_ = this;
-
-  // Validate parameters.
-  if (boot->type == HPX_BOOT_SMP) {
-    log_net("will not instantiate PWC for the SMP boot network\n");
-    throw std::exception();
-  }
 
   // Validate configuration.
   if (popcountl(cfg->pwc_parcelbuffersize) != 1) {
@@ -81,7 +90,7 @@ PWCNetwork::PWCNetwork(const config_t *cfg, boot_t *boot, GAS *gas)
   local.heap.addr = static_cast<char*>(gas_.pinHeap(*this, &local.heap.key));
 
   std::unique_ptr<Exchange[]> remotes(new Exchange[ranks_]);
-  boot_allgather(boot, &local, &remotes[0], sizeof(Exchange));
+  boot.allgather(&local, &remotes[0], sizeof(Exchange));
 
   // And initialize the peers.
   for (int i = 0, e = ranks_; i < e; ++i) {
@@ -105,7 +114,7 @@ PWCNetwork::~PWCNetwork()
 
   // Network deletion is effectively a collective, so this enforces that
   // everyone is done with rdma before we go and deregister anything.
-  boot_barrier(boot_);
+  boot_.barrier();
 
   // Unpin the heap segment.
   gas_.unpinHeap(*this);
@@ -225,24 +234,6 @@ PWCNetwork::get(void *dest, hpx_addr_t src, size_t n, const Command& lcmd,
 {
   int rank = gpa_to_rank(src);
   peers_[rank].get(dest, src, n, lcmd, rcmd);
-}
-
-void*
-PWCNetwork::operator new (size_t size)
-{
-  PhotonTransport::Initialize(here->config, here->boot);
-  void *memory;
-  if (posix_memalign(&memory, HPX_CACHELINE_SIZE, size)) {
-    dbg_error("Could not allocate aligned memory for the PWCNetwork\n");
-    throw std::bad_alloc();
-  }
-  return memory;
-}
-
-void
-PWCNetwork::operator delete (void *p)
-{
-  free(p);
 }
 
 void

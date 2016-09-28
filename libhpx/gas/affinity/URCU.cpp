@@ -16,6 +16,7 @@
 #endif
 
 #include "libhpx/gas/Affinity.h"
+#include "libhpx/debug.h"
 #include <city_hasher.hh>
 #include <urcu-qsbr.h>
 #include <urcu/rculfhash.h>
@@ -89,7 +90,7 @@ URCU::~URCU()
   }
 
   if (cds_lfht_destroy(ht, NULL) != 0) {
-    throw std::runtime_error("Failed to destroy the urcu hash table\n");
+    dbg_error("Failed to destroy the urcu hash table\n");
   }
 }
 

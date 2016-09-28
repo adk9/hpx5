@@ -22,6 +22,7 @@
 #include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
 #include "libhpx/parcel.h"
+#include "libhpx/boot/Network.h"
 #include <cstdlib>
 
 namespace {
@@ -35,19 +36,21 @@ using Key = libhpx::network::pwc::PhotonTransport::Key;
 static int
 _boot_barrier(void)
 {
-  return here->boot->barrier(here->boot);
+  here->boot->barrier();
+  return 0;
 }
 
 /// An allgather for photon that binds to the local bootstrap network.
 static int
 _boot_allgather(void *obj, const void * src, void * dest, int n)
 {
-  return here->boot->allgather(here->boot, src, dest, n);
+  here->boot->allgather(src, dest, n);
+  return 0;
 }
 
 
 static void
-_init_photon_config(const config_t *cfg, boot_t *boot,
+_init_photon_config(const config_t *cfg, int rank, int ranks,
                     struct photon_config_t *pcfg) {
   // C++ doesn't like it when we assign a string literal to a char *, it demands
   // a const char *. Unfortunately, photon's interface is a char *, which I
@@ -56,19 +59,19 @@ _init_photon_config(const config_t *cfg, boot_t *boot,
   static char _gid_cxx_hack[] = "ff0e::ffff:0000:0000\0";
 
   pcfg->meta_exch               = PHOTON_EXCH_EXTERNAL;
-  pcfg->nproc                   = boot_n_ranks(boot);
-  pcfg->address                 = boot_rank(boot);
+  pcfg->nproc                   = ranks;
+  pcfg->address                 = rank;
   pcfg->comm                    = NULL;
-  pcfg->fi.provider             = cfg->photon_fiprov;
-  pcfg->fi.eth_dev              = cfg->photon_fidev;
+  pcfg->fi.provider             = const_cast<char*>(cfg->photon_fiprov);
+  pcfg->fi.eth_dev              = const_cast<char*>(cfg->photon_fidev);
   pcfg->fi.node                 = NULL;
   pcfg->fi.service              = NULL;
   pcfg->fi.domain               = NULL;
   pcfg->ibv.use_cma             = cfg->photon_usecma;
-  pcfg->ibv.eth_dev             = cfg->photon_ethdev;
-  pcfg->ibv.ib_dev              = cfg->photon_ibdev;
+  pcfg->ibv.eth_dev             = const_cast<char*>(cfg->photon_ethdev);
+  pcfg->ibv.ib_dev              = const_cast<char*>(cfg->photon_ibdev);
   pcfg->ibv.num_srq             = cfg->photon_ibsrq;
-  pcfg->ugni.eth_dev            = cfg->photon_ethdev;
+  pcfg->ugni.eth_dev            = const_cast<char*>(cfg->photon_ethdev);
   pcfg->ugni.bte_thresh         = cfg->photon_btethresh;
   pcfg->cap.eager_buf_size      = cfg->photon_eagerbufsize;
   pcfg->cap.pwc_buf_size        = cfg->photon_pwcbufsize;
@@ -94,17 +97,16 @@ _init_photon_config(const config_t *cfg, boot_t *boot,
 }
 
 void
-PhotonTransport::Initialize(const config_t *cfg, boot_t *boot) {
+PhotonTransport::Initialize(const config_t *cfg, int rank, int ranks) {
   if (photon_initialized()) {
     return;
   }
 
   struct photon_config_t pcfg;
-  _init_photon_config(cfg, boot, &pcfg);
+  _init_photon_config(cfg, rank, ranks, &pcfg);
   if (photon_init(&pcfg) != PHOTON_OK) {
     dbg_error("failed to initialize transport.\n");
   }
-
   registered_allocator_init();
 }
 
@@ -146,7 +148,8 @@ PhotonTransport::Pin(const void *base, size_t n, Key *key)
     dbg_error("failed to register segment with Photon\n");
   }
   else {
-    log_net("registered segment (%p, %zu)\n", base, n);
+    static constexpr auto LEVEL= HPX_LOG_NET | HPX_LOG_MEMORY;
+    log_level(LEVEL, "pinned segment (%p, %zu)\n", base, n);
   }
 
   if (key) {
@@ -162,8 +165,10 @@ PhotonTransport::Unpin(const void *base, size_t n)
     dbg_error("unhandled error %d during release of segment (%p, %zu)\n", e,
               base, n);
   }
-  log_net("released the segment (%p, %zu)\n", base, n);
-
+  else {
+    static constexpr auto LEVEL= HPX_LOG_NET | HPX_LOG_MEMORY;
+    log_level(LEVEL, "unpinned the segment (%p, %zu)\n", base, n);
+  }
 }
 
 // async entry point for unpin

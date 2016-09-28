@@ -115,6 +115,9 @@ Command::rendezvousLaunch(unsigned src) const
   hpx_parcel_t *p = reinterpret_cast<hpx_parcel_t*>(arg_);
   parcel_set_state(p, PARCEL_SERIALIZED);
   EVENT_PARCEL_RECV(p->id, p->action, p->size, p->src, p->target);
+  DEBUG_IF (!p->target || !p->action) {
+    dbg_error("Rendezvous recv operation failed for %p\n", p);
+  }
   return p;
 }
 
