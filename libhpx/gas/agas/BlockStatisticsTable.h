@@ -56,17 +56,14 @@ class BlockStatisticsTable
   // Constructs a sparse graph in the compressed sparse row (CSR)
   // format from the global BST, and serializes it into an output
   // buffer.
-  std::vector<unsigned char> serializeToBuffer();
+  size_t serializeToBuffer(unsigned char* buf);
 
   // Constructs a sparse graph in the compressed sparse row (CSR)
   // format from the global BST, and serializes it into an output
   // parcel.
-  hpx_parcel_t* serializeToParcel();  
+  hpx_parcel_t* serializeToParcel();
 
  private:
-  // Serialize into an allocated buffer.
-  size_t serializeTo(unsigned char* buf);
-
   // Maximum bytes required for the serialized parcel.
   size_t serializeMaxBytes();
 

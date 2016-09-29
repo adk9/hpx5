@@ -70,19 +70,6 @@ BST::clear()
   map_.clear();
 }
 
-std::vector<unsigned char>
-BST::serializeToBuffer()
-{
-  auto lt = map_.lock_table();
-  size_t max_bytes = serializeMaxBytes();
-
-  std::vector<unsigned char> output(max_bytes);
-  size_t bytes = serializeTo(output.data());
-  output.resize(bytes);
-  map_.clear();
-  return output;
-}
-
 hpx_parcel_t*
 BST::serializeToParcel()
 {
@@ -90,8 +77,7 @@ BST::serializeToParcel()
   size_t max_bytes = serializeMaxBytes();
   hpx_parcel_t* p = hpx_parcel_acquire(NULL, max_bytes);
   unsigned char* buf = static_cast<unsigned char*>(hpx_parcel_get_data(p));
-  size_t bytes = serializeTo(buf);
-  p->size = bytes;
+  p->size = serializeToBuffer(buf);
   map_.clear();
   return p;
 }
@@ -124,7 +110,7 @@ BST::serializeMaxBytes(void)
 }
 
 size_t
-BST::serializeTo(unsigned char* output)
+BST::serializeToBuffer(unsigned char* output)
 {
   const unsigned ranks = here->ranks;
   const size_t map_size = map_.size();
