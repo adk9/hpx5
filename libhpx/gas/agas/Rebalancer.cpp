@@ -149,7 +149,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _aggregate_global_bst,
 // forwards it along to the generated parcel.
 static int _aggregate_bst_handler(hpx_addr_t graph) {
   hpx_par_for_sync(_local_to_global_bst, 0, HPX_THREADS, NULL);
-  hpx_parcel_t *p = _global_bst->serializeToParcel();
+  hpx_parcel_t *p = _global_bst->toParcel();
   log_gas("Global BST size: %u bytes.\n", p->size);
   if (!p || !p->size) {
     return HPX_SUCCESS;

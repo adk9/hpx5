@@ -70,18 +70,6 @@ BST::clear()
   map_.clear();
 }
 
-hpx_parcel_t*
-BST::serializeToParcel()
-{
-  auto lt = map_.lock_table();
-  size_t max_bytes = serializeMaxBytes();
-  hpx_parcel_t* p = hpx_parcel_acquire(NULL, max_bytes);
-  unsigned char* buf = static_cast<unsigned char*>(hpx_parcel_get_data(p));
-  p->size = serializeToBuffer(buf);
-  map_.clear();
-  return p;
-}
-
 // Serialization format:
 // member : Size (in multiples of uint64_t)
 //
@@ -110,7 +98,7 @@ BST::serializeMaxBytes(void)
 }
 
 size_t
-BST::serializeToBuffer(unsigned char* output)
+BST::toBuffer(unsigned char* output)
 {
   const unsigned ranks = here->ranks;
   const size_t map_size = map_.size();
@@ -179,3 +167,14 @@ BST::serializeToBuffer(unsigned char* output)
   return n * sizeof(uint64_t);
 }
 
+hpx_parcel_t*
+BST::toParcel()
+{
+  auto lt = map_.lock_table();
+  size_t max_bytes = serializeMaxBytes();
+  hpx_parcel_t* p = hpx_parcel_acquire(NULL, max_bytes);
+  unsigned char* buf = static_cast<unsigned char*>(hpx_parcel_get_data(p));
+  p->size = toBuffer(buf);
+  map_.clear();
+  return p;
+}

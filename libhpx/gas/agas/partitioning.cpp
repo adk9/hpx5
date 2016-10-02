@@ -60,14 +60,20 @@ typedef struct agas_graph {
   unsigned count;
 } _agas_graph_t;
 
-// Add nodes associated with a locality to the graph.
-//
-// This adds the n nodes to the graph from index 0 to n. The weights
+// Initialize a AGAS graph.
+// 
+// This also adds n nodes to the graph from index 0 to n. The weights
 // of these nodes are initialized with INT_MAX since we don't ever
 // want two locality nodes to fall into one partition. The sizes are
 // presently initialized to 0.
-static void _add_locality_nodes(_agas_graph_t *g) {
+
+static void _init(_agas_graph_t *g) {
+  g->nvtxs  = 0;
+  g->nedges = 0;
+  g->count  = 0;
+
   const unsigned n = here->ranks;
+  g->owner_map = new _owner_map_t[n];
   g->lnbrs = new std::vector<uint64_t>[n];
   for (unsigned i = 0; i < n; ++i) {
     g->vtxs.push_back(i);
@@ -77,15 +83,6 @@ static void _add_locality_nodes(_agas_graph_t *g) {
   g->vwgt.assign(n, INT_MAX);
   g->vsizes.assign(n, 0);
   g->xadj.assign(n+1, 0);
-}
-
-// Initialize a AGAS graph.
-static void _init(_agas_graph_t *g) {
-  g->nvtxs  = 0;
-  g->nedges = 0;
-  g->count  = 0;
-  g->owner_map = new _owner_map_t[here->ranks];
-  _add_locality_nodes(g);
 }
 
 // Free the AGAS graph.

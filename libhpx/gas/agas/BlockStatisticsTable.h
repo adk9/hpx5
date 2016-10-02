@@ -56,12 +56,12 @@ class BlockStatisticsTable
   // Constructs a sparse graph in the compressed sparse row (CSR)
   // format from the global BST, and serializes it into an output
   // buffer.
-  size_t serializeToBuffer(unsigned char* buf);
+  size_t toBuffer(unsigned char* buf);
 
   // Constructs a sparse graph in the compressed sparse row (CSR)
   // format from the global BST, and serializes it into an output
   // parcel.
-  hpx_parcel_t* serializeToParcel();
+  hpx_parcel_t* toParcel();
 
  private:
   // Maximum bytes required for the serialized parcel.
