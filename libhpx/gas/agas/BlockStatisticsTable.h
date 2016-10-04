@@ -121,15 +121,11 @@ class HierarchicalBST final : public BlockStatisticsTable
   }
 
  private:
-  class ThreadPrivateMap final : public CacheAligned {
-   public:
-    ThreadPrivateMap() : padding_() {}
-    ~ThreadPrivateMap() {}
+  struct PaddedMap {
     Map map_;
-    const char padding_[util::PadToCacheline(sizeof(CacheAligned) + sizeof(map_))];
+    alignas(HPX_CACHELINE_SIZE) char end_[];
   };
-
-  ThreadPrivateMap* mapArray_;   //!< thread-local map array
+  PaddedMap* mapArray_;   //!< thread-local map array
 };
 
 } // namespace agas

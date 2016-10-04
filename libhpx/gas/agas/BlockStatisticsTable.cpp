@@ -179,12 +179,20 @@ BST::toParcel()
 
 HierarchicalBST::HierarchicalBST()
 {
-  mapArray_ = new ThreadPrivateMap[here->config->threads];
+  const int n = here->config->threads;
+  const size_t size = n * sizeof(PaddedMap);
+
+  void* ptr;
+  if (posix_memalign(&ptr, HPX_CACHELINE_SIZE, size)) {
+    throw std::bad_alloc();
+  }
+
+  mapArray_ = reinterpret_cast<PaddedMap*>(ptr);
 }
 
 HierarchicalBST::~HierarchicalBST()
 {
-  delete[] mapArray_;
+  free(mapArray_);
 }
 
 void
