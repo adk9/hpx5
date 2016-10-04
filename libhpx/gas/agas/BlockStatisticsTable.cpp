@@ -18,6 +18,7 @@
 #include "BlockStatisticsTable.h"
 #include "AGAS.h"
 #include "libhpx/action.h"
+#include "libhpx/config.h"
 #include "libhpx/debug.h"
 #include "libhpx/Worker.h"
 #include "rebalancer.h"
@@ -26,22 +27,10 @@ namespace {
 using libhpx::self;
 using GVA = libhpx::gas::agas::GlobalVirtualAddress;
 using BST = libhpx::gas::agas::BlockStatisticsTable;
-using Entry = libhpx::gas::agas::BlockStatisticsEntry;
+using HierarchicalBST = libhpx::gas::agas::HierarchicalBST;
 }
 
-Entry::BlockStatisticsEntry(size_t n)
-{
-  counts = new uint64_t[n];
-  sizes = new uint64_t[n];
-}
-
-Entry::~BlockStatisticsEntry()
-{
-  delete[] counts;
-  delete[] sizes;
-}
-
-BST::BlockStatisticsTable(size_t size)
+BST::BlockStatisticsTable()
     : rank_(here->rank),
       map_()
 {
@@ -53,15 +42,25 @@ BST::~BlockStatisticsTable()
 }
 
 void
-BST::upsert(GVA gva, std::unique_ptr<Entry> entry)
+BST::add(GVA gva, unsigned src, int count, size_t size)
 {
-  auto fn = [&](std::unique_ptr<Entry>& e) {
-    for (unsigned i = 0; i < here->ranks; ++i) {
-      e->counts[i] += entry->counts[i];
-      e->sizes[i]  += entry->sizes[i];
+  auto fn = [&](Entry& e) {
+    e.counts[src] += count;
+    e.sizes[src]  += size;
+  };
+  map_.upsert(gva, fn, Entry(here->ranks, src, count, size));
+}
+
+void
+BST::add(GVA gva, Entry& entry)
+{
+  auto fn = [&](Entry& e) {
+    for (unsigned i = 0; i < e.n; ++i) {
+      e.counts[i] += entry.counts[i];
+      e.sizes[i]  += entry.sizes[i];
     }
   };
-  map_.upsert(gva, fn, std::move(entry));
+  map_.upsert(gva, fn, entry);
 }
 
 void
@@ -85,7 +84,7 @@ BST::clear()
 // lnbrs  : max(ranks * nvtxs)
 
 size_t
-BST::serializeMaxBytes(void)
+BST::serializeMaxBytes(void) const
 {
   const size_t n = map_.size();
   const unsigned ranks = here->ranks;
@@ -132,15 +131,14 @@ BST::toBuffer(unsigned char* output)
       uint64_t total_vsize = 0;
       int prev_nbrs = nbrs;
       for (unsigned k = 0; k < ranks; ++k) {
-        uint64_t count = entry->counts[k];
-        uint64_t size = entry->sizes[k];
+        uint64_t count = entry.counts[k];
+        uint64_t size = entry.sizes[k];
         if (count != 0) {
           lnbrs[k].push_back(id);
-          adjncy[nbrs] = k;
+          adjncy[nbrs++] = k;
           adjwgt.push_back(count * size);
           total_vwgt  += count;
           total_vsize += size;
-          nbrs++;
         }
       }
 
@@ -177,4 +175,56 @@ BST::toParcel()
   p->size = toBuffer(buf);
   map_.clear();
   return p;
+}
+
+HierarchicalBST::HierarchicalBST()
+{
+  mapArray_ = new ThreadPrivateMap[here->config->threads];
+}
+
+HierarchicalBST::~HierarchicalBST()
+{
+  delete[] mapArray_;
+}
+
+void
+HierarchicalBST::add(GVA gva, unsigned src, int count, size_t size)
+{
+  if (!self) return;
+
+  const unsigned id = self->getId();
+  const uint64_t block = gva.getAddr();
+  auto& map = mapArray_[id].map_;
+  auto it = map.find(block);
+  if (it != map.end()) {
+    auto entry = it->second;
+    entry.counts[src] += count;
+    entry.sizes[src]  += size;
+    return;
+  }
+
+  map[block] = Entry(here->ranks, src, count, size);
+}
+
+// This function takes the thread-local BST and merges it with the
+// per-node global BST.
+static int
+mergeBST(int id, void* b)
+{
+  HierarchicalBST *bst = static_cast<HierarchicalBST*>(b);
+  auto& m = bst->getMap(id);
+  unsigned count = m.size();
+  log_gas("Adding %u entries from %d thread-local BST to global BST.\n", id, count);
+  for (auto it = m.begin(); it != m.end(); ++it) {
+    bst->BST::add(it->first, it->second);
+  }
+  m.clear();
+  return HPX_SUCCESS;
+}
+
+hpx_parcel_t*
+HierarchicalBST::toParcel()
+{
+  hpx_par_for_sync(mergeBST, 0, HPX_THREADS, this);
+  return BST::toParcel();
 }

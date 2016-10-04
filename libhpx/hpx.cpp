@@ -160,6 +160,15 @@ int hpx_init(int *argc, char ***argv) {
     goto unwind1;
   }
 
+  cores = system_get_available_cores();
+  dbg_assert(cores > 0);
+
+  if (!here->config->threads) {
+    here->config->threads = cores;
+  }
+  log_dflt("HPX running %d worker threads on %d cores\n", here->config->threads,
+           cores);
+
   // Allocate the global heap.
   here->gas = libhpx::GAS::Create(here->config, here->boot);
   if (!here->gas) {
@@ -173,15 +182,6 @@ int hpx_init(int *argc, char ***argv) {
     status = log_error("failed to activate percolation.\n");
     goto unwind1;
   }
-
-  cores = system_get_available_cores();
-  dbg_assert(cores > 0);
-
-  if (!here->config->threads) {
-    here->config->threads = cores;
-  }
-  log_dflt("HPX running %d worker threads on %d cores\n", here->config->threads,
-           cores);
 
   here->net = Network::Create(here->config, *here->boot, here->gas);
   if (!here->net) {
