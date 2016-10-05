@@ -169,7 +169,6 @@ BST::toBuffer(unsigned char* output, size_t max_bytes)
 hpx_parcel_t*
 BST::toParcel()
 {
-  auto lt = map_.lock_table();
   size_t max_bytes = serializeMaxBytes();
   hpx_parcel_t* p = hpx_parcel_acquire(NULL, max_bytes);
   unsigned char* buf = static_cast<unsigned char*>(hpx_parcel_get_data(p));
@@ -180,7 +179,7 @@ BST::toParcel()
 
 HierarchicalBST::HierarchicalBST()
 {
-  const int n = here->config->threads;
+  const unsigned n = here->config->threads;
   const size_t size = n * sizeof(PaddedMap);
 
   void* ptr;
@@ -218,7 +217,7 @@ HierarchicalBST::add(GVA gva, unsigned src, int count, size_t size)
     return;
   }
 
-  map[block] = Entry(here->ranks, src, count, size);
+  map.emplace(block, Entry(here->ranks, src, count, size));
 }
 
 // This function takes the thread-local BST and merges it with the
@@ -226,10 +225,11 @@ HierarchicalBST::add(GVA gva, unsigned src, int count, size_t size)
 static int
 mergeBST(int id, void* b)
 {
+  dbg_assert(id >= 0 && id <= HPX_THREADS);
   HierarchicalBST *bst = static_cast<HierarchicalBST*>(b);
   auto& m = bst->getMap(id);
   unsigned count = m.size();
-  log_gas("Adding %u entries from %d thread-local BST to global BST.\n", id, count);
+  log_gas("Adding %d entries from %d thread-local BST to global BST.\n", count, id);
   for (auto it = m.begin(); it != m.end(); ++it) {
     bst->BST::add(it->first, it->second);
   }

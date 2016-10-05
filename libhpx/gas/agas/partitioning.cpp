@@ -101,6 +101,7 @@ hpx_addr_t agas_graph_new(void) {
     dbg_error("Could not pin newly allocated process.\n");
   }
   dbg_assert(graph != HPX_NULL && g);
+  new(g) _agas_graph_t();
   _init(g);
   hpx_gas_unpin(graph);
   return graph;
