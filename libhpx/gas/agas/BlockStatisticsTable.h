@@ -44,7 +44,6 @@ class BlockStatisticsTable
   // data transferred (@p sizes). The index in the @p counts and @p
   // sizes array represents the node which accessed this block.
   struct Entry {
-    Entry() {}
     Entry(int n) : n(n)
     {
       counts = new uint64_t[n]();
@@ -102,7 +101,6 @@ class HierarchicalBST final : public BlockStatisticsTable
 {
  public:
   using GVA = GlobalVirtualAddress;
-  using CacheAligned = libhpx::util::Aligned<HPX_CACHELINE_SIZE>;
   using Map = std::unordered_map<uint64_t, Entry>;
 
   HierarchicalBST();
@@ -122,6 +120,8 @@ class HierarchicalBST final : public BlockStatisticsTable
 
  private:
   struct PaddedMap {
+    PaddedMap() : map_() {}
+    ~PaddedMap() {}
     Map map_;
     alignas(HPX_CACHELINE_SIZE) char end_[];
   };

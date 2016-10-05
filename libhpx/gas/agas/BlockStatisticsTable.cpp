@@ -189,11 +189,17 @@ HierarchicalBST::HierarchicalBST()
   }
 
   mapArray_ = reinterpret_cast<PaddedMap*>(ptr);
+  for (unsigned i = 0; i < n; ++i) {
+    new(mapArray_ + i) PaddedMap();
+  }
 }
 
 HierarchicalBST::~HierarchicalBST()
 {
-  free(mapArray_);
+  const unsigned n = here->config->threads;
+  for (unsigned i = 0; i < n; ++i) {
+    mapArray_[i].~PaddedMap();
+  }
 }
 
 void
