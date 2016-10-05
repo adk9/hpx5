@@ -97,7 +97,7 @@ BST::serializeMaxBytes(void) const
 }
 
 size_t
-BST::toBuffer(unsigned char* output)
+BST::toBuffer(unsigned char* output, size_t max_bytes)
 {
   const unsigned ranks = here->ranks;
   const size_t map_size = map_.size();
@@ -162,6 +162,7 @@ BST::toBuffer(unsigned char* output)
     std::copy(lnbrs[k].begin(), lnbrs[k].end(), buf+n);
     n += lsizes[k];
   }
+  dbg_assert(n * sizeof(uint64_t) < max_bytes);
   return n * sizeof(uint64_t);
 }
 
@@ -172,7 +173,7 @@ BST::toParcel()
   size_t max_bytes = serializeMaxBytes();
   hpx_parcel_t* p = hpx_parcel_acquire(NULL, max_bytes);
   unsigned char* buf = static_cast<unsigned char*>(hpx_parcel_get_data(p));
-  p->size = toBuffer(buf);
+  p->size = toBuffer(buf, max_bytes);
   map_.clear();
   return p;
 }

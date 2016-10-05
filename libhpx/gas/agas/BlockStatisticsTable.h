@@ -87,7 +87,7 @@ class BlockStatisticsTable
   // Constructs a sparse graph in the compressed sparse row (CSR)
   // format from the global BST, and serializes it into an output
   // buffer.
-  size_t toBuffer(unsigned char* buf);
+  size_t toBuffer(unsigned char* buf, size_t max_bytes);
 
  private:
   using Map = cuckoohash_map<GVA, Entry, CityHasher<GVA>>;
