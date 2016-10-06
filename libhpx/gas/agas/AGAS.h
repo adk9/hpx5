@@ -18,6 +18,7 @@
 #include "ChunkAllocator.h"
 #include "ChunkTable.h"
 #include "GlobalVirtualAddress.h"
+#include "Rebalancer.h"
 #include "libhpx/GAS.h"
 #include "libhpx/util/Bitmap.h"
 #include "libhpx/util/math.h"
@@ -92,6 +93,10 @@ class AGAS : public GAS {
 
   void move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco);
 
+  int rebalance(hpx_addr_t async, hpx_addr_t psync, hpx_addr_t msync);
+
+  void record(int src, int dst, hpx_addr_t block, size_t size);
+
   /// Implement the allocator interface.
   /// @{
   void free(hpx_addr_t gva, hpx_addr_t rsync);
@@ -163,6 +168,14 @@ class AGAS : public GAS {
   /// @param          n The number of bytes to deallocate.
   /// @param     cyclic A flag indicating this should be a cyclic allocation.
   void chunkDeallocate(void* addr, size_t n, bool cyclic);
+
+  /// Record access to an AGAS block.
+  ///
+  /// @param      src The "src" locality accessing the block.
+  /// @param      dst The "dst" locality where the block is mapped.
+  /// @param    block The global address of the block.
+  /// @param     size The block's size in bytes.
+  void addRecord(int src, int dst, hpx_addr_t block, size_t size);
 
  public:
   /// Updating a block during the move operation.
@@ -323,6 +336,7 @@ class AGAS : public GAS {
   ChunkTable         chunks_;                   //!< maps from chunk to gva
   ChunkAllocator     global_;                   //!< allocates global chunks
   ChunkAllocator    *cyclic_;                   //!< allocates cyclic chunks
+  Rebalancer     rebalancer_;                   //!< agas-based load balancing
   const unsigned       rank_;                   //!< current rank
   const unsigned      ranks_;                   //!< total number of ranks
 };

@@ -46,7 +46,10 @@ class GAS : public virtual libhpx::gas::Affinity, public StringOps,
   virtual void free(hpx_addr_t gca, hpx_addr_t rsync) = 0;
   virtual uint32_t getAttribute(hpx_addr_t gva) const = 0;
   virtual void setAttribute(hpx_addr_t gva, uint32_t attr) = 0;
+
   virtual void move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t lco) = 0;
+  virtual int rebalance(hpx_addr_t async, hpx_addr_t psync, hpx_addr_t msync) = 0;
+  virtual void record(int src, int dst, hpx_addr_t block, size_t size) = 0;
 };
 
 static const char* const GAS_ATTR_TO_STRING[] = {

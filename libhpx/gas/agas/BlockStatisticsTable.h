@@ -23,7 +23,6 @@
 #include <city_hasher.hh>
 #include <cinttypes>
 #include <unordered_map>
-#include "rebalancer.h"
 
 namespace libhpx {
 namespace gas {

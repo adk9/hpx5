@@ -15,45 +15,55 @@
 # include "config.h"
 #endif
 
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
+#include "GlobalVirtualAddress.h"
+#include "Rebalancer.h"
 #include <libhpx/action.h>
 #include <libhpx/config.h>
 #include <libhpx/debug.h>
 #include <libhpx/locality.h>
 #include <libhpx/memory.h>
 #include <libhpx/parcel.h>
-#include <libhpx/rebalancer.h>
 #include <libhpx/Scheduler.h>
 #include <libhpx/Worker.h>
 #include <unordered_map>
-#include "GlobalVirtualAddress.h"
-#include "BlockTranslationTable.h"
-#include "BlockStatisticsTable.h"
-#include "rebalancer.h"
 
 namespace {
 using libhpx::self;
+using libhpx::gas::agas::Rebalancer;
 using GVA = libhpx::gas::agas::GlobalVirtualAddress;
 using BST = libhpx::gas::agas::HierarchicalBST;
+LIBHPX_ACTION(HPX_DEFAULT, 0, Aggregate, Rebalancer::AggregateHandler,
+              HPX_ADDR, HPX_ADDR);
+LIBHPX_ACTION(HPX_DEFAULT, 0, Partition, Rebalancer::PartitionHandler,
+              HPX_ADDR);
+LIBHPX_ACTION(HPX_DEFAULT, 0, Move, Rebalancer::MoveHandler,
+              HPX_POINTER, HPX_ADDR, HPX_POINTER);
+LIBHPX_ACTION(HPX_DEFAULT, 0, SerializeBST, Rebalancer::SerializeBSTHandler,
+              HPX_ADDR);
 }
 
-// Per-locality BST.
-//
-// During statistics aggration, all of the thread-local BSTs are
-// aggregated into a per-locality BST.
-static BST *_bst = NULL;
+Rebalancer* Rebalancer::Instance_;
 
-// Add an entry to the rebalancer's (thread-local) BST table.
-///
-/// @param      src The "src" locality accessing the block.
-/// @param      dst The "dst" locality where the block is mapped.
-/// @param    block The global address of the block.
-/// @param     size The block's size in bytes.
-///
-//// @returns An error code, or HPX_SUCCESS.
-void rebalancer_add_entry(int src, int dst, hpx_addr_t block, size_t size) {
+Rebalancer::Rebalancer()
+    : bst_()
+{
+  dbg_assert(!Instance_);
+  Instance_ = this;
+}
+
+Rebalancer::~Rebalancer()
+{
+}
+
+int
+Rebalancer::start(hpx_addr_t async, hpx_addr_t psync, hpx_addr_t msync)
+{
+  log_gas("Starting GAS rebalancing\n");
+  return hpx_call(HPX_HERE, Aggregate, async, &psync, &msync);
+}
+
+void
+Rebalancer::record(int src, int dst, hpx_addr_t block, size_t size) {
   if (here->config->gas != HPX_GAS_AGAS) {
     return;
   }
@@ -67,46 +77,37 @@ void rebalancer_add_entry(int src, int dst, hpx_addr_t block, size_t size) {
   }
 
   // add an entry to the BST
-  _bst->add(gva, src, 1, size);
+  bst_.add(gva, src, 1, size);
 }
 
-// Initialize the AGAS-based rebalancer.
-int rebalancer_init(void) {
-  _bst = new BST();
-  dbg_assert(_bst);
-
-  log_gas("GAS rebalancer initialized\n");
-  return HPX_SUCCESS;
-}
-
-// Finalize the AGAS-based rebalancer.
-void rebalancer_finalize(void) {
-  if (_bst) {
-    delete _bst;
-    _bst = NULL;
-  }
-}
-
-// Constructs a graph at the target global address from the serialized
-// parcel payload.
+/// Constructs a graph at the target global address from the serialized
+/// parcel payload.
 static int _aggregate_global_bst_handler(void *data, size_t size) {
-  hpx_addr_t graph = hpx_thread_current_target();
-  const hpx_parcel_t *p = hpx_thread_current_parcel();
-  return agas_graph_construct(graph, data, size, p->src);
+  const hpx_parcel_t *p = self->getCurrentParcel();
+  return agas_graph_construct(p->target, data, size, p->src);
 }
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _aggregate_global_bst,
                      _aggregate_global_bst_handler, HPX_POINTER, HPX_SIZE_T);
 
-// Aggregate the BST on a given locality.
-//
-// This function collects all of the block statistics on a given
-// locality and serializes it into a parcel that is sent to the @p
-// graph global address. All of the local BSTs are merged into a
-// single global BST in parallel, before the global BST is serialized
-// into a parcel. This function steals the current continuation and
-// forwards it along to the generated parcel.
-static int _aggregate_bst_handler(hpx_addr_t graph) {
-  hpx_parcel_t *p = _bst->toParcel();
+int
+Rebalancer::aggregate(hpx_addr_t psync, hpx_addr_t msync)
+{
+  hpx_addr_t graph = agas_graph_new();
+  // first, aggregate the "block" graph locally
+  hpx_bcast_rsync(SerializeBST, &graph);
+  log_gas("Block graph aggregated on locality %d\n", HPX_LOCALITY_ID);
+  return hpx_call(graph, Partition, psync, &msync);
+}
+
+/// Serialize the per-locality BST.
+///
+/// This function serializes the BST on a locality into a parcel that
+/// is then sent to the @p graph. This function steals the current
+/// continuation and forwards it along to the generated parcel.
+int
+Rebalancer::serializeBST(hpx_addr_t graph)
+{
+  hpx_parcel_t* p = bst_.toParcel();
   log_gas("Global BST size: %u bytes.\n", p->size);
   if (!p || !p->size) {
     return HPX_SUCCESS;
@@ -115,18 +116,29 @@ static int _aggregate_bst_handler(hpx_addr_t graph) {
   p->action = _aggregate_global_bst;
 
   // *take* the current continuation
-  hpx_parcel_t *curr = self->getCurrentParcel();
+  hpx_parcel_t* curr = self->getCurrentParcel();
   p->c_target = curr->c_target;
   p->c_action = curr->c_action;
   curr->c_target = HPX_NULL;
   curr->c_action = HPX_ACTION_NULL;
 
-  hpx_parcel_send(p, HPX_NULL);
-  return HPX_SUCCESS;
+  return hpx_parcel_send(p, HPX_NULL);
 }
-static LIBHPX_ACTION(HPX_DEFAULT, 0, _aggregate_bst, _aggregate_bst_handler,
-                     HPX_ADDR);
 
+int
+Rebalancer::partition(hpx_addr_t msync)
+{
+  hpx_addr_t graph = hpx_thread_current_target();
+  void *g = NULL;
+  if (!hpx_gas_try_pin(graph, (void**)&g)) {
+    return HPX_RESEND;
+  }
+
+  uint64_t *partition = NULL;
+  size_t nvtxs = agas_graph_partition(g, here->ranks, &partition);
+  log_gas("Finished partitioning block graph (%ld vertices)\n", nvtxs);
+  return hpx_call(HPX_HERE, Move, msync, &partition, &graph, &g);
+}
 
 // Move blocks in bulk to their new owners.
 static int
@@ -154,9 +166,9 @@ _bulk_move_handler(int n, void *args[], size_t sizes[]) {
 static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED | HPX_VECTORED, _bulk_move,
                      _bulk_move_handler, HPX_INT, HPX_POINTER, HPX_POINTER);
 
-// Start rebalancing the blocks.
-// This can be called by any locality in the system.
-static int _rebalance_sync(uint64_t *partition, hpx_addr_t graph, void *g) {
+int
+Rebalancer::move(uint64_t *partition, hpx_addr_t graph, void *g)
+{
   // get the vertex array
   uint64_t *vtxs = NULL;
   size_t nvtxs = agas_graph_get_vtxs(g, &vtxs);
@@ -182,51 +194,4 @@ static int _rebalance_sync(uint64_t *partition, hpx_addr_t graph, void *g) {
   free(partition);
   agas_graph_delete(graph);
   return HPX_SUCCESS;
-}
-static LIBHPX_ACTION(HPX_DEFAULT, 0, _rebalance, _rebalance_sync,
-                     HPX_POINTER, HPX_ADDR, HPX_POINTER);
-
-// Start partitioning the aggregated BST.
-//
-static int _partition_sync(hpx_addr_t msync) {
-  hpx_addr_t graph = hpx_thread_current_target();
-  void *g = NULL;
-  if (!hpx_gas_try_pin(graph, (void**)&g)) {
-    return HPX_RESEND;
-  }
-
-  uint64_t *partition = NULL;
-  size_t nvtxs = agas_graph_partition(g, here->ranks, &partition);
-  log_gas("Finished partitioning block graph (%ld vertices)\n", nvtxs);
-  return hpx_call(HPX_HERE, _rebalance, msync, &partition, &graph, &g);
-}
-static LIBHPX_ACTION(HPX_DEFAULT, 0, _partition, _partition_sync, HPX_ADDR);
-
-// Aggregate the global BSTs.
-//
-static int _aggregate_sync(hpx_addr_t psync, hpx_addr_t msync) {
-  log_gas("Starting GAS rebalancing\n");
-
-  hpx_addr_t graph = agas_graph_new();
-  // first, aggregate the "block" graph locally
-  hpx_bcast_rsync(_aggregate_bst, &graph);
-  log_gas("Block graph aggregated on locality %d\n", HPX_LOCALITY_ID);
-  return hpx_call(graph, _partition, psync, &msync);
-}
-static LIBHPX_ACTION(HPX_DEFAULT, 0, _aggregate, _aggregate_sync, HPX_ADDR,
-                     HPX_ADDR);
-
-// Start rebalancing.
-//
-// The LCO @p sync can be used for completion notification. This can
-// be called by any locality in the system.
-int rebalancer_start(hpx_addr_t async, hpx_addr_t psync, hpx_addr_t msync) {
-  if (here->config->gas != HPX_GAS_AGAS) {
-    hpx_lco_set(async, 0, NULL, HPX_NULL, HPX_NULL);
-    hpx_lco_set(psync, 0, NULL, HPX_NULL, HPX_NULL);
-    hpx_lco_set(msync, 0, NULL, HPX_NULL, HPX_NULL);
-    return 0;
-  }
-
-  return hpx_call(HPX_HERE, _aggregate, async, &psync, &msync);
 }

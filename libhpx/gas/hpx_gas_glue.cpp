@@ -20,7 +20,6 @@
 #include "libhpx/gpa.h"
 #include "libhpx/locality.h"
 #include "libhpx/Network.h"
-#include "libhpx/rebalancer.h"
 #include "libhpx/Worker.h"
 #include "hpx/hpx.h"
 #include <cinttypes>
@@ -434,10 +433,10 @@ hpx_gas_set_attr(hpx_addr_t addr, uint32_t attr)
   hpx_gas_unpin(addr);
 }
 
-void
+int
 hpx_gas_rebalance(hpx_addr_t async, hpx_addr_t psync, hpx_addr_t msync)
 {
-  rebalancer_start(async, psync, msync);
+  return here->gas->rebalance(async, psync, msync);
 }
 
 void
@@ -446,7 +445,9 @@ hpx_gas_set_affinity(hpx_addr_t gva, int worker)
   here->gas->setAffinity(gva, worker);
 }
 
-void hpx_gas_clear_affinity(hpx_addr_t gva) {
+void
+hpx_gas_clear_affinity(hpx_addr_t gva)
+{
   here->gas->clearAffinity(gva);
 }
 

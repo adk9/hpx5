@@ -22,7 +22,6 @@
 #include "libhpx/gpa.h"
 #include "libhpx/locality.h"
 #include "libhpx/memory.h"
-#include "libhpx/rebalancer.h"
 #include "libhpx/Worker.h"                      // self->getCurrentParcel()
 #include "libhpx/util/math.h"
 #include <cstdlib>
@@ -62,6 +61,7 @@ AGAS::AGAS(const config_t* config, const boot::Network* const boot)
       chunks_(0),
       global_(chunks_, HEAP_SIZE),
       cyclic_(nullptr),
+      rebalancer_(),
       rank_(boot->getRank()),
       ranks_(boot->getNRanks())
 {
@@ -73,7 +73,6 @@ AGAS::AGAS(const config_t* config, const boot::Network* const boot)
   }
 
   initAllocators(rank_);
-  rebalancer_init();
 
   GlobalVirtualAddress gva(there(rank_));
   btt_.insert(gva, rank_, here, 1, HPX_GAS_ATTR_NONE);
@@ -82,7 +81,6 @@ AGAS::AGAS(const config_t* config, const boot::Network* const boot)
 AGAS::~AGAS()
 {
   delete cyclic_;
-  rebalancer_finalize();
 }
 
 uint64_t
@@ -169,6 +167,17 @@ AGAS::move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync)
   else {
     hpx_call(dst, Move, sync, &src);
   }
+}
+
+int
+AGAS::rebalance(hpx_addr_t async, hpx_addr_t psync, hpx_addr_t msync) {
+  return rebalancer_.start(async, psync, msync);
+}
+
+void
+AGAS::record(int src, int dst, hpx_addr_t block, size_t size)
+{
+  rebalancer_.record(src, dst, block, size);
 }
 
 /// This will free an allocation.

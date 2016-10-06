@@ -15,6 +15,7 @@
 # include "config.h"
 #endif
 
+#include "Rebalancer.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -24,7 +25,6 @@
 #include <libhpx/memory.h>
 #include <algorithm>
 #include <mutex>
-#include "rebalancer.h"
 
 #ifdef HAVE_METIS
 #include <metis.h>

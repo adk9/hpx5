@@ -26,7 +26,6 @@
 #include "libhpx/locality.h"
 #include "libhpx/memory.h"
 #include "libhpx/Network.h"
-#include "libhpx/rebalancer.h"
 #include "libhpx/Scheduler.h"
 #include "libhpx/system.h"
 #include "libhpx/topology.h"
@@ -92,11 +91,12 @@ Worker::pushLIFO(hpx_parcel_t* p)
   dbg_assert(p->target != HPX_NULL);
   dbg_assert(actions[p->action].handler != NULL);
   EVENT_SCHED_PUSH_LIFO(p->id);
-#if defined(HAVE_AGAS) && defined(HAVE_REBALANCING)
-  rebalancer_add_entry(p->src, here->rank, p->target, p->size);
-#elif defined(ENABLE_INSTRUMENTATION)
   EVENT_GAS_ACCESS(p->src, here->rank, p->target, p->size);
+
+#if defined(HAVE_AGAS) && defined(HAVE_REBALANCING)
+  here->gas->record(p->src, here->rank, p->target, p->size);
 #endif
+
   uint64_t size = queues_[workId_].push(p);
   if (workFirst_ >= 0) {
     workFirst_ = (here->config->sched_wfthreshold < size);

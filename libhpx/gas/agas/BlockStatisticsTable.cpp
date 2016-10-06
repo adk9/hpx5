@@ -21,7 +21,7 @@
 #include "libhpx/config.h"
 #include "libhpx/debug.h"
 #include "libhpx/Worker.h"
-#include "rebalancer.h"
+
 
 namespace {
 using libhpx::self;

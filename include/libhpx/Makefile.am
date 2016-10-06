@@ -19,7 +19,6 @@ noinst_HEADERS = action.h \
                  ParcelStringOps.h \
                  percolation.h \
                  process.h \
-                 rebalancer.h \
                  Scheduler.h\
                  StringOps.h \
                  system.h \

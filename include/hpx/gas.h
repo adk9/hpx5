@@ -613,12 +613,23 @@ _hpx_gas_bcast_sync(hpx_action_t action, hpx_addr_t base, int n,
 /// Rebalance GAS blocks in the system. (EXPERIMENTAL).
 ///
 /// This operation tries to rebalance blocks allocated in the global
-/// address space based on the tracing information it collects at
-/// runtime. All accesses to blocks marked with the HPX_GAS_ATTR_LB
-/// are recorded, and when the "rebalance" operation is invoked,
-/// blocks are moved automatically to come up with a better
-/// distribution.
-void hpx_gas_rebalance(hpx_addr_t async, hpx_addr_t psync, hpx_addr_t msync)
+/// address space based on the historical tracing information
+/// collected at runtime. All accesses to blocks marked with the @p
+/// HPX_GAS_ATTR_LB are recorded during execution. During a
+/// "rebalance" operation, a global block access graph is constructed
+/// and subsequently partitioned to determine a more favorable block
+/// distribution. Blocks are remapped asynchronously per the new
+/// distribution determined by the rebalancer.
+///
+/// AGAS rebalancing is divided into three main phases:
+///  1. Aggregation
+///  2. Partitioning
+///  3. Moving blocks
+/// The LCOs can used for notification of completion of the different
+/// rebalancing phases, @p async for aggregation, @p psync for
+/// partitioning and @p msync for moving blocks. The rebalancing
+///  operation can be initiated from any locality in the system.
+int hpx_gas_rebalance(hpx_addr_t async, hpx_addr_t psync, hpx_addr_t msync)
   HPX_PUBLIC;
 
 /// Set the (soft) affinity of a global address to a worker ID.

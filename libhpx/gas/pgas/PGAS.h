@@ -84,6 +84,16 @@ class PGAS : public GAS, public HeapSegment {
     hpx_lco_set(lco, 0, NULL, HPX_NULL, HPX_NULL);
   }
 
+  int rebalance(hpx_addr_t async, hpx_addr_t psync, hpx_addr_t msync) {
+    hpx_lco_set(async, 0, NULL, HPX_NULL, HPX_NULL);
+    hpx_lco_set(psync, 0, NULL, HPX_NULL, HPX_NULL);
+    hpx_lco_set(msync, 0, NULL, HPX_NULL, HPX_NULL);
+    return HPX_SUCCESS;
+  }
+
+  void record(int src, int dst, hpx_addr_t block, size_t size) {
+  }
+
   void free(hpx_addr_t gva, hpx_addr_t rsync);
 
   hpx_addr_t alloc_cyclic(size_t n, size_t bsize, uint32_t boundary,

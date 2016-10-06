@@ -78,6 +78,16 @@ class SMP : public GAS {
     hpx_lco_set(sync, 0, NULL, HPX_NULL, HPX_NULL);
   }
 
+  int rebalance(hpx_addr_t async, hpx_addr_t psync, hpx_addr_t msync) {
+    hpx_lco_set(async, 0, NULL, HPX_NULL, HPX_NULL);
+    hpx_lco_set(psync, 0, NULL, HPX_NULL, HPX_NULL);
+    hpx_lco_set(msync, 0, NULL, HPX_NULL, HPX_NULL);
+    return HPX_SUCCESS;
+  }
+
+  void record(int src, int dst, hpx_addr_t block, size_t size) {
+  }
+
   /// Implement the StringOps interface.
   /// @{
   void memget(void *dest, hpx_addr_t src, size_t n, hpx_addr_t lsync,
