@@ -40,6 +40,8 @@ LIBHPX_ACTION(HPX_DEFAULT, 0, Move, Rebalancer::MoveHandler,
               HPX_POINTER, HPX_ADDR, HPX_POINTER);
 LIBHPX_ACTION(HPX_DEFAULT, 0, SerializeBST, Rebalancer::SerializeBSTHandler,
               HPX_ADDR);
+LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED | HPX_VECTORED, BulkMove,
+              Rebalancer::BulkMoveHandler, HPX_INT, HPX_POINTER, HPX_POINTER);
 }
 
 Rebalancer* Rebalancer::Instance_;
@@ -53,13 +55,6 @@ Rebalancer::Rebalancer()
 
 Rebalancer::~Rebalancer()
 {
-}
-
-int
-Rebalancer::start(hpx_addr_t async, hpx_addr_t psync, hpx_addr_t msync)
-{
-  log_gas("Starting GAS rebalancing\n");
-  return hpx_call(HPX_HERE, Aggregate, async, &psync, &msync);
 }
 
 void
@@ -78,6 +73,13 @@ Rebalancer::record(int src, int dst, hpx_addr_t block, size_t size) {
 
   // add an entry to the BST
   bst_.add(gva, src, 1, size);
+}
+
+int
+Rebalancer::rebalance(hpx_addr_t async, hpx_addr_t psync, hpx_addr_t msync)
+{
+  log_gas("Starting GAS rebalancing\n");
+  return hpx_call(HPX_HERE, Aggregate, async, &psync, &msync);
 }
 
 /// Constructs a graph at the target global address from the serialized
@@ -140,32 +142,6 @@ Rebalancer::partition(hpx_addr_t msync)
   return hpx_call(HPX_HERE, Move, msync, &partition, &graph, &g);
 }
 
-// Move blocks in bulk to their new owners.
-static int
-_bulk_move_handler(int n, void *args[], size_t sizes[]) {
-  uint64_t      *vtxs = static_cast<uint64_t*>(args[0]);
-  uint64_t *partition = static_cast<uint64_t*>(args[1]);
-
-  size_t bytes = sizes[0];
-  uint64_t count = bytes/sizeof(uint64_t);
-
-  hpx_addr_t done = hpx_lco_and_new(count);
-  for (unsigned i = 0; i < count; ++i) {
-    unsigned new_owner = partition[i];
-    if (new_owner != here->rank) {
-      log_gas("move block 0x%lx from %d to %d\n", vtxs[i], here->rank, new_owner);
-      hpx_gas_move(vtxs[i], HPX_THERE(new_owner), done);
-    } else {
-      hpx_lco_set(done, 0, NULL, HPX_NULL, HPX_NULL);
-    }
-  }
-  hpx_lco_wait(done);
-  hpx_lco_delete(done, HPX_NULL);
-  return HPX_SUCCESS;
-}
-static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED | HPX_VECTORED, _bulk_move,
-                     _bulk_move_handler, HPX_INT, HPX_POINTER, HPX_POINTER);
-
 int
 Rebalancer::move(uint64_t *partition, hpx_addr_t graph, void *g)
 {
@@ -183,7 +159,7 @@ Rebalancer::move(uint64_t *partition, hpx_addr_t graph, void *g)
         hpx_lco_set(done, 0, NULL, HPX_NULL, HPX_NULL);
         continue;
       }
-      hpx_call(HPX_THERE(owner), _bulk_move, done,
+      hpx_call(HPX_THERE(owner), BulkMove, done,
                vtxs+start, bytes, partition+start, bytes);
     }
     hpx_lco_wait(done);
@@ -193,5 +169,29 @@ Rebalancer::move(uint64_t *partition, hpx_addr_t graph, void *g)
   hpx_gas_unpin(graph);
   free(partition);
   agas_graph_delete(graph);
+  return HPX_SUCCESS;
+}
+
+// Move blocks in bulk to their new owners.
+int
+BulkMoveHandler(int n, void *args[], size_t sizes[])
+{
+  hpx_addr_t *vtxs = static_cast<hpx_addr_t*>(args[0]);
+  uint64_t *partition = static_cast<uint64_t*>(args[1]);
+
+  size_t bytes = sizes[0];
+  uint64_t count = bytes/sizeof(uint64_t);
+
+  hpx_addr_t done = hpx_lco_and_new(count);
+  for (unsigned i = 0; i < count; ++i) {
+    unsigned newOwner = partition[i];
+    if (newOwner != here->rank) {
+      hpx_gas_move(vtxs[i], HPX_THERE(new_owner), done);
+    } else {
+      hpx_lco_set(done, 0, NULL, HPX_NULL, HPX_NULL);
+    }
+  }
+  hpx_lco_wait(done);
+  hpx_lco_delete(done, HPX_NULL);
   return HPX_SUCCESS;
 }

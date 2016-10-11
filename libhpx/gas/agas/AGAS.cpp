@@ -153,12 +153,13 @@ int
 AGAS::MoveHandler(hpx_addr_t src)
 {
   hpx_addr_t dst = hpx_thread_current_target();
-  return hpx_call_cc(src, InvalidateMapping, &dst, &here->rank);
+  return hpx_call_cc(src, InvalidateMapping, &dst, &rank_);
 }
 
 void
 AGAS::move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync)
 {
+  log_gas("Move block 0x%lx from %d to %d\n", src, rank_, gpa_to_rank(dst));
   bool found;
   uint32_t owner = btt_.getOwner(dst, found);
   if (found) {
@@ -171,7 +172,7 @@ AGAS::move(hpx_addr_t src, hpx_addr_t dst, hpx_addr_t sync)
 
 int
 AGAS::rebalance(hpx_addr_t async, hpx_addr_t psync, hpx_addr_t msync) {
-  return rebalancer_.start(async, psync, msync);
+  return rebalancer_.rebalance(async, psync, msync);
 }
 
 void

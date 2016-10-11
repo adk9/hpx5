@@ -40,8 +40,8 @@ class Rebalancer {
   /// @param     size The block's size in bytes.
   void record(int src, int dst, hpx_addr_t block, size_t size);
 
-  // Start rebalancing asynchronously.
-  int start(hpx_addr_t async, hpx_addr_t psync, hpx_addr_t msync);
+  // Rebalance asynchronously.
+  int rebalance(hpx_addr_t async, hpx_addr_t psync, hpx_addr_t msync);
 
   static int AggregateHandler(hpx_addr_t psync, hpx_addr_t msync) {
     return Instance()->aggregate(psync, msync);
@@ -58,6 +58,8 @@ class Rebalancer {
   static int SerializeBSTHandler(hpx_addr_t graph) {
     return Instance()->serializeBST(graph);
   }
+
+  static int BulkMoveHandler(int N, void* args[], size_t sizes[]);
 
  private:
   int aggregate(hpx_addr_t psync, hpx_addr_t msync);
