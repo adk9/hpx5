@@ -23,6 +23,7 @@ AC_DEFUN([_HPX_DO_LINUX], [
  AS_CASE([$host_cpu],
    [x86_64], [HPX_CHECK_CMPXCHG16B
               l1d_linesize=`cat /sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size`],
+  [powerpc64le], [l1d_linesize=64],
   [aarch64], [LIBHPX_CFLAGS="$LIBHPX_CFLAGS -fexceptions"
   	      HPX_APPS_CFLAGS="$HPX_APPS_CFLAGS -fexceptions"
   	      HPX_PC_CFLAGS="$HPX_PC_CFLAGS -fexceptions"

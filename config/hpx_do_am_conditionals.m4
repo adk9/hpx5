@@ -11,6 +11,7 @@ AC_DEFUN([HPX_DO_AM_CONDITIONALS], [
  AM_CONDITIONAL([CPU_X86_64], [test "x$host_cpu" = xx86_64])
  AM_CONDITIONAL([CPU_ARM], [test "x$host_cpu" = xarmv7l -o "x$host_cpu" = xarm])
  AM_CONDITIONAL([CPU_AARCH64], [test "x$host_cpu" = xaarch64])
+ AM_CONDITIONAL([CPU_POWERPC64LE], [test "x$host_cpu" = xpowerpc64le])
 
  AM_CONDITIONAL([GNU_PE_ENV], [test "x$hpx_pe_env" = xGNU])
  AM_CONDITIONAL([CRAY_PE_ENV], [test "x$hpx_pe_env" = xCRAY])
