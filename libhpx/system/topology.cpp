@@ -100,7 +100,7 @@ static void _cpu_affinity_map_delete(topology_t *topology) {
 
 topology_t *topology_new(const struct config *config) {
   // Allocate the topology structure/
-  topology_t *topo = new topology_t(); // malloc(sizeof(*topo));
+  topology_t *topo = (topology_t*) malloc(sizeof(*topo));
   if (!topo) {
     log_error("failed to allocate topology structure\n");
     return NULL;
@@ -220,7 +220,7 @@ topology_t *topology_new(const struct config *config) {
   // keeps track of the "next" index for each numa node array, so that we can
   // insert into the right place.
   int numa_to_cpus_next[topo->nnodes];
-  memset(numa_to_cpus_next, 0, sizeof(numa_to_cpus_next));
+  std::fill_n(numa_to_cpus_next, sizeof(numa_to_cpus_next), 0);
 
   libhpx_hwloc_obj_t cpu = NULL;
   libhpx_hwloc_obj_t core = NULL;
@@ -234,7 +234,11 @@ topology_t *topology_new(const struct config *config) {
     // get integer indexes for the cpu, core, and numa node
     int index = cpu->os_index;
     int core_index = (core) ? core->os_index : 0;
-    int numa_index = (numa_node) ? numa_node->os_index : 0;
+    #if defined(__PPC64__)
+      int numa_index = (numa_node) ? numa_node->logical_index : 0;
+    #else
+      int numa_index = (numa_node) ? numa_node->os_index : 0;
+    #endif
 
     // record our hwloc nodes so that we can get them quickly during queries
     topo->cpus[index] = cpu;

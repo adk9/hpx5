@@ -49,7 +49,7 @@
 #elif defined(__linux__)
 # define SYMBOL(S) S
 # define PLT_SYMBOL(S) S##@PLT
-#if defined(__x86_64__) || defined(__ARMEL__)
+#if defined(__x86_64__) || defined(__ARMEL__) || defined(__PPC64__)
 # define GLOBAL(S) .globl SYMBOL(S)
 #elif defined(__aarch64__)
 # define GLOBAL(S) .global SYMBOL(S)
