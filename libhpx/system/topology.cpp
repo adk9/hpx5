@@ -100,7 +100,7 @@ static void _cpu_affinity_map_delete(topology_t *topology) {
 
 topology_t *topology_new(const struct config *config) {
   // Allocate the topology structure/
-  topology_t *topo = (topology_t*) malloc(sizeof(*topo));
+  topology_t *topo = (topology_t*) calloc(1, sizeof(*topo));
   if (!topo) {
     log_error("failed to allocate topology structure\n");
     return NULL;
@@ -220,7 +220,7 @@ topology_t *topology_new(const struct config *config) {
   // keeps track of the "next" index for each numa node array, so that we can
   // insert into the right place.
   int numa_to_cpus_next[topo->nnodes];
-  std::fill_n(numa_to_cpus_next, sizeof(numa_to_cpus_next), 0);
+  memset(numa_to_cpus_next, 0, sizeof(numa_to_cpus_next));
 
   libhpx_hwloc_obj_t cpu = NULL;
   libhpx_hwloc_obj_t core = NULL;
