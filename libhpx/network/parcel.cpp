@@ -201,7 +201,7 @@ void parcel_init(hpx_addr_t target, hpx_action_t action, hpx_addr_t c_target,
     parcel_count++;
     int rank   = HPX_LOCALITY_ID;
     int thread = HPX_THREAD_ID;
-    p->id = topo_offset_to_value(rank, thread, parcel_count);
+    p->id = Topology::topo_offset_to_value(rank, thread, parcel_count);
   } else {
     p->id = 0;
   }
