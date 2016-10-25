@@ -32,6 +32,7 @@
 #include "libhpx/Network.h"
 #include <libhpx/padding.h>
 #include <libhpx/parcel.h>
+#include <libhpx/Topology.h>
 #include "libhpx/Worker.h"
 #include <hpx/hpx.h>
 #include <ffi.h>
