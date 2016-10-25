@@ -25,5 +25,6 @@
 LABEL(thread_transfer)
         STARTPROC
         // Coming soon...
+        blr
         ENDPROC
         SIZE(thread_transfer)

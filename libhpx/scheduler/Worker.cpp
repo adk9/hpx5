@@ -28,8 +28,8 @@
 #include "libhpx/Network.h"
 #include "libhpx/rebalancer.h"
 #include "libhpx/Scheduler.h"
+#include "libhpx/Topology.h"
 #include "libhpx/system.h"
-#include "libhpx/topology.h"
 #include "libhpx/util/math.h"
 #include <cstring>
 #ifdef HAVE_URCU

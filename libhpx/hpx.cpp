@@ -38,7 +38,7 @@
 #include "libhpx/Scheduler.h"
 #include "libhpx/system.h"
 #include "libhpx/time.h"
-#include "libhpx/topology.h"
+#include "libhpx/Topology.h"
 #include "libhpx/boot/Network.h"
 #include <hpx/hpx.h>
 #include <assert.h>
@@ -75,7 +75,7 @@ static void _cleanup(locality_t *l) {
   delete l->boot;
 
   if (l->topology) {
-    topology_delete(l->topology);
+    Topology::Delete(l->topology);
   }
 
   action_table_finalize();
@@ -154,7 +154,7 @@ int hpx_init(int *argc, char ***argv) {
   }
 
   // topology discovery and initialization
-  here->topology = topology_new(here->config);
+  here->topology = Topology::Create(here->config);
   if (!here->topology) {
     status = log_error("failed to discover topology.\n");
     goto unwind1;
