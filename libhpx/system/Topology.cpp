@@ -15,19 +15,28 @@
 # include "config.h"
 #endif
 
-#include "libhpx/config.h"
+#include "libhpx/Topology.h"
 #include "libhpx/debug.h"
 #include "libhpx/libhpx.h"
 #include "libhpx/locality.h"
 #include "libhpx/system.h"
-#include "libhpx/topology.h"
 #include "libhpx/util/Env.h"
 #include <alloca.h>
 #include <string.h>
 #include <unistd.h>
 #include <hwloc.h>
 
-static int _get_resources_by_affinity(topology_t *topology,
+namespace {
+  using namespace libhpx;
+}
+
+Topology::Topology() {
+}
+
+Topology::~Topology() {
+}
+
+static int _get_resources_by_affinity(Topology *topology,
                                       libhpx_thread_affinity_t policy) {
   int n = 0;
   switch (policy) {
@@ -49,7 +58,7 @@ static int _get_resources_by_affinity(topology_t *topology,
   return n;
 }
 
-static libhpx_hwloc_cpuset_t *_cpu_affinity_map_new(topology_t *topology,
+static libhpx_hwloc_cpuset_t *_cpu_affinity_map_new(Topology *topology,
                                              libhpx_thread_affinity_t policy) {
   int resources = _get_resources_by_affinity(topology, policy);
   if (!resources) {
@@ -90,7 +99,7 @@ static libhpx_hwloc_cpuset_t *_cpu_affinity_map_new(topology_t *topology,
   return cpu_affinity_map;
 }
 
-static void _cpu_affinity_map_delete(topology_t *topology) {
+static void _cpu_affinity_map_delete(Topology *topology) {
   int resources = _get_resources_by_affinity(topology, here->config->thread_affinity);
   for (int r = 0; r < resources; ++r) {
     libhpx_hwloc_bitmap_free(topology->cpu_affinity_map[r]);
@@ -98,9 +107,60 @@ static void _cpu_affinity_map_delete(topology_t *topology) {
   delete [] topology->cpu_affinity_map;
 }
 
-topology_t *topology_new(const struct config *config) {
+void 
+Topology::Delete(Topology *topology) {
+  if (!topology) {
+    return;
+  }
+
+  if (topology->cpus) {
+    delete [] topology->cpus;
+    topology->cpus = NULL;
+  }
+
+  if (topology->numa_nodes) {
+    delete [] topology->numa_nodes;
+    topology->numa_nodes = NULL;
+  }
+
+  if (topology->cpu_to_core) {
+    delete [] topology->cpu_to_core;
+    topology->cpu_to_core = NULL;
+  }
+
+  if (topology->cpu_to_numa) {
+    delete [] topology->cpu_to_numa;
+    topology->cpu_to_numa = NULL;
+  }
+
+  if (topology->numa_to_cpus) {
+    for (int i = 0; i < topology->nnodes; ++i) {
+      if (topology->numa_to_cpus[i]) {
+        delete [] topology->numa_to_cpus[i];
+      }
+    }
+    delete [] topology->numa_to_cpus;
+    topology->numa_to_cpus = NULL;
+  }
+
+  if (topology->allowed_cpus) {
+    libhpx_hwloc_bitmap_free(topology->allowed_cpus);
+    topology->allowed_cpus = NULL;
+  }
+
+  if (topology->cpu_affinity_map) {
+    _cpu_affinity_map_delete(topology);
+    topology->cpu_affinity_map  = NULL;
+  }
+
+  libhpx_hwloc_topology_destroy(topology->hwloc_topology);
+  delete topology;
+}
+
+Topology*
+Topology::Create(config_t *config) {
   // Allocate the topology structure/
-  topology_t *topo = (topology_t*) calloc(1, sizeof(*topo));
+  Topology *topo = new Topology();
   if (!topo) {
     log_error("failed to allocate topology structure\n");
     return NULL;
@@ -121,13 +181,13 @@ topology_t *topology_new(const struct config *config) {
   libhpx_hwloc_topology_t *hwloc = &topo->hwloc_topology;
   if (libhpx_hwloc_topology_init(hwloc)) {
     log_error("failed to initialize HWLOC topology.\n");
-    topology_delete(topo);
+    Topology::Delete(topo);
     return NULL;
   }
 
   if (libhpx_hwloc_topology_load(*hwloc)) {
     log_error("failed to load HWLOC topology.\n");
-    topology_delete(topo);
+    Topology::Delete(topo);
     return NULL;
   }
 
@@ -143,42 +203,42 @@ topology_t *topology_new(const struct config *config) {
   topo->allowed_cpus = libhpx_hwloc_bitmap_alloc();
   if (!topo->allowed_cpus) {
     log_error("failed to allocate memory for cpuset.\n");
-    topology_delete(topo);
+    Topology::Delete(topo);
     return NULL;
   }
 
   topo->cpus = new libhpx_hwloc_obj_t[topo->ncpus]();
   if (!topo->cpus) {
     log_error("failed to allocate memory for cpu objects.\n");
-    topology_delete(topo);
+    Topology::Delete(topo);
     return NULL;
   }
 
   topo->cpu_to_core = new int[topo->ncpus]();
   if (!topo->cpu_to_core) {
     log_error("failed to allocate memory for the core map.\n");
-    topology_delete(topo);
+    Topology::Delete(topo);
     return NULL;
   }
 
   topo->cpu_to_numa = new int[topo->ncpus]();
   if (!topo->cpu_to_numa) {
     log_error("failed to allocate memory for the NUMA map.\n");
-    topology_delete(topo);
+    Topology::Delete(topo);
     return NULL;
   }
 
   topo->numa_nodes = new libhpx_hwloc_obj_t[topo->nnodes]();
   if (!topo->numa_nodes) {
     log_error("failed to allocate memory for numa node objects.\n");
-    topology_delete(topo);
+    Topology::Delete(topo);
     return NULL;
   }
 
   topo->numa_to_cpus = new int*[topo->nnodes]();
   if (!topo->numa_to_cpus) {
     log_error("failed to allocate memory for the reverse NUMA map.\n");
-    topology_delete(topo);
+    Topology::Delete(topo);
     return NULL;
   }
 
@@ -186,7 +246,7 @@ topology_t *topology_new(const struct config *config) {
     topo->numa_to_cpus[i] = new int[topo->cpus_per_node]();
     if (!topo->numa_to_cpus[i]) {
       log_error("failed to allocate memory for the reverse NUMA map.\n");
-      topology_delete(topo);
+      Topology::Delete(topo);
       return NULL;
     }
   }
@@ -256,53 +316,4 @@ topology_t *topology_new(const struct config *config) {
   // generate the CPU affinity map
   topo->cpu_affinity_map = _cpu_affinity_map_new(topo, config->thread_affinity);
   return topo;
-}
-
-void topology_delete(topology_t *topology) {
-  if (!topology) {
-    return;
-  }
-
-  if (topology->cpus) {
-    delete [] topology->cpus;
-    topology->cpus = NULL;
-  }
-
-  if (topology->numa_nodes) {
-    delete [] topology->numa_nodes;
-    topology->numa_nodes = NULL;
-  }
-
-  if (topology->cpu_to_core) {
-    delete [] topology->cpu_to_core;
-    topology->cpu_to_core = NULL;
-  }
-
-  if (topology->cpu_to_numa) {
-    delete [] topology->cpu_to_numa;
-    topology->cpu_to_numa = NULL;
-  }
-
-  if (topology->numa_to_cpus) {
-    for (int i = 0; i < topology->nnodes; ++i) {
-      if (topology->numa_to_cpus[i]) {
-        delete [] topology->numa_to_cpus[i];
-      }
-    }
-    delete [] topology->numa_to_cpus;
-    topology->numa_to_cpus = NULL;
-  }
-
-  if (topology->allowed_cpus) {
-    libhpx_hwloc_bitmap_free(topology->allowed_cpus);
-    topology->allowed_cpus = NULL;
-  }
-
-  if (topology->cpu_affinity_map) {
-    _cpu_affinity_map_delete(topology);
-    topology->cpu_affinity_map  = NULL;
-  }
-
-  libhpx_hwloc_topology_destroy(topology->hwloc_topology);
-  delete topology;
 }
