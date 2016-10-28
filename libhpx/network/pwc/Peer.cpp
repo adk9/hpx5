@@ -43,9 +43,9 @@ Peer::Peer()
 
 Peer::~Peer()
 {
-  delete recv_;
+  if (recv_)
+    recv_->finalize();
 }
-
 
 void*
 Peer::operator new[](size_t bytes)

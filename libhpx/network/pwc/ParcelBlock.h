@@ -123,6 +123,13 @@ class EagerBlock {
 /// EagerBlock metadata for an InplaceBlock back to the sender, such that the
 /// sender can manage allocation.
 class InplaceBlock final : public EagerBlock {
+  /// Destruct the eager block.
+  ///
+  /// This is private to prevent accidental double frees. All block deletion
+  /// occurs through the reference-counted deallocate() or shutdown-time
+  /// finalize() routines.
+  ~InplaceBlock();
+
  public:
   /// Construct a recv block with the given size.
   ///
@@ -131,9 +138,6 @@ class InplaceBlock final : public EagerBlock {
   ///
   /// @param       size The total size of the Recv block.
   InplaceBlock(size_t size);
-
-  /// Destruct the eager block.
-  ~InplaceBlock();
 
   /// Allocate registered memory for a new RecvBlock.
   ///
@@ -157,6 +161,15 @@ class InplaceBlock final : public EagerBlock {
   ///
   /// @param          n The number of bytes to return.
   void deallocate(size_t n);
+
+  /// Clean up a block at shutdown.
+  ///
+  /// This is called by a Peer to finalize its current inplace block at
+  /// shutdown. If there are bytes remaining then it should deallocate them,
+  /// otherwise if there are no bytes remaining then it has no impact (because
+  /// the fact that there are 0 remaining bytes implies delete was already
+  /// called).
+  void finalize();
 
   /// A utility to help delete a block-allocated parcel.
   ///
