@@ -63,7 +63,7 @@ class CoalescingBuffer {
       auto n = parcel_size(p);
       memcpy(next, p, n);
       parcel_delete(p);
-      next += parcel_size(p);
+      next += n;
     }
     if (net->send(fat, ssync_)) {
       throw std::exception();
