@@ -53,14 +53,14 @@ static HPX_RETURNS_NON_NULL const char *_id(void) {
 }
 
 static void _deallocate(void *percolation) {
-  _opencl_percolation_t *cl = (_opencl_percolation_t*)percolation;
+  auto *cl = static_cast<_opencl_percolation_t*>(percolation);
   clReleaseCommandQueue(cl->queue);
   clReleaseContext(cl->context);
 }
 
 static void *_prepare(const void *percolation, const char *key,
                       const char *kernel) {
-  const _opencl_percolation_t *cl = (const _opencl_percolation_t*)percolation;
+  const auto *cl = static_cast<const _opencl_percolation_t*>(percolation);
 
   int e;
   cl_program program = clCreateProgramWithSource(cl->context, 1, &kernel,
@@ -70,7 +70,7 @@ static void *_prepare(const void *percolation, const char *key,
   e = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
   dbg_assert_str(e >= 0, "failed to build OpenCL program for %s.\n", key);
 
-  char *name = const_cast<char*>(strchr(key, ':') + 1);
+  const char *name = strchr(key, ':') + 1;
   dbg_assert(name);
   cl_kernel k = clCreateKernel(program, name, &e);
   dbg_assert_str(e >= 0, "failed to create OpenCL kernel for %s.\n", key);
@@ -80,7 +80,7 @@ static void *_prepare(const void *percolation, const char *key,
 
 static int _execute(const void *percolation, void *obj, int nargs,
                     void *vargs[], size_t sizes[]) {
-  const _opencl_percolation_t *cl = (const _opencl_percolation_t*)percolation;
+  const auto *cl = static_cast<const _opencl_percolation_t*>(percolation);
   cl_kernel kernel = (cl_kernel)obj;
 
   cl_mem buf[nargs];
