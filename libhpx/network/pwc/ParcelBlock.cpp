@@ -107,7 +107,8 @@ InplaceBlock::InplaceBlock(size_t n)
 InplaceBlock::~InplaceBlock()
 {
   if (remaining_.load()) {
-    log_parcel("block freed with %zu bytes remaining\n", this, remaining_.load());
+    log_parcel("block %p freed with %zu bytes remaining\n", this,
+               remaining_.load());
   }
   log_parcel("deleting parcel block at %p\n", (void*)this);
 }
