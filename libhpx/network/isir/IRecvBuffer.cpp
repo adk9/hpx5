@@ -20,6 +20,10 @@
 #include "libhpx/events.h"
 #include "libhpx/parcel.h"
 #include <memory>
+#include <libhpx/topology.h>
+#ifdef HAVE_APEX
+#include "apex.h"
+#endif
 
 namespace {
 using libhpx::network::isir::IRecvBuffer;
@@ -152,5 +156,8 @@ IRecvBuffer::finish(unsigned i, const Status& status)
   p->src = xport_.source(status);
   log_net("finished a recv for a %u-byte payload\n", p->size);
   EVENT_NETWORK_RECV();
+#ifdef HAVE_APEX
+  apex_recv(p->id, p->size, p->src, topo_value_to_worker(p->id)+1);
+#endif
   return p;
 }

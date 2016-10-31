@@ -191,8 +191,7 @@ int hpx_init(int *argc, char ***argv) {
 
 #ifdef HAVE_APEX
   // initialize APEX, give this main thread a name
-  apex_init("HPX WORKER THREAD");
-  apex_set_node_id(here->rank);
+  apex_init("HPX WORKER THREAD", here->rank, here->ranks);
 #endif
 
   // thread scheduler

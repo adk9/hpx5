@@ -40,6 +40,9 @@
 #include <cinttypes>
 #include <cstdlib>
 #include <cstring>
+#ifdef HAVE_APEX
+#include "apex.h"
+#endif
 
 namespace {
 using libhpx::self;
@@ -146,6 +149,9 @@ void parcel_launch(hpx_parcel_t *p) {
   }
   else {
     int e = here->net->send(p, NULL);
+#ifdef HAVE_APEX
+  	apex_send(p->id, p->size, target);
+#endif
     dbg_check(e, "failed to perform a network send\n");
   }
 }
@@ -190,7 +196,8 @@ void parcel_init(hpx_addr_t target, hpx_action_t action, hpx_addr_t c_target,
   p->credit   = 0;
 
 #ifdef ENABLE_INSTRUMENTATION
-  if (inst_trace_class(HPX_TRACE_PARCEL) && self) {
+  //if (inst_trace_class(HPX_TRACE_PARCEL) && self) {
+  if (self) {
     parcel_count++;
     int rank   = HPX_LOCALITY_ID;
     int thread = HPX_THREAD_ID;
