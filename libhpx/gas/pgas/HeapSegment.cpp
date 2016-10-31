@@ -167,7 +167,9 @@ bool
 HeapSegment::chunksAreUsed(uint64_t offset, size_t n) const
 {
   uint32_t from = offset / bytesPerChunk_;
-  uint32_t to = ceil_div_32(offset + n, bytesPerChunk_);
+  auto t = ceil_div(offset + n, uint64_t(bytesPerChunk_)); // ILP32
+  dbg_assert(t < UINT32_MAX);
+  uint32_t to = (uint32_t)t;
   return chunks_.isSet(from, to - from);
 }
 

@@ -28,9 +28,10 @@ x86_64.
 
 The following tools have been verified to work with HPX-5.
 
-* GCC 4.8.4 or newer (Tested with 4.8.4, 4.9.1, 4.9.2, 5.1.0, 5.2.0).
-* clang Tested with 3.6 (3.5 and earlier are known to be broken).
-* icc (Tested with 15.0.1).
+* GCC 4.8.4 or newer (Tested with 4.8.4, 4.9.1, 4.9.2, 5.1.0, 5.2.0, 5.3.0, 
+                      6.2.0).
+* clang Tested with 3.8.1 (3.5 and earlier are known to be broken).
+* icc (Tested with 16.0.2).
 * GNU Make 3.81+
 
 # Configuration and Building
