@@ -1,7 +1,7 @@
-HPX–5 Version 3.1.0 Release Notes
+HPX–5 Version 4.0.0 Release Notes
 ---------------------------------
 
-Release date: 07/11/2016
+Release date: 11/01/2016
 
 Distributed under the Indiana University License.
 (See accompanying file LICENSE.txt) 
@@ -52,111 +52,64 @@ This contains example applications designed to depend on an installed instance
 of HPX–5, and should serve as a usage model. In particular, it includes a 
 tutorial as well as the Lulesh, Wavelet-AMR, HPCG, CoMD, and SSSP applications.
 
-What's new in HPX-5 v3.1.0?
+What's new in HPX-5 v4.0.0?
 ----------------------------
+The HPX-5 runtime library is being updated to leverage C++, which simplifies 
+its code base (4% fewer lines of code), provides better interoperability with 
+dependencies, promotes static type safety, and promotes platform independence 
+through the elimination of the libsync synchronization library and its 
+associated architecture-specific functionality. In the future, this will 
+assist with the development and performance of the HPX-5 C++ API. Throughout 
+this effort we have paid attention to execution and compile times. Application 
+performance is unchanged and the HPX-5 library compilation time (performed 
+once per HPX-5 installation) has roughly doubled from 2 to 4 minutes in a 
+16-core parallel build.
 
 HPX-5 API
 ==========
-
-1. Extended HPX-5 with the concept of a SPMD epoch, exposed through the 
-hpx_run_spmd() top-level run command. SPMD epochs will launch one instance of 
-their top-level action at each locality, and will collectively terminate when 
-each of these actions has exited by continuing a return code. This 
-functionality is provided to assist with legacy compatibility.
-2. Extended HPX-5 with soft GAS affinity, through the 
-hpx_gas_{set,clear}_affinity() interface. An application may use GAS affinity 
-to specify a preferred intra-locality core for a global address, and affinity
-aware implementations can use this information during scheduling.
-3. Removed the hpx_thread_affinity() interface. GAS affinity serves a similar 
-purpose in the context of an active message execution model.
-4. Provide hpx_{de}register_memory() to allow application users explicit 
-control over network memory registration. This is primarily for legacy 
-compatibility with applications designed using traditional distributed memory.
-5. The experimental C++ API has been extended to support: SPMD epochs, 
-HPX_POINTER argument types, and rvalue continuation.
+1. Added methods to AGAS to get attributes of global blocks.
+2. The hpx_run(), hpx_run_spmd(), and hpx_exit() interface has changed to support 
+arbitrary epoch return types. Details are available at 
+http://www.crest.iu.edu/MailArchives/hpx-users/2016/07/0077.php.
+3. The hpx_run_spmd() interface requires explicitly collective use of hpx_exit() 
+at each locality.
 
 HPX Implementation
 ====================
-
 1. AGAS Changes
-1.1 Implemented address translation caching to improve performance for 
-relocated blocks.
-1.2 Implemented user-defined data distributions to allow arbitrary initial 
-data distributions in the global address space.
-1.3 Implemented blocked allocations.
-
+  - Significant improvements have been made to AGAS rebalancer code.
 2. Tracing infrastructure changes
-2.1 Added the libhpx_inst_phase_{enable,disable}() interface to allow 
-runtime control over trace activity.
-2.2 New event EVENT_PARCEL_DELETE has been added to handle local send 
-completion.
-2.3 Added an AGAS miss event to count the number of remote translations.
-2.4 The console trace backend will dump trace events to the console 
-(see --hpx-trace-backend).
-2.5 The stats trace backend will accumulate event counts and dump them to the 
-console (see --hpx-trace-backend).
-2.6 The file trace backend format has changed, and can be processed using the 
-scripts/read_log.py script.
-
-3. Scheduler changes
-3.1 Added a userspace read-copy-update implementation of GAS affinity 
-(see hpx_gas_{set,clear}_affinity(), --hpx-gas-affinity).
-3.2 Added a libcuckoo implementation of GAS affinity 
-(see hpx_gas_{set,clear}_affinity(), --hpx-gas-affinity).
-
+  - Improvements have been made to Numpy logs -- Extended python tools to include 
+    command line tool and proper modules.
+3. LCO changes
+  - UserLCO can now be set with a size different than the size of the state.
 4. Network changes
-4.1 Implemented the ssync event handler.
-4.2 Added support for non-strict ordering from the photon network 
-(see --hpx-photon-comporder).
-
-5. Runtime options
-5.1 The --hpx-thread-affinity default has been changed to none. Testing has 
-shown that this is a safer default than numa across multiple platforms, 
-applications, and launcher topologies.
-5.2 The --hpx-gas-affinity option selects how the scheduler responds to the 
-hpx_gas_{set,clear}_affinity() interface. The default none option ignores 
-affinity, the urcu option selects the userspace read-copy-update implementation 
-and is recommended for applications that depend on affinity, and the cuckoo 
-implementation uses a libcuckoo hash table and is provided for portability.
-5.3 The --hpx-trace-backend option selects the trace backend at runtime. The 
-file backend generates trace files, the console backend dumps events to the 
-console, and the stats backend counts events and dumps them to the console 
-at shutdown.
-5.4 The --hpx-photon-comporder option controls the network ordering constraints 
-for the photon backend. none permits low-level out-of-order delivery while 
-strict enforces in-order delivery and is the default. This has no impact on HPX 
-semantics.
-5.5 The --hpx-trace-off option disables the automatic call to 
-libhpx_inst_phase_enable() at startup when --hpx-trace-at is specified.
+  - Added an LRU Cache for registered chunk allocations. This reduces the amount 
+    of high-frequency mmap and pin operations for large parcels. Restructured the 
+    peer-to-peer data for the PWC Network.
 
 Removed/Retired Features
 ---------------------------
-1. Removed the unsupported --hpx-statistics flag.
-2. Removed the hpx_thread_affinity() interface 
-(see hpx_gas_{set,clear}_affinity()).
-3. Removed the hpx_thread_set_affinity() interface.
+libsync dependency has been removed
 
 Dependencies changes
 ---------------------------
-
-1. Building HPX-5 now requires a C++11 compiler by default.
-2. A dependency on the userspace rcu library has been added, and a version has 
-been included in the distribution.
-3. The distributed version of jemalloc has been upgraded to 4.2.1.
+1. The distribution version of hwloc has been upgraded to 1.11.4
+2. The distribution version of libcuckoo has been upgraded to 
+   59efe01436f462e5cd3a2616b802f1b8
+3. The distribution version of libfabric has been upgraded to 1.3.0
+4. uthash dependency has been removed - unordered_map is being used instead of 
+   uthash in the rebalancer code
 
 Bug Fixes
 -----------
-
-1. The libffi API now correctly detects complex support.
-2. The C++ API now correctly defines wrappers as inline.
-3. The SLURM -c option now correctly sets --hpx-threads.
-4. The PGAS cyclic arithmetic functions now correctly handle large blocks.
-5. The scheduler no longer violates MPI_THREAD_SERIALIZED during epoch shutdown 
-(see #65).
+1. lco_gencount unit test has been with fixed with odd number of localities > 1
+2. Fixed hpx_init(NULL, NULL) segfault with --enable-debug
+3. Fixed the typo in name hpx_calloc_registered
+4. Fixed hpx_run epoch failures with psm/openmpi 1.10.2
 
 Application Updates
 --------------------
-
 No application updates.
 
 Known bugs & limitations in the release
@@ -166,39 +119,45 @@ Known bugs & limitations in the release
 $ ./configure --with-hwloc=contrib --with-libffi=contrib CC=clang to configure. 
 gcc installed with brew or port is not supported. We believe this is due to 
 https://gcc.gnu.org/bugzilla/show_bug.cgi?format=multiple&id=60893.
-2. There are known regressions with TBBmalloc 4.4. Please use TBBmalloc 4.3 
+2. HPX-5 on Mac OS Sierra (10.12.1) with xcode version 8.1 toolchain with 
+ --enable-jemalloc results in external application execution error malloc: 
+*** malloc_zone_unregister() failed. This is due to 
+https://github.com/jemalloc/jemalloc/issues/420.
+3. There are known regressions with TBBmalloc 4.4. Please use TBBmalloc 4.3 
 or earlier.
-3. The Intel toolchain on Cray platforms requires the gcc 4.8 or 4.9 compiler 
+4. The Intel toolchain on Cray platforms requires the gcc 4.8 or 4.9 compiler 
 in the path (see https://www.nersc.gov/users/software/compilers/intel-fortran-c-
 and-c/intel-bug-reports/c-11-header-files-appear-missing-on-edison/).
-4. Clang versions prior to 3.6 (3.5.1 or earlier) contain regressions that 
+5. Clang versions prior to 3.6 (3.5.1 or earlier) contain regressions that 
 trigger runtime failures in HPX.
-5. The --map-by node:pe=1 flag will be incorrectly interpreted when using 
+6. The --map-by node:pe=1 flag will be incorrectly interpreted when using 
 openmpi version 1.10.0, and will spawn #cores HPX-5 worker threads. Use 
 --hpx-threads=1 to force 1 worker thread if necessary.
-6. LULESH induces a performance regression with jemalloc, prefer tbbmalloc for 
+7. LULESH induces a performance regression with jemalloc, prefer tbbmalloc for 
 it. When using jemalloc set MALLOC_CONF=lg_dirty_mult:-1 on the command 
 line—this resolves the performance regression but may cause memory exhaustion. 
 Also use hugetlbfs when available.
-7. Remote hpx_lco_get/wait operations do not propagate errors correctly.
-8. User registered signal handlers are overwritten by --hpx-dbg-waitonsig.
-9. lco_gencount unit test fails with odd number of localities > 1.
-10. HPX-5 does not currently account for dynamic changes in system 
+8. Remote hpx_lco_get/wait operations do not propagate errors correctly.
+9. User registered signal handlers are overwritten by --hpx-dbg-waitonsig.
+10. hpx_parcel_send and hpx_parcel_retain cannot be used in combination.
+11. HPX-5 does not currently account for dynamic changes in system 
 configuration. Systems that turn cores on and off may cause an unexpected 
 state during startup, which will result in triggering a guarding assert check.
+12. HPX-5 has to be compiled with CXXFLAGS="-O3 -fno-gcse" for aarch64 
+optimized code. Optimized code with clang does not have this requirement.
 
 General Information
 ---------------------
 
 If you plan to use HPX–5, we suggest starting with the latest released
-version (currently HPX–5 v3.1.0) which can be downloaded from
+version (currently HPX–5 v4.0.0) which can be downloaded from
 http://hpx.crest.iu.edu/download. If you would like to work with the
 cutting edge version of HPX–5, we suggest using the the `develop`
 branch at https://gitlab.crest.iu.edu/extreme/hpx. While we try to
 keep the develop branch stable and usable, sometimes new bugs trick
 their way into the code base - be aware!
 
-Documentation for the latest release of HPX–5 (currently v3.1.0) and
+Documentation for the latest release of HPX–5 (currently v4.0.0) and
 the previous versions can be accessed at
 http://hpx.crest.iu.edu/documentation. The FAQ can be found at
 http://hpx.crest.iu.edu/faqs_and_tutorials.
