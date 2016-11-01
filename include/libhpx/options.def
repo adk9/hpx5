@@ -76,7 +76,7 @@
 #endif
 
 #ifndef LIBHPX_OPT_STRING
-# define LIBHPX_OPT_STRING(group, id, init) LIBHPX_OPT(group, id, init, char*)
+# define LIBHPX_OPT_STRING(group, id, init) LIBHPX_OPT(group, id, init, const char*)
 # define _LIBHPX_OPT_STRING_UNDEF
 #endif
 

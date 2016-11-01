@@ -29,7 +29,7 @@ HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, echo, echo_handler, HPX_POINTER,
 int test_handler(void) {
   const char message[] = {'h', 'e', 'l', 'l', 'o', '\0'};
   hpx::system::broadcast(echo, message, sizeof(message));
-  hpx::exit(hpx::SUCCESS);
+  hpx::exit();
 }
 auto test = hpx::make_action(test_handler);
 }

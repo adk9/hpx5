@@ -1,8 +1,8 @@
 noinst_LTLIBRARIES = libinstrumentation.la
-noinst_HEADERS     = file.h
+noinst_HEADERS     = file.h metadata.h
 
 libinstrumentation_la_CPPFLAGS = -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
-libinstrumentation_la_CFLAGS   = $(LIBHPX_CFLAGS)
+libinstrumentation_la_CXXFLAGS   = $(LIBHPX_CXXFLAGS)
 
-libinstrumentation_la_SOURCES  = file_header.c instrumentation.c \
-                                 file.c console.c stats.c
+libinstrumentation_la_SOURCES  = file_header.cpp instrumentation.cpp \
+                                 file.cpp console.cpp stats.cpp

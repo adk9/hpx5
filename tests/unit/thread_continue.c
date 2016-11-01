@@ -22,7 +22,6 @@
 #include "hpx/hpx.h"
 #include "tests.h"
 #include "libhpx/locality.h"
-#include "libsync/queues.h"
 
 #define NUM_THREADS 5
 #define ARRAY_SIZE 100

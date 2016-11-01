@@ -43,7 +43,7 @@ int _fib_action(int n);
 hpx::Action<HPX_DEFAULT, HPX_ATTR_NONE, decltype(_fib_action), int> _fib;
 
 int _fib_action(int n) {
-  
+
   if (n < 2) {
     return _fib.thread_continue(n);
   }
@@ -52,16 +52,16 @@ int _fib_action(int n) {
   hpx::global_ptr<hpx::lco::Future<int>> f1 = hpx::lco::Future<int>::Alloc();
 
   int v1 = n - 1, v2 = n - 2;
-  
+
   _fib.call(HPX_HERE, f0.get(), v1);
   _fib.call(HPX_HERE, f1.get(), v2);
-  
+
   int rv1 = 0, rv2 = 0;
   std::vector<decltype(f0)> futures = {f0, f1};
   std::vector<int> rvars = {rv1, rv2};
-  
+
   hpx::lco::get_all(futures, rvars);
-  
+
   hpx::lco::dealloc(f0, nullptr);
   hpx::lco::dealloc(f1, nullptr);
 
@@ -73,25 +73,25 @@ int _fib_action(int n) {
 
 static int _fib_main_action(int n) {
   int fn = 0;                                   // fib result
-  
+
   hpx_time_t now = hpx_time_now();
 
   _fib.call_sync(HPX_HERE, fn, n);
   double elapsed = hpx_time_elapsed_ms(now)/1e3;
-  
+
   std::cout << "fib("<< n << ")=";
   std::cout << fn << std::endl;
   std::cout << "seconds: " << elapsed << std::endl;
   std::cout << "localities: " << HPX_LOCALITIES << std::endl;
   std::cout << "threads/locality: " << HPX_THREADS << std::endl;
-  hpx_exit(HPX_SUCCESS);
+  hpx::exit();
 }
 auto _fib_main = hpx::make_action(_fib_main_action);
 
 int main(int argc, char *argv[]) {
-  
+
   _fib._register(_fib_action);
-  
+
   int e = hpx::init(&argc, &argv);
   if (e) {
     std::cerr << "HPX: failed to initialize.\n";
@@ -126,9 +126,9 @@ int main(int argc, char *argv[]) {
 
   // run the main action
   _fib_main.run(n);
-  
+
   hpx::finalize();
-  
+
   return e;
 }
 

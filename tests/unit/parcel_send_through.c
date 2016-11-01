@@ -16,7 +16,6 @@
 #include <unistd.h>
 #include "hpx/hpx.h"
 #include "tests.h"
-#include "libsync/sync.h"
 
 static int _is_error(hpx_status_t s) {
   if (s != HPX_SUCCESS) {

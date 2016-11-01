@@ -48,5 +48,4 @@ static inline uint32_t tag_to_isir_bytes(int tag) {
   return parcel_size - offsetof(hpx_parcel_t, action);
 }
 
-
 #endif // LIBHPX_NETWORK_ISIR_PARCEL_UTILS_H

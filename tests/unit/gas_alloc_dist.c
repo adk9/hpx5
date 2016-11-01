@@ -70,14 +70,15 @@ static int _verify(_dist_type dist) {
   return 0;
 }
 
-static int _run_test(_dist_type dist, void *fn) {
+static int
+_run_test(_dist_type dist, void *fn)
+{
   int e = HPX_SUCCESS;
   int blocks = 2*HPX_LOCALITIES;
   hpx_addr_t data;
   if (dist == _user) {
     hpx_gas_dist_t distfn = (hpx_gas_dist_t)fn;
-    data = hpx_gas_alloc(blocks, blocksize, 0,
-                         distfn, HPX_GAS_ATTR_NONE);
+    data = hpx_gas_alloc(blocks, blocksize, 0, distfn, HPX_GAS_ATTR_NONE);
     dist = _cyclic;
   } else {
     hpx_addr_t (*alloc_fn)(size_t, size_t, uint32_t) = fn;
@@ -91,9 +92,8 @@ static int _run_test(_dist_type dist, void *fn) {
                                   hpx_lco_set_action, sum_lco, &data);
   int sum;
   hpx_lco_get(sum_lco, sizeof(sum), &sum);
-  hpx_lco_delete(sum_lco, HPX_NULL);
-
-  hpx_gas_free(data, HPX_NULL);
+  hpx_lco_delete_sync(sum_lco);
+  hpx_gas_free_sync(data);
 
   int expected = _verify(dist);
   if (sum == expected) {

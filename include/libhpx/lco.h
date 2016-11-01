@@ -15,7 +15,6 @@
 #define LIBHPX_LCO_H
 
 #include "hpx/hpx.h"
-#include <libsync/locks.h>
 
 typedef struct lco {
   tatas_lock_t lock;

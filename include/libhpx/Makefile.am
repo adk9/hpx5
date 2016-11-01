@@ -1,27 +1,30 @@
-noinst_HEADERS = \
-                 action.h \
+SUBDIRS = boot util gas
+
+noinst_HEADERS = action.h \
                  attach.h \
-                 bitmap.h \
-                 boot.h \
+                 CollectiveOps.h \
                  debug.h \
                  events.h \
-                 gas.h \
+                 GAS.h \
                  gpa.h \
                  instrumentation.h \
-                 lco.h \
+                 LCOOps.h \
                  locality.h \
                  memory.h \
-                 network.h \
+                 MemoryOps.h \
+                 Network.h \
                  padding.h \
-                 parcel_block.h \
                  parcel.h \
+                 ParcelOps.h \
+                 ParcelStringOps.h \
                  percolation.h \
                  process.h \
                  rebalancer.h \
-                 scheduler.h \
+                 Scheduler.h\
+                 StringOps.h \
                  system.h \
-                 termination.h \
                  time.h \
                  topology.h \
-                 utils.h \
-                 worker.h
+                 Worker.h
+
+

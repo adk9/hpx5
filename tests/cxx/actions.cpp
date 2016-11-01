@@ -35,7 +35,7 @@ using namespace std;
 
 namespace {
 int _check_pointer_handler(int *) {
-  hpx::exit(hpx::SUCCESS);
+  hpx::exit();
 }
 auto _check_pointer = hpx::make_action(_check_pointer_handler);
 
@@ -76,13 +76,13 @@ int main_act(int arg) {
   int r, i = 1; float f = 3.0; char c = 'b';
   mth.call_sync(HPX_HERE, r, i, f, c);
 
-  hpx::exit(hpx::SUCCESS);
+  hpx::exit();
 }
 auto ma = hpx::make_action(main_act);
 
 int spmd_handler(int, int *)
 {
-  return hpx::c::thread_continue(0);
+  hpx::exit();
 }
 auto spmd = hpx::make_action(spmd_handler);
 }

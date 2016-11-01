@@ -14,7 +14,7 @@
 #   LIBHPX_CPPFLAGS
 #   LIBHPX_CFLAGS
 #   LIBHPX_LIBADD
-#   LIBHPX_LIBS
+#   HPX_APPS_LDADD
 #   HPX_PC_PRIVATE_PKGS
 #   HPX_PC_PRIVATE_LIBS
 #
@@ -27,6 +27,7 @@ AC_DEFUN([_HAVE_HWLOC], [
 ])
 
 AC_DEFUN([_BUILD_HWLOC], [
+  AC_DEFINE([BUILD_HWLOC], [1], [We have hwloc support])
   build_hwloc=yes
  _HAVE_HWLOC
 ])
@@ -38,7 +39,7 @@ AC_DEFUN([_EMBEDDED], [
  LIBHPX_CFLAGS="$LIBHPX_CFLAGS $HWLOC_EMBEDDED_CFLAGS"
  LIBHPX_CPPFLAGS="$LIBHPX_CPPFLAGS $HWLOC_EMBEDDED_CPPFLAGS"
  LIBHPX_LIBADD="$LIBHPX_LIBADD $HWLOC_EMBEDDED_LDADD"
- LIBHPX_LIBS="$LIBHPX_LIBS $HWLOC_EMBEDDED_LIBS"
+ HPX_APPS_LDADD="$HPX_APPS_LDADD $HWLOC_EMBEDDED_LIBS"
 
  # Export the hwloc flags internally in this case, because some of our tests
  # depend on the LIBHPX headers directly and need to find hwloc.h. This isn't
@@ -61,7 +62,7 @@ AC_DEFUN([_LIB_HWLOC], [
  AC_CHECK_HEADER([hwloc.h],
    [AC_CHECK_LIB([hwloc], [hwloc_topology_init],
      [_HAVE_HWLOC
-      LIBHPX_LIBS="$LIBHPX_LIBS -lhwloc"
+      HPX_APPS_LDADD="$HPX_APPS_LDADD -lhwloc"
       HPX_PC_PRIVATE_LIBS="$HPX_PC_PRIVATE_LIBS -lhwloc"])])
 ])
 
@@ -72,7 +73,7 @@ AC_DEFUN([_PKG_HWLOC], [
  PKG_CHECK_MODULES([HWLOC], [$pkg],
    [_HAVE_HWLOC
     LIBHPX_CFLAGS="$LIBHPX_CFLAGS $HWLOC_CFLAGS"
-    LIBHPX_LIBS="$LIBHPX_LIBS $HWLOC_LIBS"
+    HPX_APPS_LDADD="$HPX_APPS_LDADD $HWLOC_LIBS"
     HPX_PC_PRIVATE_PKGS="$HPX_PC_PRIVATE_PKGS $pkg"],
    [have_hwloc=no])
 ])

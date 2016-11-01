@@ -24,6 +24,37 @@
 extern "C" {
 #endif
 
+#ifndef BUILD_HWLOC
+#define libhpx_hwloc_topology_t hwloc_topology_t
+#define libhpx_hwloc_obj_t hwloc_obj_t
+#define libhpx_hwloc_cpuset_t hwloc_cpuset_t
+#define libhpx_hwloc_set_cpubind hwloc_set_cpubind
+#define libhpx_hwloc_get_cpubind hwloc_get_cpubind
+#define libhpx_hwloc_bitmap_weight hwloc_bitmap_weight
+#define libhpx_hwloc_bitmap_alloc hwloc_bitmap_alloc
+#define libhpx_hwloc_bitmap_set hwloc_bitmap_set
+#define libhpx_hwloc_bitmap_set_range hwloc_bitmap_set_range
+#define libhpx_hwloc_bitmap_free hwloc_bitmap_free
+#define libhpx_hwloc_bitmap_singlify hwloc_bitmap_singlify
+#define libhpx_hwloc_topology_init hwloc_topology_init
+#define libhpx_hwloc_topology_load hwloc_topology_load
+#define libhpx_hwloc_topology_destroy hwloc_topology_destroy
+#define libhpx_hwloc_get_nbobjs_by_type hwloc_get_nbobjs_by_type
+#define libhpx_hwloc_get_next_obj_by_type hwloc_get_next_obj_by_type
+#define libhpx_hwloc_get_ancestor_obj_by_type hwloc_get_ancestor_obj_by_type
+#define LIBHPX_HWLOC_CPUBIND_THREAD HWLOC_CPUBIND_THREAD
+#define LIBHPX_HWLOC_OBJ_PU HWLOC_OBJ_PU
+#define LIBHPX_HWLOC_OBJ_CORE HWLOC_OBJ_CORE
+#define LIBHPX_HWLOC_OBJ_NUMANODE HWLOC_OBJ_NODE
+#define LIBHPX_HWLOC_CPUBIND_PROCESS HWLOC_CPUBIND_PROCESS
+#else
+#define LIBHPX_HWLOC_CPUBIND_THREAD LIBHPX_hwloc_CPUBIND_THREAD
+#define LIBHPX_HWLOC_OBJ_PU LIBHPX_hwloc_OBJ_PU
+#define LIBHPX_HWLOC_OBJ_CORE LIBHPX_hwloc_OBJ_CORE
+#define LIBHPX_HWLOC_OBJ_NUMANODE LIBHPX_hwloc_OBJ_NUMANODE
+#define LIBHPX_HWLOC_CPUBIND_PROCESS LIBHPX_hwloc_CPUBIND_PROCESS
+#endif
+
 /// Forward declarations
 /// @{
 struct config;
@@ -31,28 +62,28 @@ struct config;
 
 /// The "physical" topology object.
 typedef struct topology {
-  hwloc_topology_t  hwloc_topology; //!< The HWLOC topology object.
-  int                        ncpus; //!< The number of physical CPUs in the 
+  libhpx_hwloc_topology_t  hwloc_topology; //!< The HWLOC topology object.
+  int                        ncpus; //!< The number of physical CPUs in the
                                     //!< system.
-  
-  hwloc_obj_t                *cpus; //!< The HWLOC object corresponding to each 
+
+  libhpx_hwloc_obj_t         *cpus; //!< The HWLOC object corresponding to each
                                     //!< CPU.
-  
-  int                       ncores; //!< The number of physical cores in the 
+
+  int                       ncores; //!< The number of physical cores in the
                                     //!< system.
-  
+
   int                       nnodes; //!< The number of NUMA nodes in the system.
-  hwloc_obj_t          *numa_nodes; //!< The HWLOC object corresponding to each 
+  libhpx_hwloc_obj_t   *numa_nodes; //!< The HWLOC object corresponding to each
                                     //!< NUMA node.
-  
+
   int                cpus_per_node; //!< The number of CPUs per NUMA node
   int                 *cpu_to_core; //!< The CPU to core mapping.
   int                 *cpu_to_numa; //!< The CPU to NUMA node mapping.
   int               **numa_to_cpus; //!< The (reverse) NUMA node to cpus mapping.
-  hwloc_cpuset_t      allowed_cpus; //!< The initial CPU - HPX process binding.
-  hwloc_cpuset_t *cpu_affinity_map; //!< The CPU affinity map that maintains the
-                                    //!< CPU binding for a resource (numa-node, 
-                                    //!< core-id) depending on the global 
+  libhpx_hwloc_cpuset_t      allowed_cpus; //!< The initial CPU - HPX process binding.
+  libhpx_hwloc_cpuset_t *cpu_affinity_map; //!< The CPU affinity map that maintains the
+                                    //!< CPU binding for a resource (numa-node,
+                                    //!< core-id) depending on the global
                                     //!< affinity policy.
 } topology_t;
 

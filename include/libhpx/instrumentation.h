@@ -34,16 +34,8 @@ extern "C" {
 # define INST_IF(S) if (false)
 #endif
 
-typedef struct trace {
-  int type;
-  volatile bool active;
-  void (*start)(void);
-  void (*destroy)(void);
-  void (*vappend)(int type, int n, int id, ...);
-} trace_t;
-
 /// Initialize tracing. This is usually called in hpx_init().
-trace_t *trace_new(const config_t *cfg)
+void* trace_new(const config_t *cfg)
   HPX_NON_NULL(1) HPX_MALLOC;
 
 /// "Start" tracing. This is usually called in
@@ -51,24 +43,15 @@ trace_t *trace_new(const config_t *cfg)
 /// care of some things that must be done after initialization is
 /// complete,
 /// specifically action registration.
-static inline
-void trace_start(void *obj) {
-  if (obj) {
-    const trace_t *t = (trace_t*)obj;
-    t->start();
-  }
-}
+void trace_start(void *obj);
 
 /// Delete a trace object.
 ///
 /// @param      obj The trace object to delete.
-static inline void
-trace_destroy(void *obj) {
-  if (obj) {
-    trace_t *t = (trace_t*)obj;
-    t->destroy();
-  }
-}
+void trace_destroy(void *obj);
+
+/// vappend
+void trace_vappend(void* obj, int UNUSED, int n, int id, ...);
 
 static inline bool inst_trace_class(int type) {
   return config_trace_classes_isset(here->config, type);
@@ -90,7 +73,7 @@ int inst_check_vappend(int id, ...);
 #ifdef ENABLE_INSTRUMENTATION
 # define trace_append(type, ...) do {                           \
     if (inst_check_vappend(__VA_ARGS__)) {                      \
-      here->tracer->vappend(type, __HPX_NARGS(__VA_ARGS__) - 1, \
+      trace_vappend(here->tracer, type, __HPX_NARGS(__VA_ARGS__) - 1,   \
           __VA_ARGS__);                                         \
     }                                                           \
   } while (0)
@@ -98,17 +81,17 @@ int inst_check_vappend(int id, ...);
 # define trace_append(type, id, ...)
 #endif
 
+// Constructor for a "file" tracer object.
+void *trace_file_new(const config_t *cfg);
+
+// Constructor for a "console" tracer object.
+void *trace_console_new(const config_t *cfg);
+
+// Constructor for the "stats" tracer object.
+void *trace_stats_new(const config_t *cfg);
+
 #ifdef __cplusplus
 }
 #endif
-
-// Constructor for a "file" tracer object.
-trace_t *trace_file_new(const config_t *cfg);
-
-// Constructor for a "console" tracer object.
-trace_t *trace_console_new(const config_t *cfg);
-
-// Constructor for the "stats" tracer object.
-trace_t *trace_stats_new(const config_t *cfg);
 
 #endif

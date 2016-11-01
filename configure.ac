@@ -8,8 +8,8 @@
 # Research in Extreme Scale Technologies (CREST).
 
 AC_PREREQ([2.63])
-m4_define([LIBHPX_MAJOR], [3])
-m4_define([LIBHPX_MINOR], [1])
+m4_define([LIBHPX_MAJOR], [4])
+m4_define([LIBHPX_MINOR], [0])
 m4_define([LIBHPX_PATCH], [0])
 AC_INIT([hpx-5], LIBHPX_MAJOR.LIBHPX_MINOR.LIBHPX_PATCH, [hpx@indiana.edu])
 
@@ -64,12 +64,11 @@ LT_INIT([disable-shared])
 # LIBHPX_CXXFLAGS: CXXFLAGS required to build libhpx.la
 # LIBHPX_LIBADD: .la dependencies required to build libhpx.la
 # LIBHPX_LDFLAGS: -L and -Wl flags needed to link installed libhpx
-# LIBHPX_LIBS: -l dependencies required to link installed libhpx
 #
 # HPX_APPS_CPPFLAGS: CPPFLAGS required to link to build-tree libhpx.la
 # HPX_APPS_CFLAGS: CFLAGS required to link to build-tree libhpx.la
 # HPX_APPS_LDFLAGS: LDFLAGS required to link to build-tree libhpx.la
-# HPX_APPS_LDADD: .la libraries require to link build-tree libhpx.la
+# HPX_APPS_LDADD: .la and -l libraries require to link build-tree libhpx.la
 # HPX_APPS_DEPS: .la library dependendencies for apps
 #
 # HPX_PC_CFLAGS: C and CPP flags (typically just -D) for installed libhps.so
@@ -83,6 +82,9 @@ LT_INIT([disable-shared])
 LIBHPX_CPPFLAGS="-I\$(srcdir) -I\$(top_builddir)/include"
 HPX_APPS_CPPFLAGS="-I\$(srcdir) -I\$(top_builddir)/include"
 
+# Prefer the statically built .la libraries when they're available.
+HPX_APPS_LDFLAGS="-static-libtool-libs"
+
 HPX_CONFIG_COMPILER
 HPX_CONFIG_HOST
 HPX_PE_ENV
@@ -92,7 +94,7 @@ HPX_PE_ENV
 # be on the link line too, so add them for pkg-config static linking.
 AX_PTHREAD(
  [LIBHPX_CFLAGS="$LIBHPX_CFLAGS $PTHREAD_CFLAGS"
-  LIBHPX_LIBS="$LIBHPX_LIBS $PTHREAD_LIBS"
+  LIBHPX_APPS_LDADD="LIBHPX_APPS_LDADD $PTHREAD_LIBS"
   HPX_PC_PRIVATE_LIBS="$PTHREAD_CFLAGS $HPX_PC_PRIVATE_LIBS $PTHREAD_LIBS"],
  [AC_MSG_ERROR([Could not find pthread implementation])])
 
@@ -137,7 +139,6 @@ AS_IF([test "x$enable_parallel_config" != xno],
 #   LIBHPX_CXXFLAGS
 #   LIBHPX_LIBADD
 #   LIBHPX_LDFLAGS
-#   LIBHPX_LIBS
 #
 #   HPX_APPS_CPPFLAGS
 #   HPX_APPS_CFLAGS
@@ -153,18 +154,18 @@ AS_IF([test "x$enable_parallel_config" != xno],
 HPX_CONFIG_URCU([contrib/userspace-rcu], [$want_urcu])
 HPX_CONFIG_HPXPP
 HPX_CONFIG_PHOTON([contrib/photon], [photon])
-HPX_CONFIG_MPI([ompi])
+HPX_CONFIG_MPI([ompi-cxx])
 HPX_CONFIG_PMI([cray-pmi])
 HPX_CONFIG_JEMALLOC([contrib/jemalloc], ["jemalloc >= 4.0"]) 
 HPX_CONFIG_TBBMALLOC
 
+HWLOC_SET_SYMBOL_PREFIX(libhpx_)
 HPX_CONFIG_HWLOC_PRE_SETUP_CORE
 HWLOC_SETUP_CORE([contrib/hwloc])
 HPX_CONFIG_HWLOC_POST_SETUP_CORE
 HPX_CONFIG_HWLOC([hwloc])
 
 HPX_CONFIG_HUGETLBFS([hugetlbfs])
-HPX_CONFIG_UTHASH([contrib/uthash])
 HPX_CONFIG_VALGRIND([contrib/valgrind])
 HPX_CONFIG_LIBFFI([contrib/$libffi_contrib_dir], [libffi])
 HPX_CONFIG_AGAS
@@ -210,7 +211,6 @@ AC_SUBST(LIBHPX_CXXFLAGS)
 AC_SUBST(LIBHPX_CCASFLAGS)
 AC_SUBST(LIBHPX_LDFLAGS)
 AC_SUBST(LIBHPX_LIBADD)
-AC_SUBST(LIBHPX_LIBS)
 
 AC_SUBST(HPX_PC_CFLAGS)
 AC_SUBST(HPX_PC_PUBLIC_LIBS)

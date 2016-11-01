@@ -19,6 +19,10 @@
 #include <hpx/attributes.h>
 #include <libhpx/config.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum {
   LIBHPX_ENOMEM = -(ENOMEM),
   LIBHPX_EINVAL = -(EINVAL),
@@ -61,16 +65,12 @@ void libhpx_print_version(void)
 void libhpx_get_version(int version[3])
   HPX_PUBLIC;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /// Start the instramentation infrastructure
-void libhpx_inst_phase_begin() 
+void libhpx_inst_phase_begin()
   HPX_PUBLIC;
 
 /// Stop the instramentation infrastructure
-void libhpx_inst_phase_end() 
+void libhpx_inst_phase_end()
   HPX_PUBLIC;
 
 /// Check if the tracer is currently active

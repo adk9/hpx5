@@ -117,7 +117,7 @@ static int _main_action(uint64_t *args, size_t size) {
 
   free(lyst);
   free(lystbck);
-  hpx_exit(HPX_SUCCESS);
+  hpx_exit(0, NULL);
 }
 
 int main (int argc, char *argv[])
@@ -162,7 +162,7 @@ int main (int argc, char *argv[])
   }
 
   // Run the main action
-  e = hpx_run(&_main, &NUM, sizeof(NUM));
+  e = hpx_run(&_main, NULL, &NUM, sizeof(NUM));
   hpx_finalize();
   return e;
 }

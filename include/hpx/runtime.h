@@ -47,7 +47,7 @@ int hpx_init(int *argc, char ***argv)
 void hpx_finalize()
   HPX_PUBLIC;
 
-/// Start an HPX main process.
+/// Start an HPX epoch.
 ///
 /// This collective creates an HPX "main" process, and calls the given action @p
 /// entry in the context of this process.
@@ -56,47 +56,59 @@ void hpx_finalize()
 ///   diffusing computation.
 /// * The process does not use termination detection and must be terminated
 ///   through a single explicit call to hpx_exit().
-/// * On termination, it deletes the main process and returns the status
-///   returned by hpx_exit().
-///OB
+/// * On termination, it deletes the main process and broadcasts the buffer
+///   provided to hpx_exit().
+///
 /// @param        entry An action to execute.
+/// @param[out]     out A user buffer for output (may be NULL).
 /// @param        nargs The number of arguments to pass to @p entry.
 /// @param          ... Pointers to the arguments for @p entry.
 ///
-/// @returns            The status code passed to hpx_exit() upon termination.
-int _hpx_run(hpx_action_t *entry, int nargs, ...)
+/// @returns            An error code if HPX encountered an internal error.
+int _hpx_run(hpx_action_t *entry, void *out, int nargs, ...)
   HPX_PUBLIC;
 
-#define hpx_run(entry, ...)                                 \
-  _hpx_run(entry, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
+#define hpx_run(entry, out, ...)                                    \
+  _hpx_run(entry, out, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
-/// Start an HPX main process.
+/// Start an HPX SPMD epoch.
 ///
 /// This creates an HPX "main" process, and calls the given action @p entry in
-/// the context of this process.
+/// the context of this process. The SPMD epoch terminates when an instance of
+/// hpx_exit() occurs at each participating locality.
 ///
 /// * The @p entry action is invoked at startup on every locality.
-/// * The process will terminate implicitly when all of the @p entry threads
-///   terminate completely. Outstanding asynchronous operations may result in
-///   undefined behavior.
-/// * On termination the main process is deleted and the value returned will be
-///   zero for success and non-zero for failure.
+/// * The process will terminate when all of the participating localities call
+///   hpx_exit(). Outstanding asynchronous operations may result in undefined
+///   behavior.
+/// * On termination the value provided at hpx_exit() for each locality will be
+///   copied to the corresponding @p out buffer at that locality.
 ///
 /// @param        entry An action to execute.
+/// @param[out]     out A user buffer for output (may be NULL).
 /// @param        nargs The number of arguments to pass to @p entry.
 /// @param          ... Pointers to the arguments for @p entry.
 ///
-/// @returns            Zero for success and non-zero for failure.
-int _hpx_run_spmd(hpx_action_t *entry, int nargs, ...)
+/// @returns            An error code if HPX encountered an internal error.
+int _hpx_run_spmd(hpx_action_t *entry, void *out, int nargs, ...)
   HPX_PUBLIC;
 
-#define hpx_run_spmd(entry, ...)                                    \
-  _hpx_run_spmd(entry, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
+#define hpx_run_spmd(entry, out, ...)                                   \
+  _hpx_run_spmd(entry, out, __HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
-/// Exit the HPX runtime.
+/// Exit the HPX runtime from an epoch.
 ///
-/// This causes the hpx_run() in the main native thread to return the @p
-/// code. It is safe to call hpx_run() again after hpx_exit().
+/// * Diffuse Epochs (hpx_run())
+///
+///   This causes the hpx_run() in the main native thread to return the @p out
+///   value which will be broadcast to all participants in the hpx_run()
+///   collective. It is safe to call hpx_run() again after hpx_exit().
+///
+/// * SPMD Epochs (hpx_run_spmd())
+///
+///   This causes the hpx_run_spmd() calls in the main native threads to return
+///   the @p out buffer produced locally. If an @p out value is provided it will be
+///   returned locally. It is safe to call hpx_run() again after hpx_exit().
 ///
 /// This call does not imply that the HPX runtime has shut down. In particular,
 /// system threads may continue to run and execute HPX high-speed network
@@ -113,8 +125,9 @@ int _hpx_run_spmd(hpx_action_t *entry, int nargs, ...)
 ///       consumption as a result of this call. In particular, runtime-spawned
 ///       system threads should be suspended.
 ///
-/// @param         code A status code to be returned by hpx_run().
-void hpx_exit(int code)
+/// @param        bytes The size of the data to be returned (may be 0).
+/// @param          out A (possibly NULL) pointer to the data to be returned.
+void hpx_exit(size_t bytes, const void *out)
   HPX_PUBLIC HPX_NORETURN;
 
 /// Abort the HPX runtime.

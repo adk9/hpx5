@@ -16,31 +16,16 @@
 
 #include <hpx/hpx.h>
 
-/// SPMD epoch management.
-/// @{
-///
-/// ParalleX processes are envisioned as diffusive entitieis, where execution
-/// spreads through the system from a single thread, however many current
-/// applications benefit from a SPMD model where execution starts as a set of
-/// symmetric top-level actions and terminates when these actions collectively
-/// terminate.
-///
-/// Termination detection in such a setting can be performed without credit
-/// recovery, but still requires a notion of quiescence. HPX-5 SPMD processes
-/// are only available from top-level hpx_run_spmd() epochs, and as such we can
-/// use an extremely simple form of centralized reference counting for
-/// quiescence.
-///
-/// @todo: SPMD behavior should be part of the process namespace, and available
-///        for any process launch.
-///
-void spmd_init(void);
-void spmd_fini(void);
-extern HPX_ACTION_DECL(spmd_epoch_terminate);
-/// @}
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /// Recover any credit associated with a parcel.
 int process_recover_credit(hpx_parcel_t *p)
   HPX_NON_NULL(1);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIBHPX_PROCESS_H

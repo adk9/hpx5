@@ -23,10 +23,9 @@ AC_DEFUN([HPX_CONFIG_LIBCUCKOO], [
  AS_IF([test "x$required" == xyes], 
    [#lubcuckoo uses ceil and hence requires libm
 
-   AC_CHECK_LIB([m], [log,ceil])
-   HPX_PC_PRIVATE_LIBS="$HPX_PC_PRIVATE_LIBS -lm"
-   LIBHPX_LIBS="$LIBHPX_LIBS -lm"
-   HPX_APPS_LIBS="$HPX_APPS_LIBS -lm"
+    AC_CHECK_LIB([m], [log,ceil])
+    HPX_PC_PRIVATE_LIBS="$HPX_PC_PRIVATE_LIBS -lm"
+    HPX_APPS_LDADD="$HPX_APPS_LDADD -lm"
 
     # libcuckoo requires C++11, and hpx.h uses gnu extensions, so ask for [ext]
     HPX_MERGE_STATIC_SHARED([LIBCUCKOO_CARGS])

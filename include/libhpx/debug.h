@@ -16,6 +16,11 @@
 
 #include <hpx/hpx.h>
 #include <libhpx/config.h>
+#include "libhpx/locality.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #ifdef ENABLE_DEBUG
 # define DEBUG 1
@@ -47,16 +52,21 @@ void dbg_error_internal(unsigned line, const char *filename, const char *func,
 
 #ifdef ENABLE_DEBUG
 
+# ifdef __cplusplus
+# define dbg_assert_str(e, ...) assert(e)
+# define dbg_assert(e) dbg_assert_str(e, "\n")
+# else
 // NB: this is complex for clang's benefit, so it can tell that we're asserting
 // e when doing static analysis
-# define dbg_assert_str(e, ...)                         \
+#  define dbg_assert_str(e, ...)                        \
   do {                                                  \
     if (!(e)) {                                         \
       dbg_error("assert failed: ("#e") "__VA_ARGS__);   \
     }                                                   \
   } while (0)
 
-# define dbg_assert(e) dbg_assert_str(e, "\n")
+#  define dbg_assert(e) dbg_assert_str(e, "\n")
+# endif
 #else
 # define dbg_assert_str(e, ...) assert(e)
 # define dbg_assert(e) assert(e)
@@ -73,7 +83,6 @@ void log_internal(unsigned line, const char *filename, const char *func,
   HPX_PRINTF(4, 5);
 
 #ifdef ENABLE_LOGGING
-# include "libhpx/locality.h"
 # define log_level(level, ...)                                 \
   do {                                                         \
     if (here->config &&                                        \
@@ -105,5 +114,9 @@ int log_error_internal(unsigned line, const char *filename, const char *func,
 
 #define log_error(...)                                                  \
   log_error_internal(__LINE__, __FILE__, __func__, __VA_ARGS__)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIBHPX_DEBUG_H

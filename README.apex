@@ -38,19 +38,33 @@ for APEX are:
 
 -DCMAKE_INSTALL_PREFIX=<some path to an installation location>
 
-1. Get the code:
-wget https://github.com/khuck/xpress-apex/archive/v0.5.tar.gz
-tar -xvzf v0.5.tar.gz
+1. Get the code (two methods):
+
+wget https://github.com/khuck/xpress-apex/archive/v1.0.tar.gz
+tar -xvzf v1.0.tar.gz
+
+...or...
+
+git clone https://github.com/khuck/xpress-apex.git
+cd xpress-apex
+git checkout v1.0
 
 2. Enter the repo directory, make a build directory:
 
-cd xpress-apex-0.5
+cd xpress-apex-1.0
 mkdir build
 cd build
 
 3. configure using CMake:
 
-cmake -DCMAKE_INSTALL_PREFIX=<installation-path> ..
+cmake -DCMAKE_INSTALL_PREFIX=<installation-path> \
+   -DUSE_BFD=TRUE -DUSE_ACTIVEHARMONY=TRUE -DUSE_OTF2=TRUE ..
+
+Enabling BFD (binutils), Active Harmony and OTF2 will enable the 
+most useful and relevant options for use with HPX.  If the 
+libraries are not found by CMake, the build will automatically
+download and build them. (See the APEX documentation for more
+details: https://github.com/khuck/xpress-apex)
 
 4. build with make:
 
@@ -60,7 +74,7 @@ make doc
 make install
 
 Other CMake setting, depending on you needs can be set:
-https://github.com/khuck/xpress-apex/blob/master/README.rst
+https://github.com/khuck/xpress-apex
 
 -----------------------------------------------------
 3) Build HPX

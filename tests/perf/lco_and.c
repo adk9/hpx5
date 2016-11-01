@@ -52,7 +52,7 @@ static int _empty_action(hpx_addr_t *args, size_t size) {
   return HPX_SUCCESS;
 }
 
-static int _main_action(int *args, size_t size) {
+static int _main_action(void) {
   printf(HEADER);
   printf("# Latency in (ms)\n");
   printf("%s%*s%*s%*s\n", "# Iters " , FIELD_WIDTH, "Init time ",
@@ -92,13 +92,13 @@ static int _main_action(int *args, size_t size) {
     hpx_lco_delete(done, HPX_NULL);
   }
 
-  hpx_exit(HPX_SUCCESS);
+  hpx_exit(0, NULL);
 }
 
 int main(int argc, char *argv[]) {
   // register the actions
   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _lco_set, _lco_set_action, HPX_POINTER, HPX_SIZE_T);
-  HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _main, _main_action, HPX_POINTER, HPX_SIZE_T);
+  HPX_REGISTER_ACTION(HPX_DEFAULT, 0, _main, _main_action);
   HPX_REGISTER_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _empty, _empty_action, HPX_POINTER, HPX_SIZE_T);
 
   if (hpx_init(&argc, &argv)) {
@@ -120,7 +120,7 @@ int main(int argc, char *argv[]) {
   }
 
   // run the main action
-  int e = hpx_run(&_main, NULL, 0);
+  int e = hpx_run(&_main, NULL);
   hpx_finalize();
   return e;
 }

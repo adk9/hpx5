@@ -90,7 +90,7 @@ static int _main_action(int levels, int work) {
     free(buf);
   }
 
-  hpx_exit(0);
+  hpx_exit(0, NULL);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _main, _main_action, HPX_INT, HPX_INT);
 
@@ -148,7 +148,7 @@ int main(int argc, char *argv[argc]) {
     return -1;
   }
 
-  int e = hpx_run(&_main, &levels, &work);
+  int e = hpx_run(&_main, NULL, &levels, &work);
   hpx_finalize();
   return e;
 }

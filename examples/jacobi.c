@@ -11,21 +11,22 @@
 //  Extreme Scale Technologies (CREST).
 // =============================================================================
 
+#include "hpx/hpx.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include "hpx/hpx.h"
-
 
 #define BSIZE sizeof(double)
 #define IDX(base, offset) \
   hpx_addr_add((base), (offset)*sizeof(double), sizeof(double))
 
 // filename to dump the output to.
-static char *fname;
+static char *_fname;
 
-static void _usage(FILE *f, int error) {
+static void
+_usage(FILE *f, int error)
+{
   fprintf(f, "Usage: jacobi [options]\n"
           "\t-n, number of discretized points\n"
           "\t-s, number of steps\n"
@@ -36,8 +37,9 @@ static void _usage(FILE *f, int error) {
   exit(error);
 }
 
-static hpx_action_t _op;
-static int _op_handler(double *lu, int i, double h2, hpx_addr_t u, hpx_addr_t f) {
+static int
+_op_handler(double *lu, int i, double h2, hpx_addr_t u, hpx_addr_t f)
+{
   double left, right, lf;
 
   hpx_gas_memget_sync(&left, IDX(u,i-1), sizeof(left));
@@ -53,7 +55,9 @@ static HPX_ACTION(HPX_DEFAULT, HPX_PINNED, _op, _op_handler,
 // discretized by n+1 equally spaced mesh points on [0,1].
 // u is subject to Dirichlet boundary conditions specified in
 // the u[0] and u[n] entries of the initial vector.
-void jacobi(int nsteps, int n, hpx_addr_t u, hpx_addr_t f) {
+static void
+_jacobi(int nsteps, int n, hpx_addr_t u, hpx_addr_t f)
+{
   double h  = 1.0/n;
   double h2 = h*h;
   hpx_addr_t utmp = hpx_gas_alloc_local((n+1), BSIZE, 0);
@@ -79,7 +83,9 @@ void jacobi(int nsteps, int n, hpx_addr_t u, hpx_addr_t f) {
   hpx_gas_free(utmp, HPX_NULL);
 }
 
-void write_solution(int n, hpx_addr_t u, const char *fname) {
+static void
+_write_solution(int n, hpx_addr_t u, const char *fname)
+{
   double h = 1.0/n;
   FILE* fp = fopen(fname, "w+");
   double lu;
@@ -90,12 +96,12 @@ void write_solution(int n, hpx_addr_t u, const char *fname) {
   fclose(fp);
 }
 
-static hpx_action_t _jacobi_main;
-static int _jacobi_main_handler(int n, int nsteps) {
-
+static int
+_jacobi_main_handler(int n, int nsteps)
+{
   double h = 1.0/n;
 
-  // allocate and initialize arrays 
+  // allocate and initialize arrays
   hpx_addr_t u = hpx_gas_calloc_local_attr((n+1), BSIZE, 0, HPX_GAS_ATTR_LB);
   hpx_addr_t f = hpx_gas_alloc_local((n+1), BSIZE, 0);
   hpx_addr_t and = hpx_lco_and_new(n+1);
@@ -109,7 +115,7 @@ static int _jacobi_main_handler(int n, int nsteps) {
   printf("starting jacobi iterations...\n");
 
   hpx_time_t start = hpx_time_now();
-  jacobi(n, nsteps, u, f);
+  _jacobi(n, nsteps, u, f);
   double elapsed = hpx_time_elapsed_ms(start)/1e3;
 
   // run the solver
@@ -118,19 +124,20 @@ static int _jacobi_main_handler(int n, int nsteps) {
   printf("seconds: %.7f\n", elapsed);
 
   // write the results
-  if (fname) {
-    write_solution(n, u, fname);
+  if (_fname) {
+    _write_solution(n, u, _fname);
   }
 
   hpx_gas_free(f, HPX_NULL);
   hpx_gas_free(u, HPX_NULL);
-  hpx_exit(HPX_SUCCESS);
+  hpx_exit(0, NULL);
 }
 static HPX_ACTION(HPX_DEFAULT, 0, _jacobi_main, _jacobi_main_handler,
                   HPX_INT, HPX_INT);
 
-int main(int argc, char **argv) {
-
+int
+main(int argc, char **argv)
+{
   int e = hpx_init(&argc, &argv);
   if (e) {
     fprintf(stderr, "failed to initialize HPX.\n");
@@ -151,7 +158,7 @@ int main(int argc, char **argv) {
        nsteps = atoi(optarg);
        break;
       case 'f':
-       fname = optarg;
+       _fname = optarg;
        break;
       case 'h':
        _usage(stdout, EXIT_SUCCESS);
@@ -166,7 +173,7 @@ int main(int argc, char **argv) {
   argv += optind;
 
   // run the main action
-  e = hpx_run(&_jacobi_main, &n, &nsteps);
+  e = hpx_run(&_jacobi_main, NULL, &n, &nsteps);
   hpx_finalize();
   return e;
 }

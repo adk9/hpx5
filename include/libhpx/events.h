@@ -26,8 +26,7 @@ extern "C" {
 #include <libhpx/action.h>
 #include <libhpx/config.h>
 #include <libhpx/instrumentation.h>
-#include <libhpx/parcel.h>
-#include <libhpx/worker.h>
+//#include <libhpx/parcel.h>
 
 /// Tracing events.
 ///

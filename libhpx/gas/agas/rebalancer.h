@@ -14,30 +14,16 @@
 #ifndef LIBHPX_GAS_AGAS_REBALANCER_H
 #define LIBHPX_GAS_AGAS_REBALANCER_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <hpx/hpx.h>
-    
-// Block Statistics Table (BST) API
-void *bst_new(size_t size);
-void bst_delete(void *bst);
-void bst_upsert(void *obj, uint64_t block, uint64_t *counts, uint64_t *sizes);
-size_t bst_serialize_to_parcel(void* obj, hpx_parcel_t **parcel);
 
 // AGAS Graph Partitioning API
 hpx_addr_t agas_graph_new(void);
 void agas_graph_delete(hpx_addr_t graph);
-int agas_graph_construct(hpx_addr_t graph, uint64_t *data, size_t size,
+int agas_graph_construct(hpx_addr_t graph, void* input, size_t size,
                          int owner);
 size_t agas_graph_partition(void *g, int nparts, uint64_t **partition);
 size_t agas_graph_get_vtxs(void *graph, uint64_t **vtxs);
-void agas_graph_get_owner_entry(void *graph, int id, int *start,
+void agas_graph_get_owner_entry(void *graph, unsigned id, int *start,
                                 int *end, int *owner);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif // LIBHPX_GAS_AGAS_REBALANCER_H

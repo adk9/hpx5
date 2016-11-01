@@ -346,7 +346,7 @@ void _main_action(guppie_config_t *cfg, std::size_t size) {
          (j <= 0.01 * cfg->tabsize) ? "passed" : "failed");
 
   hpx::free(cfg->table);
-  hpx::exit(HPX_SUCCESS);
+  hpx::exit();
 }
 // auto _main = hpx::make_action(_main_action);
 auto _main = hpx::Action<HPX_DEFAULT, HPX_MARSHALLED, decltype(_main_action)>(

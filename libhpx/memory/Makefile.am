@@ -3,24 +3,17 @@ noinst_LTLIBRARIES	  = libmemory.la
 
 # libboot files and flags
 libmemory_la_CPPFLAGS = -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
-libmemory_la_CFLAGS   = $(LIBHPX_CFLAGS)
-libmemory_la_SOURCES  = glue.c
+libmemory_la_CXXFLAGS = $(LIBHPX_CXXFLAGS)
+libmemory_la_SOURCES  = glue.cpp
 
 if HAVE_NETWORK
 if HAVE_JEMALLOC
-libmemory_la_SOURCES += jemalloc.c
+libmemory_la_SOURCES += jemalloc.cpp
 endif
 endif
 
-# Completely separate CXX dependency here via intermediate libtool library,
-# otherwise we get libstdc++ dependency in libhpx even if we don't compile any
-# C++ files (it uses CXXLD to link libmemory).
 if HAVE_NETWORK
 if HAVE_TBBMALLOC
-noinst_LTLIBRARIES	       += libtbbmalloc.la
-libtbbmalloc_la_CPPFLAGS	= -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
-libtbbmalloc_la_CXXFLAGS 	= $(LIBHPX_CXXFLAGS)
-libtbbmalloc_la_SOURCES  	= tbbmalloc.cc
-libmemory_la_LIBADD             = libtbbmalloc.la
+libmemory_la_SOURCES += tbbmalloc.cpp
 endif
 endif

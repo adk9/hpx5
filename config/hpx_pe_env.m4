@@ -24,7 +24,7 @@ AC_DEFUN([_HPX_DO_PE_PGI], [
 ])
 
 AC_DEFUN([_HPX_DO_PE_CLANG], [
- LIBHPX_CPPFLAGS="$LIBHPX_CPPFLAGS -Wno-gnu-zero-variadic-macro-arguments"
+ LIBHPX_CPPFLAGS="$LIBHPX_CPPFLAGS -Wno-gnu-zero-variadic-macro-arguments -Wno-unused-private-field"
  hpx_pe_env_cflags_pedantic="-pedantic"
  hpx_pe_env_cflags_wall="-Wall"
 ])

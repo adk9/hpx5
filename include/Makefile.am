@@ -17,19 +17,6 @@ nobase_include_HEADERS = hpx/action.h \
                          hpx/topology.h \
                          hpx/types.h \
                          libapex/apex_global_hpx.h \
-                         libsync/backoff.h \
-                         libsync/barriers.h \
-                         libsync/cptr.h \
-                         libsync/deques.h \
-                         libsync/generic.h \
-                         libsync/locks.h \
-                         libsync/lockable_ptr.h \
-                         libsync/queues.h \
-                         libsync/sync.h \
-                         libsync/types.def \
-                         libsync/gcc/sync.h \
-                         libsync/gcc/atomic.h \
-                         libsync/craycc/sync.h \
                          libhpx/libhpx.h \
                          libhpx/config.h \
                          libhpx/options.def

@@ -23,6 +23,10 @@
 
 #include <libhpx/events.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum {
   AS_REGISTERED = 0,
   AS_GLOBAL,
@@ -274,5 +278,9 @@ static inline void cyclic_free(void *ptr)  {
   as_free(AS_CYCLIC, ptr);
   EVENT_MEMORY_FREE_END(AS_CYCLIC);
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIBHPX_MEMORY_H

@@ -13,8 +13,6 @@
 
 #include <unistd.h>
 #include "hpx/hpx.h"
-#include "libsync/sync.h"
-#include "libsync/barriers.h"
 #include "tests.h"
 
 static barrier_t *barrier = NULL;

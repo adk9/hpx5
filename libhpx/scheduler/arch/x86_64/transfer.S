@@ -64,12 +64,11 @@ LABEL(thread_transfer)
         CFA_ADJ_OFFSET(8)
         fnstcw 4(%rsp)
         stmxcsr	(%rsp)
-        mov %rsi, %rbx                          // cont
-        mov (%rdi), %rsi                        // p->stack
-        mov (%rsi), %rsi                        // p->stack->sp
-        xchg %rsp, %rsi
-	CFA_REGISTER(rsi)
-        call *%rbx                              // cont(p, sp, env)
+        mov (%rdi), %rcx                        // p->stack
+        mov (%rcx), %rcx                        // p->stack->sp
+        xchg %rsp, %rcx
+	CFA_REGISTER(rcx)
+        call PLT_SYMBOL(worker_checkpoint)
 	CFA_DEF(rsp,64)
         ldmxcsr	(%rsp)
         fldcw 4(%rsp)

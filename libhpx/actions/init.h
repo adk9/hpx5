@@ -14,7 +14,8 @@
 #ifndef LIBHPX_ACTIONS_INIT_H
 #define LIBHPX_ACTIONS_INIT_H
 
-#include <hpx/hpx.h>
+#include "libhpx/action.h"
+#include "hpx/hpx.h"
 
 void action_init(action_t *action, int n, va_list *args);
 

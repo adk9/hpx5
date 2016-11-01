@@ -14,13 +14,16 @@
 #ifndef LIBHPX_ACTION_H
 #define LIBHPX_ACTION_H
 
-#ifdef __cplusplus
-extern "C" {
+#ifndef __cplusplus
+#error
 #endif
 
-#include <stdarg.h>
-#include <stdint.h>
-#include <hpx/hpx.h>
+
+#include "hpx/hpx.h"
+#include <cstdarg>
+#include <cstdint>
+
+extern "C" {
 
 /// Generic action handler type.
 typedef void (*handler_t)(void);
@@ -227,11 +230,11 @@ typedef struct {
 /// their records contain the union of all of the fields that all of the
 /// different actions might need.
 typedef struct {
-  const parcel_management_vtable_t *parcel_class; //!< The parcel management 
+  const parcel_management_vtable_t *parcel_class; //!< The parcel management
                                                   //!< vtable pointer.
-  const calling_convention_vtable_t  *call_class; //!< The calling convention 
+  const calling_convention_vtable_t  *call_class; //!< The calling convention
                                                   //!< vtable pointer.
-  void (*finish)(void*);                          //!< Called to finish 
+  void (*finish)(void*);                          //!< Called to finish
                                                   //!< registration.
   void (*fini)(void*);                            //!< The destructor.
 
@@ -532,9 +535,6 @@ static inline bool action_is_opencl(hpx_action_t id) {
   }                                                                  \
   static HPX_CONSTRUCTOR void _register##_##id(void)
 
-
-#ifdef __cplusplus
 }
-#endif
 
 #endif // LIBHPX_ACTION_H

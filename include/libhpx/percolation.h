@@ -28,7 +28,7 @@ extern "C" {
 
 typedef struct {
   const char *(*id)(void);
-  void (*delete)(void*);
+  void (*deallocate)(void*);
   void *(*prepare)(const void*, const char *, const char *);
   int (*execute)(const void*, void *, int, void **, size_t *);
   void (*destroy)(const void*, void *);
@@ -40,33 +40,19 @@ percolation_t *percolation_new(void);
 /// Percolation  interface.
 /// @{
 
-/// Delete a percolation object.
-static inline void percolation_delete(void *obj) {
-  percolation_t *percolation = obj;
-  percolation->delete(percolation);
-}
+// /// Delete a percolation object.
+void percolation_deallocate(void *obj);
 
 /// Percolate an action to be executed later on a device.
-static inline
 void *percolation_prepare(const void *obj, const char *key,
-                          const char *kernel) {
-  const percolation_t *percolation = obj;
-  return percolation->prepare(percolation, key, kernel);
-}
+                          const char *kernel);
 
 /// Execute a percolation object on an available device.
-static inline
 int percolation_execute(const void *obj, void *o, int n, void *vargs[],
-                        size_t sizes[]) {
-  const percolation_t *percolation = obj;
-  return percolation->execute(percolation, o, n, vargs, sizes);
-}
+                        size_t sizes[]);
 
 /// Destroy or release the state associated with a percolation object.
-static inline void percolation_destroy(const void *obj, void *o) {
-  const percolation_t *percolation = obj;
-  percolation->destroy(percolation, o);
-}
+void percolation_destroy(const void *obj, void *o);
 
 /// An action to launch OpenCL kernels.
 extern HPX_ACTION_DECL(percolation_execute_action);

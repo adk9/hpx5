@@ -1,4 +1,4 @@
-// =============================================================================
+// ==================================================================-*- C++ -*-
 //  High Performance ParalleX Library (libhpx)
 //
 //  Copyright (c) 2013-2016, Trustees of Indiana University,
@@ -27,5 +27,20 @@
 /// Alignment bytes to a a align=2^k alignment.
 #define ALIGN(bytes, align)                                 \
   (((align) - ((bytes) & ((align) - 1))) & ((align) - 1))
+
+#ifdef __cplusplus
+#include <cstddef>
+namespace libhpx {
+namespace util {
+inline constexpr size_t PadToCacheline(size_t bytes) {
+  return _BYTES(HPX_CACHELINE_SIZE, bytes);
+}
+
+inline constexpr size_t align(size_t bytes, size_t align) {
+  return ALIGN(bytes, align);
+}
+}
+}
+#endif
 
 #endif // LIBHPX_PADDING_H

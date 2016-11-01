@@ -1,6 +1,6 @@
 SUBDIRS       = lz4
 DIST_SUBDIRS  = libffi hwloc photon libcuckoo lz4
-EXTRA_DIST    = jemalloc libffi-mic uthash valgrind
+EXTRA_DIST    = jemalloc libffi-mic valgrind
 
 if BUILD_LIBFFI
 SUBDIRS      += $(LIBFFI_CONTRIB_DIR)

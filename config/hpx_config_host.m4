@@ -16,7 +16,7 @@
 #   HPX_PAGE_SIZE
 #
 # Appends
-#   LIBHPX_LIBS
+#   HPX_APPS_LDADD
 #   HPX_PC_PUBLIC_LIBS
 # ------------------------------------------------------------------------------
 AC_DEFUN([_HPX_DO_LINUX], [
@@ -40,7 +40,7 @@ AC_DEFUN([_HPX_DO_LINUX], [
  want_urcu=yes
 
  AC_DEFINE([_POSIX_C_SOURCE], [200809L], [Define the POSIX version])
- LIBHPX_LIBS="$LIBHPX_LIBS -lrt"
+ HPX_APPS_LDADD="$HPX_APPS_LDADD -lrt"
  HPX_PC_CFLAGS="$HPX_PC_CFLAGS -D_POSIX_C_SOURCE=200809L"
  HPX_PC_PUBLIC_LIBS="$HPX_PC_PUBLIC_LIBS -lrt"
 ])

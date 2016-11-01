@@ -12,7 +12,7 @@ scan-build:
   stage: scan
   script:
   - ./bootstrap
-  - scan-build ./configure --enable-debug --enable-instrumentation --enable-percolation --enable-agas
+  - scan-build ./configure --enable-shared --enable-debug --enable-instrumentation --enable-percolation --enable-agas
                 --enable-hpx++ --enable-mpi --enable-photon --enable-testsuite --enable-parallel-config
                 --with-photon=system --with-jemalloc=system --with-hwloc=system --with-libffi=contrib
                 CFLAGS="-g -O0" CXXFLAGS="-g -O0"
@@ -39,7 +39,7 @@ cross-build:
   stage: cross
   script:
   - ./bootstrap
-  - ./configure --enable-debug --enable-instrumentation --enable-percolation --enable-agas --enable-hpx++
+  - ./configure --enable-shared --enable-debug --enable-instrumentation --enable-percolation --enable-agas --enable-hpx++
                 --enable-testsuite --enable-parallel-config --with-libffi=contrib
                 --host=arm-linux-gnueabihf CC=arm-linux-gnueabihf-gcc CXX=arm-linux-gnueabihf-g++
                 CFLAGS="-g -O0" CXXFLAGS="-g -O0"

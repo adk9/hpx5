@@ -16,6 +16,10 @@
 
 #include <hpx/hpx.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct {
   int (*memget)(void *obj, void *to, hpx_addr_t from, size_t size,
                 hpx_addr_t lsync, hpx_addr_t rsync);
@@ -39,6 +43,8 @@ typedef struct {
   int (*memcpy_sync)(void *obj, hpx_addr_t to, hpx_addr_t from, size_t size);
 } class_string_t;
 
-extern const class_string_t parcel_string_vtable;
+#ifdef __cplusplus
+}
+#endif
 
 #endif // LIBHPX_STRING_H

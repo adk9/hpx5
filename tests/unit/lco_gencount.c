@@ -26,6 +26,7 @@
 static const int DEPTH = 100;
 static const int NINPLACE = 9;
 
+
 // A call_cc cleanup handler to print out a message.
 static void _done(void* message) {
   printf("done %s\n", (char*)message);
@@ -55,7 +56,7 @@ static HPX_ACTION(HPX_DEFAULT, 0, _seed, _seed_handler, HPX_INT, HPX_ADDR,
                   HPX_ADDR);
 
 static int _set_handler(int n, hpx_addr_t counter, hpx_addr_t done) {
-  assert(HPX_LOCALITIES*(n/HPX_LOCALITIES)==n);
+  assert((HPX_LOCALITIES*(n/HPX_LOCALITIES))+(n%HPX_LOCALITIES)==n);
 
   for (int i = 0, e = n / HPX_LOCALITIES; i < e; ++i) {
     if (i & 1) {
@@ -71,12 +72,13 @@ static HPX_ACTION(HPX_DEFAULT, 0, _set, _set_handler, HPX_INT, HPX_ADDR,
                   HPX_ADDR);
 
 static int _single_wait(int inplace) {
+  int CORRECTED_DEPTH = HPX_LOCALITIES*(DEPTH/HPX_LOCALITIES);  
   hpx_addr_t counter = hpx_lco_gencount_new(inplace);
   hpx_addr_t and = hpx_lco_and_new(1);
-  hpx_addr_t done = hpx_lco_and_new(DEPTH);
-  int end = DEPTH - 1;
+  hpx_addr_t done = hpx_lco_and_new(CORRECTED_DEPTH);
+  int end = CORRECTED_DEPTH - 1;
   hpx_xcall(counter, _wait, and, end);
-  hpx_bcast(_set, HPX_NULL, HPX_NULL, &DEPTH, &counter, &done);
+  hpx_bcast(_set, HPX_NULL, HPX_NULL, &CORRECTED_DEPTH, &counter, &done);
   hpx_lco_wait(and);
   hpx_lco_wait(done);
 
@@ -90,20 +92,21 @@ static int _single_wait(int inplace) {
 }
 
 static int _multi_wait(int inplace) {
+  int CORRECTED_DEPTH = HPX_LOCALITIES*(DEPTH/HPX_LOCALITIES); 
   // allocate the counter
   hpx_addr_t counter = hpx_lco_gencount_new(inplace);
 
   // make sure we don't delete anything until all of the sets are done
-  hpx_addr_t sets = hpx_lco_and_new(DEPTH);
+  hpx_addr_t sets = hpx_lco_and_new(CORRECTED_DEPTH);
 
   // we will seed the counter with DEPTH * LOCALITIES waiting threads
-  hpx_addr_t done = hpx_lco_and_new(DEPTH * HPX_LOCALITIES);
+  hpx_addr_t done = hpx_lco_and_new(CORRECTED_DEPTH * HPX_LOCALITIES);
 
   // broadcast the seed---lots of asynchronous stuff here
-  hpx_bcast(_seed, HPX_NULL, HPX_NULL, &DEPTH, &counter, &done);
+  hpx_bcast(_seed, HPX_NULL, HPX_NULL, &CORRECTED_DEPTH, &counter, &done);
 
   // broadcast the sets---lots of asynchronous stuff here too
-  hpx_bcast(_set, HPX_NULL, HPX_NULL, &DEPTH, &counter, &sets);
+  hpx_bcast(_set, HPX_NULL, HPX_NULL, &CORRECTED_DEPTH, &counter, &sets);
 
   // all of the seeds should wake up and signal done
   hpx_lco_wait(done);

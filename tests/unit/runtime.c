@@ -43,13 +43,29 @@ static int _inner(int iteration) {
 
 static int _diffusion_handler(int iteration) {
   int status = _inner(iteration);
-  hpx_exit(status);
+  hpx_exit(sizeof(status), &status);
 }
 HPX_ACTION(HPX_DEFAULT, 0, _diffusion, _diffusion_handler, HPX_INT);
 
+static int _diffusion_return_handler(int *out, size_t bytes) {
+  for (int i = 0, e = bytes / sizeof(out[0]); i < e; ++i) {
+    out[i] += 3;
+  }
+  hpx_exit(bytes, out);
+}
+HPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _diffusion_return,
+           _diffusion_return_handler, HPX_POINTER, HPX_SIZE_T);
+
+static int _spmd_return_handler(int out) {
+  out += HPX_LOCALITY_ID;
+  hpx_exit(sizeof(out), &out);
+}
+HPX_ACTION(HPX_DEFAULT, 0, _spmd_return, _spmd_return_handler, HPX_INT);
+
 static int _spmd_handler(int iteration) {
+  printf("spmd at %d\n", HPX_LOCALITY_ID);
   int status = _inner(iteration);
-  return hpx_thread_continue(&status);
+  hpx_exit(sizeof(status), &status);
 }
 HPX_ACTION(HPX_DEFAULT, 0, _spmd, _spmd_handler, HPX_INT);
 
@@ -59,14 +75,37 @@ int main(int argc, char *argv[argc]) {
     return -1;
   }
 
+  int status;
   for (int i = 0; i < RUNS; ++i) {
-    int success = hpx_run(&_diffusion, &i);
-    printf("%i hpx_run returned %d.\n", i+1, success);
+    int success = hpx_run(&_diffusion, &status, &i);
+    assert(success == HPX_SUCCESS);
+    printf("%i hpx_run returned %d.\n", i+1, status);
   }
 
   for (int i = 0; i < RUNS; ++i) {
-    int success = hpx_run_spmd(&_spmd, &i);
-    printf("%i hpx_run_spmd returned %d.\n", i+1, success);
+    int success = hpx_run_spmd(&_spmd, &status, &i);
+    assert(success == HPX_SUCCESS);
+    printf("%i hpx_run_spmd returned %d.\n", i+1, status);
+  }
+
+  {
+    int input[] = { 0, 1, 2, 3 };
+    int success = hpx_run(&_diffusion_return, input, input, sizeof(input));
+    assert(success == HPX_SUCCESS);
+    for (int i = 0, e = 4; i < e; ++i) {
+      if (input[i] != i + 3) {
+        abort();
+      }
+    }
+  }
+
+  {
+    int rank = HPX_LOCALITY_ID;
+    int success = hpx_run_spmd(&_spmd_return, &rank, &rank);
+    assert(success == HPX_SUCCESS);
+    if (rank != 2 * HPX_LOCALITY_ID) {
+      abort();
+    }
   }
 
   hpx_finalize();
