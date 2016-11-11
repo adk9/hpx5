@@ -1,7 +1,7 @@
 HPX–5 Version 4.0.0 Release Notes
 ---------------------------------
 
-Release date: 11/01/2016
+Release date: 11/11/2016
 
 Distributed under the Indiana University License.
 (See accompanying file LICENSE.txt) 
@@ -52,20 +52,21 @@ This contains example applications designed to depend on an installed instance
 of HPX–5, and should serve as a usage model. In particular, it includes a 
 tutorial as well as the Lulesh, Wavelet-AMR, HPCG, CoMD, and SSSP applications.
 
-What's new in HPX-5 v4.0.0?
+HPX-5 General Information
 ----------------------------
-The HPX-5 runtime library is being updated to leverage C++, which simplifies 
-its code base (4% fewer lines of code), provides better interoperability with 
-dependencies, promotes static type safety, and promotes platform independence 
-through the elimination of the libsync synchronization library and its 
-associated architecture-specific functionality. In the future, this will 
-assist with the development and performance of the HPX-5 C++ API. Throughout 
-this effort we have paid attention to execution and compile times. Application 
-performance is unchanged and the HPX-5 library compilation time (performed 
-once per HPX-5 installation) has roughly doubled from 2 to 4 minutes in a 
-16-core parallel build.
+As part of this 4.0 major release of HPX-5, large portions of the runtime 
+library have been rewritten in standard C++. This 1) simplifies its code base 
+(4% fewer lines of code), 2) provides better interoperability with external 
+dependencies, 3) promotes static type safety and code quality, and 4) promotes 
+platform independence through the elimination of the libsync synchronization 
+library and its associated architecture-specific functionality. In the future, 
+this will assist with the development and performance of the HPX-5 C++ API. 
+Throughout this effort we have paid attention to execution and compile times. 
+Application performance is unchanged and the HPX-5 library compilation time 
+(performed once per HPX-5 installation) has roughly doubled from 2 to 4 minutes 
+in a 16-core parallel build.
 
-HPX-5 API
+HPX-5 C-API
 ==========
 1. Added methods to AGAS to get attributes of global blocks.
 2. The hpx_run(), hpx_run_spmd(), and hpx_exit() interface has changed to support 
@@ -77,7 +78,7 @@ at each locality.
 HPX Implementation
 ====================
 1. AGAS Changes
-  - Significant improvements have been made to AGAS rebalancer code.
+  - Significant improvements have been made to AGAS automatic rebalancer code.
 2. Tracing infrastructure changes
   - Improvements have been made to Numpy logs -- Extended python tools to include 
     command line tool and proper modules.
@@ -85,8 +86,8 @@ HPX Implementation
   - UserLCO can now be set with a size different than the size of the state.
 4. Network changes
   - Added an LRU Cache for registered chunk allocations. This reduces the amount 
-    of high-frequency mmap and pin operations for large parcels. Restructured the 
-    peer-to-peer data for the PWC Network.
+    of high-frequency mmap and pin operations for large parcels. 
+  - Restructured the peer-to-peer data for the PWC Network.
 
 Removed/Retired Features
 ---------------------------
@@ -94,12 +95,10 @@ libsync dependency has been removed
 
 Dependencies changes
 ---------------------------
-1. The distribution version of hwloc has been upgraded to 1.11.4
-2. The distribution version of libcuckoo has been upgraded to 
-   59efe01436f462e5cd3a2616b802f1b8
-3. The distribution version of libfabric has been upgraded to 1.3.0
-4. uthash dependency has been removed - unordered_map is being used instead of 
-   uthash in the rebalancer code
+1. hwloc has been upgraded to 1.11.4
+2. libcuckoo has been upgraded to 59efe01436f462e5cd3a2616b802f1b8
+3. libfabric has been upgraded to 1.3.0
+4. uthash dependency has been removed
 
 Bug Fixes
 -----------
@@ -115,36 +114,41 @@ No application updates.
 Known bugs & limitations in the release
 -----------------------------------------
 
-1. HPX-5 on Mac OS X only builds with default xcode toolchain. Use 
-$ ./configure --with-hwloc=contrib --with-libffi=contrib CC=clang to configure. 
-gcc installed with brew or port is not supported. We believe this is due to 
-https://gcc.gnu.org/bugzilla/show_bug.cgi?format=multiple&id=60893.
-2. HPX-5 on Mac OS Sierra (10.12.1) with xcode version 8.1 toolchain with 
- --enable-jemalloc results in external application execution error malloc: 
+1. The ISIR backend may suffer deadlocks when built with jemalloc running on 
+OpenMPI (see https://github.com/jemalloc/jemalloc/issues/500). This appears to 
+only manifest for very large message sizes (greater than 4MB in our testing). We 
+recommend tbbmalloc for ISIR when available.
+2. HPX-5 on Mac OS X only builds with default xcode toolchain. 
+Use $ ./configure --with-hwloc=contrib --with-libffi=contrib CC=clang to 
+configure. gcc installed with brew or port is not supported. We believe this is 
+due to https://gcc.gnu.org/bugzilla/show_bug.cgi?format=multiple&id=60893.
+3. HPX-5 on Mac OS Sierra (10.12.1) with xcode version 8.1 toolchain with 
+--enable-jemalloc results in external application execution error malloc: 
 *** malloc_zone_unregister() failed. This is due to 
 https://github.com/jemalloc/jemalloc/issues/420.
-3. There are known regressions with TBBmalloc 4.4. Please use TBBmalloc 4.3 
-or earlier.
-4. The Intel toolchain on Cray platforms requires the gcc 4.8 or 4.9 compiler 
-in the path (see https://www.nersc.gov/users/software/compilers/intel-fortran-c-
-and-c/intel-bug-reports/c-11-header-files-appear-missing-on-edison/).
-5. Clang versions prior to 3.6 (3.5.1 or earlier) contain regressions that 
+4. There are known regressions with TBBmalloc 4.4. Please use TBBmalloc 4.3 or 
+earlier.
+5. The Intel toolchain on Cray platforms requires the gcc compiler in the path 
+(see https://www.nersc.gov/users/software/compilers/intel-fortran-c-and-c/intel-bug-reports/c-11-header-files-appear-missing-on-edison/).
+6. Clang versions prior to 3.6 (3.5.1 or earlier) contain regressions that 
 trigger runtime failures in HPX.
-6. The --map-by node:pe=1 flag will be incorrectly interpreted when using 
-openmpi version 1.10.0, and will spawn #cores HPX-5 worker threads. Use 
+7. The --map-by node:pe=1 flag will be incorrectly interpreted when using some 
+versions of OpenMPI, and will spawn #cores HPX-5 worker threads. Use 
 --hpx-threads=1 to force 1 worker thread if necessary.
-7. LULESH induces a performance regression with jemalloc, prefer tbbmalloc for 
-it. When using jemalloc set MALLOC_CONF=lg_dirty_mult:-1 on the command 
+8. LULESH induces a performance regression with jemalloc, prefer tbbmalloc 
+for it. When using jemalloc set MALLOC_CONF=lg_dirty_mult:-1 on the command 
 line—this resolves the performance regression but may cause memory exhaustion. 
 Also use hugetlbfs when available.
-8. Remote hpx_lco_get/wait operations do not propagate errors correctly.
-9. User registered signal handlers are overwritten by --hpx-dbg-waitonsig.
-10. hpx_parcel_send and hpx_parcel_retain cannot be used in combination.
-11. HPX-5 does not currently account for dynamic changes in system 
-configuration. Systems that turn cores on and off may cause an unexpected 
-state during startup, which will result in triggering a guarding assert check.
-12. HPX-5 has to be compiled with CXXFLAGS="-O3 -fno-gcse" for aarch64 
-optimized code. Optimized code with clang does not have this requirement.
+9. Remote hpx_lco_get/wait operations do not propagate errors correctly.
+10. User registered signal handlers are overwritten by --hpx-dbg-waitonsig.
+11. hpx_parcel_send and hpx_parcel_retain cannot be used in combination.
+12. HPX-5 does not currently account for dynamic changes in system configuration. 
+Systems that turn cores on and off may cause an unexpected state during startup, 
+which will result in triggering a guarding assert check.
+13. HPX-5 exhibits a regression on aarch64 when compiling with gcc and -fgcse 
+(present in -O2 and greater). The source of this regression is under 
+investigation. Optimized configurations on aarch64 using gcc must explicitly 
+add -fno-gcse to their CXXFLAGS. The clang compiler does not trigger this regression.
 
 General Information
 ---------------------
