@@ -32,28 +32,34 @@ class [[ gnu::packed ]] TransferFrame
 {
  public:
   TransferFrame(hpx_parcel_t*p, Thread::Entry f)
-    : regs_(),
-      r5_(p),
-      r4_(f),
-      lr_(align_stack_trampoline),
+    : r1_(),
+      r2_(),
+      r14_(f),
+      r15_(p),
+      regs_(),
+      r31_(),
+      lr_(),
       vfp_alignment_(),
       fpscr_(),
       VFRegs_(),
-      top_r4_(nullptr),
+      top_r14_(nullptr),
       top_lr_(nullptr)
   {
   }
 
  private:
-  void          *regs_[8];                      //!< r6-r11
-  void            *r5_;                         //!< hold the parcel
-  Thread::Entry    r4_;                         //!< hold the entry function
-  void           (*lr_)(void);                  //!< return address
-  void *vfp_alignment_;
-  void         *fpscr_;
-  void       *VFRegs_[8];
-  void        *top_r4_;
-  void       (*top_lr_)(void);
+  void             *r1_;         //!< Stack pointer
+  void             *r2_;         //!< TOC
+  Thread::Entry    r14_;         //!< hold the entry function
+  void            *r15_;         //!< hold the parcel
+  void       *regs_[15];         //!< r16-r30
+  void            *r31_;         //!< Frame pointer
+  void     (*lr_)(void);         //!< return address
+  void  *vfp_alignment_;
+  void          *fpscr_;
+  void      *VFRegs_[8];
+  void        *top_r14_;
+  void (*top_lr_)(void);
 };
 }
 
