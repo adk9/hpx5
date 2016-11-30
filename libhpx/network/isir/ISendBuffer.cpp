@@ -130,13 +130,6 @@ ISendBuffer::start(unsigned long id)
 {
   unsigned i = _index_of(id, size_);
   records_[i].parcel->start();
-  //hpx_parcel_t *p = records_[i].parcel;
-  //void *from = isir_network_offset(p);
-  //unsigned to = gas_.ownerOf(p->target);
-  //unsigned n = payload_size_to_isir_bytes(p->size);
-  //int tag = PayloadSizeToTag(p->size);
-  //log_net("starting a parcel send: tag %d, %d bytes\n", tag, n);
-  //requests_[i] = xport_.isend(to, from, n, tag);
 }
 
 /// Start as many isend operations as we can.
