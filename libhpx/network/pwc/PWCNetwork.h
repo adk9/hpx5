@@ -51,7 +51,7 @@ class PWCNetwork : public Network
   int get(hpx_addr_t lco, size_t n, void *to, int reset);
 
   int coll_init(void **collective);
-  int coll_sync(void *in, size_t in_size, void* out, void *collective);
+  int coll_sync(coll_data_t *dt, coll_t* c) ;
   int coll_async(coll_data_t *dt, coll_t* c, hpx_addr_t lsync, hpx_addr_t rsync) ;
 
   /// Reload an eager buffer.

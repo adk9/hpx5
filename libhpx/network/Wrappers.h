@@ -62,8 +62,9 @@ class NetworkWrapper : public Network
     return impl_->coll_init(collective);
   }
 
-  int coll_sync(void *in, size_t in_size, void* out, void *collective) {
-    return impl_->coll_sync(in, in_size, out, collective);
+  int coll_sync(coll_data_t *dt, coll_t* c)
+  {
+    return impl_->coll_sync(dt, c);
   }
 
   int coll_async(coll_data_t *dt, coll_t* c, hpx_addr_t lsync, hpx_addr_t rsync)

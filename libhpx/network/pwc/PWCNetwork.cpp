@@ -215,16 +215,19 @@ PWCNetwork::coll_init(coll_t **collective)
 }
 
 int
-PWCNetwork::coll_sync(void *in, size_t in_size, void* out, void *collective)
-{
-  return LIBHPX_OK;
-}
-
-
-int
 PWCNetwork::coll_async(coll_data_t *dt, coll_t* c, hpx_addr_t lsync, hpx_addr_t rsync)
 {
 
+  return LIBHPX_OK;	
+}
+
+int
+PWCNetwork::coll_sync(coll_data_t *dt, coll_t* c)
+{
+  hpx_addr_t _and = hpx_lco_and_new(1);
+  coll_async(dt, c, _and, HPX_NULL );
+  hpx_lco_wait(_and);
+  hpx_lco_delete_sync(_and);
   return LIBHPX_OK;	
 }
 

@@ -24,8 +24,7 @@ class CollectiveOps {
  public:
   virtual ~CollectiveOps();
   virtual int coll_init(coll_t **collective) = 0;
-  //TODO fix sync interface
-  virtual int coll_sync(void *in, size_t in_size, void* out, void *collective) = 0;
+  virtual int coll_sync(coll_data_t *dt, coll_t* c) = 0 ;
   virtual int coll_async(coll_data_t *dt, coll_t* c, hpx_addr_t lsync, hpx_addr_t rsync) = 0 ;
 };
 }

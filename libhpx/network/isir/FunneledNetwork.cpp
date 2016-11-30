@@ -103,24 +103,12 @@ FunneledNetwork::coll_init(coll_t **ctx)
 }
 
 int
-FunneledNetwork::coll_sync(void *in, size_t count, void *out, void *ctx)
+FunneledNetwork::coll_sync(coll_data_t *dt, coll_t* c)
 {
-  // flushing network is necessary (sufficient?) to execute any
-  // packets destined for collective operation
-  flush();
-
-  auto coll = static_cast<coll_t *>(ctx);
-  auto offset = coll->data + coll->group_bytes;
-  auto comm = reinterpret_cast<Transport::Communicator*>(offset);
-  std::lock_guard<std::mutex> _(lock_);
-  switch (coll->type) {
-   case COLL_ALLRED:
-    xport_.allreduce(in, out, count, NULL, &coll->op, comm);
-    break;
-   default:
-    log_dflt("Collective type descriptor: %d is invalid!\n", coll->type);
-    break;
-  }
+  hpx_addr_t _and = hpx_lco_and_new(1);
+  coll_async(dt, c, _and, HPX_NULL );
+  hpx_lco_wait(_and);
+  hpx_lco_delete_sync(_and);
   return LIBHPX_OK;
 }
 

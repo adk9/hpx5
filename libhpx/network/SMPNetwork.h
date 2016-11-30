@@ -39,7 +39,7 @@ class SMPNetwork final : public Network
   int get(hpx_addr_t lco, size_t n, void *to, int reset);
 
   int coll_init(coll_t **collective);
-  int coll_sync(void *in, size_t in_size, void* out, void *collective);
+  int coll_sync(coll_data_t *dt, coll_t* collective) ;
   int coll_async(coll_data_t *dt, coll_t* collective, hpx_addr_t lsync, hpx_addr_t rsync) ;
 
   void memget(void *to, hpx_addr_t from, size_t size, hpx_addr_t lsync, hpx_addr_t rsync);

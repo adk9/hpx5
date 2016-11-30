@@ -161,29 +161,29 @@ Allreduce::reduce(const void *val)
     void *in = calloc(bytes_, sizeof(char));
     reduce_->reset(in);
 
-#ifdef USE_ASYNC_NETWORK    
-    hpx_addr_t and_future = hpx_lco_and_new(1);
-
-    // allocate a coll data parcel for async send
-    // ownership transfers to network (thus user doesn't need to free it)
+    //init collective data parcel
     coll_data_t *data = (coll_data_t*)calloc(1, sizeof(coll_data_t));
     data->in = in;
     data->bytes = bytes_;
     data->out = output ; 
     data->data_type = ctx_->net_dt;
     data->op = ctx_->net_op;
+#ifdef USE_ASYNC_NETWORK    
+    hpx_addr_t and_future = hpx_lco_and_new(1);
+
+    // allocate a coll data parcel for async send
+    // ownership transfers to network (thus user doesn't need to free it)
     
     here->net->coll_async(data, ctx_, and_future, HPX_NULL);
     
     hpx_lco_wait(and_future);
     hpx_lco_delete_sync(and_future);
 
-    /*free(data);*/
 #else
     // perform synchronized collective comm
-    here->net->coll_sync(in, bytes_, output, ctx_);
+    here->net->coll_sync2(data, ctx_);
+    //here->net->coll_sync(in, bytes_, output, ctx_);
 #endif  
-
     // perform synchronized collective comm
     //here->net->sync(in, bytes_, output, ctx_);
 
@@ -191,6 +191,7 @@ Allreduce::reduce(const void *val)
     continuation_.trigger(output);
     free(output);
     free(in);
+    free(data);
     //return;
   }
   // the local continuation is done, join the parent node asynchronously
