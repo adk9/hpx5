@@ -30,33 +30,33 @@ LABEL(thread_transfer)
         # PROLOGUE
         # 1) Reserve stack space and save the old stack pointer
         # This will allocate stack memory atomically.
-        stdu r1, -264(r1)
+        stdu 1,-264(1)
         # Save LR
-        mflr r0
-        std  r0, 0*8(r1)
+        mflr 0
+        std  0, 0*8(1)
         # store r2 (TOC)
-        std   r2,1*8(r1)
+        std  2, 1*8(1)
 
         # Save all non-volatile registers that will be used
         # during this function
-        std  r14,3*8(r1)
-        std  r15,4*8(r1)
-        std  r16,5*8(r1)
-        std  r17,6*8(r1)
-        std  r18,7*8(r1)
-        std  r19,8*8(r1)
-        std  r20,9*8(r1)
-        std  r21,10*8(r1)
-        std  r22,11*8(r1)
-        std  r23,12*8(r1)
-        std  r24,13*8(r1)
-        std  r25,14*8(r1)
-        std  r26,15*8(r1)
-        std  r27,16*8(r1)
-        std  r28,17*8(r1)
-        std  r29,18*8(r1)
-        std  r30,19*8(r1)
-        std  r31,20*8(r1)
+        std  14, 3*8(1)
+        std  15, 4*8(1)
+        std  16, 5*8(1)
+        std  17, 6*8(1)
+        std  18, 7*8(1)
+        std  19, 8*8(1)
+        std  20, 9*8(1)
+        std  21, 10*8(1)
+        std  22, 11*8(1)
+        std  23, 12*8(1)
+        std  24, 13*8(1)
+        std  25, 14*8(1)
+        std  26, 15*8(1)
+        std  27, 16*8(1)
+        std  28, 17*8(1)
+        std  29, 18*8(1)
+        std  30, 19*8(1)
+        std  31, 20*8(1)
 
         // r0 commonly used to hold the old link register when building the stack frame
         // r1 is the stack pointer 
@@ -66,43 +66,43 @@ LABEL(thread_transfer)
         // We want to call cont(p, f, w, sp).
         // p is there in r3, f in r4 and this is in r5
         // but we need to move the new sp to x6.
-        mr r6, r1     // Checkpoint sp for call
-        ld r7, 0(r3)  // p->ustack r7 = (r3)
-        ld r7, 0(r7)  // p->ustack->sp r7 = (r7)
-        mr r1, r7     // Replace r1 (sp) for the context switch
+        mr 6, 1     // Checkpoint sp for call
+        ld 7, 0(3)  // p->ustack r7 = (r3)
+        ld 7, 0(7)  // p->ustack->sp r7 = (r7)
+        mr 1, 7     // Replace r1 (sp) for the context switch
 
-	// Make enough space for the worker_checkpoint to store sp to the frame.
-	stdu r1, -8(r1)
+        // Make enough space for the worker_checkpoint to store sp to the frame
+        stdu 1, -8(1)
         bl worker_checkpoint
-        addi r1, r1, 8
+        addi 1, 1, 8
         # move old return address into the link register
-        ld   r0,0*8(r1)
-        mtlr r0
-        # restore r1-r2 (SP and TOC)
-        ld  r2, 1*8(r1)
-        ld  r3, 2*8(r1)
+        ld   0, 0*8(1)
+        mtlr 0
+        # restore r2 (TOC)
+        ld   2, 1*8(1)
+        ld   3, 2*8(1)
         # The function's epilogue follows the reverse sequence, restoring what had been saved
-        ld  r14,3*8(r1)
-        ld  r15,4*8(r1)
-        ld  r16,5*8(r1)
-        ld  r17,6*8(r1)
-        ld  r18,7*8(r1)
-        ld  r19,8*8(r1)
-        ld  r20,9*8(r1)
-        ld  r21,10*8(r1)
-        ld  r22,11*8(r1)
-        ld  r23,12*8(r1)
-        ld  r24,13*8(r1)
-        ld  r25,14*8(r1)
-        ld  r26,15*8(r1)
-        ld  r27,16*8(r1)
-        ld  r28,17*8(r1)
-        ld  r29,18*8(r1)
-        ld  r30,19*8(r1)
-        ld  r31,20*8(r1)
+        ld  14, 3*8(1)
+        ld  15, 4*8(1)
+        ld  16, 5*8(1)
+        ld  17, 6*8(1)
+        ld  18, 7*8(1)
+        ld  19, 8*8(1)
+        ld  20, 9*8(1)
+        ld  21, 10*8(1)
+        ld  22, 11*8(1)
+        ld  23, 12*8(1)
+        ld  24, 13*8(1)
+        ld  25, 14*8(1)
+        ld  26, 15*8(1)
+        ld  27, 16*8(1)
+        ld  28, 17*8(1)
+        ld  29, 18*8(1)
+        ld  30, 19*8(1)
+        ld  31, 20*8(1)
 
         # Restore stack frame
-        addi   r1, r1, 264
+        addi 1, 1, 264
 
         # Return
         blr
