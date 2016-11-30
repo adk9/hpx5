@@ -82,11 +82,13 @@ class ISendBuffer {
       virtual void cancel(hpx_parcel_t **stack) = 0;      
       	
     protected:  
-      Transport&     _xport_handle;
-      cmd_t _optype;
+      Transport& _xport_handle;
+      GAS&         _gas_handle;
+      cmd_t 	       _optype;
 
-    ParcelHandle(Transport &xport, cmd_t op):
+    ParcelHandle(Transport &xport, GAS &gas, cmd_t op):
       _xport_handle(xport),
+      _gas_handle(gas),
       _optype(op){
     }
   };
@@ -96,8 +98,8 @@ class ISendBuffer {
     private:
       T *_parcel;	    
     public:	  
-      DirectParcelHandle(T *data, cmd_t op, Transport &xp) : 
-	ParcelHandle(xp, op), 
+      DirectParcelHandle(T *data, cmd_t op, Transport &xp, GAS &gas) : 
+	ParcelHandle(xp, gas, op), 
 	_parcel(data){
       }
 
@@ -108,8 +110,7 @@ class ISendBuffer {
   	hpx_parcel_t *p = static_cast<hpx_parcel_t*>(_parcel);
   	void *from = isir_network_offset(p);
 	//TODO FIX
-	//unsigned to = gas_.ownerOf(p->target);
-	unsigned to = 0;
+	unsigned to = _gas_handle.ownerOf(p->target);
   	unsigned n = payload_size_to_isir_bytes(p->size);
   	int tag = PayloadSizeToTag(p->size);
   	log_net("starting a parcel send: tag %d, %d bytes\n", tag, n);
@@ -130,8 +131,8 @@ class ISendBuffer {
     private:
       T *_coll_parcel;	    
     public:	  
-      CollAllredHandle(T *data, cmd_t op, Transport &xp) :
-	ParcelHandle(xp, op), 
+      CollAllredHandle(T *data, cmd_t op, Transport &xp, GAS &gas) :
+	ParcelHandle(xp, gas, op), 
 	_coll_parcel(data) {
       }
 

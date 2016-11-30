@@ -321,9 +321,9 @@ ISendBuffer::append(void *p, hpx_parcel_t *ssync, cmd_t optype)
   records_[max].ssync = ssync;
 
   if(optype == DIRECT){
-    records_[max].parcel  = new DirectParcelHandle<hpx_parcel_t>(static_cast<hpx_parcel_t*>(p), optype, xport_);
+    records_[max].parcel  = new DirectParcelHandle<hpx_parcel_t>(static_cast<hpx_parcel_t*>(p), optype, xport_, gas_);
   } else if(optype == COLL_ALLRED){
-    records_[max].parcel  = new CollAllredHandle<coll_data_t>( static_cast<coll_data_t*>(p), optype, xport_);
+    records_[max].parcel  = new CollAllredHandle<coll_data_t>( static_cast<coll_data_t*>(p), optype, xport_, gas_);
   }  
 
   if (size_ <= max_ - min_) {
