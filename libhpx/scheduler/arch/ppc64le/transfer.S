@@ -18,35 +18,45 @@
         // @param r4 - the continuation to call after the sp exchange
         // @param r5 - the worker
         .file "libhpx/scheduler/arch/ppc64le/transfer.S"
-        .text
+        .machine power8
+        .abiversion 2
+        .section        ".toc","aw"
+        .section        .text
         .type thread_transfer, STT_FUNC
         INTERNAL(thread_transfer)
         GLOBAL(thread_transfer)
 LABEL(thread_transfer)
         STARTPROC
+        # PROLOGUE
+        # 1) Reserve stack space and save the old stack pointer
+        # This will allocate stack memory atomically.
+        stdu r1, -264(r1)
+        # Save LR
+        mflr r0
+        std  r0, 0*8(r1)
+        # store r2 (TOC)
+        std   r2,1*8(r1)
 
-        std   r1,-264(r1)
-        std   r2,-256(r1)
-        std  r14,-248(r1)
-        std  r15,-240(r1)
-        std  r16,-232(r1)
-        std  r17,-224(r1)
-        std  r18,-216(r1)
-        std  r19,-208(r1)
-        std  r20,-200(r1)
-        std  r21,-192(r1)
-        std  r22,-184(r1)
-        std  r23,-176(r1)
-        std  r24,-168(r1)
-        std  r25,-160(r1)
-        std  r26,-152(r1)
-        std  r27,-144(r1)
-        std  r28,-136(r1)
-        std  r29,-128(r1)
-        std  r30,-120(r1)
-        std  r31,-112(r1)
-        std   r0,-104(r1)
-        mflr  r0
+        # Save all non-volatile registers that will be used
+        # during this function
+        std  r14,3*8(r1)
+        std  r15,4*8(r1)
+        std  r16,5*8(r1)
+        std  r17,6*8(r1)
+        std  r18,7*8(r1)
+        std  r19,8*8(r1)
+        std  r20,9*8(r1)
+        std  r21,10*8(r1)
+        std  r22,11*8(r1)
+        std  r23,12*8(r1)
+        std  r24,13*8(r1)
+        std  r25,14*8(r1)
+        std  r26,15*8(r1)
+        std  r27,16*8(r1)
+        std  r28,17*8(r1)
+        std  r29,18*8(r1)
+        std  r30,19*8(r1)
+        std  r31,20*8(r1)
 
         // r0 commonly used to hold the old link register when building the stack frame
         // r1 is the stack pointer 
@@ -57,34 +67,43 @@ LABEL(thread_transfer)
         // p is there in r3, f in r4 and this is in r5
         // but we need to move the new sp to x6.
         mr r6, r1     // Checkpoint sp for call
-        la r7, 0(r3)  // p->ustack r7 = (r3)
-        la r7, 0(r7)  // p->ustack->sp r7 = (r7)
+        ld r7, 0(r3)  // p->ustack r7 = (r3)
+        ld r7, 0(r7)  // p->ustack->sp r7 = (r7)
         mr r1, r7     // Replace r1 (sp) for the context switch
-        bl worker_checkpoint
 
-        ld   r1,-264(r1)
-        ld   r2,-256(r1)
-        ld  r14,-248(r1)
-        ld  r15,-240(r1)
-        ld  r16,-232(r1)
-        ld  r17,-224(r1)
-        ld  r18,-216(r1)
-        ld  r19,-208(r1)
-        ld  r20,-200(r1)
-        ld  r21,-192(r1)
-        ld  r22,-184(r1)
-        ld  r23,-176(r1)
-        ld  r24,-168(r1)
-        ld  r25,-160(r1)
-        ld  r26,-152(r1)
-        ld  r27,-144(r1)
-        ld  r28,-136(r1)
-        ld  r29,-128(r1)
-        ld  r30,-120(r1)
-        ld  r31,-112(r1)
-        ld   r0,-104(r1)
-  
-        mtlr r14
+	// Make enough space for the worker_checkpoint to store sp to the frame.
+	stdu r1, -8(r1)
+        bl worker_checkpoint
+        addi r1, r1, 8
+        # move old return address into the link register
+        ld   r0,0*8(r1)
+        mtlr r0
+        # restore r1-r2 (SP and TOC)
+        ld  r2, 1*8(r1)
+        ld  r3, 2*8(r1)
+        # The function's epilogue follows the reverse sequence, restoring what had been saved
+        ld  r14,3*8(r1)
+        ld  r15,4*8(r1)
+        ld  r16,5*8(r1)
+        ld  r17,6*8(r1)
+        ld  r18,7*8(r1)
+        ld  r19,8*8(r1)
+        ld  r20,9*8(r1)
+        ld  r21,10*8(r1)
+        ld  r22,11*8(r1)
+        ld  r23,12*8(r1)
+        ld  r24,13*8(r1)
+        ld  r25,14*8(r1)
+        ld  r26,15*8(r1)
+        ld  r27,16*8(r1)
+        ld  r28,17*8(r1)
+        ld  r29,18*8(r1)
+        ld  r30,19*8(r1)
+        ld  r31,20*8(r1)
+
+        # Restore stack frame
+        addi   r1, r1, 264
+
         # Return
         blr
         ENDPROC
