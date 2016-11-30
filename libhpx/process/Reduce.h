@@ -15,6 +15,7 @@
 #define LIBHPX_PROCESS_REDUCE_H
 
 #include "hpx/hpx.h"
+#include "libhpx/collective.h"
 #include <atomic>
 
 namespace libhpx {

@@ -103,7 +103,7 @@ struct Allreduce {
   Continuation continuation_;         // our continuation data
   Reduce            *reduce_;         // the local reduction
   unsigned               id_;         // our identifier for our parent
-  void                 *ctx_;         // collective context info for this reduce
+  coll_t 	       *ctx_;         // collective context info for this reduce
 };
 } // namespace process
 } // namespace libhpx

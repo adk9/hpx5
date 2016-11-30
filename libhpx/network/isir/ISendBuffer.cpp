@@ -129,13 +129,14 @@ void
 ISendBuffer::start(unsigned long id)
 {
   unsigned i = _index_of(id, size_);
-  hpx_parcel_t *p = records_[i].parcel;
-  void *from = isir_network_offset(p);
-  unsigned to = gas_.ownerOf(p->target);
-  unsigned n = payload_size_to_isir_bytes(p->size);
-  int tag = PayloadSizeToTag(p->size);
-  log_net("starting a parcel send: tag %d, %d bytes\n", tag, n);
-  requests_[i] = xport_.isend(to, from, n, tag);
+  records_[i].parcel->start();
+  //hpx_parcel_t *p = records_[i].parcel;
+  //void *from = isir_network_offset(p);
+  //unsigned to = gas_.ownerOf(p->target);
+  //unsigned n = payload_size_to_isir_bytes(p->size);
+  //int tag = PayloadSizeToTag(p->size);
+  //log_net("starting a parcel send: tag %d, %d bytes\n", tag, n);
+  //requests_[i] = xport_.isend(to, from, n, tag);
 }
 
 /// Start as many isend operations as we can.
@@ -178,7 +179,10 @@ ISendBuffer::testRange(unsigned i, unsigned n, int* out, hpx_parcel_t **ssync)
     assert(i <= k && k < i + n);
 
     // handle each of the completed requests
-    parcel_delete(records_[k].parcel);
+    //parcel_delete(records_[k].parcel);
+    records_[k].parcel->clear();
+    delete(records_[k].parcel);
+
     while (hpx_parcel_t *p = parcel_stack_pop(&records_[k].ssync)) {
       parcel_stack_push(ssync, p);
     }
@@ -261,7 +265,8 @@ ISendBuffer::cancel(unsigned long id, hpx_parcel_t **parcels)
 {
   unsigned i = _index_of(id, size_);
   xport_.cancel(requests_[i]);
-  parcel_stack_push(parcels, records_[i].parcel);
+  //parcel_stack_push(parcels, records_[i].parcel);
+  records_[i].parcel->cancel(parcels);
   while (hpx_parcel_t *p = parcel_stack_pop(&records_[i].ssync)) {
     parcel_stack_push(parcels, p);
   }
@@ -309,11 +314,18 @@ ISendBuffer::~ISendBuffer()
 }
 
 void
-ISendBuffer::append(hpx_parcel_t *p, hpx_parcel_t *ssync)
+ISendBuffer::append(void *p, hpx_parcel_t *ssync, cmd_t optype)
 {
   unsigned max = _index_of(max_++, size_);
-  records_[max].parcel = p;
+  //records_[max].parcel = p;
   records_[max].ssync = ssync;
+
+  if(optype == DIRECT){
+    records_[max].parcel  = new DirectParcelHandle<hpx_parcel_t>(static_cast<hpx_parcel_t*>(p), optype, xport_);
+  } else if(optype == COLL_ALLRED){
+    records_[max].parcel  = new CollAllredHandle<coll_data_t>( static_cast<coll_data_t*>(p), optype, xport_);
+  }  
+
   if (size_ <= max_ - min_) {
     reserve(2 * size_);
   }

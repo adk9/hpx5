@@ -45,8 +45,9 @@ class FunneledNetwork : public Network, public ParcelStringOps
   int wait(hpx_addr_t lco, int reset);
   int get(hpx_addr_t lco, size_t n, void *to, int reset);
 
-  int init(void **collective);
-  int sync(void *in, size_t in_size, void* out, void *collective);
+  int coll_init(coll_t **collective);
+  int coll_sync(void *in, size_t in_size, void* out, void *collective);
+  int coll_async(coll_data_t *dt, coll_t* c, hpx_addr_t lsync, hpx_addr_t rsync) ;
 
  private:
 
@@ -54,11 +55,13 @@ class FunneledNetwork : public Network, public ParcelStringOps
   using IRecvBuffer = libhpx::network::isir::IRecvBuffer;
   using ISendBuffer = libhpx::network::isir::ISendBuffer;
   using ParcelQueue = libhpx::util::TwoLockQueue<hpx_parcel_t*>;
+  using CollQueue = libhpx::util::TwoLockQueue<coll_data_t*>;
 
   void sendAll();
 
   ParcelQueue  sends_;
   ParcelQueue  recvs_;
+  CollQueue    colls_;
   Transport    xport_;
   ISendBuffer isends_;
   IRecvBuffer irecvs_;

@@ -209,15 +209,23 @@ PWCNetwork::unpin(const void *base, size_t bytes)
 }
 
 int
-PWCNetwork::init(void **collective)
+PWCNetwork::coll_init(coll_t **collective)
 {
   return LIBHPX_OK;
 }
 
 int
-PWCNetwork::sync(void *in, size_t in_size, void* out, void *collective)
+PWCNetwork::coll_sync(void *in, size_t in_size, void* out, void *collective)
 {
   return LIBHPX_OK;
+}
+
+
+int
+PWCNetwork::coll_async(coll_data_t *dt, coll_t* c, hpx_addr_t lsync, hpx_addr_t rsync)
+{
+
+  return LIBHPX_OK;	
 }
 
 void

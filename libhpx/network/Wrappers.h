@@ -58,13 +58,19 @@ class NetworkWrapper : public Network
     impl_->unpin(base, bytes);
   }
 
-  int init(void **collective) {
-    return impl_->init(collective);
+  int coll_init(coll_t **collective) {
+    return impl_->coll_init(collective);
   }
 
-  int sync(void *in, size_t in_size, void* out, void *collective) {
-    return impl_->sync(in, in_size, out, collective);
+  int coll_sync(void *in, size_t in_size, void* out, void *collective) {
+    return impl_->coll_sync(in, in_size, out, collective);
   }
+
+  int coll_async(coll_data_t *dt, coll_t* c, hpx_addr_t lsync, hpx_addr_t rsync)
+  {
+    return impl_->coll_async(dt, c, lsync, rsync);
+  }
+  
 
   int wait(hpx_addr_t lco, int reset) {
     return impl_->wait(lco, reset);

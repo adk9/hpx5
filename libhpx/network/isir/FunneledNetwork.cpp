@@ -15,9 +15,11 @@
 #endif
 
 #include "FunneledNetwork.h"
+#include "libhpx/libhpx.h"
 #include "libhpx/collective.h"
 #include "libhpx/debug.h"
 #include "libhpx/parcel.h"
+#include "libhpx/action.h"
 
 namespace {
 using libhpx::Network;
@@ -30,6 +32,7 @@ FunneledNetwork::FunneledNetwork(const config_t *cfg, GAS *gas)
       ParcelStringOps(),
       sends_(),
       recvs_(),
+      colls_(),
       xport_(),
       isends_(cfg, gas, xport_),
       irecvs_(cfg, xport_),
@@ -57,12 +60,23 @@ FunneledNetwork::sendAll() {
   while (hpx_parcel_t *p = sends_.dequeue()) {
     hpx_parcel_t *ssync = p->next;
     p->next = NULL;
-    isends_.append(p, ssync);
+    isends_.append((void*)p, ssync, DIRECT);
+  }
+
+  while (coll_data_t *p = colls_.dequeue()) {
+    hpx_parcel_t *ssync = p->ssync;
+    if(p->type == COLL_ALLRED){
+      isends_.append((void*)p, ssync, COLL_ALLRED);
+    } else{
+      //currently only ALLREDUCE is supported
+      log_net("ISIR network doesn't support this collective type :%d"
+          , COLL_ALLRED);
+    }
   }
 }
 
 int
-FunneledNetwork::init(void **ctx)
+FunneledNetwork::coll_init(coll_t **ctx)
 {
   flush();
 
@@ -85,11 +99,11 @@ FunneledNetwork::init(void **ctx)
   auto comm = reinterpret_cast<Transport::Communicator*>(offset);
   std::lock_guard<std::mutex> _(lock_);
   xport_.createComm(comm, num_active, ranks);
-  return 0;
+  return LIBHPX_OK;
 }
 
 int
-FunneledNetwork::sync(void *in, size_t count, void *out, void *ctx)
+FunneledNetwork::coll_sync(void *in, size_t count, void *out, void *ctx)
 {
   // flushing network is necessary (sufficient?) to execute any
   // packets destined for collective operation
@@ -100,14 +114,28 @@ FunneledNetwork::sync(void *in, size_t count, void *out, void *ctx)
   auto comm = reinterpret_cast<Transport::Communicator*>(offset);
   std::lock_guard<std::mutex> _(lock_);
   switch (coll->type) {
-   case ALL_REDUCE:
+   case COLL_ALLRED:
     xport_.allreduce(in, out, count, NULL, &coll->op, comm);
     break;
    default:
     log_dflt("Collective type descriptor: %d is invalid!\n", coll->type);
     break;
   }
-  return 0;
+  return LIBHPX_OK;
+}
+
+int
+FunneledNetwork::coll_async(coll_data_t *dt, coll_t* c, hpx_addr_t lsync, hpx_addr_t rsync)
+{
+  //char *comm = c->data + c->group_bytes;
+  auto offset = c->data + c->group_bytes;
+  auto comm = reinterpret_cast<Transport::Communicator*>(offset);
+  dt->comm = comm;
+  dt->type = c->type;
+  hpx_parcel_t *ssync_local = action_new_parcel(hpx_lco_set_action, lsync, 0, 0, 0);
+  dt->ssync = ssync_local;
+  colls_.enqueue(dt);
+  return LIBHPX_OK;
 }
 
 void

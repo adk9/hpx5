@@ -23,6 +23,7 @@
 #include "libhpx/Network.h"
 #include <string.h>
 #include <mutex>
+#define USE_ASYNC_NETWORK 1
 
 namespace {
 using libhpx::process::Allreduce;
@@ -79,7 +80,7 @@ Allreduce::Allreduce(size_t bytes, hpx_addr_t parent,
   ctx->comm_bytes = 0;
   ctx->group_sz = 0;
   ctx->recv_count = bytes;
-  ctx->type = ALL_REDUCE;
+  ctx->type = COLL_ALLRED;
   ctx->op = op;
   ctx_ = ctx;
 }
@@ -160,13 +161,37 @@ Allreduce::reduce(const void *val)
     void *in = calloc(bytes_, sizeof(char));
     reduce_->reset(in);
 
+#ifdef USE_ASYNC_NETWORK    
+    hpx_addr_t and_future = hpx_lco_and_new(1);
+
+    // allocate a coll data parcel for async send
+    // ownership transfers to network (thus user doesn't need to free it)
+    coll_data_t *data = (coll_data_t*)calloc(1, sizeof(coll_data_t));
+    data->in = in;
+    data->bytes = bytes_;
+    data->out = output ; 
+    data->data_type = ctx_->net_dt;
+    data->op = ctx_->net_op;
+    
+    here->net->coll_async(data, ctx_, and_future, HPX_NULL);
+    
+    hpx_lco_wait(and_future);
+    hpx_lco_delete_sync(and_future);
+
+    /*free(data);*/
+#else
     // perform synchronized collective comm
-    here->net->sync(in, bytes_, output, ctx_);
+    here->net->coll_sync(in, bytes_, output, ctx_);
+#endif  
+
+    // perform synchronized collective comm
+    //here->net->sync(in, bytes_, output, ctx_);
 
     // call all local continuations to communicate the result
     continuation_.trigger(output);
     free(output);
     free(in);
+    //return;
   }
   // the local continuation is done, join the parent node asynchronously
   else if (parent_) {
@@ -239,7 +264,7 @@ Allreduce::bcast_comm(hpx_addr_t base, const void *coll)
     ranks[i] = copy_ranks[i];
   }
   // perform collective initialization for all leaf nodes here
-  dbg_check(here->net->init(&ctx_));
+  dbg_check(here->net->coll_init(&ctx_));
 }
 
 int

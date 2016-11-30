@@ -18,6 +18,8 @@
 #include "libhpx/config.h"
 #include "libhpx/GAS.h"
 #include "libhpx/parcel.h"
+#include "parcel_utils.h"
+#include "libhpx/collective.h"
 
 namespace libhpx {
 namespace network {
@@ -43,7 +45,8 @@ class ISendBuffer {
   ///
   /// @param            p The stack of parcels to send.
   /// @param        ssync The stack of parcel continuations.
-  void append(hpx_parcel_t *p, hpx_parcel_t *ssync);
+  /// @param        optype The operation type for this parcel
+  void append(void *p, hpx_parcel_t *ssync, cmd_t optype);
 
   /// Progress the sends in the buffer.
   ///
@@ -63,9 +66,83 @@ class ISendBuffer {
   int flush(hpx_parcel_t**ssync);
 
  private:
+  class ParcelHandle;
+  
   struct Record {
-    hpx_parcel_t *parcel;
+    ParcelHandle *parcel;
     hpx_parcel_t *ssync;
+  };
+
+  class ParcelHandle {
+    public:
+      using Transport = libhpx::network::isir::MPITransport;
+      virtual Request    		start() = 0;
+      virtual void       		clear() = 0;
+      virtual void cancel(hpx_parcel_t **stack) = 0;      
+      	
+    protected:  
+      Transport&     _xport_handle;
+      cmd_t _optype;
+
+    ParcelHandle(Transport &xport, cmd_t op):
+      _xport_handle(xport),
+      _optype(op){
+    }
+  };
+
+  template <typename T>
+  class DirectParcelHandle : public ParcelHandle {
+    private:
+      T *_parcel;	    
+    public:	  
+      DirectParcelHandle(T *data, cmd_t op, Transport &xp) : 
+	ParcelHandle(xp, op), 
+	_parcel(data){
+      }
+
+      Request start() {
+  	hpx_parcel_t *p = static_cast<hpx_parcel_t*>(_parcel);
+  	void *from = isir_network_offset(p);
+	//TODO FIX
+	//unsigned to = gas_.ownerOf(p->target);
+	unsigned to = 0;
+  	unsigned n = payload_size_to_isir_bytes(p->size);
+  	int tag = PayloadSizeToTag(p->size);
+  	log_net("starting a parcel send: tag %d, %d bytes\n", tag, n);
+  	return _xport_handle.isend(to, from, n, tag);
+      }
+
+      void clear() {
+    	parcel_delete(_parcel);
+      }
+
+      void cancel(hpx_parcel_t **stack) {
+  	parcel_stack_push(stack, _parcel);
+      }      
+  };
+
+  template <typename T>
+  class CollAllredHandle : public ParcelHandle {
+    private:
+      T *_coll_parcel;	    
+    public:	  
+      CollAllredHandle(T *data, cmd_t op, Transport &xp) :
+	ParcelHandle(xp, op), 
+	_coll_parcel(data) {
+      }
+
+      Request start() {
+	return MPI_REQUEST_NULL;
+      }
+
+      void clear() {
+        free(_coll_parcel);	      
+      }
+
+      void cancel(hpx_parcel_t **stack) {
+        free(_coll_parcel);	      
+      }      
+		  
   };
 
   static int PayloadSizeToTag(unsigned payload);
