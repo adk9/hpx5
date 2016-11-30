@@ -76,6 +76,7 @@ class ISendBuffer {
   class ParcelHandle {
     public:
       using Transport = libhpx::network::isir::MPITransport;
+      virtual ~ParcelHandle(){};
       virtual Request    		start() = 0;
       virtual void       		clear() = 0;
       virtual void cancel(hpx_parcel_t **stack) = 0;      
@@ -98,6 +99,9 @@ class ISendBuffer {
       DirectParcelHandle(T *data, cmd_t op, Transport &xp) : 
 	ParcelHandle(xp, op), 
 	_parcel(data){
+      }
+
+      ~DirectParcelHandle(){
       }
 
       Request start() {
@@ -129,6 +133,9 @@ class ISendBuffer {
       CollAllredHandle(T *data, cmd_t op, Transport &xp) :
 	ParcelHandle(xp, op), 
 	_coll_parcel(data) {
+      }
+
+      virtual ~CollAllredHandle(){
       }
 
       Request start() {
