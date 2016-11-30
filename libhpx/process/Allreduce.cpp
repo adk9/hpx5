@@ -181,7 +181,7 @@ Allreduce::reduce(const void *val)
 
 #else
     // perform synchronized collective comm
-    here->net->coll_sync2(data, ctx_);
+    here->net->coll_sync(data, ctx_);
     //here->net->coll_sync(in, bytes_, output, ctx_);
 #endif  
     // perform synchronized collective comm
