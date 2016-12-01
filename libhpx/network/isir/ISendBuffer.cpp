@@ -129,7 +129,7 @@ void
 ISendBuffer::start(unsigned long id)
 {
   unsigned i = _index_of(id, size_);
-  records_[i].parcel->start();
+  requests_[i] = records_[i].parcel->start();
 }
 
 /// Start as many isend operations as we can.

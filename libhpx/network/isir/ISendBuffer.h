@@ -109,7 +109,6 @@ class ISendBuffer {
       Request start() {
   	hpx_parcel_t *p = static_cast<hpx_parcel_t*>(_parcel);
   	void *from = isir_network_offset(p);
-	//TODO FIX
 	unsigned to = _gas_handle.ownerOf(p->target);
   	unsigned n = payload_size_to_isir_bytes(p->size);
   	int tag = PayloadSizeToTag(p->size);
@@ -140,7 +139,9 @@ class ISendBuffer {
       }
 
       Request start() {
-	return MPI_REQUEST_NULL;
+    	coll_data_t *d = static_cast<coll_data_t*>(_coll_parcel);
+        return _xport_handle.iallreduce(d->in, d->out, d->bytes, 
+			&d->data_type, &d->op, d->comm);
       }
 
       void clear() {

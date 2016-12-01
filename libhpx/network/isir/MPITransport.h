@@ -139,24 +139,10 @@ class MPITransport {
     }
   }
 
-  void allreduce(void *sendbuf, void *result, int count, void *datatype,
-                 hpx_monoid_op_t *op, Communicator *comm)
+  Request iallreduce(void *sendbuf, void *out, int bytes, void *datatype, void *op,
+               Communicator *c)
   {
-    int bytes = sizeof(CollectiveArg) + count;
-    CollectiveArg* in = new(alloca(bytes)) CollectiveArg(*op, count, sendbuf);
-    CollectiveArg* out = new(alloca(bytes)) CollectiveArg(*op, 0, nullptr);
-
-    MPI_Op usrOp;
-    Check(MPI_Op_create(CollectiveArg::Op, 1, &usrOp));
-    Check(MPI_Allreduce(in, out, bytes, MPI_BYTE, usrOp, *comm));
-    Check(MPI_Op_free(&usrOp));
-    out->put(result);
-  }
-
-  void iallreduce(void *sendbuf, void *out, int bytes, void *datatype, void *op,
-               Communicator *c, void *r)
-  {
-
+    Request request;
     MPI_Comm *comm = c;
     MPI_Op mpi_operation = MPI_SUM;
     MPI_Datatype mpi_datatype = MPI_INT;
@@ -166,7 +152,7 @@ class MPITransport {
     MPI_Type_size(mpi_datatype, &mpi_int_sz);
     count = bytes/mpi_int_sz;
 
-    MPI_Request *req = (MPI_Request*) r;
+    MPI_Request *req = (MPI_Request*) &request;
 
     if(op){
       to_mpi_optype(*(hpx_coll_optype_t*) op, &mpi_operation);
@@ -176,7 +162,7 @@ class MPITransport {
     }
 
     Check(MPI_Iallreduce(sendbuf, out, count, mpi_datatype, mpi_operation, *comm, req));
-    //log_net("started MPI_Iallreduce with count to %d\n", count);
+    return request;
   }
 
   static void pin(const void*, size_t, void*) {
