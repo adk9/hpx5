@@ -140,8 +140,9 @@ class ISendBuffer {
 
       Request start() {
     	coll_data_t *d = static_cast<coll_data_t*>(_coll_parcel);
+	auto comm = reinterpret_cast<Transport::Communicator*>(d->comm);
         return _xport_handle.iallreduce(d->in, d->out, d->bytes, 
-			&d->data_type, &d->op, d->comm);
+			&d->data_type, &d->op, comm);
       }
 
       void clear() {
