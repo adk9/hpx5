@@ -50,7 +50,7 @@ class PWCNetwork : public Network
   int wait(hpx_addr_t lco, int reset);
   int get(hpx_addr_t lco, size_t n, void *to, int reset);
 
-  int coll_init(void **collective);
+  int coll_init(coll_t **collective);
   int coll_sync(coll_data_t *dt, coll_t* c) ;
   int coll_async(coll_data_t *dt, coll_t* c, hpx_addr_t lsync, hpx_addr_t rsync) ;
 
