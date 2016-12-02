@@ -20,7 +20,7 @@
 #include "libhpx/events.h"
 #include "libhpx/parcel.h"
 #include <memory>
-#include <libhpx/topology.h>
+#include <libhpx/Topology.h>
 #ifdef HAVE_APEX
 #include "apex.h"
 #endif
