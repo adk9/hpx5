@@ -30,33 +30,57 @@ LABEL(thread_transfer)
         # PROLOGUE
         # 1) Reserve stack space and save the old stack pointer
         # This will allocate stack memory atomically.
-        stdu 1,-264(1)
+        stdu 1,-336(1)
         # Save LR
         mflr 0
         std  0, 0*8(1)
+
+        # Save CR
+        mfcr 12
+        std  12, 1*8(1)
+
         # store r2 (TOC)
-        std  2, 1*8(1)
+        std   2, 2*8(1)
 
         # Save all non-volatile registers that will be used
         # during this function
-        std  14, 3*8(1)
-        std  15, 4*8(1)
-        std  16, 5*8(1)
-        std  17, 6*8(1)
-        std  18, 7*8(1)
-        std  19, 8*8(1)
-        std  20, 9*8(1)
-        std  21, 10*8(1)
-        std  22, 11*8(1)
-        std  23, 12*8(1)
-        std  24, 13*8(1)
-        std  25, 14*8(1)
-        std  26, 15*8(1)
-        std  27, 16*8(1)
-        std  28, 17*8(1)
-        std  29, 18*8(1)
-        std  30, 19*8(1)
-        std  31, 20*8(1)
+        std  14, 4*8(1)
+        std  15, 5*8(1)
+        std  16, 6*8(1)
+        std  17, 7*8(1)
+        std  18, 8*8(1)
+        std  19, 9*8(1)
+        std  20, 10*8(1)
+        std  21, 11*8(1)
+        std  22, 12*8(1)
+        std  23, 13*8(1)
+        std  24, 14*8(1)
+        std  25, 15*8(1)
+        std  26, 16*8(1)
+        std  27, 17*8(1)
+        std  28, 18*8(1)
+        std  29, 19*8(1)
+        std  30, 20*8(1)
+        std  31, 21*8(1)
+
+        stfd 14, 22*8(1)
+        stfd 15, 23*8(1)
+        stfd 16, 24*8(1)
+        stfd 17, 25*8(1)
+        stfd 18, 26*8(1)
+        stfd 19, 27*8(1)
+        stfd 20, 28*8(1)
+        stfd 21, 29*8(1)
+        stfd 22, 30*8(1)
+        stfd 23, 31*8(1)
+        stfd 24, 32*8(1)
+        stfd 25, 33*8(1)
+        stfd 26, 34*8(1)
+        stfd 27, 35*8(1)
+        stfd 28, 36*8(1)
+        stfd 29, 37*8(1)
+        stfd 30, 38*8(1)
+        stfd 31, 39*8(1)
 
         // r0 commonly used to hold the old link register when building the stack frame
         // r1 is the stack pointer 
@@ -71,38 +95,63 @@ LABEL(thread_transfer)
         ld 7, 0(7)  // p->ustack->sp r7 = (r7)
         mr 1, 7     // Replace r1 (sp) for the context switch
 
-        // Make enough space for the worker_checkpoint to store sp to the frame
-        stdu 1, -8(1)
+        stwu 1, -48(1)
         bl worker_checkpoint
-        addi 1, 1, 8
+        addi 1, 1, 48
         # move old return address into the link register
         ld   0, 0*8(1)
         mtlr 0
+        # move cr
+        ld  12, 1*8(1)
+        # Restore CR2, CR3, CR4 of the CR
+        mtcrf 32, 12
+        mtcrf 16, 12
+        mtcrf  8, 12
+
         # restore r2 (TOC)
-        ld   2, 1*8(1)
-        ld   3, 2*8(1)
+        ld   2, 2*8(1)
+        ld   3, 3*8(1)
         # The function's epilogue follows the reverse sequence, restoring what had been saved
-        ld  14, 3*8(1)
-        ld  15, 4*8(1)
-        ld  16, 5*8(1)
-        ld  17, 6*8(1)
-        ld  18, 7*8(1)
-        ld  19, 8*8(1)
-        ld  20, 9*8(1)
-        ld  21, 10*8(1)
-        ld  22, 11*8(1)
-        ld  23, 12*8(1)
-        ld  24, 13*8(1)
-        ld  25, 14*8(1)
-        ld  26, 15*8(1)
-        ld  27, 16*8(1)
-        ld  28, 17*8(1)
-        ld  29, 18*8(1)
-        ld  30, 19*8(1)
-        ld  31, 20*8(1)
+        ld  14, 4*8(1)
+        ld  15, 5*8(1)
+        ld  16, 6*8(1)
+        ld  17, 7*8(1)
+        ld  18, 8*8(1)
+        ld  19, 9*8(1)
+        ld  20, 10*8(1)
+        ld  21, 11*8(1)
+        ld  22, 12*8(1)
+        ld  23, 13*8(1)
+        ld  24, 14*8(1)
+        ld  25, 15*8(1)
+        ld  26, 16*8(1)
+        ld  27, 17*8(1)
+        ld  28, 18*8(1)
+        ld  29, 19*8(1)
+        ld  30, 20*8(1)
+        ld  31, 21*8(1)
+
+        lfd 14, 22*8(1)
+        lfd 15, 23*8(1)
+        lfd 16, 24*8(1)
+        lfd 17, 25*8(1)
+        lfd 18, 26*8(1)
+        lfd 19, 27*8(1)
+        lfd 20, 28*8(1)
+        lfd 21, 29*8(1)
+        lfd 22, 30*8(1)
+        lfd 23, 31*8(1)
+        lfd 24, 32*8(1)
+        lfd 25, 33*8(1)
+        lfd 26, 34*8(1)
+        lfd 27, 35*8(1)
+        lfd 28, 36*8(1)
+        lfd 29, 37*8(1)
+        lfd 30, 38*8(1)
+        lfd 31, 39*8(1)
 
         # Restore stack frame
-        addi 1, 1, 264
+        addi 1, 1, 336
 
         # Return
         blr
