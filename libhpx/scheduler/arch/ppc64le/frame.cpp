@@ -33,13 +33,12 @@ class [[ gnu::packed ]] TransferFrame
  public:
   TransferFrame(hpx_parcel_t*p, Thread::Entry f)
     : lr_(align_stack_trampoline),
+      cr_(),
       r2_(nullptr),
       r3_(),
       r14_(f),
       r15_(p),
       regs_{nullptr},
-      vfp_alignment_(nullptr),
-      fpscr_(nullptr),
       VFRegs_{nullptr},
       top_r14_(nullptr),
       top_lr_(nullptr)
@@ -48,14 +47,13 @@ class [[ gnu::packed ]] TransferFrame
 
  private:
   void     (*lr_)(void);         //!< return address
+  void             *cr_;         //! CR2-CR4 are non volatile registers
   void             *r2_;         //!< TOC Pointer
   void             *r3_;
   Thread::Entry    r14_;         //!< Function
   void            *r15_;         //!> the parcel that is passed to f
   void       *regs_[16];         //!< r16-r31
-  void  *vfp_alignment_;
-  void          *fpscr_;
-  void      *VFRegs_[8];
+  void     *VFRegs_[18];         //!< fpr14-fpr31
   void        *top_r14_;
   void (*top_lr_)(void);
 };
@@ -64,6 +62,6 @@ class [[ gnu::packed ]] TransferFrame
 void
 Thread::initTransferFrame(Entry f)
 {
-  void *addr = top() - sizeof(TransferFrame);
+  void *addr = top() - sizeof(TransferFrame) - 32;
   sp_ = new(addr) TransferFrame(parcel_, f);
 }
