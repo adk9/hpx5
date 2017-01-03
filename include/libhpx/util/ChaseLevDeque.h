@@ -23,17 +23,16 @@
 namespace libhpx {
 namespace util {
 
+/// A chase-lev workstealing deque.
+///
+/// The workstealing deque provides push and pop operations that must be called
+/// serially, along with a steal operation that may be called concurrently with
+/// either push or pop.
+///
+/// http://dl.acm.org/citation.cfm?id=1073974
 template <typename T>
 class ChaseLevDeque;
 
-/// Class representing a worker thread's state.
-///
-/// Worker threads are "object-oriented" insofar as that goes, but each native
-/// thread has exactly one, thread-local worker structure, so the interface
-/// doesn't take a "this" pointer and instead grabs the "self" structure using
-/// __thread local storage.
-///
-/// @{
 template <typename T>
 class ChaseLevDeque<T*> : public Aligned<HPX_CACHELINE_SIZE>
 {
@@ -46,9 +45,11 @@ class ChaseLevDeque<T*> : public Aligned<HPX_CACHELINE_SIZE>
 
  public:
   ChaseLevDeque(unsigned capacity)
-      : bottom_(1), topBound_(1), capacity_(ceil2(capacity)),
-        buffer_(nullptr), top_(1) {
-    buffer_ = new(capacity_) Buffer(nullptr, capacity_);
+      : bottom_(1),
+        topBound_(1),
+        capacity_(ceil2(capacity)),
+        buffer_(new(capacity_) Buffer(nullptr, capacity_)),
+        top_(1) {
   }
 
   ChaseLevDeque() : ChaseLevDeque(32u) {
