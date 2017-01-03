@@ -54,7 +54,7 @@ class Worker : public libhpx::util::Aligned<HPX_CACHELINE_SIZE>
  public:
   using Continuation = std::function<void(hpx_parcel_t*)>;
   using Mailbox = libhpx::util::TwoLockQueue<hpx_parcel_t*>;
-  using FIFO = libhpx::util::WorkstealingQueue<hpx_parcel_t>;
+  using FIFO = libhpx::util::WorkstealingQueue<hpx_parcel_t*>;
 
   /// Event handlers.
   ///

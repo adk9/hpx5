@@ -23,7 +23,10 @@ namespace libhpx {
 namespace util {
 
 template <typename T>
-class WorkstealingQueue {
+class WorkstealingQueue;
+
+template <typename T>
+class WorkstealingQueue<T*> {
   using Index = std::uint_fast64_t;
 
   // This class represents a Bounded Buffer used in the workstealing
