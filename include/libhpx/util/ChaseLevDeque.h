@@ -71,7 +71,7 @@ class ChaseLevDeque<T*> : public Aligned<HPX_CACHELINE_SIZE>
 
   /// Pop an item from the deque.
   T* pop() {
-    auto bottom = bottom_.fetch_sub(1, RELEASE) - 1;
+    auto bottom = bottom_.fetch_sub(1, std::memory_order_seq_cst) - 1;
     topBound_ = top_.load(ACQUIRE);  // update bound
 
     // if the queue was empty, then we overshot (canonicalize empty)

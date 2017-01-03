@@ -36,8 +36,8 @@ LABEL(thread_transfer)
         std  0, 0*8(1)
 
         # Save CR
-        mfcr 12
-        std  12, 1*8(1)
+        mfcr 8
+        std  8, 1*8(1)
 
         # store r2 (TOC)
         std   2, 2*8(1)
@@ -97,16 +97,17 @@ LABEL(thread_transfer)
 
         stwu 1, -48(1)
         bl worker_checkpoint
+        nop
         addi 1, 1, 48
         # move old return address into the link register
         ld   0, 0*8(1)
         mtlr 0
         # move cr
-        ld  12, 1*8(1)
+        ld  8, 1*8(1)
         # Restore CR2, CR3, CR4 of the CR
-        mtcrf 32, 12
-        mtcrf 16, 12
-        mtcrf  8, 12
+        mtcrf 32, 8
+        mtcrf 16, 8
+        mtcrf  8, 8
 
         # restore r2 (TOC)
         ld   2, 2*8(1)
