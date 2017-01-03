@@ -53,14 +53,14 @@ static HPX_RETURNS_NON_NULL const char *_id(void) {
 }
 
 static void _deallocate(void *percolation) {
-  _opencl_percolation_t *cl = percolation;
+  auto *cl = static_cast<_opencl_percolation_t*>(percolation);
   clReleaseCommandQueue(cl->queue);
   clReleaseContext(cl->context);
 }
 
 static void *_prepare(const void *percolation, const char *key,
                       const char *kernel) {
-  const _opencl_percolation_t *cl = percolation;
+  const auto *cl = static_cast<const _opencl_percolation_t*>(percolation);
 
   int e;
   cl_program program = clCreateProgramWithSource(cl->context, 1, &kernel,
@@ -70,7 +70,7 @@ static void *_prepare(const void *percolation, const char *key,
   e = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
   dbg_assert_str(e >= 0, "failed to build OpenCL program for %s.\n", key);
 
-  char *name = strchr(key, ':')+1;
+  const char *name = strchr(key, ':') + 1;
   dbg_assert(name);
   cl_kernel k = clCreateKernel(program, name, &e);
   dbg_assert_str(e >= 0, "failed to create OpenCL kernel for %s.\n", key);
@@ -80,7 +80,7 @@ static void *_prepare(const void *percolation, const char *key,
 
 static int _execute(const void *percolation, void *obj, int nargs,
                     void *vargs[], size_t sizes[]) {
-  const _opencl_percolation_t *cl = percolation;
+  const auto *cl = static_cast<const _opencl_percolation_t*>(percolation);
   cl_kernel kernel = (cl_kernel)obj;
 
   cl_mem buf[nargs];
@@ -162,25 +162,27 @@ static _opencl_percolation_t _opencl_percolation_class = {
 /// spawned). Further, it initializes all of the structures necessary
 /// to execute jobs on this resource.
 percolation_t *percolation_new_opencl(void) {
-  _opencl_percolation_t *class = &_opencl_percolation_class;
+  _opencl_percolation_t *opencl_class = &_opencl_percolation_class;
 
-  int e = clGetPlatformIDs(1, &class->platform, NULL);
+  int e = clGetPlatformIDs(1, &opencl_class->platform, NULL);
   dbg_assert_str(e == CL_SUCCESS, "failed to identify the OpenCL platform.\n");
 
-  e = clGetDeviceIDs(class->platform, CL_DEVICE_TYPE_GPU, 1,
-                     &class->device, NULL);
+  e = clGetDeviceIDs(opencl_class->platform, CL_DEVICE_TYPE_GPU, 1,
+                     &opencl_class->device, NULL);
   if (e == CL_DEVICE_NOT_FOUND) {
     log_dflt("GPU device not found. Using the CPU...\n");
-    e = clGetDeviceIDs(class->platform, CL_DEVICE_TYPE_CPU, 1,
-                       &class->device, NULL);
+    e = clGetDeviceIDs(opencl_class->platform, CL_DEVICE_TYPE_CPU, 1,
+                       &opencl_class->device, NULL);
   }
   dbg_assert_str(e >= 0, "failed to access the OpenCL device.\n");
 
-  class->context = clCreateContext(NULL, 1, &class->device, NULL, NULL, &e);
+  opencl_class->context = clCreateContext(NULL, 1, &opencl_class->device, NULL, 
+                                          NULL, &e);
   dbg_assert_str(e >= 0, "failed to create an OpenCL context.\n");
 
-  class->queue = clCreateCommandQueue(class->context, class->device, 0, &e);
+  opencl_class->queue = clCreateCommandQueue(opencl_class->context, 
+                                             opencl_class->device, 0, &e);
   dbg_assert_str(e >= 0, "failed to create an OpenCL command queue.\n");
 
-  return (percolation_t*)class;
+  return (percolation_t*)opencl_class;
 }

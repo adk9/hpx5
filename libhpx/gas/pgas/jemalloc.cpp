@@ -91,7 +91,7 @@ static const chunk_hooks_t _global_hooks = {
   .merge    = as_null_merge
 };
 
-GlobalAllocator::GlobalAllocator(int rank) {
+GlobalAllocator::GlobalAllocator(int rank) : hpx143Fix_() {
   as_set_allocator(AS_GLOBAL, &_global_hooks);
   if (rank == 0) {
     hpx143Fix_ = as_malloc(AS_GLOBAL, sizeof(int));

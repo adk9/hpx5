@@ -157,7 +157,7 @@ void
 PGAS::zeroBlocks(uint64_t offset, size_t n, size_t bsize)
 {
   dbg_assert(isCyclicOffset(offset));
-  uint64_t blocks = ceil_div(n, uint64_t(here->ranks));
+  uint64_t blocks = ceil_div(uint64_t(n), uint64_t(here->ranks));
   uint32_t align = ceil_log2(bsize);
   uint64_t padded = uint64_t(1) << align;
   std::memset(offsetToLVA(offset), 0, blocks * padded);
@@ -168,7 +168,7 @@ PGAS::allocateCyclicBlocks(size_t n, size_t bsize, uint32_t boundary,
                            uint32_t attr, int zero)
 {
   dbg_assert(here->rank == 0);
-  size_t blocks = ceil_div(n, uint64_t(here->ranks));
+  uint64_t blocks = ceil_div(uint64_t(n), uint64_t(here->ranks));
   uint64_t offset = allocateBlocks(blocks, bsize, boundary, attr, zero, true);
   uint64_t csbrk = getCsbrk();
   hpx_bcast_rsync(SetCsbrk, &csbrk);

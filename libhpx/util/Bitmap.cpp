@@ -144,7 +144,7 @@ Bitmap::set(unsigned bit, unsigned nbits)
     //   mask   0 1 1 0
     //          -------
     // result   0 0 0 1
-    blocks_[block] &= ~mask;
+    blocks_[block++] &= ~mask;
 
     // we set each bit in the mask
     nbits -= popcountl(mask);
@@ -166,7 +166,7 @@ Bitmap::clear(unsigned bit, unsigned nbits)
     //   mask   0 1 1 0
     //          -------
     // result   0 1 1 1
-    blocks_[block] |= mask;
+    blocks_[block++] |= mask;
 
     // we cleared each bit in the mask
     nbits -= popcountl(mask);

@@ -47,6 +47,9 @@ LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, Demultiplex, DemultiplexHandler,
 
 class CoalescingBuffer {
  public:
+  CoalescingBuffer() : parcels_(), ssync_(), bytes_() {
+  }
+
   void record(hpx_parcel_t *p) {
     while (auto s = parcel_stack_pop(&p->next)) {
       parcel_stack_push(&ssync_, s);
@@ -63,7 +66,7 @@ class CoalescingBuffer {
       auto n = parcel_size(p);
       memcpy(next, p, n);
       parcel_delete(p);
-      next += parcel_size(p);
+      next += n;
     }
     if (net->send(fat, ssync_)) {
       throw std::exception();
@@ -99,6 +102,7 @@ CoalescingWrapper::send(unsigned n) {
 
   for (auto i = 0u, e = n; i < e; ++i) {
     auto p = sends_.dequeue();
+    dbg_assert(p);
     auto target = gas_.ownerOf(p->target);
     buffers[target].record(p);
   }
@@ -115,9 +119,16 @@ CoalescingWrapper::send(hpx_parcel_t *p, hpx_parcel_t *ssync)
     return impl_->send(p, ssync);
   }
 
+  // Prepare the parcel now, 1) to serialize it while its data is probably in
+  // our cache and 2) to make sure it gets a pid from the right parent.
+  parcel_prepare(p);
+  sends_.enqueue(p);
+
+  // Notify the world that there's another parcel in the queue.
+  auto n = 1 + count_++;
+
   // Coalesce on demand as long as we have enough parcels available.
-  auto n = count_++;
-  while (n >= size_) {
+  while (size_ < n) {
     Coalescing _(coalescing_);
     if (count_.compare_exchange_strong(n, n - size_)) {
       send(size_);
@@ -125,10 +136,6 @@ CoalescingWrapper::send(hpx_parcel_t *p, hpx_parcel_t *ssync)
     }
   }
 
-  // Prepare the parcel now, 1) to serialize it while its data is probably in
-  // our cache and 2) to make sure it gets a pid from the right parent.
-  parcel_prepare(p);
-  sends_.enqueue(p);
   return LIBHPX_OK;
 }
 

@@ -16,7 +16,10 @@ nobase_include_HEADERS = hpx/action.h \
                          hpx/time.h \
                          hpx/topology.h \
                          hpx/types.h \
-                         libapex/apex_global_hpx.h 
+                         libapex/apex_global_hpx.h \
+                         libhpx/libhpx.h \
+                         libhpx/config.h \
+                         libhpx/options.def
 
 if HAVE_HPXPP
 nobase_include_HEADERS += hpx/hpx++.h \

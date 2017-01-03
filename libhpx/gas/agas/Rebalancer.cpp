@@ -36,16 +36,14 @@
 namespace {
 using libhpx::self;
 using GVA = libhpx::gas::agas::GlobalVirtualAddress;
-using BST = libhpx::gas::agas::BlockStatisticsTable;
-using Entry = libhpx::gas::agas::BlockStatisticsEntry;
-using Map = std::unordered_map<uint64_t, std::unique_ptr<Entry>>;
+using BST = libhpx::gas::agas::HierarchicalBST;
 }
 
 // Per-locality BST.
 //
 // During statistics aggration, all of the thread-local BSTs are
 // aggregated into a per-locality BST.
-static BST *_global_bst = NULL;
+static BST *_bst = NULL;
 
 // Add an entry to the rebalancer's (thread-local) BST table.
 ///
@@ -68,30 +66,14 @@ void rebalancer_add_entry(int src, int dst, hpx_addr_t block, size_t size) {
     return;
   }
 
-  // insert the block if it does not already exist
-  Map *m = static_cast<Map*>(self->bst);
-  if (!m) {
-    return;
-  }
-
-  auto& entry = (*m)[block];
-  if (entry) {
-    // otherwise, simply update the counts and sizes
-    entry->counts[src]++;
-    entry->sizes[src] += size;
-  } else {
-    (*m)[block] = std::unique_ptr<Entry>(new Entry(here->ranks));
-  }
+  // add an entry to the BST
+  _bst->add(gva, src, 1, size);
 }
 
 // Initialize the AGAS-based rebalancer.
 int rebalancer_init(void) {
-  _global_bst = new BST(0);
-  dbg_assert(_global_bst);
-
-  for (auto&& w : here->sched->getWorkers()) {
-    w->bst = new Map;
-  }
+  _bst = new BST();
+  dbg_assert(_bst);
 
   log_gas("GAS rebalancer initialized\n");
   return HPX_SUCCESS;
@@ -99,34 +81,10 @@ int rebalancer_init(void) {
 
 // Finalize the AGAS-based rebalancer.
 void rebalancer_finalize(void) {
-  for (auto&& w : here->sched->getWorkers()) {
-    Map *m = static_cast<Map*>(w->bst);
-    m->clear();
-    delete m;
+  if (_bst) {
+    delete _bst;
+    _bst = NULL;
   }
-
-  if (_global_bst) {
-    delete _global_bst;
-    _global_bst = NULL;
-  }
-}
-
-// This function takes the thread-local BST and merges it with the
-// per-node global BST.
-int _local_to_global_bst(int id, void *UNUSED) {
-  libhpx::Worker* w = here->sched->getWorker(id);
-  Map *m = static_cast<Map*>(w->bst);
-  if (!m) {
-    return HPX_SUCCESS;
-  }
-
-  unsigned count = m->size();
-  log_gas("Added %u entries to global BST.\n", count);
-  for (auto it = m->begin(); it != m->end(); ++it) {
-    _global_bst->upsert(it->first, std::move(it->second));
-  }
-  m->clear();
-  return HPX_SUCCESS;
 }
 
 // Constructs a graph at the target global address from the serialized
@@ -148,8 +106,7 @@ static LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, _aggregate_global_bst,
 // into a parcel. This function steals the current continuation and
 // forwards it along to the generated parcel.
 static int _aggregate_bst_handler(hpx_addr_t graph) {
-  hpx_par_for_sync(_local_to_global_bst, 0, HPX_THREADS, NULL);
-  hpx_parcel_t *p = _global_bst->serializeToParcel();
+  hpx_parcel_t *p = _bst->toParcel();
   log_gas("Global BST size: %u bytes.\n", p->size);
   if (!p || !p->size) {
     return HPX_SUCCESS;

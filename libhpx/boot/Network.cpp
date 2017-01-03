@@ -35,7 +35,7 @@ BootNetwork::~Network()
 void
 BootNetwork::abort() const
 {
-  abort();
+  std::abort();
   unreachable();
 }
 
