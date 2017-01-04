@@ -20,13 +20,26 @@
         .file "libhpx/scheduler/arch/ppc64le/transfer.S"
         .machine power8
         .abiversion 2
-        .section        ".toc","aw"
         .section        .text
-        .type thread_transfer, STT_FUNC
-        INTERNAL(thread_transfer)
-        GLOBAL(thread_transfer)
+        .align 2
+        .globl thread_transfer
+        .type thread_transfer, @function
 LABEL(thread_transfer)
         STARTPROC
+.LCF1:
+        // Global entry of thread_transfer
+        // TOC pointer initialization code sequence
+        // r12 holds the current function entry address
+        // .TOC - TOC Pointer
+        // Initialize the value of the TOC pointer into r2
+        // Calculate the upper 16 bits
+0:      addis 2, 12, .TOC.-.LCF1@ha
+        // Add the low 16 bits
+	addi 2, 2, .TOC.-.LCF1@l
+       
+        // Local entry of thread_transfer
+        .localentry thread_transfer,.-thread_transfer
+
         # PROLOGUE
         # 1) Reserve stack space and save the old stack pointer
         # This will allocate stack memory atomically.
