@@ -34,7 +34,7 @@ class [[ gnu::packed ]] TransferFrame
   TransferFrame(hpx_parcel_t*p, Thread::Entry f)
     : lr_(align_stack_trampoline),
       cr_(),
-      r2_(nullptr),
+      r2_(init_r2_),
       r3_(),
       r14_(f),
       r15_(p),
@@ -56,7 +56,10 @@ class [[ gnu::packed ]] TransferFrame
   void     *VFRegs_[18];         //!< fpr14-fpr31
   void        *top_r14_;
   void (*top_lr_)(void);
+
+  static void* init_r2_;
 };
+TransferFrame::init_r2_ = nullptr;
 }
 
 void
@@ -64,4 +67,41 @@ Thread::initTransferFrame(Entry f)
 {
   void *addr = top() - sizeof(TransferFrame) - 32;
   sp_ = new(addr) TransferFrame(parcel_, f);
+}
+
+void
+Thread::initArch(Worker *w)
+{
+  // We need to extract a value to use for the table-of-contents register for
+  // the thread_transfer frame that we spoof. We can do this by performing a
+  // "fake" context switch using the initial thread, and capturing the value of
+  // r2 relative to the stack frame for thread_transfer, which is the value that
+  // gets checkpointed in the "From" parcel during the context switch.
+  //
+  // We borrow the system parcel/thread in order to spoof this context switch
+  // and just make sure to restore its previous stack pointer before returning.
+  //
+  // This *doesn't actually* context switch because we carefully control the
+  // stack pointer we are switching to in order not to change it during the
+  // transfer function, which means these are just "normal" function calls that
+  // happen to checkpoint the stuff we need in the stack frame.
+  void *sp = w->current_->thread->getSp();
+
+  // The constant here is experimentally determined and corresponds to the value
+  // of r7 that we need at line 109 in transfer.S so that the instruction
+  // becomes a noop.
+  w->current_->thread->setSp(&sp - 14);
+
+  // This continuation captures the value of r2 that was stored on line 56 of
+  // transfer.S (the "checkpointed" sp is the value of r1 from thread_transfer).
+  std::function<void(hpx_parcel_t*)> c([](hpx_parcel_t *p) {
+      init_r2_ = p->thread->getSp()[2];
+    });
+
+  // Perform the "fake" context switch to get the correct TOC stored on this
+  // stack so that the continuation above can read it.
+  libhpx::Worker::ContextSwitch(w->current_, c, w);
+
+  // Restore whatever value was in the system thread's sp previously.
+  w->current_->thread->setSp(sp);
 }

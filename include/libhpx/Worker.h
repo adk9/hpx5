@@ -426,6 +426,9 @@ class Worker : public libhpx::util::Aligned<HPX_CACHELINE_SIZE>
   Deque                    queues_[2];          //!< work and yield queues
   Mailbox                   inbox_;             //!< mail sent to me
   std::thread              thread_;             //!< this worker's native thread
+
+  // Allow the thread class to call ContextSwitch directly.
+  friend class libhpx::scheduler::Thread;
 };
 
 
