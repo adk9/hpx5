@@ -45,10 +45,15 @@ class [[ gnu::packed ]] TransferFrame
   {
   }
 
+  static void
+  setInitR2(const void* value) {
+    init_r2_ = value;
+  }
+
  private:
   void     (*lr_)(void);         //!< return address
   void             *cr_;         //! CR2-CR4 are non volatile registers
-  void             *r2_;         //!< TOC Pointer
+  const void       *r2_;         //!< TOC Pointer
   void             *r3_;
   Thread::Entry    r14_;         //!< Function
   void            *r15_;         //!> the parcel that is passed to f
@@ -57,9 +62,9 @@ class [[ gnu::packed ]] TransferFrame
   void        *top_r14_;
   void (*top_lr_)(void);
 
-  static void* init_r2_;
+  static const void* init_r2_;
 };
-TransferFrame::init_r2_ = nullptr;
+const void* TransferFrame::init_r2_ = nullptr;
 }
 
 void
@@ -90,12 +95,19 @@ Thread::initArch(Worker *w)
   // The constant here is experimentally determined and corresponds to the value
   // of r7 that we need at line 109 in transfer.S so that the instruction
   // becomes a noop.
-  w->current_->thread->setSp(&sp - 14);
+
+  #if defined(__OPTIMIZED_SIZE__) || defined(__OPTIMIZE__)
+     /* __OPTIMIZED_SIZE__: -Os set */
+     /* __OPTIMIZE__: -O1, -O2 or -O3 set */
+     w->current_->thread->setSp(&sp - 50);
+  #else
+     w->current_->thread->setSp(&sp - 47);
+  #endif
 
   // This continuation captures the value of r2 that was stored on line 56 of
   // transfer.S (the "checkpointed" sp is the value of r1 from thread_transfer).
   std::function<void(hpx_parcel_t*)> c([](hpx_parcel_t *p) {
-      init_r2_ = p->thread->getSp()[2];
+      TransferFrame::setInitR2(p->thread->getSp()[2]);
     });
 
   // Perform the "fake" context switch to get the correct TOC stored on this

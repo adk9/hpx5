@@ -23,17 +23,16 @@
         .file "libhpx/scheduler/arch/ppc64le/asm.S"
         .machine power8
         .abiversion 2
-        .section        ".toc","aw"
-        .text
-        .type align_stack_trampoline, STT_FUNC
-        INTERNAL(align_stack_trampoline)
-        GLOBAL(align_stack_trampoline)
-        .type align_stack_trampoline, %function
-
+        .section        .text
+        .align 2
+        .globl align_stack_trampoline
+        .type align_stack_trampoline, @function
 LABEL(align_stack_trampoline)
         STARTPROC
+	mtlr 0x0
         mr 3, 15
-        mtlr 14
-        blr
+        mr 12, 14
+        mtctr 12
+        bctrl
         ENDPROC
         SIZE(align_stack_trampoline)
