@@ -263,7 +263,7 @@ Worker::enter()
   // At this point (once we have a "current_" pointer we can do any
   // architecture-specific initialization necessary, up to and including calling
   // ContextSwitch.
-  Thread::initArch(this);
+  Thread::InitArch(this);
 
   // Hang out here until we're shut down.
   while (state_ != SHUTDOWN) {

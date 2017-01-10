@@ -75,7 +75,7 @@ Thread::initTransferFrame(Entry f)
 }
 
 void
-Thread::initArch(Worker *w)
+Thread::InitArch(Worker *w)
 {
   // We need to extract a value to use for the table-of-contents register for
   // the thread_transfer frame that we spoof. We can do this by performing a

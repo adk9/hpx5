@@ -42,6 +42,7 @@ class ChaseLevDeque<T*> : public Aligned<HPX_CACHELINE_SIZE>
   static constexpr auto RELAXED = std::memory_order_relaxed;
   static constexpr auto ACQUIRE = std::memory_order_acquire;
   static constexpr auto RELEASE = std::memory_order_release;
+  static constexpr auto SEQ_CST = std::memory_order_seq_cst;
 
  public:
   ChaseLevDeque(unsigned capacity)
@@ -71,7 +72,7 @@ class ChaseLevDeque<T*> : public Aligned<HPX_CACHELINE_SIZE>
 
   /// Pop an item from the deque.
   T* pop() {
-    auto bottom = bottom_.fetch_sub(1, std::memory_order_seq_cst) - 1;
+    auto bottom = bottom_.fetch_sub(1, SEQ_CST) - 1;
     topBound_ = top_.load(ACQUIRE);  // update bound
 
     // if the queue was empty, then we overshot (canonicalize empty)

@@ -76,7 +76,7 @@ typedef ffi_type* hpx_type_t;
 /* We have support for libffi complex numbers */
 #undef HAVE_LIBFFI_COMPLEX
 
-#ifndef __PPC64__
+#if !defined(__PPC64__)
 #ifdef HAVE_LIBFFI_COMPLEX
 # define HPX_COMPLEX_FLOAT      &ffi_type_complex_float
 # define HPX_COMPLEX_DOUBLE     &ffi_type_complex_double
