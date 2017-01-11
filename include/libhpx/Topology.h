@@ -71,16 +71,82 @@ namespace libhpx {
 
 class Topology {
   public:
-    virtual ~Topology();
+    Topology()
+      : ncpus_(0),
+        ncores_(0),
+        nnodes_(0),
+        numa_nodes_(nullptr),
+        cpus_per_node_(0),
+        cpu_to_core_(0),
+        cpu_to_numa_(nullptr),
+        numa_to_cpus_(0),
+        cpu_affinity_map_(nullptr)
+    {
+    }
+
+    ~Topology() {
+    }
 
     /// Allocate and initialize a new topology object.
     ///
-    /// @param       config The configuration object.
+    /// @param   size_t
+    ///          config The configuration object.
     ///
-    /// @returns            The topology object, or NULL if there was an error.
-    static Topology* Create(config_t *config);
+    /// @returns The topology object, or NULL if there was an error.
+    static void* operator new(size_t, config_t *config);
 
-    static void Delete(Topology* topology);
+    /// Deallocate the topology object.
+    ///
+    /// @param   topology The pointer to the topology object.
+    static void operator delete(void*, Topology *topology);
+
+    int getNnodes() const {
+      return nnodes_;
+    }
+
+    int getNcpus() const {
+      return ncpus_;
+    }
+
+    int getNcores() const {
+      return ncores_;
+    }
+
+    int getCpuToNuma(int cpu) const {
+      return cpu_to_numa_[cpu];
+    }
+
+    int getCpuToCore(int cpu) const {
+      return cpu_to_core_[cpu];
+    }
+
+    int getCpusPerNode() const {
+      return cpus_per_node_;
+    }
+
+    int getNumaToCpus(int node, int cpu) {
+      return numa_to_cpus_[node][cpu];
+    }
+
+    int **getNumaToCpusPtr() {
+      return numa_to_cpus_;
+    }
+
+    libhpx_hwloc_cpuset_t getCpuAffinityMap(int resource) {
+      return cpu_affinity_map_[resource];
+    }
+
+    libhpx_hwloc_cpuset_t *getAffinityMap() {
+      return cpu_affinity_map_;
+    }
+
+    libhpx_hwloc_topology_t getHwlocTopology() {
+      return hwloc_topology_;
+    }
+
+    libhpx_hwloc_cpuset_t getAllowedCpus() {
+      return allowed_cpus_;
+    }
 
     /// Extract the locality from a packed value.
     static inline uint32_t topo_value_to_rank(uint64_t value) {
@@ -116,35 +182,31 @@ class Topology {
       return pe + core + dat;
    }
 
-  protected:
-    Topology();
-
-  public:
-    libhpx_hwloc_topology_t  hwloc_topology; //!< The HWLOC topology object.
-    int                        ncpus; //!< The number of physical CPUs in the
+  private:
+    libhpx_hwloc_topology_t  hwloc_topology_; //!< The HWLOC topology object.
+    int                        ncpus_; //!< The number of physical CPUs in the
                                       //!< system.
 
-    libhpx_hwloc_obj_t         *cpus; //!< The HWLOC object corresponding to each
+    libhpx_hwloc_obj_t         *cpus_; //!< The HWLOC object corresponding to each
                                       //!< CPU.
 
-    int                       ncores; //!< The number of physical cores in the
+    int                       ncores_; //!< The number of physical cores in the
                                       //!< system.
 
-    int                       nnodes; //!< The number of NUMA nodes in the system.
-    libhpx_hwloc_obj_t   *numa_nodes; //!< The HWLOC object corresponding to each
+    int                       nnodes_; //!< The number of NUMA nodes in the system.
+    libhpx_hwloc_obj_t   *numa_nodes_; //!< The HWLOC object corresponding to each
                                       //!< NUMA node.
 
-    int                cpus_per_node; //!< The number of CPUs per NUMA node
-    int                 *cpu_to_core; //!< The CPU to core mapping.
-    int                 *cpu_to_numa; //!< The CPU to NUMA node mapping.
-    int               **numa_to_cpus; //!< The (reverse) NUMA node to cpus mapping.
-    libhpx_hwloc_cpuset_t      allowed_cpus; //!< The initial CPU - HPX process binding.
-    libhpx_hwloc_cpuset_t *cpu_affinity_map; //!< The CPU affinity map that maintains the
+    int                cpus_per_node_; //!< The number of CPUs per NUMA node
+    int                 *cpu_to_core_; //!< The CPU to core mapping.
+    int                 *cpu_to_numa_; //!< The CPU to NUMA node mapping.
+    int               **numa_to_cpus_; //!< The (reverse) NUMA node to cpus mapping.
+    libhpx_hwloc_cpuset_t      allowed_cpus_; //!< The initial CPU - HPX process binding.
+    libhpx_hwloc_cpuset_t *cpu_affinity_map_; //!< The CPU affinity map that maintains the
                                       //!< CPU binding for a resource (numa-node,
                                       //!< core-id) depending on the global
                                       //!< affinity policy.
 };
-
 } // namespace libhpx
 
 #endif // LIBHPX_TOPOLOGY_CXX_H

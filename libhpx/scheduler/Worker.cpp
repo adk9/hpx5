@@ -51,7 +51,7 @@ __thread Worker * volatile libhpx::self;
 
 Worker::Worker(int id)
     : id_(id),
-      numaNode_(here->topology->cpu_to_numa[id % here->topology->ncpus]),
+      numaNode_(here->topology->getCpuToNuma(id % here->topology->getNcpus())),
       seed_(id),
       workFirst_(0),
       lastVictim_(nullptr),
@@ -464,12 +464,12 @@ Worker::stealRandom()
 hpx_parcel_t*
 Worker::stealRandomNode()
 {
-  int   n = here->topology->cpus_per_node;
+  int   n = here->topology->getCpusPerNode();
   int cpu = rand(n);
-  int  id = here->topology->numa_to_cpus[numaNode_][cpu];
+  int  id = here->topology->getNumaToCpus(numaNode_, cpu);
   while (id == id_) {
     cpu = rand(n);
-    id = here->topology->numa_to_cpus[numaNode_][cpu];
+    id = here->topology->getNumaToCpus(numaNode_, cpu);
   }
   return stealFrom(here->sched->getWorker(id));
 }
@@ -518,7 +518,7 @@ Worker::stealHierarchical()
     return stealRandom();
   }
 
-  if (here->topology->numa_to_cpus == NULL) {
+  if (here->topology->getNumaToCpusPtr() == NULL) {
     return stealRandom();
   }
 
@@ -544,11 +544,11 @@ Worker::stealHierarchical()
   // step 4
   int nn = numaNode_;
   while (nn == numaNode_) {
-    nn = rand(here->topology->nnodes);
+    nn = rand(here->topology->getNnodes());
   }
 
-  int        idx = rand(here->topology->cpus_per_node);
-  int        cpu = here->topology->numa_to_cpus[nn][idx];
+  int        idx = rand(here->topology->getCpusPerNode());
+  int        cpu = here->topology->getNumaToCpus(nn, idx);
   Worker* victim = here->sched->getWorker(cpu);
   Worker*    src = this;
   hpx_parcel_t* p = action_new_parcel(StealHalf, // action

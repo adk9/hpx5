@@ -26,13 +26,13 @@
 
 int system_set_worker_affinity(int id, libhpx_thread_affinity_t policy) {
   int resource;
-  int cpu = (id % here->topology->ncpus);
+  int cpu = (id % here->topology->getNcpus());
   switch (policy) {
    case HPX_THREAD_AFFINITY_NUMA:
-     resource = here->topology->cpu_to_numa[cpu];
+     resource = here->topology->getCpuToNuma(cpu);
      break;
    case HPX_THREAD_AFFINITY_CORE:
-     resource = here->topology->cpu_to_core[cpu];
+     resource = here->topology->getCpuToCore(cpu);
      break;
    case HPX_THREAD_AFFINITY_HWTHREAD:
      resource = cpu;
@@ -51,13 +51,13 @@ int system_set_worker_affinity(int id, libhpx_thread_affinity_t policy) {
     return LIBHPX_OK;
   }
 
-  libhpx_hwloc_cpuset_t cpuset = here->topology->cpu_affinity_map[resource];
-  return  libhpx_hwloc_set_cpubind(here->topology->hwloc_topology,
+  libhpx_hwloc_cpuset_t cpuset = here->topology->getCpuAffinityMap(resource);
+  return  libhpx_hwloc_set_cpubind(here->topology->getHwlocTopology(),
                             cpuset, LIBHPX_HWLOC_CPUBIND_THREAD);
 }
 
 /// Return the weight of the bitmap that represents the CPUs we are
 ///  allowed to run on. This bitmap is set in libhpx/system/topology.c.
 int system_get_available_cores(void) {
-  return libhpx_hwloc_bitmap_weight(here->topology->allowed_cpus);
+  return libhpx_hwloc_bitmap_weight(here->topology->getAllowedCpus());
 }
