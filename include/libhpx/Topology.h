@@ -71,16 +71,13 @@ namespace libhpx {
 
 class Topology {
   public:
-    virtual ~Topology();
-
     /// Allocate and initialize a new topology object.
     ///
     /// @param       config The configuration object.
-    ///
-    /// @returns            The topology object, or NULL if there was an error.
-    static Topology* Create(config_t *config);
+    Topology(const config_t *config);
 
-    static void Delete(Topology* topology);
+    /// Finalize and free a topology.
+    virtual ~Topology();
 
     /// Extract the locality from a packed value.
     static inline uint32_t topo_value_to_rank(uint64_t value) {
@@ -115,9 +112,6 @@ class Topology {
       uint64_t dat = (offset << TOPO_OFFSET_SHIFT) & TOPO_OFFSET_MASK;
       return pe + core + dat;
    }
-
-  protected:
-    Topology();
 
   public:
     libhpx_hwloc_topology_t  hwloc_topology; //!< The HWLOC topology object.

@@ -75,7 +75,7 @@ static void _cleanup(locality_t *l) {
   delete l->boot;
 
   if (l->topology) {
-    Topology::Delete(l->topology);
+    delete l->topology;
   }
 
   action_table_finalize();
@@ -154,7 +154,7 @@ int hpx_init(int *argc, char ***argv) {
   }
 
   // topology discovery and initialization
-  here->topology = Topology::Create(here->config);
+  here->topology = new Topology(here->config);
   if (!here->topology) {
     status = log_error("failed to discover topology.\n");
     goto unwind1;
