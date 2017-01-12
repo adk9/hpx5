@@ -30,6 +30,7 @@ def print_lco(lco_name):
     symtab_entry = gdb.parse_and_eval(temp_str)
     temp_addr, cast_to = str(symtab_entry['data_type']).split()
     cast_to = cast_to[1:-1]
+    print("LCO type: " + cast_to[1:-2])
     #Use hpx print to display the LCO
     temp_str = "set $req_val = (" + cast_to + " *) malloc(sizeof(" + cast_to \
         + "))"
