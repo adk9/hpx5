@@ -85,3 +85,8 @@ Thread::initTransferFrame(Entry f)
   void *addr = top() - sizeof(TransferFrame);
   sp_ = new(addr) TransferFrame(parcel_, f, mxcsr, fpucw);
 }
+
+void
+Thread::InitArch(Worker *w)
+{
+}

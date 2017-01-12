@@ -18,3 +18,7 @@ endif
 if CPU_AARCH64
 libarch_la_SOURCES = aarch64/frame.cpp aarch64/asm.S aarch64/transfer.S common/nop.cpp
 endif
+
+if CPU_POWERPC64LE
+libarch_la_SOURCES = ppc64le/frame.cpp ppc64le/asm.S ppc64le/transfer.S common/nop.cpp
+endif
