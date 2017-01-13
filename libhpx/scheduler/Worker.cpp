@@ -28,8 +28,8 @@
 #include "libhpx/Network.h"
 #include "libhpx/rebalancer.h"
 #include "libhpx/Scheduler.h"
+#include "libhpx/Topology.h"
 #include "libhpx/system.h"
-#include "libhpx/topology.h"
 #include "libhpx/util/math.h"
 #include <cstring>
 #ifdef HAVE_URCU
@@ -259,6 +259,11 @@ Worker::enter()
 
   system_ = &system;
   current_ = &system;
+
+  // At this point (once we have a "current_" pointer we can do any
+  // architecture-specific initialization necessary, up to and including calling
+  // ContextSwitch.
+  Thread::InitArch(this);
 
   // Hang out here until we're shut down.
   while (state_ != SHUTDOWN) {

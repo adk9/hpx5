@@ -18,6 +18,7 @@
 /// @brief Defines the lightweight thread stack structure and interface for user
 ///        level threads.
 #include "libhpx/parcel.h"
+#include "libhpx/Worker.h"
 #include <functional>
 
 namespace libhpx {
@@ -52,6 +53,10 @@ class Thread {
 
   void setSp(void *sp) {
     sp_ = sp;
+  }
+
+  const void** getSp() const {
+    return reinterpret_cast<const void**>(sp_);
   }
 
   intptr_t canAlloca(size_t bytes) {
@@ -112,6 +117,9 @@ class Thread {
   ///
   /// All of the stacks in the system need to have the same size.
   static void SetStackSize(int bytes);
+
+  /// Do any architecture-specific initialization for the worker.
+  static void InitArch(Worker*);
 
  private:
   /// Get the top address in the stack.

@@ -21,7 +21,7 @@
 #include <libhpx/libhpx.h>
 #include <libhpx/locality.h>
 #include <libhpx/system.h>
-#include <libhpx/topology.h>
+#include <libhpx/Topology.h>
 #include <hwloc.h>
 
 int system_set_worker_affinity(int id, libhpx_thread_affinity_t policy) {

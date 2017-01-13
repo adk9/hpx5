@@ -35,6 +35,7 @@ namespace libhpx {
 class GAS;
 class Network;
 class Scheduler;
+class Topology;
 namespace boot {
 class Network;
 }
@@ -42,6 +43,7 @@ class Network;
 using libhpx::GAS;
 using libhpx::Network;
 using libhpx::Scheduler;
+using libhpx::Topology;
 using BootNetwork = libhpx::boot::Network;
 extern "C" {
 #else
@@ -49,12 +51,12 @@ extern "C" {
 #define Network void
 #define Scheduler void
 #define BootNetwork void
+#define Topology void
 #endif
 
 /// Forward declarations.
 /// @{
 struct config;
-struct topology;
 /// @}
 
 /// The locality object.
@@ -81,7 +83,7 @@ typedef struct locality {
                                //!< parameters based on the user-specified
                                //!< runtime configuration values and/or the
                                //!< defaults.
-  struct topology   *topology; //!< The topology information.
+  Topology          *topology; //!< The topology information.
   void           *percolation; //!< An interface for dealing with GPU backends.
   void                *tracer; //!< Reference to the tracer object
   sigset_t               mask; //!< The default signal mask.
