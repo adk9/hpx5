@@ -61,7 +61,26 @@ AC_DEFUN([HPX_CONFIG_HOST], [
               [AC_MSG_ERROR([Unsupported Host OS $host_os])])
 
  AS_CASE([$host_vendor],
-      [k1om], [libffi_contrib_dir=libffi-mic],
+      [k1om], [ AC_REQUIRE([AC_USE_SYSTEM_EXTENSIONS])
+                AC_LANG_PUSH([C])
+
+                AC_CACHE_CHECK([for Intel Knight's Corner],
+                [pt_cv_knc],
+                [AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
+                #ifdef __MIC__
+                #include <immintrin.h>
+                #else
+                #error unsupported host
+                #endif
+                ]])],
+                [pt_cv_knc=yes; pt_cv_knc_val=1],
+                [pt_cv_knc=no; pt_cv_knc_val=0])])
+                AC_DEFINE_UNQUOTED([HAVE_KNC], [$pt_cv_knc_val],
+                  [define to 1 if the C compiler supports KNC])
+                AM_CONDITIONAL([HAVE_KNC], [test "x$pt_cv_knc" = xyes])
+                AS_IF([test "x$pt_cv_knc" = xyes], 
+                      [libffi_contrib_dir=libffi-mic],
+                      [libffi_contrib_dir=libffi])],
               [libffi_contrib_dir=libffi])
 
  AC_SUBST([LIBFFI_CONTRIB_DIR], [$libffi_contrib_dir])
