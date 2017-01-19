@@ -287,6 +287,13 @@ const char *hpx_strerror(hpx_status_t s) {
   }
 }
 
-void hpx_finalize(void) {
+void
+hpx_finalize(void) {
   _cleanup(here);
+  here = NULL;
+}
+
+int
+hpx_initialized(void) {
+  return (here != NULL);
 }

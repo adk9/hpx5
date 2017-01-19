@@ -39,6 +39,12 @@ extern "C" {
 int hpx_init(int *argc, char ***argv)
   HPX_PUBLIC;
 
+/// Test to see if the runtime has been initialized.
+///
+/// @returns            Non-zero if HPX has been initialized and not finalized.
+int hpx_initialized(void)
+  HPX_PUBLIC;
+
 /// Finalize/cleanup from the HPX runtime.
 ///
 /// This function will remove almost all data structures and allocations, and
