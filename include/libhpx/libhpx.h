@@ -35,6 +35,7 @@ enum {
 /// Forward declare the libhpx configuration type.
 /// @{
 struct config;
+struct hpx_parcel;
 typedef struct config libhpx_config_t;
 /// @}
 
@@ -79,6 +80,9 @@ bool libhpx_inst_tracer_active()
 
 /// Get libhpx-specific parcel data.
 uint32_t libhpx_parcel_get_source(hpx_parcel_t*)
+  HPX_PUBLIC;
+
+void libhpx_parcel_set_priority(hpx_parcel_t *p, uint16_t priority)
   HPX_PUBLIC;
 
 #ifdef __cplusplus
