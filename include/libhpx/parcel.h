@@ -73,7 +73,7 @@ struct hpx_parcel {
   uint32_t            src;         //!< The src rank for the parcel.
   uint32_t           size;         //!< The data size in bytes.
   parcel_state_t    state;         //!< The parcel's state bits.
-  uint16_t         offset;         //!< Reserved for future use.
+  uint16_t       priority;         //!< Parcel priority.
   hpx_action_t     action;         //!< The target action identifier.
   hpx_action_t   c_action;         //!< The continuation action identifier.
   hpx_addr_t       target;         //!< The target address for parcel_send().
