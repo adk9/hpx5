@@ -35,6 +35,7 @@ enum {
 /// Forward declare the libhpx configuration type.
 /// @{
 struct config;
+struct hpx_parcel;
 typedef struct config libhpx_config_t;
 /// @}
 
@@ -75,6 +76,9 @@ void libhpx_inst_phase_end()
 
 /// Check if the tracer is currently active
 bool libhpx_inst_tracer_active()
+  HPX_PUBLIC;
+
+void libhpx_parcel_set_priority(struct hpx_parcel *p, uint16_t priority)
   HPX_PUBLIC;
 
 #ifdef __cplusplus

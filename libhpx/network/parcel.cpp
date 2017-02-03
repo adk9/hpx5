@@ -150,7 +150,7 @@ void parcel_launch(hpx_parcel_t *p) {
   else {
     int e = here->net->send(p, NULL);
 #ifdef HAVE_APEX
-  	apex_send(p->id, p->size, target);
+    apex_send(p->id, p->size, target);
 #endif
     dbg_check(e, "failed to perform a network send\n");
   }
@@ -187,7 +187,7 @@ void parcel_init(hpx_addr_t target, hpx_action_t action, hpx_addr_t c_target,
   p->next     = nullptr;
   p->src      = here->rank;
   p->size     = len;
-  p->offset   = 0;
+  p->priority = 0;
   p->action   = action;
   p->c_action = c_action;
   p->target   = target;
@@ -309,4 +309,10 @@ Thread* parcel_set_thread(hpx_parcel_t *p, Thread *next) {
     std::swap(p->thread, next);
     return next;
 #endif
+}
+
+void
+libhpx_parcel_set_priority(hpx_parcel_t *p, uint16_t priority)
+{
+  p->priority = priority;
 }
