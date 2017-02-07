@@ -114,6 +114,11 @@ LIBHPX_OPT_SCALAR(sched_, wfthreshold, 256, uint32_t)
 LIBHPX_OPT_SCALAR(sched_, stackcachelimit, 32, int32_t)
 // @}
 
+// Network options
+// @{
+LIBHPX_OPT_SCALAR(progress_, period, 10000000000, uint64_t)
+// @}
+
 // GAS options
 // @{
 LIBHPX_OPT_SCALAR(gas_, affinity, HPX_GAS_AFFINITY_NONE, libhpx_gas_affinity_t)

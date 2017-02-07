@@ -96,6 +96,9 @@ struct hpx_options_t
   int hpx_sched_stackcachelimit_arg;	/**< @brief bound on the number of stacks to cache.  */
   char * hpx_sched_stackcachelimit_orig;	/**< @brief bound on the number of stacks to cache original value given at command line.  */
   const char *hpx_sched_stackcachelimit_help; /**< @brief bound on the number of stacks to cache help description.  */
+  long hpx_progress_period_arg;	/**< @brief async network progess period.  */
+  char * hpx_progress_period_orig;	/**< @brief async network progess period original value given at command line.  */
+  const char *hpx_progress_period_help; /**< @brief async network progess period help description.  */
   enum enum_hpx_gas_affinity hpx_gas_affinity_arg;	/**< @brief GAS affinity implementation.  */
   char * hpx_gas_affinity_orig;	/**< @brief GAS affinity implementation original value given at command line.  */
   const char *hpx_gas_affinity_help; /**< @brief GAS affinity implementation help description.  */
@@ -242,6 +245,7 @@ struct hpx_options_t
   unsigned int hpx_sched_policy_given ;	/**< @brief Whether hpx-sched-policy was given.  */
   unsigned int hpx_sched_wfthreshold_given ;	/**< @brief Whether hpx-sched-wfthreshold was given.  */
   unsigned int hpx_sched_stackcachelimit_given ;	/**< @brief Whether hpx-sched-stackcachelimit was given.  */
+  unsigned int hpx_progress_period_given ;	/**< @brief Whether hpx-progress-period was given.  */
   unsigned int hpx_gas_affinity_given ;	/**< @brief Whether hpx-gas-affinity was given.  */
   unsigned int hpx_log_at_given ;	/**< @brief Whether hpx-log-at was given.  */
   unsigned int hpx_log_level_given ;	/**< @brief Whether hpx-log-level was given.  */

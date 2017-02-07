@@ -146,7 +146,7 @@ class Scheduler : public libhpx::util::Aligned<HPX_CACHELINE_SIZE> {
 
  private:
   /// This blocks the calling thread until the worker threads shutdown.
-  void wait();
+  void wait(std::unique_lock<std::mutex>&&);
 
   /// This only happens at rank 0 and accumulates all of the SPMD termination
   /// messages.
@@ -164,8 +164,8 @@ class Scheduler : public libhpx::util::Aligned<HPX_CACHELINE_SIZE> {
   /// Exit a spmd epoch.
   void exitSPMD(size_t size, const void* out);
 
-  pthread_mutex_t                 lock_;     //!< lock for running condition
-  pthread_cond_t               stopped_;     //!< the running condition
+  std::mutex                      lock_;     //!< lock for running condition
+  std::condition_variable      stopped_;     //!< the running condition
   std::atomic<State>             state_;     //!< the run state
   std::atomic<int>           nextTlsId_;     //!< lightweight thread ids
   std::atomic<int>                code_;     //!< the exit code
@@ -175,7 +175,7 @@ class Scheduler : public libhpx::util::Aligned<HPX_CACHELINE_SIZE> {
   int                          nTarget_;     //!< target number of workers
   int                            epoch_;     //!< current scheduler epoch
   int                             spmd_;     //!< 1 if the current epoch is spmd
-  long                          nsWait_;     //!< nanoseconds to wait in start()
+  std::chrono::nanoseconds      nsWait_;     //!< nanoseconds to wait in start()
   void                         *output_;     //!< the output slot
   std::vector<libhpx::Worker*> workers_;     //!< array of worker data
 };
