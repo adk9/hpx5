@@ -99,12 +99,7 @@ Scheduler::start(int spmd, hpx_action_t act, void *out, int n, va_list *args)
   }
 
   // wait for someone to stop the scheduler
-  {
-    std::unique_lock<std::mutex> _(lock_);
-    while (getState() == RUN) {
-      wait(std::move(_));
-    }
-  }
+  wait();
 
   // stop all of the worker threads
   for (auto&& w : workers_) {
@@ -131,28 +126,30 @@ Scheduler::start(int spmd, hpx_action_t act, void *out, int n, va_list *args)
 }
 
 void
-Scheduler::wait(std::unique_lock<std::mutex>&& lock)
+Scheduler::wait()
 {
+  std::unique_lock<std::mutex> _(lock_);
+  stopped_.wait_for(_, nsWait_, [this]() {
 #ifdef HAVE_APEX
-  using std::min;
-  using std::max;
-  int prev = nTarget_;
-  nTarget_ = min(apex_get_thread_cap(), nWorkers_);
-  if (prev != nTarget_) {
-    log_sched("apex adjusting from %d to %d workers\n", prev, nTarget_);
-  }
-  for (int i = min(prev, nTarget_), e = max(prev, nTarget_); i < e; ++i) {
-    dbg_assert(workers_[i]);
-    if (nTarget_ < prev) {
-      workers_[i]->stop();
-    }
-    else {
-      workers_[i]->start();
-    }
-  }
+      using std::min;
+      using std::max;
+      int prev = nTarget_;
+      nTarget_ = min(apex_get_thread_cap(), nWorkers_);
+      if (prev != nTarget_) {
+        log_sched("apex adjusting from %d to %d workers\n", prev, nTarget_);
+      }
+      for (int i = min(prev, nTarget_), e = max(prev, nTarget_); i < e; ++i) {
+        dbg_assert(workers_[i]);
+        if (nTarget_ < prev) {
+          workers_[i]->stop();
+        }
+        else {
+          workers_[i]->start();
+        }
+      }
 #endif
-
-  stopped_.wait_for(lock, nsWait_);
+      return (getState() != RUN);
+    });
 }
 
 void
