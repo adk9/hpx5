@@ -60,7 +60,7 @@ class ISendBuffer {
   /// @param[out]   ssync A stack of synchronization parcels.
   ///
   /// @returns            The number of completed requests during the flush.
-  int flush(hpx_parcel_t**ssync);
+  int flush(hpx_parcel_t **ssync);
 
  private:
   struct Record {

@@ -32,9 +32,8 @@ class FunneledNetwork : public Network, public ParcelStringOps
   ~FunneledNetwork();
 
   int type() const;
-  void progress(int);
-  hpx_parcel_t* probe(int);
-  void flush();
+  hpx_parcel_t* progress(int);
+  hpx_parcel_t* flush();
 
   void deallocate(const hpx_parcel_t* p);
   int send(hpx_parcel_t* p, hpx_parcel_t* ssync);
@@ -58,7 +57,6 @@ class FunneledNetwork : public Network, public ParcelStringOps
   void sendAll();
 
   ParcelQueue  sends_;
-  ParcelQueue  recvs_;
   Transport    xport_;
   ISendBuffer isends_;
   IRecvBuffer irecvs_;

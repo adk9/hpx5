@@ -90,9 +90,10 @@ SMPNetwork::type() const
   return HPX_NETWORK_SMP;
 }
 
-void
+hpx_parcel_t*
 SMPNetwork::progress(int)
 {
+  return nullptr;
 }
 
 void
@@ -107,15 +108,10 @@ SMPNetwork::send(hpx_parcel_t *p, hpx_parcel_t *ssync)
   dbg_error("SMP network send called\n");
 }
 
-hpx_parcel_t *
-SMPNetwork::probe(int nrx)
-{
-  return NULL;
-}
-
-void
+hpx_parcel_t*
 SMPNetwork::flush()
 {
+  return nullptr;
 }
 
 void

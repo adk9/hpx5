@@ -78,13 +78,11 @@ LIBHPX_EVENT(PARCEL, DELETE,
 /// @}
 
 /// Network events
-/// Network events include when the scheduler handles network probing and 
+/// Network events include when the scheduler handles network probing and
 /// whenever PWC send/receive operations occur.
 /// @{
 LIBHPX_EVENT(NETWORK, SEND)
 LIBHPX_EVENT(NETWORK, RECV)
-LIBHPX_EVENT(NETWORK, PROBE_BEGIN)
-LIBHPX_EVENT(NETWORK, PROBE_END)
 LIBHPX_EVENT(NETWORK, PROGRESS_BEGIN)
 LIBHPX_EVENT(NETWORK, PROGRESS_END)
 /// @}
@@ -114,7 +112,7 @@ LIBHPX_EVENT(SCHED, MAIL,
 /// LCO events
 /// LCO events mark when important lco procedures occur, such as the
 /// initialization, deletion, setting, resetting, or triggering of the LCO
-/// occurs, and also whenever the LCO is waited on or has a parcel attached to 
+/// occurs, and also whenever the LCO is waited on or has a parcel attached to
 /// it.
 /// @{
 LIBHPX_EVENT(LCO, INIT,
@@ -179,7 +177,7 @@ LIBHPX_EVENT(MEMORY, FREE_END,
 /// @}
 
 /// Trace events
-/// Trace events are used for marking events related to tracing.  At the moment 
+/// Trace events are used for marking events related to tracing.  At the moment
 /// this is only used when dumping trace data to file.
 /// @{
 LIBHPX_EVENT(TRACE, FILE_IO_BEGIN)
@@ -206,7 +204,7 @@ LIBHPX_EVENT(GAS, MISS,
 /// Collective events
 /// Collective events mark important moments in the lifetime of process
 /// collectives.  Specifically the creation or deletion of collectives, the
-/// subscription or unsubscription of participants in the collective, and 
+/// subscription or unsubscription of participants in the collective, and
 /// whenever the collective performs a join operation.
 /// @{
 LIBHPX_EVENT(COLLECTIVE, NEW,

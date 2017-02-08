@@ -121,9 +121,7 @@ Worker::handleNetwork()
   // don't do work first scheduling in the network
   int wf = workFirst_;
   workFirst_ = -1;
-  here->net->progress(0);
-
-  hpx_parcel_t *stack = here->net->probe(0);
+  hpx_parcel_t *stack = here->net->progress(0);
   workFirst_ = wf;
 
   while (hpx_parcel_t *p = parcel_stack_pop(&stack)) {
