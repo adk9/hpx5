@@ -66,7 +66,6 @@ class Scheduler : public libhpx::util::Aligned<HPX_CACHELINE_SIZE> {
   /// @param         args The arguments to the action.
   int start(int spmd, hpx_action_t act, void *out, int n, va_list *args);
 
-
   /// Stop scheduling lightweight threads, and return @p code from the
   /// scheduler_stop operation.
   ///
@@ -102,6 +101,10 @@ class Scheduler : public libhpx::util::Aligned<HPX_CACHELINE_SIZE> {
   int getNextTlsId() {
     return nextTlsId_.fetch_add(1, std::memory_order_acq_rel);
   }
+
+  /// Spawn a stack of parcels.
+  ///
+  void spawn(hpx_parcel_t *stack);
 
   void addActive() {
     nActive_ += 1;
@@ -175,7 +178,7 @@ class Scheduler : public libhpx::util::Aligned<HPX_CACHELINE_SIZE> {
   int                          nTarget_;     //!< target number of workers
   int                            epoch_;     //!< current scheduler epoch
   int                             spmd_;     //!< 1 if the current epoch is spmd
-  std::chrono::nanoseconds      nsWait_;     //!< nanoseconds to wait in start()
+  std::chrono::nanoseconds      nsWait_;     //!< nanoseconds to wait in wait()
   void                         *output_;     //!< the output slot
   std::vector<libhpx::Worker*> workers_;     //!< array of worker data
 };

@@ -127,8 +127,8 @@ PWCNetwork::type() const
   return HPX_NETWORK_PWC;
 }
 
-void
-PWCNetwork::progress(int n)
+hpx_parcel_t*
+PWCNetwork::progress(int)
 {
   hpx_parcel_t* stack = nullptr;
   if (auto _ = std::unique_lock<std::mutex>(progressLock_, std::try_to_lock)) {
@@ -140,18 +140,6 @@ PWCNetwork::progress(int n)
       }
     }
   }
-  parcel_launch_all(stack);
-}
-
-void
-PWCNetwork::flush()
-{
-}
-
-hpx_parcel_t*
-PWCNetwork::probe(int n)
-{
-  hpx_parcel_t* stack = nullptr;
   if (auto _ = std::unique_lock<std::mutex>(probeLock_, std::try_to_lock)) {
     Command command;
     int src;
@@ -162,6 +150,12 @@ PWCNetwork::probe(int n)
     }
   }
   return stack;
+}
+
+hpx_parcel_t*
+PWCNetwork::flush()
+{
+  return nullptr;
 }
 
 void

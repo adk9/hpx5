@@ -45,13 +45,10 @@ static Network* Create(config_t *config, const boot::Network& boot, GAS *gas);
   /// Perform one network progress operation.
   ///
   /// @param       n The id to use when progressing the network.
-  virtual void progress(int n) = 0;
+  virtual hpx_parcel_t* progress(int n) = 0;
 
   /// Flush the network.
-  virtual void flush() = 0;
-
-  /// Probe the network for received parcels.
-  virtual hpx_parcel_t* probe(int rank) = 0;
+  virtual hpx_parcel_t* flush() = 0;
 
  protected:
   Network();
