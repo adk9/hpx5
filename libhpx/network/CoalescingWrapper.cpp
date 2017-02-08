@@ -139,7 +139,7 @@ CoalescingWrapper::send(hpx_parcel_t *p, hpx_parcel_t *ssync)
   return LIBHPX_OK;
 }
 
-void
+hpx_parcel_t*
 CoalescingWrapper::progress(int n) {
   // If the number of buffered parcels is the same as the previous time we
   // progressed, we'll do an eager send operation to reduce latency and make
@@ -151,10 +151,10 @@ CoalescingWrapper::progress(int n) {
     count = 0;
   }
   prev_ = count;
-  NetworkWrapper::progress(n);
+  return NetworkWrapper::progress(n);
 }
 
-void
+hpx_parcel_t*
 CoalescingWrapper::flush() {
   // coalesce the rest of the buffered sends
   send(count_.exchange(0));
@@ -163,7 +163,7 @@ CoalescingWrapper::flush() {
   while (coalescing_) { /* spin */; }
 
   // and flush the underlying network
-  NetworkWrapper::flush();
+  return NetworkWrapper::flush();
 }
 
 CoalescingWrapper::CoalescingWrapper(Network* impl, const config_t *cfg,
