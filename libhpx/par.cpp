@@ -19,14 +19,15 @@
 /// @brief Implements the HPX par constructs
 ///
 
+#include "libhpx/action.h"
+#include "libhpx/debug.h"
+#include "libhpx/locality.h"
+#include "libhpx/parcel.h"
+#include "libhpx/Scheduler.h"
+#include "libhpx/Worker.h"
+#include "hpx/hpx.h"
 #include <stdlib.h>
 #include <string.h>
-#include <hpx/hpx.h>
-#include <libhpx/action.h>
-#include <libhpx/debug.h>
-#include <libhpx/locality.h>
-#include <libhpx/parcel.h>
-#include <libhpx/Scheduler.h>
 
 static int _par_for_async_handler(hpx_for_action_t f, void *args, int min,
                                   int max) {

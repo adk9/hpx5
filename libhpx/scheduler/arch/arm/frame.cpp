@@ -71,6 +71,6 @@ Thread::initTransferFrame(Entry f)
 }
 
 void
-Thread::InitArch(Worker*)
+Thread::InitArch(WorkerBase*)
 {
 }

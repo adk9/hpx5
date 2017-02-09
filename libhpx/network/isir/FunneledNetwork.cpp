@@ -18,6 +18,7 @@
 #include "libhpx/collective.h"
 #include "libhpx/debug.h"
 #include "libhpx/parcel.h"
+#include "libhpx/Scheduler.h"
 
 namespace {
 using libhpx::Network;
@@ -60,7 +61,7 @@ FunneledNetwork::sendAll() {
 int
 FunneledNetwork::init(void **ctx)
 {
-  flush();
+  here->sched->spawn(flush());
 
   auto coll = static_cast<coll_t*>(*ctx);
   int num_active = coll->group_sz;
@@ -89,7 +90,7 @@ FunneledNetwork::sync(void *in, size_t count, void *out, void *ctx)
 {
   // flushing network is necessary (sufficient?) to execute any
   // packets destined for collective operation
-  flush();
+  here->sched->spawn(flush());
 
   auto coll = static_cast<coll_t *>(ctx);
   auto offset = coll->data + coll->group_bytes;
