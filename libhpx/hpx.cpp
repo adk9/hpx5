@@ -203,6 +203,7 @@ int hpx_init(int *argc, char ***argv) {
 
   action_registration_finalize();
   trace_start(here->tracer);
+  here->sched->startLWProgress();
   return status;
  unwind1:
   _cleanup(here);

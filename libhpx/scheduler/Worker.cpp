@@ -18,19 +18,13 @@
 #include "libhpx/Worker.h"
 #include "Condition.h"
 #include "Thread.h"
+#include "WorkstealingWorker.h"
 #include "lco/LCO.h"
-#include "libhpx/action.h"
 #include "libhpx/debug.h"
 #include "libhpx/events.h"
 #include "libhpx/libhpx.h"
-#include "libhpx/locality.h"
 #include "libhpx/memory.h"
-#include "libhpx/Network.h"
-#include "libhpx/rebalancer.h"
-#include "libhpx/Scheduler.h"
-#include "libhpx/Topology.h"
 #include "libhpx/system.h"
-#include "libhpx/util/math.h"
 #include <cstring>
 #ifdef HAVE_URCU
 # include <urcu-qsbr.h>
@@ -38,23 +32,20 @@
 
 namespace {
 using libhpx::self;
-using libhpx::Worker;
+using libhpx::WorkerBase;
 using libhpx::scheduler::Condition;
 using libhpx::scheduler::LCO;
 using libhpx::scheduler::Thread;
-LIBHPX_ACTION(HPX_INTERRUPT, 0, StealHalf, Worker::StealHalfHandler,
-              HPX_POINTER);
+using libhpx::scheduler::WorkstealingWorker;
 }
 
 /// Storage for the thread-local worker pointer.
-__thread Worker * volatile libhpx::self;
+__thread WorkerBase * volatile libhpx::self;
 
-Worker::Worker(int id)
+WorkerBase::WorkerBase(Scheduler& sched, int id)
     : id_(id),
-      numaNode_(here->topology->cpu_to_numa[id % here->topology->ncpus]),
       seed_(id),
-      workFirst_(0),
-      lastVictim_(nullptr),
+      sched_(sched),
       profiler_(nullptr),
       bst(nullptr),
       system_(nullptr),
@@ -63,23 +54,14 @@ Worker::Worker(int id)
       lock_(),
       running_(),
       state_(STOP),
-      workId_(0),
-      queues_(),
       inbox_(),
       thread_([this]() { enter(); })
 {
+  assert((uintptr_t)&inbox_ % HPX_CACHELINE_SIZE == 0);
 }
 
-Worker::~Worker() {
+WorkerBase::~WorkerBase() {
   thread_.join();
-  if (hpx_parcel_t* p = handleMail()) {
-    parcel_delete(p);
-  }
-
-  while (hpx_parcel_t* p = popLIFO()) {
-    parcel_delete(p);
-  }
-
   while (auto* thread = threads_) {
     threads_ = thread->next;
     delete thread;
@@ -87,75 +69,7 @@ Worker::~Worker() {
 }
 
 void
-Worker::pushLIFO(hpx_parcel_t* p)
-{
-  dbg_assert(p->target != HPX_NULL);
-  dbg_assert(actions[p->action].handler != NULL);
-  EVENT_SCHED_PUSH_LIFO(p->id);
-#if defined(HAVE_AGAS) && defined(HAVE_REBALANCING)
-  rebalancer_add_entry(p->src, here->rank, p->target, p->size);
-#elif defined(ENABLE_INSTRUMENTATION)
-  EVENT_GAS_ACCESS(p->src, here->rank, p->target, p->size);
-#endif
-  uint64_t size = queues_[workId_].push(p);
-  if (workFirst_ >= 0) {
-    workFirst_ = (here->config->sched_wfthreshold < size);
-  }
-}
-
-hpx_parcel_t*
-Worker::popLIFO()
-{
-  hpx_parcel_t *p = queues_[workId_].pop();
-  dbg_assert(!p || p != current_);
-  INST_IF (p) {
-    EVENT_SCHED_POP_LIFO(p->id);
-    EVENT_SCHED_WQSIZE(queues_[workId_].size());
-  }
-  return p;
-}
-
-hpx_parcel_t *
-Worker::handleNetwork()
-{
-  // don't do work first scheduling in the network
-  int wf = workFirst_;
-  workFirst_ = -1;
-  hpx_parcel_t *stack = here->net->progress(0);
-  workFirst_ = wf;
-
-  while (hpx_parcel_t *p = parcel_stack_pop(&stack)) {
-    pushLIFO(p);
-  }
-
-  return popLIFO();
-}
-
-hpx_parcel_t*
-Worker::handleMail()
-{
-  hpx_parcel_t *parcels = inbox_.dequeue();
-  if (!parcels) {
-    return NULL;
-  }
-
-  hpx_parcel_t *prev = parcel_stack_pop(&parcels);
-  do {
-    hpx_parcel_t *next = NULL;
-    while ((next = parcel_stack_pop(&parcels))) {
-      dbg_assert(next != current_);
-      EVENT_SCHED_MAIL(prev->id);
-      log_sched("got mail %p\n", prev);
-      pushLIFO(prev);
-      prev = next;
-    }
-  } while ((parcels = inbox_.dequeue()));
-  dbg_assert(prev);
-  return prev;
-}
-
-void
-Worker::bind(hpx_parcel_t *p)
+WorkerBase::bind(hpx_parcel_t *p)
 {
   dbg_assert(!p->thread);
 
@@ -176,7 +90,7 @@ Worker::bind(hpx_parcel_t *p)
 }
 
 void
-Worker::unbind(hpx_parcel_t* p)
+WorkerBase::unbind(hpx_parcel_t* p)
 {
   if (Thread* thread = parcel_set_thread(p, nullptr)) {
     thread->~Thread();
@@ -200,26 +114,7 @@ Worker::unbind(hpx_parcel_t* p)
 }
 
 void
-Worker::schedule(Continuation& f)
-{
-  EVENT_SCHED_BEGIN();
-  if (state_ != RUN) {
-    transfer(system_, f);
-  }
-  else if (hpx_parcel_t *p = handleMail()) {
-    transfer(p, f);
-  }
-  else if (hpx_parcel_t *p = popLIFO()) {
-    transfer(p, f);
-  }
-  else {
-    transfer(system_, f);
-  }
-  EVENT_SCHED_END(0, 0);
-}
-
-void
-Worker::enter()
+WorkerBase::enter()
 {
   EVENT_SCHED_BEGIN();
   dbg_assert(here && here->config && here->gas && here->net);
@@ -293,27 +188,25 @@ Worker::enter()
 }
 
 void
-Worker::sleep()
+WorkerBase::sleep()
 {
   std::unique_lock<std::mutex> _(lock_);
   while (state_ == STOP) {
-    while (hpx_parcel_t *p = queues_[1 - workId_].pop()) {
-      pushLIFO(p);
-    }
+    onSleep();
 
     if (hpx_parcel_t *p = handleMail()) {
-      pushLIFO(p);
+      spawn(p);
     }
 
     // go back to sleep
-    here->sched->subActive();
+    sched_.subActive();
     running_.wait(_);
-    here->sched->addActive();
+    sched_.addActive();
   }
 }
 
 void
-Worker::checkpoint(hpx_parcel_t *p, Continuation& f, void *sp)
+WorkerBase::checkpoint(hpx_parcel_t *p, Continuation& f, void *sp)
 {
   current_->thread->setSp(sp);
   std::swap(current_, p);
@@ -325,13 +218,14 @@ Worker::checkpoint(hpx_parcel_t *p, Continuation& f, void *sp)
 }
 
 void
-Worker::Checkpoint(hpx_parcel_t* p, Continuation& f, Worker* w, void *sp)
+WorkerBase::Checkpoint(hpx_parcel_t* p, Continuation& f, WorkerBase* w,
+                       void *sp)
 {
   w->checkpoint(p, f, sp);
 }
 
 void
-Worker::transfer(hpx_parcel_t *p, Continuation& f)
+WorkerBase::transfer(hpx_parcel_t *p, Continuation& f)
 {
   dbg_assert(p != current_);
 
@@ -351,23 +245,17 @@ Worker::transfer(hpx_parcel_t *p, Continuation& f)
 }
 
 void
-Worker::run()
+WorkerBase::run()
 {
-  std::function<void(hpx_parcel_t*)> null([](hpx_parcel_t*){});
+  auto null = [](hpx_parcel_t*){};
   while (state_ ==  RUN) {
-    if (hpx_parcel_t *p = handleMail()) {
+    if (auto p = handleMail()) {
       transfer(p, null);
     }
-    else if (hpx_parcel_t *p = popLIFO()) {
+    else if (auto p = onRun()) {
       transfer(p, null);
     }
-    else if (hpx_parcel_t *p = handleEpoch()) {
-      transfer(p, null);
-    }
-    else if (hpx_parcel_t *p = handleNetwork()) {
-      transfer(p, null);
-    }
-    else if (hpx_parcel_t *p = handleSteal()) {
+    else if (auto p = sched_.schedule()) {
       transfer(p, null);
     }
     else {
@@ -379,210 +267,9 @@ Worker::run()
 }
 
 void
-Worker::spawn(hpx_parcel_t* p)
+WorkerBase::ExecuteUserThread(hpx_parcel_t *p)
 {
-  dbg_assert(p);
-  dbg_assert(actions[p->action].handler != NULL);
-
-  // If the target has affinity then send the parcel to that worker.
-  int affinity = here->gas->getAffinity(p->target);
-  if (0 <= affinity && affinity != id_) {
-    here->sched->getWorker(affinity)->pushMail(p);
-    return;
-  }
-
-  // If we're not running then push the parcel and return. This prevents an
-  // infinite spawn from inhibiting termination.
-  if (state_ != RUN) {
-    pushLIFO(p);
-    return;
-  }
-
-  // If we're not in work-first mode, then push the parcel for later.
-  if (workFirst_ < 1) {
-    pushLIFO(p);
-    return;
-  }
-
-  // If we're holding a lock then we have to push the spawn for later
-  // processing, or we could end up causing a deadlock.
-  if (current_->thread->inLCO()) {
-    pushLIFO(p);
-    return;
-  }
-
-  // If we are currently running an interrupt, then we can't work-first since we
-  // don't have our own stack to suspend.
-  if (action_is_interrupt(current_->action)) {
-    pushLIFO(p);
-    return;
-  }
-
-  // Process p work-first. If we're running the system thread then we need to
-  // prevent it from being stolen, which we can do by using the NULL
-  // continuation.
-  EVENT_THREAD_SUSPEND(current_);
-  if (current_ == system_) {
-    transfer(p, [](hpx_parcel_t*) {});
-  }
-  else {
-    transfer(p, [this](hpx_parcel_t* p) { pushLIFO(p); });
-  }
-  self->EVENT_THREAD_RESUME(current_);          // re-read self
-}
-
-int
-Worker::StealHalfHandler(Worker* src)
-{
-  if (hpx_parcel_t* half = self->stealHalf()) {
-    src->pushMail(half);
-  }
-  return HPX_SUCCESS;
-}
-
-hpx_parcel_t*
-Worker::stealFrom(Worker* victim) {
-  hpx_parcel_t *p = victim->queues_[victim->workId_].steal();
-  lastVictim_ = (p) ? victim : nullptr;
-  EVENT_SCHED_STEAL((p) ? p->id : 0, victim->getId());
-  return p;
-}
-
-hpx_parcel_t*
-Worker::stealRandom()
-{
-  int n = here->sched->getNWorkers();
-  int id;
-  do {
-    id = rand(n);
-  } while (id == id_);
-  return stealFrom(here->sched->getWorker(id));
-}
-
-hpx_parcel_t*
-Worker::stealRandomNode()
-{
-  int   n = here->topology->cpus_per_node;
-  int cpu = rand(n);
-  int  id = here->topology->numa_to_cpus[numaNode_][cpu];
-  while (id == id_) {
-    cpu = rand(n);
-    id = here->topology->numa_to_cpus[numaNode_][cpu];
-  }
-  return stealFrom(here->sched->getWorker(id));
-}
-
-hpx_parcel_t*
-Worker::stealHalf()
-{
-  int qsize = queues_[workId_].size();
-  if (qsize < MAGIC_STEAL_HALF_THRESHOLD) {
-    return nullptr;
-  }
-
-  hpx_parcel_t *parcels = nullptr;
-  for (int i = 0, e = qsize / 2; i < e; ++i) {
-    hpx_parcel_t *p = popLIFO();
-    if (!p) {
-      break;
-    }
-    if (p->action == StealHalf) {
-      parcel_delete(p);
-      continue;
-    }
-    parcel_stack_push(&parcels, p);
-  }
-  return parcels;
-}
-
-/// Hierarchical work-stealing policy.
-///
-/// This policy is only applicable if the worker threads are
-/// pinned. This policy works as follows:
-///
-/// 1. try to steal from the last succesful victim in
-///    the same numa domain.
-/// 2. if failed, try to steal randomly from the same numa domain.
-/// 3. if failed, repeat step 2.
-/// 4. if failed, try to steal half randomly from across the numa domain.
-/// 5. if failed, go idle.
-///
-hpx_parcel_t*
-Worker::stealHierarchical()
-{
-  // disable hierarchical stealing if the worker threads are not
-  // bound, or if the system is not hierarchical.
-  if (here->config->thread_affinity == HPX_THREAD_AFFINITY_NONE) {
-    return stealRandom();
-  }
-
-  if (here->topology->numa_to_cpus == NULL) {
-    return stealRandom();
-  }
-
-  dbg_assert(numaNode_ >= 0);
-
-  // step 1
-  if (lastVictim_) {
-    if (hpx_parcel_t* p = stealFrom(lastVictim_)) {
-      return p;
-    }
-  }
-
-  // step 2
-  if (hpx_parcel_t* p = stealRandomNode()) {
-    return p;
-  }
-
-  // step 3
-  if (hpx_parcel_t* p = stealRandomNode()) {
-    return p;
-  }
-
-  // step 4
-  int nn = numaNode_;
-  while (nn == numaNode_) {
-    nn = rand(here->topology->nnodes);
-  }
-
-  int        idx = rand(here->topology->cpus_per_node);
-  int        cpu = here->topology->numa_to_cpus[nn][idx];
-  Worker* victim = here->sched->getWorker(cpu);
-  Worker*    src = this;
-  hpx_parcel_t* p = action_new_parcel(StealHalf, // action
-                                      HPX_HERE,  // target
-                                      0,         // c_action
-                                      0,         // c_taget
-                                      1,         // n args
-                                      &src);     // reply
-  parcel_prepare(p);
-  victim->pushMail(p);
-  return NULL;
-}
-
-hpx_parcel_t*
-Worker::handleSteal()
-{
-  if (here->sched->getNWorkers() == 1) {
-    return NULL;
-  }
-
-  libhpx_sched_policy_t policy = here->config->sched_policy;
-  switch (policy) {
-    default:
-      log_dflt("invalid scheduling policy, defaulting to random..");
-    case HPX_SCHED_POLICY_DEFAULT:
-    case HPX_SCHED_POLICY_RANDOM:
-     return stealRandom();
-    case HPX_SCHED_POLICY_HIER:
-     return stealHierarchical();
-  }
-}
-
-void
-Worker::ExecuteUserThread(hpx_parcel_t *p)
-{
-  Worker* w = self;
+  WorkerBase* w = self;
   w->EVENT_THREAD_RUN(p);
   EVENT_SCHED_END(0, 0);
   int status = HPX_SUCCESS;
@@ -640,7 +327,7 @@ Worker::ExecuteUserThread(hpx_parcel_t *p)
 }
 
 void
-Worker::yield()
+WorkerBase::yield()
 {
   dbg_assert(action_is_default(current_->action));
   EVENT_SCHED_YIELD();
@@ -655,7 +342,7 @@ Worker::yield()
 }
 
 void
-Worker::suspend(void (*f)(hpx_parcel_t *, void*), void *env)
+WorkerBase::suspend(void (*f)(hpx_parcel_t *, void*), void *env)
 {
   hpx_parcel_t* p = current_;
   log_sched("suspending %p in %s\n", p, actions[p->action].key);
@@ -669,7 +356,7 @@ Worker::suspend(void (*f)(hpx_parcel_t *, void*), void *env)
 }
 
 hpx_status_t
-Worker::wait(LCO& lco, Condition& cond)
+WorkerBase::wait(LCO& lco, Condition& cond)
 {
   hpx_parcel_t* p = current_;
   // we had better be holding a lock here
@@ -690,14 +377,77 @@ Worker::wait(LCO& lco, Condition& cond)
   return cond.getError();
 }
 
-Worker::FreelistNode::FreelistNode(FreelistNode* n)
+WorkerBase::FreelistNode::FreelistNode(FreelistNode* n)
     : next(n),
       depth((n) ? n->depth + 1 : 1)
 {
 }
 
 void
-Worker::FreelistNode::operator delete(void* obj)
+WorkerBase::FreelistNode::operator delete(void* obj)
 {
   Thread::operator delete(obj);
+}
+
+void
+WorkerBase::schedule(Continuation& f)
+{
+  EVENT_SCHED_BEGIN();
+  if (state_ != RUN) {
+    transfer(system_, f);
+  }
+  else if (auto p = handleMail()) {
+    transfer(p, f);
+  }
+  else if (hpx_parcel_t *p = onSchedule()) {
+    transfer(p, f);
+  }
+  else {
+    transfer(system_, f);
+  }
+  EVENT_SCHED_END(0, 0);
+}
+
+void
+WorkerBase::spawn(hpx_parcel_t* p)
+{
+  dbg_assert(p);
+  dbg_assert(actions[p->action].handler != NULL);
+
+  // If we're not running then push the parcel through the global scheduler.
+  if (state_ != RUN) {
+    sched_.spawn(p);
+  }
+  else {
+    onSpawn(p);
+  }
+}
+
+hpx_parcel_t*
+WorkerBase::handleMail()
+{
+  hpx_parcel_t *parcels = inbox_.dequeue();
+  if (!parcels) {
+    return NULL;
+  }
+
+  hpx_parcel_t *prev = parcel_stack_pop(&parcels);
+  do {
+    hpx_parcel_t *next = NULL;
+    while ((next = parcel_stack_pop(&parcels))) {
+      dbg_assert(next != current_);
+      EVENT_SCHED_MAIL(prev->id);
+      log_sched("got mail %p\n", prev);
+      spawn(prev);
+      prev = next;
+    }
+  } while ((parcels = inbox_.dequeue()));
+  dbg_assert(prev);
+  return prev;
+}
+
+WorkerBase*
+WorkerBase::Create(Scheduler& sched, int i)
+{
+  return new WorkstealingWorker(sched, i);
 }

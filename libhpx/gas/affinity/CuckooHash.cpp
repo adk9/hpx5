@@ -16,6 +16,7 @@
 #endif
 #include "libhpx/gas/Affinity.h"
 #include "libhpx/debug.h"
+#include "libhpx/GAS.h"
 #include "libhpx/locality.h"
 #include "libhpx/Scheduler.h"
 #include <cinttypes>

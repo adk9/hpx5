@@ -240,7 +240,7 @@ hpx_parcel_t *parcel_new(hpx_addr_t target, hpx_action_t action,
                          hpx_pid_t pid, const void *data, size_t len) {
   hpx_parcel_t* p = parcel_alloc(len);
   parcel_init(target, action, c_target, c_action, pid, data, len, p);
-  if (libhpx::Worker* w = libhpx::self) {
+  if (auto w = libhpx::self) {
     EVENT_PARCEL_CREATE(p->id, p->action, p->size, w->getCurrentParcel()->id);
   }
   else {

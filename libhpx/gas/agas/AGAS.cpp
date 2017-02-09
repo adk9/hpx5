@@ -22,6 +22,7 @@
 #include "libhpx/gpa.h"
 #include "libhpx/locality.h"
 #include "libhpx/memory.h"
+#include "libhpx/Network.h"
 #include "libhpx/rebalancer.h"
 #include "libhpx/Worker.h"                      // self->getCurrentParcel()
 #include "libhpx/util/math.h"
