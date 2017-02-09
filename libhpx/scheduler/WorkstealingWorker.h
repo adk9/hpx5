@@ -43,10 +43,18 @@ class WorkstealingWorker : public WorkerBase,
   static int StealHalfHandler(WorkstealingWorker* src);
 
  protected:
-  hpx_parcel_t* onRun();
-  hpx_parcel_t* onSchedule();
-  void onSleep();
   void onSpawn(hpx_parcel_t*);
+
+  hpx_parcel_t* onSchedule() {
+    return popLIFO();
+  }
+
+  hpx_parcel_t* onBalance() {
+    return handleSteal();
+  }
+
+  void onSleep() {
+  }
 
  private:
   hpx_parcel_t* handleSteal();
