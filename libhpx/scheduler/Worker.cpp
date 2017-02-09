@@ -252,10 +252,13 @@ WorkerBase::run()
     if (auto p = handleMail()) {
       transfer(p, null);
     }
-    else if (auto p = onRun()) {
+    else if (auto p = onSchedule()) {
       transfer(p, null);
     }
     else if (auto p = sched_.schedule()) {
+      transfer(p, null);
+    }
+    else if (auto p = onBalance()) {
       transfer(p, null);
     }
     else {
