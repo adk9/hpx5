@@ -20,7 +20,7 @@ contrib_md5=(
     "3a5a1d5c906d0eb94c05c16dc129546b" # libcukoo
     "666c2f4194b583e162d9e5a112167846" # jemalloc
     "c3f381d8fd2fd611b472fb4971c4f546" # libffi
-    "2abe358b18384e3a09ef3036b5886895" # liburcu
+    "845da9bd258170becca07fe9ef4c7940" # liburcu
     "865d3dfba3c173f66905c4301dfc7d73" # hwloc
 )
 
