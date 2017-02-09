@@ -16,7 +16,7 @@ contrib_tars=(
 
 # set matching md5sums for each tarball
 contrib_md5=(
-    "038e31de21749872fe8cf6d31bb881f6" # photon
+    "8a3dc27eb8af55f7c2912272a742a7ff" # photon
     "3a5a1d5c906d0eb94c05c16dc129546b" # libcukoo
     "666c2f4194b583e162d9e5a112167846" # jemalloc
     "c3f381d8fd2fd611b472fb4971c4f546" # libffi
