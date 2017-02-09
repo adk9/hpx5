@@ -225,8 +225,8 @@ class WorkerBase
   }
 
   virtual void onSpawn(hpx_parcel_t* p) = 0;
-  virtual hpx_parcel_t* onRun() = 0;
   virtual hpx_parcel_t* onSchedule() = 0;
+  virtual hpx_parcel_t* onBalance() = 0;
   virtual void onSleep() = 0;
 
  private:
