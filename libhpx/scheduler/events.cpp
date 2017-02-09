@@ -21,11 +21,11 @@
 #include "hpx/hpx.h"
 
 namespace {
-using libhpx::Worker;
+using libhpx::WorkerBase;
 }
 
 void
-Worker::EVENT_THREAD_RUN(hpx_parcel_t *p) {
+WorkerBase::EVENT_THREAD_RUN(hpx_parcel_t *p) {
   if (p == system_) {
     return;
   }
@@ -41,7 +41,7 @@ Worker::EVENT_THREAD_RUN(hpx_parcel_t *p) {
 }
 
 void
-Worker::EVENT_THREAD_END(hpx_parcel_t *p) {
+WorkerBase::EVENT_THREAD_END(hpx_parcel_t *p) {
   if (p == system_) {
     return;
   }
@@ -55,7 +55,7 @@ Worker::EVENT_THREAD_END(hpx_parcel_t *p) {
 }
 
 void
-Worker::EVENT_THREAD_SUSPEND(hpx_parcel_t *p) {
+WorkerBase::EVENT_THREAD_SUSPEND(hpx_parcel_t *p) {
   if (p == system_) {
     return;
   }
@@ -69,7 +69,7 @@ Worker::EVENT_THREAD_SUSPEND(hpx_parcel_t *p) {
 }
 
 void
-Worker::EVENT_THREAD_RESUME(hpx_parcel_t *p) {
+WorkerBase::EVENT_THREAD_RESUME(hpx_parcel_t *p) {
   if (p == system_) {
     return;
   }

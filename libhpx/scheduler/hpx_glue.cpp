@@ -26,7 +26,7 @@
 
 namespace {
 using libhpx::self;
-using libhpx::Worker;
+using libhpx::WorkerBase;
 }
 
 hpx_parcel_t *
@@ -146,7 +146,7 @@ int
 hpx_thread_sigmask(int how, int mask)
 {
   assert(self && "hpx not active on current pthread");
-  Worker *w = self;
+  WorkerBase *w = self;
   hpx_parcel_t *p = w->getCurrentParcel();
   p->thread->setMasked();
 
@@ -238,7 +238,7 @@ hpx_thread_sigmask(int how, int mask)
 int
 _hpx_thread_continue(int n, ...)
 {
-  Worker *w = self;
+  WorkerBase *w = self;
   hpx_parcel_t *p = w->getCurrentParcel();
 
   va_list args;

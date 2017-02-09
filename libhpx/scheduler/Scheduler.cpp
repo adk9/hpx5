@@ -20,6 +20,7 @@
 #include "libhpx/debug.h"
 #include "libhpx/memory.h"
 #include "libhpx/Network.h"
+#include "libhpx/Worker.h"
 #include <cstring>
 #ifdef HAVE_APEX
 #include <sys/time.h>
@@ -27,11 +28,26 @@
 
 namespace {
 using libhpx::Scheduler;
-using libhpx::Worker;
+using libhpx::WorkerBase;
 LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, SetOutput,
               Scheduler::SetOutputHandler, HPX_POINTER, HPX_SIZE_T);
 LIBHPX_ACTION(HPX_DEFAULT, 0, Stop, Scheduler::StopHandler);
 LIBHPX_ACTION(HPX_DEFAULT, 0, TerminateSPMD, Scheduler::TerminateSPMDHandler);
+
+int lw_progress(void)
+{
+  auto& network = *here->net;
+  auto& scheduler = *here->sched;
+  while (true) {
+    hpx_parcel_t *stack = network.progress(0);
+    while (hpx_parcel_t *p = parcel_stack_pop(&stack)) {
+      scheduler.spawn(p);
+    }
+    hpx_thread_yield();
+  }
+  return HPX_SUCCESS;
+}
+LIBHPX_ACTION(HPX_DEFAULT, 0, Progress, lw_progress);
 }
 
 Scheduler::Scheduler(const config_t* cfg)
@@ -48,7 +64,8 @@ Scheduler::Scheduler(const config_t* cfg)
       spmd_(0),
       nsWait_(cfg->progress_period),
       output_(nullptr),
-      workers_(nWorkers_)
+      workers_(nWorkers_),
+      ready_()
 {
   Thread::SetStackSize(cfg->stacksize);
 
@@ -60,6 +77,10 @@ Scheduler::Scheduler(const config_t* cfg)
 
 Scheduler::~Scheduler()
 {
+  while (hpx_parcel_t *p = ready_.dequeue()) {
+    parcel_delete(p);
+  }
+
   for (auto&& w : workers_) {
     if (w) {
       w->shutdown();
@@ -67,6 +88,28 @@ Scheduler::~Scheduler()
     }
   }
   as_leave();
+}
+
+void
+Scheduler::startLWProgress()
+{
+  hpx_parcel_t *p = action_new_parcel(Progress, HPX_HERE, 0, 0, 0);
+  parcel_prepare(p);
+  spawn(p);
+}
+
+void
+Scheduler::spawn(hpx_parcel_t *stack)
+{
+  while (auto p = parcel_stack_pop(&stack)) {
+    ready_.enqueue(p);
+  }
+}
+
+hpx_parcel_t*
+Scheduler::schedule()
+{
+  return ready_.dequeue();
 }
 
 int
@@ -77,7 +120,7 @@ Scheduler::start(int spmd, hpx_action_t act, void *out, int n, va_list *args)
   // Create the worker threads for the first epoch.
   if (epoch_ == 0) {
     for (int i = 0, e = nWorkers_; i < e; ++i) {
-      workers_[i] = new Worker(i);
+      workers_[i] = WorkerBase::Create(*this, i);
     }
   }
 
@@ -88,7 +131,7 @@ Scheduler::start(int spmd, hpx_action_t act, void *out, int n, va_list *args)
   if (spmd_ || here->rank == 0) {
     hpx_parcel_t *p = action_new_parcel_va(act, HPX_HERE, 0, 0, n, args);
     parcel_prepare(p);
-    workers_[0]->pushMail(p);
+    spawn(p);
   }
 
   // switch the state and then start all the workers
@@ -130,6 +173,9 @@ Scheduler::wait()
 {
   std::unique_lock<std::mutex> _(lock_);
   stopped_.wait_for(_, nsWait_, [this]() {
+      if (getState() != RUN)
+        return 1;
+
 #ifdef HAVE_APEX
       using std::min;
       using std::max;
@@ -148,7 +194,8 @@ Scheduler::wait()
         }
       }
 #endif
-      return (getState() != RUN);
+
+      return 0;
     });
 }
 
@@ -274,7 +321,6 @@ Scheduler::StopHandler(void)
   here->sched->stop(HPX_SUCCESS);
   return HPX_SUCCESS;
 }
-
 
 int
 Scheduler::TerminateSPMDHandler()

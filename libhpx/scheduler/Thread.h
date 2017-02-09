@@ -119,7 +119,7 @@ class Thread {
   static void SetStackSize(int bytes);
 
   /// Do any architecture-specific initialization for the worker.
-  static void InitArch(Worker*);
+  static void InitArch(WorkerBase*);
 
  private:
   /// Get the top address in the stack.

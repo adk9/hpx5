@@ -37,7 +37,7 @@ class Network : public virtual StringOps, public CollectiveOps, public LCOOps,
   /// @param          gas The global address space.
   ///
   /// @returns            The network object, or NULL if there was an issue.
-static Network* Create(config_t *config, const boot::Network& boot, GAS *gas);
+  static Network* Create(config_t *config, const boot::Network& boot, GAS *gas);
 
   /// Get the HPX configuration type of the base network implementation.
   virtual int type() const = 0;

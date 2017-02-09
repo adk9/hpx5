@@ -14,12 +14,16 @@
 #ifndef LIBHPX_SCHEDULER_H
 #define LIBHPX_SCHEDULER_H
 
-#include "libhpx/Worker.h"
+#include "libhpx/config.h"
 #include "libhpx/util/Aligned.h"
+#include "libhpx/util/TwoLockQueue.h"
 #include <atomic>
+#include <condition_variable>
 #include <vector>
 
 namespace libhpx {
+class WorkerBase;                               // avoid circular include
+
 /// The scheduler class.
 ///
 /// The scheduler class represents the shared-memory state of the entire
@@ -33,7 +37,8 @@ namespace libhpx {
 /// by updating the worker's scheduler pointer and the scheduler's worker
 /// table, though all of the functionality that is required to make this work is
 /// not implemented.
-class Scheduler : public libhpx::util::Aligned<HPX_CACHELINE_SIZE> {
+class Scheduler : public libhpx::util::Aligned<HPX_CACHELINE_SIZE>
+{
  public:
   enum State {
     SHUTDOWN,
@@ -65,6 +70,9 @@ class Scheduler : public libhpx::util::Aligned<HPX_CACHELINE_SIZE> {
   /// @param            n The number of arguments
   /// @param         args The arguments to the action.
   int start(int spmd, hpx_action_t act, void *out, int n, va_list *args);
+
+  /// Start a lightweight progress thread.
+  void startLWProgress();
 
   /// Stop scheduling lightweight threads, and return @p code from the
   /// scheduler_stop operation.
@@ -98,13 +106,18 @@ class Scheduler : public libhpx::util::Aligned<HPX_CACHELINE_SIZE> {
   /// @param          out The output data.
   void setOutput(size_t bytes, const void* out);
 
+  /// Spawn a stack of parcels.
+  ///
+  /// This interface takes a stack of parcels and submits them to the scheduler
+  /// to execute as threads. The parcels may already have stacks.
+  void spawn(hpx_parcel_t *stack);
+
+  /// Get a ready parcel.
+  hpx_parcel_t* schedule();
+
   int getNextTlsId() {
     return nextTlsId_.fetch_add(1, std::memory_order_acq_rel);
   }
-
-  /// Spawn a stack of parcels.
-  ///
-  void spawn(hpx_parcel_t *stack);
 
   void addActive() {
     nActive_ += 1;
@@ -134,11 +147,7 @@ class Scheduler : public libhpx::util::Aligned<HPX_CACHELINE_SIZE> {
     return nWorkers_;
   }
 
-  std::vector<libhpx::Worker*>& getWorkers() {
-    return workers_;
-  }
-
-  libhpx::Worker* getWorker(int i) {
+  WorkerBase* getWorker(int i) {
     assert(0 <= i && i < nWorkers_ && workers_[i]);
     return workers_[i];
   }
@@ -167,20 +176,21 @@ class Scheduler : public libhpx::util::Aligned<HPX_CACHELINE_SIZE> {
   /// Exit a spmd epoch.
   void exitSPMD(size_t size, const void* out);
 
-  std::mutex                      lock_;     //!< lock for running condition
-  std::condition_variable      stopped_;     //!< the running condition
-  std::atomic<State>             state_;     //!< the run state
-  std::atomic<int>           nextTlsId_;     //!< lightweight thread ids
-  std::atomic<int>                code_;     //!< the exit code
-  std::atomic<int>             nActive_;     //!< active number of workers
-  std::atomic<unsigned>      spmdCount_;     //!< barrier count for spmd
-  const int                   nWorkers_;     //!< total number of workers
-  int                          nTarget_;     //!< target number of workers
-  int                            epoch_;     //!< current scheduler epoch
-  int                             spmd_;     //!< 1 if the current epoch is spmd
-  std::chrono::nanoseconds      nsWait_;     //!< nanoseconds to wait in wait()
-  void                         *output_;     //!< the output slot
-  std::vector<libhpx::Worker*> workers_;     //!< array of worker data
+  std::mutex                         lock_;  //!< lock for running condition
+  std::condition_variable         stopped_;  //!< the running condition
+  std::atomic<State>                state_;  //!< the run state
+  std::atomic<int>              nextTlsId_;  //!< lightweight thread ids
+  std::atomic<int>                   code_;  //!< the exit code
+  std::atomic<int>                nActive_;  //!< active number of workers
+  std::atomic<unsigned>         spmdCount_;  //!< barrier count for spmd
+  const int                      nWorkers_;  //!< total number of workers
+  int                             nTarget_;  //!< target number of workers
+  int                               epoch_;  //!< current scheduler epoch
+  int                                spmd_;  //!< 1 if the current epoch is spmd
+  std::chrono::nanoseconds         nsWait_;  //!< nanoseconds to wait in wait()
+  void                            *output_;  //!< the output slot
+  std::vector<WorkerBase*>        workers_;  //!< array of worker data
+  util::TwoLockQueue<hpx_parcel_t*> ready_;  //!< global work queue
 };
 } // namespace libhpx
 #endif // LIBHPX_SCHEDULER_H
