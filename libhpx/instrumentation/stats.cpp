@@ -39,6 +39,7 @@
 
 namespace {
 using libhpx::self;
+using libhpx::Worker;
 using libhpx::instrumentation::Trace;
 
 class StatsTracer : public Trace {
