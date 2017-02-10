@@ -77,6 +77,12 @@ WorkstealingWorker::popLIFO()
   return p;
 }
 
+hpx_parcel_t*
+WorkstealingWorker::onSchedule()
+{
+  return popLIFO();
+}
+
 void
 WorkstealingWorker::onSpawn(hpx_parcel_t* p)
 {
@@ -267,6 +273,25 @@ WorkstealingWorker::handleSteal()
    case HPX_SCHED_POLICY_HIER:
     return stealHierarchical();
   }
+}
+
+hpx_parcel_t*
+WorkstealingWorker::onRun()
+{
+  if (hpx_parcel_t *p = popLIFO()) {
+    return p;
+  }
+  else if (hpx_parcel_t *p = handleSteal()) {
+    return p;
+  }
+  else {
+    return nullptr;
+  }
+}
+
+void
+WorkstealingWorker::onSleep()
+{
 }
 
 WorkstealingWorker*
