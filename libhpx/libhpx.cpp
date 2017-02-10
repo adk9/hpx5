@@ -15,12 +15,21 @@
 # include "config.h"
 #endif
 
-#include <libhpx/debug.h>
-#include <libhpx/libhpx.h>
-#include <libhpx/locality.h>
+#include "libhpx/debug.h"
+#include "libhpx/libhpx.h"
+#include "libhpx/locality.h"
+#include "libhpx/parcel.h"
 
-const libhpx_config_t *libhpx_get_config(void) {
+const libhpx_config_t*
+libhpx_get_config(void)
+{
   dbg_assert_str(here, "libhpx not initialized\n");
   dbg_assert_str(here->config, "libhpx config not available yet\n");
   return here->config;
+}
+
+uint32_t
+libhpx_parcel_get_source(hpx_parcel_t* p)
+{
+  return p->src;
 }

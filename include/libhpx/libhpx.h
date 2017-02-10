@@ -16,7 +16,7 @@
 
 #include <errno.h>
 #include <stdbool.h>
-#include <hpx/attributes.h>
+#include <hpx/hpx.h>
 #include <libhpx/config.h>
 
 #ifdef __cplusplus
@@ -75,6 +75,10 @@ void libhpx_inst_phase_end()
 
 /// Check if the tracer is currently active
 bool libhpx_inst_tracer_active()
+  HPX_PUBLIC;
+
+/// Get libhpx-specific parcel data.
+uint32_t libhpx_parcel_get_source(hpx_parcel_t*)
   HPX_PUBLIC;
 
 #ifdef __cplusplus
