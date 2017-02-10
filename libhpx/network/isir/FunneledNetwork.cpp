@@ -29,6 +29,7 @@ FunneledNetwork::FunneledNetwork(const config_t *cfg, GAS *gas)
     : Network(),
       ParcelStringOps(),
       sends_(),
+      recvs_(),
       xport_(),
       isends_(cfg, gas, xport_),
       irecvs_(cfg, xport_),
@@ -39,6 +40,9 @@ FunneledNetwork::FunneledNetwork(const config_t *cfg, GAS *gas)
 FunneledNetwork::~FunneledNetwork()
 {
   while (hpx_parcel_t *p = sends_.dequeue()) {
+    parcel_delete(p);
+  }
+  while (hpx_parcel_t *p = recvs_.dequeue()) {
     parcel_delete(p);
   }
 }
@@ -121,14 +125,21 @@ FunneledNetwork::send(hpx_parcel_t *p, hpx_parcel_t *ssync) {
   return 0;
 }
 
-hpx_parcel_t*
+hpx_parcel_t *
+FunneledNetwork::probe(int) {
+  return recvs_.dequeue();
+}
+
+void
 FunneledNetwork::flush()
 {
   std::lock_guard<std::mutex> _(lock_);
   sendAll();
   hpx_parcel_t *ssync = NULL;
   isends_.flush(&ssync);
-  return ssync;
+  if (ssync) {
+    recvs_.enqueue(ssync);
+  }
 }
 
 void
@@ -143,18 +154,20 @@ FunneledNetwork::unpin(const void* base, size_t n)
   xport_.unpin(base, n);
 }
 
-hpx_parcel_t*
+void
 FunneledNetwork::progress(int)
 {
-  hpx_parcel_t *chain = nullptr;
   if (auto _ = std::unique_lock<std::mutex>(lock_, std::try_to_lock)) {
+    hpx_parcel_t *chain = NULL;
     if (int n = irecvs_.progress(&chain)) {
       log_net("completed %d recvs\n", n);
+      recvs_.enqueue(chain);
     }
     chain = NULL;
     if (int n = isends_.progress(&chain)) {
       log_net("completed %d sends\n", n);
+      recvs_.enqueue(chain);
     }
+    sendAll();
   }
-  return chain;
 }
