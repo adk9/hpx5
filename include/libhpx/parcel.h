@@ -1,4 +1,4 @@
-// =============================================================================
+// ==================================================================-*- C++ -*-
 //  High Performance ParalleX Library (libhpx)
 //
 //  Copyright (c) 2013-2016, Trustees of Indiana University,
@@ -14,19 +14,6 @@
 #ifndef LIBHPX_PARCEL_H
 #define LIBHPX_PARCEL_H
 
-#ifdef __cplusplus
-namespace libhpx {
-namespace scheduler {
-class Thread;
-}
-}
-using Thread = libhpx::scheduler::Thread;
-extern "C" {
-#else
-#warning included parcel.h
-#define Thread void
-#endif
-
 #ifdef HAVE_APEX
 # include <apex.h>
 # include <apex_policies.h>
@@ -34,6 +21,14 @@ extern "C" {
 
 #include <hpx/hpx.h>
 #include <libhpx/instrumentation.h>
+
+// @todo Update the parcel implementation to C++.
+
+namespace libhpx {
+namespace scheduler {
+class Thread;
+} // namespace scheduler
+} // namespace libhpx
 
 typedef uint16_t parcel_state_t;
 
@@ -71,6 +66,8 @@ static inline uint16_t parcel_pinned(parcel_state_t state) {
 /// The hpx_parcel structure is what the user-level interacts with.
 ///
 struct hpx_parcel {
+  using Thread = libhpx::scheduler::Thread;
+
   Thread*          thread;         //!< A pointer to a thread.
   struct hpx_parcel *next;         //!< A pointer to the next parcel.
   uint32_t            src;         //!< The src rank for the parcel.
@@ -126,7 +123,8 @@ void parcel_delete(hpx_parcel_t *p);
 ///
 /// For debugging purposes, this operation is done using an atomic exchange when
 /// ENABLE_DEBUG is set.
-Thread* parcel_set_thread(hpx_parcel_t *p, Thread *thread);
+libhpx::scheduler::Thread* parcel_set_thread(hpx_parcel_t *p,
+                                             libhpx::scheduler::Thread *thread);
 
 /// The core send operation.
 ///
@@ -183,9 +181,5 @@ static inline uint32_t parcel_payload_size(const hpx_parcel_t *p) {
 
 void parcel_prepare(hpx_parcel_t *p)
   HPX_NON_NULL(1);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif // LIBHPX_PARCEL_H

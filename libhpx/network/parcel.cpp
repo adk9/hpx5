@@ -46,6 +46,7 @@
 
 namespace {
 using libhpx::self;
+using libhpx::scheduler::Thread;
 }
 
 // this will only be used during instrumentation
@@ -150,7 +151,7 @@ void parcel_launch(hpx_parcel_t *p) {
   else {
     int e = here->net->send(p, NULL);
 #ifdef HAVE_APEX
-  	apex_send(p->id, p->size, target);
+    apex_send(p->id, p->size, target);
 #endif
     dbg_check(e, "failed to perform a network send\n");
   }

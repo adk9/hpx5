@@ -28,6 +28,7 @@
 namespace {
 using libhpx::Scheduler;
 using libhpx::Worker;
+using libhpx::scheduler::Thread;
 LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, SetOutput,
               Scheduler::SetOutputHandler, HPX_POINTER, HPX_SIZE_T);
 LIBHPX_ACTION(HPX_DEFAULT, 0, Stop, Scheduler::StopHandler);

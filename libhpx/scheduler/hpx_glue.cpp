@@ -27,6 +27,7 @@
 namespace {
 using libhpx::self;
 using libhpx::Worker;
+using libhpx::scheduler::Thread;
 }
 
 hpx_parcel_t *
