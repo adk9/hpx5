@@ -146,7 +146,7 @@ class Scheduler : public libhpx::util::Aligned<HPX_CACHELINE_SIZE> {
 
  private:
   /// This blocks the calling thread until the worker threads shutdown.
-  void wait();
+  void wait(std::unique_lock<std::mutex>&&);
 
   /// This only happens at rank 0 and accumulates all of the SPMD termination
   /// messages.
