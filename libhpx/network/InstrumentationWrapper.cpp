@@ -28,13 +28,12 @@ InstrumentationWrapper::InstrumentationWrapper(Network* impl)
 {
 }
 
-hpx_parcel_t*
+void
 InstrumentationWrapper::progress(int n)
 {
   EVENT_NETWORK_PROGRESS_BEGIN();
-  auto p = impl_->progress(n);
+  impl_->progress(n);
   EVENT_NETWORK_PROGRESS_END();
-  return p;
 }
 
 int
@@ -42,4 +41,13 @@ InstrumentationWrapper::send(hpx_parcel_t *p, hpx_parcel_t *ssync)
 {
   EVENT_NETWORK_SEND();
   return impl_->send(p, ssync);
+}
+
+hpx_parcel_t*
+InstrumentationWrapper::probe(int nrx)
+{
+  EVENT_NETWORK_PROBE_BEGIN();
+  hpx_parcel_t *p = impl_->probe(nrx);
+  EVENT_NETWORK_PROBE_END();
+  return p;
 }

@@ -30,12 +30,16 @@ class NetworkWrapper : public Network
     return impl_->type();
   }
 
-  hpx_parcel_t* progress(int n) {
-    return impl_->progress(n);
+  void progress(int n) {
+    impl_->progress(n);
   }
 
-  hpx_parcel_t* flush() {
-    return impl_->flush();
+  hpx_parcel_t* probe(int n) {
+    return impl_->probe(n);
+  }
+
+  void flush() {
+    impl_->flush();
   }
 
   void deallocate(const hpx_parcel_t* p) {
@@ -114,7 +118,8 @@ class InstrumentationWrapper final : public NetworkWrapper {
  public:
   InstrumentationWrapper(Network* impl);
 
-  hpx_parcel_t* progress(int n);
+  void progress(int n);
+  hpx_parcel_t* probe(int);
   int send(hpx_parcel_t* p, hpx_parcel_t* ssync);
 };
 
@@ -127,8 +132,8 @@ class CompressionWrapper final : public NetworkWrapper {
 class CoalescingWrapper final : public NetworkWrapper {
  public:
   CoalescingWrapper(Network* impl, const config_t *cfg, GAS *gas);
-  hpx_parcel_t* progress(int n);
-  hpx_parcel_t* flush();
+  void progress(int n);
+  void flush();
   int send(hpx_parcel_t* p, hpx_parcel_t* ssync);
 
  private:

@@ -25,8 +25,9 @@ class SMPNetwork final : public Network
   SMPNetwork(const boot::Network& boot);
 
   int type() const;
-  hpx_parcel_t* progress(int);
-  hpx_parcel_t* flush();
+  void progress(int n);
+  hpx_parcel_t* probe(int);
+  void flush();
 
   void deallocate(const hpx_parcel_t* p);
   int send(hpx_parcel_t* p, hpx_parcel_t* ssync);

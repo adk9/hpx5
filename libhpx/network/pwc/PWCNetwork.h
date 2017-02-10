@@ -37,8 +37,9 @@ class PWCNetwork : public Network
   ~PWCNetwork();
 
   int type() const;
-  hpx_parcel_t* progress(int);
-  hpx_parcel_t* flush();
+  void progress(int);
+  hpx_parcel_t* probe(int);
+  void flush();
 
   void deallocate(const hpx_parcel_t* p);
   int send(hpx_parcel_t* p, hpx_parcel_t* ssync);
