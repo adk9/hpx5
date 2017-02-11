@@ -152,10 +152,10 @@ FunneledNetwork::progress(int)
     if (int n = irecvs_.progress(&chain)) {
       log_net("completed %d recvs\n", n);
     }
-    chain = NULL;
     if (int n = isends_.progress(&chain)) {
       log_net("completed %d sends\n", n);
     }
+    sendAll();
   }
   return chain;
 }
