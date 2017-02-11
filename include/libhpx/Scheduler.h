@@ -71,9 +71,6 @@ class Scheduler : public libhpx::util::Aligned<HPX_CACHELINE_SIZE>
   /// @param         args The arguments to the action.
   int start(int spmd, hpx_action_t act, void *out, int n, va_list *args);
 
-  /// Start a lightweight progress thread.
-  void startLWProgress();
-
   /// Stop scheduling lightweight threads, and return @p code from the
   /// scheduler_stop operation.
   ///
@@ -94,6 +91,9 @@ class Scheduler : public libhpx::util::Aligned<HPX_CACHELINE_SIZE>
   /// @param          out The output data.
   [[ noreturn ]]
   void exit(size_t bytes, const void *out);
+
+  /// Kick the scheduler to get it to do tasks like network progress.
+  void kick();
 
   /// Set the output for the top level process.
   ///

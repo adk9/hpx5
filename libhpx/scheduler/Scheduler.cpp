@@ -34,21 +34,6 @@ LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, SetOutput,
               Scheduler::SetOutputHandler, HPX_POINTER, HPX_SIZE_T);
 LIBHPX_ACTION(HPX_DEFAULT, 0, Stop, Scheduler::StopHandler);
 LIBHPX_ACTION(HPX_DEFAULT, 0, TerminateSPMD, Scheduler::TerminateSPMDHandler);
-
-int lw_progress(void)
-{
-  auto& network = *here->net;
-  auto& scheduler = *here->sched;
-  while (true) {
-    hpx_parcel_t *stack = network.progress(0);
-    while (hpx_parcel_t *p = parcel_stack_pop(&stack)) {
-      scheduler.spawn(p);
-    }
-    hpx_thread_yield();
-  }
-  return HPX_SUCCESS;
-}
-LIBHPX_ACTION(HPX_DEFAULT, 0, Progress, lw_progress);
 }
 
 Scheduler::Scheduler(const config_t* cfg)
@@ -89,14 +74,6 @@ Scheduler::~Scheduler()
     }
   }
   as_leave();
-}
-
-void
-Scheduler::startLWProgress()
-{
-  hpx_parcel_t *p = action_new_parcel(Progress, HPX_HERE, 0, 0, 0);
-  parcel_prepare(p);
-  spawn(p);
 }
 
 void
@@ -197,6 +174,7 @@ Scheduler::wait(std::unique_lock<std::mutex>&& lock)
 #endif
 
   stopped_.wait_for(lock, nsWait_);
+  spawn(here->net->progress(0));
 }
 
 void
@@ -215,6 +193,12 @@ Scheduler::stop(uint64_t code)
   dbg_assert(code < UINT64_MAX);
   setCode(int(code));
   setState(Scheduler::STOP);
+  kick();
+}
+
+void
+Scheduler::kick()
+{
   stopped_.notify_all();
 }
 

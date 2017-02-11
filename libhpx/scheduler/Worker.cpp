@@ -262,6 +262,7 @@ WorkerBase::run()
       transfer(p, null);
     }
     else {
+      sched_.kick();
 #ifdef HAVE_URCU
       rcu_quiescent_state();
 #endif

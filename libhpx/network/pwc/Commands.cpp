@@ -32,8 +32,9 @@ inline hpx_parcel_t*
 Command::lcoSet(unsigned src) const
 {
   hpx_addr_t lco = offset_to_gpa(here->rank, arg_);
-  hpx_lco_set(lco, 0, nullptr, HPX_NULL, HPX_NULL);
-  return nullptr;
+  // hpx_lco_set(lco, 0, nullptr, HPX_NULL, HPX_NULL);
+  // return nullptr;
+  return action_new_parcel(hpx_lco_set_action, lco, 0, 0, 0);
 }
 
 inline hpx_parcel_t*
