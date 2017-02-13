@@ -44,7 +44,6 @@ __thread WorkerBase * volatile libhpx::self;
 
 WorkerBase::WorkerBase(Scheduler& sched, int id)
     : id_(id),
-      seed_(id),
       sched_(sched),
       profiler_(nullptr),
       bst(nullptr),

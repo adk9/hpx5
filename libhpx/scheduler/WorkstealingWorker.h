@@ -18,6 +18,7 @@
 #include "libhpx/util/Aligned.h"
 #include "libhpx/util/ChaseLevDeque.h"
 #include "libhpx/util/TwoLockQueue.h"
+#include <random>
 
 namespace libhpx {
 namespace scheduler {
@@ -79,10 +80,14 @@ class WorkstealingWorker : public WorkerBase,
 
   static WorkstealingWorker* GetWorker(int id);
 
-  const int              numaNode_;             //!< this worker's numa node
-  int                   workFirst_;             //!< this worker's mode
-  WorkstealingWorker*  lastVictim_;             //!< last successful victim
-  Deque                      work_;             //!< work queue
+  const int                           numaNode_; //!< this worker's numa node
+  std::mt19937&                            rng_; //!< reference to my mt19937
+  std::uniform_int_distribution<int>       cpu_; //!< random cpu
+  std::uniform_int_distribution<int>      node_; //!< random node
+  std::uniform_int_distribution<int> cpuOnNode_; //!< random node local cpu
+  int                                workFirst_; //!< this worker's mode
+  WorkstealingWorker*               lastVictim_; //!< last successful victim
+  Deque                                   work_; //!< work queue
 }; // class WorkstealingWorker
 } // namespace scheduler
 } // namespace libhpx

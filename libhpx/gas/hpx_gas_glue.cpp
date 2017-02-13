@@ -22,6 +22,7 @@
 #include "libhpx/Network.h"
 #include "libhpx/rebalancer.h"
 #include "libhpx/Worker.h"
+#include "libhpx/util/Random.h"
 #include "hpx/hpx.h"
 #include <cinttypes>
 #include <cstdlib>
@@ -179,8 +180,10 @@ _gas_local_search(size_t n, size_t bsize, uint32_t boundary, uint32_t attr,
                   hpx_action_t act)
 {
   hpx_addr_t addr = HPX_NULL;
+  std::uniform_int_distribution<int> dist(0, here->ranks - 1);
+  auto& rng = libhpx::util::getRNG();
   for (int i = 0, e = here->ranks; i < e; ++i) {
-    int j = libhpx::self->rand(e);
+    int j = dist(rng);
     hpx_addr_t l = HPX_THERE(j);
     dbg_check ( hpx_call_sync(l, act, &addr, sizeof(addr), &n, &bsize,
                               &boundary, &attr),

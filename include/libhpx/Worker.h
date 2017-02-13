@@ -181,18 +181,6 @@ class WorkerBase
     schedule(f);
   }
 
-  /// Create a random integer bounded by @p mod.
-  ///
-  /// @todo: now that we are using C++11 we should switch to standard random
-  /// number generation.
-  ///
-  /// @param        mod The bound for the random number.
-  ///
-  /// @returns          A random number in the range [0, @p mod).
-  int rand(int mod) {
-    return rand_r(&seed_) % mod;
-  }
-
  protected:
   /// Initialize a worker structure.
   ///
@@ -355,11 +343,10 @@ class WorkerBase
 
  protected:
   const int                    id_;             //!< this worker's id
-  unsigned                   seed_;             //!< my random seed
-  Scheduler&                sched_;
-  void                  *profiler_;             //!< reference to the profiler
+  Scheduler&                sched_;             //!< the global scheduler
+  void                  *profiler_;             //!< the profiler
  public:
-  void                        *bst;            //!< the block statistics table
+  void                        *bst;             //!< the block statistics table
  protected:
   hpx_parcel_t            *system_;             //!< this worker's native parcel
   hpx_parcel_t           *current_;             //!< current thread

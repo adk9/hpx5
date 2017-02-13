@@ -23,6 +23,7 @@
 #include "libhpx/Network.h"                     // progress
 #include "libhpx/parcel.h"
 #include "libhpx/Topology.h"
+#include "libhpx/util/Random.h"
 
 using namespace libhpx;
 using namespace libhpx::scheduler;
@@ -34,6 +35,10 @@ WorkstealingWorker::WorkstealingWorker(Scheduler& sched, int id)
     : WorkerBase(sched, id),
       util::Aligned<HPX_CACHELINE_SIZE>(),
       numaNode_(here->topology->cpu_to_numa[id % here->topology->ncpus]),
+      rng_(util::getRNG()),
+      cpu_(0, sched.getNWorkers() - 1),
+      node_(0, here->topology->nnodes - 1),
+      cpuOnNode_(0, here->topology->cpus_per_node - 1),
       workFirst_(0),
       lastVictim_(nullptr),
       work_()
@@ -141,25 +146,24 @@ WorkstealingWorker::stealFrom(WorkstealingWorker* victim) {
 hpx_parcel_t*
 WorkstealingWorker::stealRandom()
 {
-  int n = here->sched->getNWorkers();
-  int id;
-  do {
-    id = rand(n);
-  } while (id == id_);
-  return stealFrom(GetWorker(id));
+  while (true) {
+    int cpu = cpu_(rng_);
+    if (cpu != id_) {
+      return stealFrom(GetWorker(cpu));
+    }
+  }
 }
 
 hpx_parcel_t*
 WorkstealingWorker::stealRandomNode()
 {
-  int   n = here->topology->cpus_per_node;
-  int cpu = rand(n);
-  int  id = here->topology->numa_to_cpus[numaNode_][cpu];
-  while (id == id_) {
-    cpu = rand(n);
-    id = here->topology->numa_to_cpus[numaNode_][cpu];
+  while (true) {
+    int cpu = cpuOnNode_(rng_);
+    int id = here->topology->numa_to_cpus[numaNode_][cpu];
+    if (id != id_) {
+      return stealFrom(GetWorker(id));
+    }
   }
-  return stealFrom(GetWorker(id));
 }
 
 hpx_parcel_t*
@@ -232,10 +236,10 @@ WorkstealingWorker::stealHierarchical()
   // step 4
   int nn = numaNode_;
   while (nn == numaNode_) {
-    nn = rand(here->topology->nnodes);
+    nn = node_(rng_);
   }
 
-  int      idx = rand(here->topology->cpus_per_node);
+  int      idx = cpuOnNode_(rng_);
   int      cpu = here->topology->numa_to_cpus[nn][idx];
   auto* victim = GetWorker(cpu);
   auto*    src = this;
