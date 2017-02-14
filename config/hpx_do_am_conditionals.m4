@@ -27,6 +27,7 @@ AC_DEFUN([HPX_DO_AM_CONDITIONALS], [
  
  AM_CONDITIONAL([HAVE_CMPXCHG16B], [test "x$have_cmpxchg16b" == xyes])
  AM_CONDITIONAL([HAVE_KNC], [test "x$pt_cv_knc_val" == xyes])
+ AM_CONDITIONAL([HAVE_CUDA], [test "x$have_cuda" == xyes])
  AM_CONDITIONAL([HAVE_PHOTON], [test "x$have_photon" == xyes])
  AM_CONDITIONAL([HAVE_MPI], [test "x$have_mpi" == xyes])
  AM_CONDITIONAL([HAVE_NETWORK], [test "x$have_network" == xyes])

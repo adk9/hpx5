@@ -155,6 +155,7 @@ HPX_CONFIG_URCU([contrib/userspace-rcu], [$want_urcu])
 HPX_CONFIG_HPXPP
 HPX_CONFIG_PHOTON([contrib/photon], [photon])
 HPX_CONFIG_MPI([ompi-cxx])
+HPX_CONFIG_CUDA
 HPX_CONFIG_PMI([cray-pmi])
 HPX_CONFIG_JEMALLOC([contrib/jemalloc], ["jemalloc >= 4.0"]) 
 HPX_CONFIG_TBBMALLOC
@@ -185,7 +186,7 @@ HPX_CONFIG_LIBHPX
 
 # Set and check some composite conditions to make sure the configuration makes
 # sense. 
-AS_IF([test "x$have_photon" == xyes -o "x$have_mpi" == xyes],
+AS_IF([test "x$have_photon" == xyes -o "x$have_mpi" == xyes -o "x$have_cuda" == xyes],
   [AC_DEFINE([HAVE_NETWORK], [1], [We have a high speed network available])
    have_network=yes])
 
