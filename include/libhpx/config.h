@@ -70,7 +70,6 @@ typedef enum {
   HPX_NETWORK_DEFAULT = 0,
   HPX_NETWORK_SMP,
   HPX_NETWORK_PWC,
-  HPX_NETWORK_CUDA,
   HPX_NETWORK_ISIR,
   HPX_NETWORK_MAX
 } libhpx_network_t;
@@ -79,7 +78,6 @@ static const char * const HPX_NETWORK_TO_STRING[] = {
   "DEFAULT",
   "SMP",
   "PWC",
-  "CUDA",
   "ISIR",
   "INVALID_ID"
 };
