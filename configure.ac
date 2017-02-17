@@ -183,6 +183,12 @@ HPX_CONFIG_APEX([apex])
 HPX_CONFIG_TESTS
 HPX_CONFIG_LIBHPX
 
+PKG_CHECK_MODULES([GSL], [gsl])
+HPX_PC_PRIVATE_PKGS="$HPX_PC_PRIVATE_PKGS gsl"
+LIBHPX_CFLAGS="$LIBHPX_CFLAGS $GSL_CFLAGS"
+LIBHPX_CXXFLAGS="$LIBHPX_CXXFLAGS $GSL_CFLAGS"
+HPX_APPS_LDADD="$HPX_APPS_LDADD $GSL_LIBS"
+ 
 # Set and check some composite conditions to make sure the configuration makes
 # sense. 
 AS_IF([test "x$have_photon" == xyes -o "x$have_mpi" == xyes],

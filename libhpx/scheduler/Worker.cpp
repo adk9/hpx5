@@ -18,6 +18,7 @@
 #include "libhpx/Worker.h"
 #include "Condition.h"
 #include "Thread.h"
+#include "PriorityWorker.h"
 #include "WorkstealingWorker.h"
 #include "lco/LCO.h"
 #include "libhpx/debug.h"
@@ -33,10 +34,7 @@
 namespace {
 using libhpx::self;
 using libhpx::WorkerBase;
-using libhpx::scheduler::Condition;
-using libhpx::scheduler::LCO;
-using libhpx::scheduler::Thread;
-using libhpx::scheduler::WorkstealingWorker;
+using namespace libhpx::scheduler;
 }
 
 /// Storage for the thread-local worker pointer.
@@ -452,5 +450,5 @@ WorkerBase::handleMail()
 WorkerBase*
 WorkerBase::Create(Scheduler& sched, int i)
 {
-  return new WorkstealingWorker(sched, i);
+  return new PriorityWorker(sched, i);
 }

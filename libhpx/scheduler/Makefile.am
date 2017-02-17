@@ -1,4 +1,4 @@
-SUBDIRS = arch lco
+SUBDIRS = arch lco linden
 
 # The scheduler library
 noinst_LTLIBRARIES       = libscheduler.la
@@ -8,8 +8,8 @@ libscheduler_la_CPPFLAGS = -I$(top_srcdir)/include $(LIBHPX_CPPFLAGS)
 libscheduler_la_CFLAGS   = $(LIBHPX_CFLAGS)
 libscheduler_la_CXXFLAGS = $(LIBHPX_CXXFLAGS)
 libscheduler_la_SOURCES  = Condition.cpp Scheduler.cpp Thread.cpp Worker.cpp \
-                           hpx_glue.cpp WorkstealingWorker.cpp
-libscheduler_la_LIBADD   = arch/libarch.la lco/liblco.la
+                           hpx_glue.cpp WorkstealingWorker.cpp PriorityQueue.cpp
+libscheduler_la_LIBADD   = arch/libarch.la lco/liblco.la linden/liblinden.la
 
 if ENABLE_INSTRUMENTATION
 libscheduler_la_SOURCES += events.cpp

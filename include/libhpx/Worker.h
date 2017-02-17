@@ -212,10 +212,10 @@ class WorkerBase
     transfer(p, f);
   }
 
-  virtual void onSpawn(hpx_parcel_t* p) = 0;
-  virtual hpx_parcel_t* onSchedule() = 0;
-  virtual hpx_parcel_t* onBalance() = 0;
-  virtual void onSleep() = 0;
+  virtual void onSpawn(hpx_parcel_t* p) { sched_.spawn(p); }
+  virtual hpx_parcel_t* onSchedule() { return sched_.schedule(); }
+  virtual hpx_parcel_t* onBalance() { return nullptr; }
+  virtual void onSleep() { }
 
  private:
   enum State {

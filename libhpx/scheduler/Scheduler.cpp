@@ -51,7 +51,7 @@ Scheduler::Scheduler(const config_t* cfg)
       nsWait_(cfg->progress_period),
       output_(nullptr),
       workers_(nWorkers_),
-      ready_()
+      ready_(util::PriorityQueue::Create(cfg))
 {
   Thread::SetStackSize(cfg->stacksize);
 
@@ -63,7 +63,7 @@ Scheduler::Scheduler(const config_t* cfg)
 
 Scheduler::~Scheduler()
 {
-  while (hpx_parcel_t *p = ready_.dequeue()) {
+  while (hpx_parcel_t *p = ready_->deleteMin()) {
     parcel_delete(p);
   }
 
@@ -80,14 +80,14 @@ void
 Scheduler::spawn(hpx_parcel_t *stack)
 {
   while (auto p = parcel_stack_pop(&stack)) {
-    ready_.enqueue(p);
+    ready_->insert(p->priority, p);
   }
 }
 
 hpx_parcel_t*
 Scheduler::schedule()
 {
-  return ready_.dequeue();
+  return ready_->deleteMin();
 }
 
 int

@@ -16,7 +16,7 @@
 
 #include "libhpx/config.h"
 #include "libhpx/util/Aligned.h"
-#include "libhpx/util/TwoLockQueue.h"
+#include "libhpx/util/PriorityQueue.h"
 #include <atomic>
 #include <condition_variable>
 #include <vector>
@@ -190,7 +190,7 @@ class Scheduler : public libhpx::util::Aligned<HPX_CACHELINE_SIZE>
   std::chrono::nanoseconds         nsWait_;  //!< nanoseconds to wait in wait()
   void                            *output_;  //!< the output slot
   std::vector<WorkerBase*>        workers_;  //!< array of worker data
-  util::TwoLockQueue<hpx_parcel_t*> ready_;  //!< global work queue
+  util::PriorityQueue              *ready_;
 };
 } // namespace libhpx
 #endif // LIBHPX_SCHEDULER_H

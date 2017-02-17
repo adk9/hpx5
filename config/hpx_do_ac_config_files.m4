@@ -30,6 +30,8 @@ AC_DEFUN([HPX_DO_AC_CONFIG_FILES], [
    libhpx/scheduler/Makefile
    libhpx/scheduler/arch/Makefile
    libhpx/scheduler/lco/Makefile
+   libhpx/scheduler/linden/Makefile
+   libhpx/scheduler/linden/gc/Makefile
    libhpx/process/Makefile
    libhpx/instrumentation/Makefile
    include/Makefile

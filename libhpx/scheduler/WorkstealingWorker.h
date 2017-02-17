@@ -33,8 +33,6 @@ class WorkstealingWorker : public WorkerBase,
   WorkstealingWorker(Scheduler& sched, int id);
   ~WorkstealingWorker();
 
-  void spawn(hpx_parcel_t* p);
-
   /// Asynchronous entry point for the steal-half operation.
   ///
   /// @todo This is public because we register it with the LIBHPX_ACTION
