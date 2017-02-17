@@ -43,6 +43,7 @@ enum enum_hpx_boot { hpx_boot__NULL = -1, hpx_boot_arg_default = 0, hpx_boot_arg
 enum enum_hpx_transport { hpx_transport__NULL = -1, hpx_transport_arg_default = 0, hpx_transport_arg_mpi, hpx_transport_arg_photon };
 enum enum_hpx_network { hpx_network__NULL = -1, hpx_network_arg_default = 0, hpx_network_arg_smp, hpx_network_arg_pwc, hpx_network_arg_isir };
 enum enum_hpx_thread_affinity { hpx_thread_affinity__NULL = -1, hpx_thread_affinity_arg_default = 0, hpx_thread_affinity_arg_hwthread, hpx_thread_affinity_arg_core, hpx_thread_affinity_arg_numa, hpx_thread_affinity_arg_none };
+enum enum_hpx_sched { hpx_sched__NULL = -1, hpx_sched_arg_default = 0, hpx_sched_arg_workstealing, hpx_sched_arg_linden };
 enum enum_hpx_sched_policy { hpx_sched_policy__NULL = -1, hpx_sched_policy_arg_default = 0, hpx_sched_policy_arg_random, hpx_sched_policy_arg_hier };
 enum enum_hpx_gas_affinity { hpx_gas_affinity__NULL = -1, hpx_gas_affinity_arg_none = 0, hpx_gas_affinity_arg_urcu, hpx_gas_affinity_arg_cuckoo };
 enum enum_hpx_log_level { hpx_log_level__NULL = -1, hpx_log_level_arg_default = 0, hpx_log_level_arg_boot, hpx_log_level_arg_sched, hpx_log_level_arg_gas, hpx_log_level_arg_lco, hpx_log_level_arg_net, hpx_log_level_arg_trans, hpx_log_level_arg_parcel, hpx_log_level_arg_action, hpx_log_level_arg_config, hpx_log_level_arg_memory, hpx_log_level_arg_coll, hpx_log_level_arg_all };
@@ -87,6 +88,9 @@ struct hpx_options_t
   long hpx_stacksize_arg;	/**< @brief set HPX stack size.  */
   char * hpx_stacksize_orig;	/**< @brief set HPX stack size original value given at command line.  */
   const char *hpx_stacksize_help; /**< @brief set HPX stack size help description.  */
+  enum enum_hpx_sched hpx_sched_arg;	/**< @brief the HPX scheduling algorithm.  */
+  char * hpx_sched_orig;	/**< @brief the HPX scheduling algorithm original value given at command line.  */
+  const char *hpx_sched_help; /**< @brief the HPX scheduling algorithm help description.  */
   enum enum_hpx_sched_policy hpx_sched_policy_arg;	/**< @brief work-stealing policy for the HPX scheduler.  */
   char * hpx_sched_policy_orig;	/**< @brief work-stealing policy for the HPX scheduler original value given at command line.  */
   const char *hpx_sched_policy_help; /**< @brief work-stealing policy for the HPX scheduler help description.  */
@@ -242,6 +246,7 @@ struct hpx_options_t
   unsigned int hpx_threads_given ;	/**< @brief Whether hpx-threads was given.  */
   unsigned int hpx_thread_affinity_given ;	/**< @brief Whether hpx-thread-affinity was given.  */
   unsigned int hpx_stacksize_given ;	/**< @brief Whether hpx-stacksize was given.  */
+  unsigned int hpx_sched_given ;	/**< @brief Whether hpx-sched was given.  */
   unsigned int hpx_sched_policy_given ;	/**< @brief Whether hpx-sched-policy was given.  */
   unsigned int hpx_sched_wfthreshold_given ;	/**< @brief Whether hpx-sched-wfthreshold was given.  */
   unsigned int hpx_sched_stackcachelimit_given ;	/**< @brief Whether hpx-sched-stackcachelimit was given.  */
@@ -480,6 +485,7 @@ extern const char *hpx_option_parser_hpx_boot_values[];  /**< @brief Possible va
 extern const char *hpx_option_parser_hpx_transport_values[];  /**< @brief Possible values for hpx-transport. */
 extern const char *hpx_option_parser_hpx_network_values[];  /**< @brief Possible values for hpx-network. */
 extern const char *hpx_option_parser_hpx_thread_affinity_values[];  /**< @brief Possible values for hpx-thread-affinity. */
+extern const char *hpx_option_parser_hpx_sched_values[];  /**< @brief Possible values for hpx-sched. */
 extern const char *hpx_option_parser_hpx_sched_policy_values[];  /**< @brief Possible values for hpx-sched-policy. */
 extern const char *hpx_option_parser_hpx_gas_affinity_values[];  /**< @brief Possible values for hpx-gas-affinity. */
 extern const char *hpx_option_parser_hpx_log_level_values[];  /**< @brief Possible values for hpx-log-level. */

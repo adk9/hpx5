@@ -261,14 +261,14 @@ WorkstealingWorker::handleSteal()
     return NULL;
   }
 
-  libhpx_sched_policy_t policy = here->config->sched_policy;
+  libhpx_sched_steal_policy_t policy = here->config->sched_policy;
   switch (policy) {
    default:
     log_dflt("invalid scheduling policy, defaulting to random..");
-   case HPX_SCHED_POLICY_DEFAULT:
-   case HPX_SCHED_POLICY_RANDOM:
+   case HPX_SCHED_STEAL_POLICY_DEFAULT:
+   case HPX_SCHED_STEAL_POLICY_RANDOM:
     return stealRandom();
-   case HPX_SCHED_POLICY_HIER:
+   case HPX_SCHED_STEAL_POLICY_HIER:
     return stealHierarchical();
   }
 }

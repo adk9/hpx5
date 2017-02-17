@@ -44,7 +44,7 @@ class WorkerBase
   using Continuation = std::function<void(hpx_parcel_t*)>;
 
  public:
-  static WorkerBase* Create(Scheduler& sched, int id);
+  static WorkerBase* Create(const config_t *cfg, Scheduler& sched, int id);
 
   /// Event handlers.
   ///

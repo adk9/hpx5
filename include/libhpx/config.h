@@ -118,13 +118,28 @@ static const char * const HPX_THREAD_AFFINITY_TO_STRING[] = {
   "INVALID_POLICY"
 };
 
+//! Configuration for the scheduler.
+typedef enum {
+  HPX_SCHED_DEFAULT = 0,
+  HPX_SCHED_WORKSTEALING,                //!< The default workstealing scheduler
+  HPX_SCHED_LINDEN,                      //!< Single linden priority queue
+  HPX_SCHED_MAX
+} libhpx_sched_t;
+
+static const char * const HPX_SCHED_TO_STRING[] = {
+  "DEFAULT",
+  "WORKSTEALING",
+  "LINDEN",
+  "INVALID_SCHED"
+};
+
 //! Configuration options for the (work-stealing) scheduling policy.
 typedef enum {
-  HPX_SCHED_POLICY_DEFAULT = 0, //!< The default policy is "random".
-  HPX_SCHED_POLICY_RANDOM,      //!< Steal from a randomly chosen worker.
-  HPX_SCHED_POLICY_HIER,        //!< A hierarchical work-stealing policy.
-  HPX_SCHED_POLICY_MAX
-} libhpx_sched_policy_t;
+  HPX_SCHED_STEAL_POLICY_DEFAULT = 0, //!< The default policy is "random".
+  HPX_SCHED_STEAL_POLICY_RANDOM,      //!< Steal from a randomly chosen worker.
+  HPX_SCHED_STEAL_POLICY_HIER,        //!< A hierarchical work-stealing policy.
+  HPX_SCHED_STEAL_POLICY_MAX
+} libhpx_sched_steal_policy_t;
 
 static const char * const HPX_SCHED_POLICY_TO_STRING[] = {
   "DEFAULT",

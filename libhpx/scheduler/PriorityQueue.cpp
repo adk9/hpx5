@@ -51,7 +51,7 @@ class LindenQueue : public PriorityQueue {
   }
 
   void insert(int key, hpx_parcel_t* value) {
-    ::insert(pq_, key + 1, value);
+    ::insert(pq_, key, value);
   }
 
   hpx_parcel_t* deleteMin() {
@@ -61,6 +61,25 @@ class LindenQueue : public PriorityQueue {
  private:
   pq_t *pq_;
 };
+
+class GC {
+ public:
+  GC() : init_(false) {
+  }
+
+  ~GC() {
+    if (init_) _destroy_gc_subsystem();
+  }
+
+  void init() {
+    if (!init_) _init_gc_subsystem();
+  }
+
+ private:
+  bool init_;
+};
+
+GC gc{};
 }
 
 PriorityQueue::~PriorityQueue()
@@ -70,8 +89,11 @@ PriorityQueue::~PriorityQueue()
 PriorityQueue*
 PriorityQueue::Create(const config_t* cfg)
 {
-  _init_gc_subsystem();
-  // return new BrokenQueue();
-  return new LindenQueue(64);
-  _destroy_gc_subsystem();
+  if (cfg->sched == HPX_SCHED_LINDEN) {
+    gc.init();
+    return new LindenQueue(64);
+  }
+  else {
+    return new BrokenQueue();
+  }
 }

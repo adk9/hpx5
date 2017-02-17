@@ -98,7 +98,7 @@ Scheduler::start(int spmd, hpx_action_t act, void *out, int n, va_list *args)
   // Create the worker threads for the first epoch.
   if (epoch_ == 0) {
     for (int i = 0, e = nWorkers_; i < e; ++i) {
-      workers_[i] = WorkerBase::Create(*this, i);
+      workers_[i] = WorkerBase::Create(here->config, *this, i);
     }
   }
 

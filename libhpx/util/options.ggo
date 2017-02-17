@@ -56,6 +56,11 @@ option "hpx-stacksize" - "set HPX stack size"
 typestr="bytes"
 long optional
 
+option "hpx-sched" - "the HPX scheduling algorithm"
+typestr="algorithm"
+values="default","workstealing","linden"
+enum optional
+
 option "hpx-sched-policy" - "work-stealing policy for the HPX scheduler"
 typestr="policy"
 values="default","random","hier"

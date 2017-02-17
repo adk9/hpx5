@@ -448,7 +448,15 @@ WorkerBase::handleMail()
 }
 
 WorkerBase*
-WorkerBase::Create(Scheduler& sched, int i)
+WorkerBase::Create(const config_t *cfg, Scheduler& sched, int i)
 {
-  return new PriorityWorker(sched, i);
+  if (cfg->sched == HPX_SCHED_DEFAULT) {
+    return new WorkstealingWorker(sched, i);
+  }
+  else if (cfg->sched == HPX_SCHED_WORKSTEALING) {
+    return new WorkstealingWorker(sched, i);
+  }
+  else {
+    return new PriorityWorker(sched, i);
+  }
 }
