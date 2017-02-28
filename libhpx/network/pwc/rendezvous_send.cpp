@@ -85,5 +85,10 @@ PWCNetwork::rendezvousSend(const hpx_parcel_t *p)
     .n = n,
     .key = PhotonTransport::FindKey(p, n)
   };
-  return hpx_call(p->target, _rendezvous_get, HPX_NULL, &args, sizeof(args));
+  hpx_parcel_t *q = action_new_parcel(_rendezvous_get, p->target, 0, 0, 2,
+                                      &args, sizeof(args));
+  q->priority = UINT16_MAX - 1;
+  parcel_prepare(q);
+  return send(q, HPX_NULL);
+  // return hpx_call(p->target, _rendezvous_get, HPX_NULL, &args, sizeof(args));
 }
