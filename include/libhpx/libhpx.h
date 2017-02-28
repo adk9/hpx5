@@ -81,6 +81,26 @@ bool libhpx_inst_tracer_active()
 uint32_t libhpx_parcel_get_source(hpx_parcel_t*)
   HPX_PUBLIC;
 
+/// Traditional condition synchronization with HPX lightweight threads.
+typedef short libhpx_mutex_t;
+
+#define LIBHPX_MUTEX_INITIALIZER {0}
+
+int libhpx_mutex_init(libhpx_mutex_t* mutex);
+int libhpx_mutex_destroy(libhpx_mutex_t* mutex);
+int libhpx_mutex_lock(libhpx_mutex_t* mutex);
+int libhpx_mutex_unlock(libhpx_mutex_t* mutex);
+
+typedef void* libhpx_cond_t;
+
+#define LIBHPX_COND_INITIALIZER {NULL}
+
+int libhpx_cond_init(libhpx_cond_t* cond);
+int libhpx_cond_destroy(libhpx_cond_t* cond);
+int libhpx_cond_wait(libhpx_cond_t* cond, libhpx_mutex_t* mutex);
+int libhpx_cond_signal(libhpx_cond_t* cond);
+int libhpx_cond_broadcast(libhpx_cond_t* cond);
+
 #ifdef __cplusplus
 }
 #endif

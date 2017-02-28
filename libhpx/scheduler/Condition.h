@@ -20,7 +20,7 @@ namespace libhpx {
 namespace scheduler {
 class LCO;
 
-class Condition {
+class Condition final {
  public:
   Condition();
   ~Condition();
