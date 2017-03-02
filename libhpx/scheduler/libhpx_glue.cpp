@@ -17,8 +17,11 @@
 
 #include "Condition.h"
 #include "TatasLock.h"
+#include "Thread.h"
+#include "lco/LCO.h"
 #include "libhpx/events.h"
 #include "libhpx/libhpx.h"
+#include "libhpx/parcel.h"
 #include "libhpx/Worker.h"
 #include <memory>
 
@@ -26,6 +29,7 @@ namespace {
 using libhpx::self;
 using Condition = libhpx::scheduler::Condition;
 using Mutex = libhpx::scheduler::TatasLock<short>;
+using LCO = libhpx::scheduler::LCO;
 }
 
 int
@@ -77,6 +81,10 @@ libhpx_cond_wait(libhpx_cond_t* cond, libhpx_mutex_t* mutex)
   Mutex* m = reinterpret_cast<Mutex*>(mutex);
   hpx_parcel_t* p = w->getCurrentParcel();
 
+  // spoof that we're in an LCO, which prevents the scheduler from doing
+  // anything wonky
+  p->thread->enterLCO(reinterpret_cast<const LCO*>(cond));
+
   if (hpx_status_t status = c->push(p)) {
     return status;
   }
@@ -87,6 +95,7 @@ libhpx_cond_wait(libhpx_cond_t* cond, libhpx_mutex_t* mutex)
     });
 
   self->EVENT_THREAD_RESUME(p);                 // self is volatile
+  p->thread->leaveLCO(reinterpret_cast<const LCO*>(cond));
   m->lock();
   return c->getError();
 }
@@ -94,13 +103,23 @@ libhpx_cond_wait(libhpx_cond_t* cond, libhpx_mutex_t* mutex)
 int
 libhpx_cond_signal(libhpx_cond_t* cond)
 {
+  // spoof that we're in an LCO, which prevents the scheduler from doing
+  // anything wonky, like swapping us out here (we hold a lock)
+  hpx_parcel_t* p = self->getCurrentParcel();
+  p->thread->enterLCO(reinterpret_cast<const LCO*>(cond));
   reinterpret_cast<Condition*>(cond)->signal();
+  p->thread->leaveLCO(reinterpret_cast<const LCO*>(cond));
   return LIBHPX_OK;
 }
 
 int
 libhpx_cond_broadcast(libhpx_cond_t* cond)
 {
+  // spoof that we're in an LCO, which prevents the scheduler from doing
+  // anything wonky, like swapping us out here (we hold a lock)
+  hpx_parcel_t* p = self->getCurrentParcel();
+  p->thread->enterLCO(reinterpret_cast<const LCO*>(cond));
   reinterpret_cast<Condition*>(cond)->signalAll();
+  p->thread->leaveLCO(reinterpret_cast<const LCO*>(cond));
   return LIBHPX_OK;
 }
