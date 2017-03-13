@@ -101,6 +101,13 @@ libhpx_cond_wait(libhpx_cond_t* cond, libhpx_mutex_t* mutex)
 }
 
 int
+libhpx_cond_when(libhpx_cond_t* cond, hpx_parcel_t* p)
+{
+  Condition* c = reinterpret_cast<Condition*>(cond);
+  return c->push(p);
+}
+
+int
 libhpx_cond_signal(libhpx_cond_t* cond)
 {
   // spoof that we're in an LCO, which prevents the scheduler from doing
@@ -122,4 +129,11 @@ libhpx_cond_broadcast(libhpx_cond_t* cond)
   reinterpret_cast<Condition*>(cond)->signalAll();
   p->thread->leaveLCO(reinterpret_cast<const LCO*>(cond));
   return LIBHPX_OK;
+}
+
+int
+libhpx_cond_is_empty(libhpx_cond_t* cond)
+{
+  Condition* c = reinterpret_cast<Condition*>(cond);
+  return c->empty();
 }

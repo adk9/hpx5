@@ -86,20 +86,22 @@ typedef short libhpx_mutex_t;
 
 #define LIBHPX_MUTEX_INITIALIZER {0}
 
-int libhpx_mutex_init(libhpx_mutex_t* mutex);
-int libhpx_mutex_destroy(libhpx_mutex_t* mutex);
-int libhpx_mutex_lock(libhpx_mutex_t* mutex);
-int libhpx_mutex_unlock(libhpx_mutex_t* mutex);
+HPX_PUBLIC int libhpx_mutex_init(libhpx_mutex_t* mutex);
+HPX_PUBLIC int libhpx_mutex_destroy(libhpx_mutex_t* mutex);
+HPX_PUBLIC int libhpx_mutex_lock(libhpx_mutex_t* mutex);
+HPX_PUBLIC int libhpx_mutex_unlock(libhpx_mutex_t* mutex);
 
 typedef void* libhpx_cond_t;
 
 #define LIBHPX_COND_INITIALIZER {NULL}
 
-int libhpx_cond_init(libhpx_cond_t* cond);
-int libhpx_cond_destroy(libhpx_cond_t* cond);
-int libhpx_cond_wait(libhpx_cond_t* cond, libhpx_mutex_t* mutex);
-int libhpx_cond_signal(libhpx_cond_t* cond);
-int libhpx_cond_broadcast(libhpx_cond_t* cond);
+HPX_PUBLIC int libhpx_cond_init(libhpx_cond_t* cond);
+HPX_PUBLIC int libhpx_cond_destroy(libhpx_cond_t* cond);
+HPX_PUBLIC int libhpx_cond_wait(libhpx_cond_t* cond, libhpx_mutex_t* mutex);
+HPX_PUBLIC int libhpx_cond_when(libhpx_cond_t* cond, hpx_parcel_t* p);
+HPX_PUBLIC int libhpx_cond_signal(libhpx_cond_t* cond);
+HPX_PUBLIC int libhpx_cond_broadcast(libhpx_cond_t* cond);
+HPX_PUBLIC int libhpx_cond_is_empty(libhpx_cond_t* cond);
 
 #ifdef __cplusplus
 }
