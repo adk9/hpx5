@@ -132,8 +132,8 @@ libhpx_cond_broadcast(libhpx_cond_t* cond)
 }
 
 int
-libhpx_cond_is_empty(libhpx_cond_t* cond)
+libhpx_cond_is_empty(const libhpx_cond_t* cond)
 {
-  Condition* c = reinterpret_cast<Condition*>(cond);
+  const Condition* c = reinterpret_cast<const Condition*>(cond);
   return c->empty();
 }

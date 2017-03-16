@@ -101,7 +101,7 @@ HPX_PUBLIC int libhpx_cond_wait(libhpx_cond_t* cond, libhpx_mutex_t* mutex);
 HPX_PUBLIC int libhpx_cond_when(libhpx_cond_t* cond, hpx_parcel_t* p);
 HPX_PUBLIC int libhpx_cond_signal(libhpx_cond_t* cond);
 HPX_PUBLIC int libhpx_cond_broadcast(libhpx_cond_t* cond);
-HPX_PUBLIC int libhpx_cond_is_empty(libhpx_cond_t* cond);
+HPX_PUBLIC int libhpx_cond_is_empty(const libhpx_cond_t* cond);
 
 #ifdef __cplusplus
 }
