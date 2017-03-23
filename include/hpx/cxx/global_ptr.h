@@ -16,6 +16,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <ostream>
 #include <exception>
 #include <hpx/addr.h>
 #include <hpx/gas.h>
@@ -146,6 +147,22 @@ class global_ptr {
   /// as the user provides a block size.
   explicit global_ptr(const global_ptr<void>& gva, size_t n) noexcept
     : _gbl_ptr(gva.get()), _elems_per_blk(n) {
+  }
+
+  /// Allow smart pointers to be constructed from compatible types.
+  template <class U,
+            class = typename std::enable_if<std::is_base_of<T, U>::value>::type>
+  global_ptr(const global_ptr<U>& rhs) noexcept
+    : _gbl_ptr(rhs.get()), _elems_per_blk(rhs.get_block_size()) {
+  }
+
+  /// Allow smart pointers to be converted from compatible types.
+  template <class U,
+            class = typename std::enable_if<std::is_base_of<T, U>::value>::type>
+  global_ptr& operator=(const global_ptr<U>& rhs) {
+    _gbl_ptr = rhs.get();
+    _elems_per_blk = rhs.get_block_size();
+    return *this;
   }
 
   /// Allow smart pointers to be used in (!ptr) style tests.
@@ -465,6 +482,11 @@ class pin_guard {
     return _lva;
   }
 
+  /// Use the underlying pointer.
+  T* operator->() const noexcept {
+    return get();
+  }
+
  private:
   const global_ptr<T> _gva;
   bool              _local;
@@ -500,5 +522,19 @@ scoped_pin(hpx_addr_t gva) noexcept
 }
 
 } // namespace hpx
+
+template <class T>
+std::ostream& operator<<(std::ostream& out, const hpx::global_ptr<T>& rhs) {
+  out << rhs.get() << ":" << rhs.get_block_size();
+  return out;
+}
+
+template <class T>
+std::ostream&& operator<<(std::ostream&& out, const hpx::global_ptr<T>& rhs) {
+  std::move(out) << rhs.get();
+  std::move(out) << ":";
+  std::move(out) << rhs.get_block_size();
+  return std::move(out);
+}
 
 #endif // HPX_CXX_GLOBAL_PTR_H
