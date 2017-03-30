@@ -16,6 +16,7 @@
 
 #include "libhpx/Worker.h"
 #include "libhpx/util/Aligned.h"
+#include "libhpx/libhpx.h"
 #include <atomic>
 #include <vector>
 
@@ -143,6 +144,11 @@ class Scheduler : public libhpx::util::Aligned<HPX_CACHELINE_SIZE> {
   static int SetOutputHandler(const void* value, size_t bytes);
   static int StopHandler();
   static int TerminateSPMDHandler();
+
+  // Thread event callbacks
+  static CallbackType begin_callback;
+  static CallbackType before_transfer_callback;
+  static CallbackType after_transfer_callback;
 
  private:
   /// This blocks the calling thread until the worker threads shutdown.
