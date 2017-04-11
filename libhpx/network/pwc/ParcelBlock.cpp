@@ -44,7 +44,8 @@ EagerBlock::EagerBlock(size_t capacity, char* buffer)
 void*
 EagerBlock::operator new[](size_t bytes)
 {
-  return registered_memalign(HPX_CACHELINE_SIZE, bytes);
+  void *p = registered_memalign(HPX_CACHELINE_SIZE, bytes);
+  return p;
 }
 
 void
@@ -123,12 +124,15 @@ InplaceBlock::operator new(size_t bytes, size_t n)
                  "Parcel block alignment is currently limited to "
                  "--hpx-pwc-parcelbuffersize (%zu), %zu requested\n",
                  here->config->pwc_parcelbuffersize, align);
-  return registered_memalign(align, n);
+  void *p = registered_memalign(align, n);
+  log_net("allocating parcel block %p\n", p);
+  return p;
 }
 
 void
 InplaceBlock::operator delete(void* block)
 {
+  log_net("freeing parcel block %p\n", block);
   registered_free(block);
 }
 

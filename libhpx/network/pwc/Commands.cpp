@@ -51,7 +51,7 @@ inline hpx_parcel_t*
 Command::deleteParcel(unsigned src) const
 {
   auto p = reinterpret_cast<hpx_parcel_t*>(arg_);
-  log_net("releasing sent parcel %p\n", static_cast<void*>(p));
+  log_parcel("releasing sent parcel %p\n", static_cast<void*>(p));
   hpx_parcel_t *ssync = p->next;
   p->next = nullptr;
   parcel_delete(p);
@@ -62,7 +62,7 @@ inline hpx_parcel_t*
 Command::resumeParcel(unsigned src) const
 {
   auto p = reinterpret_cast<hpx_parcel_t*>(arg_);
-  log_net("resuming %s, (%p)\n", actions[p->action].key, static_cast<void*>(p));
+  log_parcel("resuming %s, (%p)\n", actions[p->action].key, static_cast<void*>(p));
   return p;
 }
 
