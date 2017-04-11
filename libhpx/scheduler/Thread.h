@@ -99,6 +99,9 @@ class Thread {
   /// Generate a parcel for the thread's continuation without sending it.
   hpx_parcel_t* generateContinue(int n, va_list* args);
 
+  /// Capture the current continuation as a new parcel without sending it.
+  hpx_parcel_t* captureContinue(const void* args, size_t bytes);
+
   /// Invoking a thread's continuation.
   ///
   /// @param       thread The thread.

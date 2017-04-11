@@ -157,6 +157,34 @@ struct hpx_parcel *_hpx_thread_generate_continuation(int n, ...)
 #define hpx_thread_generate_continuation(...) \
   _hpx_thread_generate_continuation(__HPX_NARGS(__VA_ARGS__) , ##__VA_ARGS__)
 
+/// Capture the current thread's continuation as a parcel.
+///
+/// This allows users to implement call-with-current-continuation semantics
+/// using the parcel transport mechanism. It creates a new parcel in the same
+/// way as the hpx_parcel_acquire() interface and gives ownership of the current
+/// thread's continuation to that parcel.
+///
+/// The user should set the target and action for the returned parcel, and set
+/// any argument data explicitly (if it is not passed through the *p buffer
+/// argument). The user must send the returned parcel, failure to do so may lead
+/// to deadlock and cannot be tracked by the implementation.
+///
+/// * Use of the _hpx_thread_continue() interface after capturing a continuation
+///   leads to undefined behavior.
+/// * Use of the _hpx_thread_generate_continuation() after this interface leads
+///   to undefined behavior.
+/// * Subsequent uses of this interface are equivalent to hpx_parcel_acquire().
+///
+/// @param       buffer A buffer for the new parcel (see hpx_parcel_acquire()).
+/// @param        bytes The number of bytes for the new parcel (see
+///                     hpx_parcel_acquire()).
+///
+/// @returns            A parcel suitable for use in the parcel API, that has
+///                     ownership of the current continuation.
+struct hpx_parcel *hpx_thread_capture_continuation(const void* buffer,
+                                                   size_t bytes)
+  HPX_PUBLIC;
+
 /// Finish the current thread's execution.
 ///
 /// The behavior of this call depends on the @p status parameter, and is

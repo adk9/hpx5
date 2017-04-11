@@ -101,10 +101,10 @@ libhpx_cond_wait(libhpx_cond_t* cond, libhpx_mutex_t* mutex)
 }
 
 int
-libhpx_cond_when(libhpx_cond_t* cond, hpx_parcel_t* p)
+libhpx_cond_when(libhpx_cond_t* cond, const hpx_parcel_t* p)
 {
   Condition* c = reinterpret_cast<Condition*>(cond);
-  return c->push(p);
+  return c->push(const_cast<hpx_parcel_t*>(p));
 }
 
 int

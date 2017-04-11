@@ -611,6 +611,17 @@ Worker::ExecuteUserThread(hpx_parcel_t *p)
       });
     unreachable();
 
+   case HPX_ABANDON:                            // like RESEND without relaunch
+    w = self;
+    w->EVENT_THREAD_END(p);
+    // EVENT_PARCEL_STOP(w->current_->id, w->current_->action,
+    //                   w->current_->size, w->current_->src);
+    w->schedule([w](hpx_parcel_t* p) {
+        dbg_assert(w == self);
+        w->unbind(p);
+      });
+    unreachable();
+
    case HPX_SUCCESS:
     p->thread->invokeContinue();
     w = self;

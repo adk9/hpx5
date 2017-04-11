@@ -165,6 +165,18 @@ Thread::generateContinue(int n, va_list* args)
   return action_new_parcel_va(op, target, 0, 0, n, args);
 }
 
+hpx_parcel_t*
+Thread::captureContinue(const void* data, size_t bytes)
+{
+  assert(!continued_);
+  continued_ = true;
+  hpx_parcel_t *p = parcel_new(0, 0, parcel_->c_target, parcel_->c_action,
+                               parcel_->pid, data, bytes);
+  parcel_->c_action = 0;
+  parcel_->c_target = 0;
+  return p;
+}
+
 void
 Thread::invokeContinue(int n, va_list* args)
 {

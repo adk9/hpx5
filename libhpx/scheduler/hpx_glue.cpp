@@ -41,6 +41,13 @@ _hpx_thread_generate_continuation(int n, ...)
   return c;
 }
 
+hpx_parcel_t *
+hpx_thread_capture_continuation(const void* args, size_t bytes)
+{
+  hpx_parcel_t *p = self->getCurrentParcel();
+  return p->thread->captureContinue(args, bytes);
+}
+
 void
 hpx_exit(size_t size, const void *out)
 {
