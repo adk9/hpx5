@@ -226,6 +226,10 @@ Worker::enter()
   EVENT_SCHED_BEGIN();
   dbg_assert(here && here->config && here->gas && here->net);
 
+  if(Scheduler::begin_callback != nullptr) {
+      Scheduler::begin_callback();
+  }
+
   self = this;
 
   // Ensure that all of the threads have joined the address spaces.
@@ -317,6 +321,10 @@ Worker::sleep()
 void
 Worker::checkpoint(hpx_parcel_t *p, Continuation& f, void *sp)
 {
+  if(Scheduler::before_transfer_callback != nullptr) {
+      Scheduler::before_transfer_callback();
+  }
+
   current_->thread->setSp(sp);
   std::swap(current_, p);
   f(p);
@@ -324,6 +332,10 @@ Worker::checkpoint(hpx_parcel_t *p, Continuation& f, void *sp)
 #ifdef HAVE_URCU
   rcu_quiescent_state();
 #endif
+
+  if(Scheduler::after_transfer_callback != nullptr) {
+      Scheduler::after_transfer_callback();
+  }
 }
 
 void
