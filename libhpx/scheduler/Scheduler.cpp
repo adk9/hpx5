@@ -286,7 +286,3 @@ Scheduler::TerminateSPMDHandler()
   here->sched->terminateSPMD();
   return HPX_SUCCESS;
 }
-
-CallbackType Scheduler::begin_callback = nullptr;
-CallbackType Scheduler::before_transfer_callback = nullptr;
-CallbackType Scheduler::after_transfer_callback = nullptr;
