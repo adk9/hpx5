@@ -257,24 +257,3 @@ _hpx_thread_continue(int n, ...)
   return HPX_SUCCESS;
 }
 
-int
-libhpx_register_begin_callback(CallbackType callback)
-{
-    Scheduler::begin_callback = callback;
-    return HPX_SUCCESS;
-}
-
-int
-libhpx_register_before_transfer_callback(CallbackType callback)
-{
-    Scheduler::before_transfer_callback = callback;
-    return HPX_SUCCESS;
-}
-
-int
-libhpx_register_after_transfer_callback(CallbackType callback)
-{
-    Scheduler::after_transfer_callback = callback;
-    return HPX_SUCCESS;
-}
-

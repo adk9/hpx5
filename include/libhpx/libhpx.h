@@ -103,14 +103,6 @@ HPX_PUBLIC int libhpx_cond_signal(libhpx_cond_t* cond);
 HPX_PUBLIC int libhpx_cond_broadcast(libhpx_cond_t* cond);
 HPX_PUBLIC int libhpx_cond_is_empty(const libhpx_cond_t* cond);
 
-typedef void (*CallbackType)(void);
-/// Register a callback function for the start of a worker thread
-int libhpx_register_begin_callback(CallbackType callback);
-/// Register a callback function before a worker switches lightweight thread
-int libhpx_register_before_transfer_callback(CallbackType callback);
-/// Register a callback function after a worker switches lightweight thread
-int libhpx_register_after_transfer_callback(CallbackType callback);
-
 #ifdef __cplusplus
 }
 #endif
