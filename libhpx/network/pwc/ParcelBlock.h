@@ -108,7 +108,7 @@ class EagerBlock {
   /// @param[in/out]  n The number of bytes to allocate.
   ///
   /// @returns          The cacheline-aligned buffer, or nullptr.
-  void* allocate(size_t& n);
+  void* allocate(size_t& n, int rank);
 
   const char* end_;                        //<! The end of the buffer
   char* next_;                             //<! The next pointer
