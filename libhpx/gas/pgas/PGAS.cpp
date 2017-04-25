@@ -15,6 +15,7 @@
 # include "config.h"
 #endif
 
+#include <cstring>
 #include "PGAS.h"
 #include "libhpx/Network.h"
 #include "libhpx/util/math.h"
