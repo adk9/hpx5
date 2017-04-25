@@ -46,6 +46,9 @@ class Bitmap : public util::Aligned<HPX_CACHELINE_SIZE> {
   Bitmap() // : pages_()      Workaround for icc ICE
   {
     pages_[0].store(new Page(), RELEASE);
+    for (unsigned i = 1; i < Pages; ++i) {
+      pages_[i].store(nullptr, RELEASE);
+    }
   }
 
   ~Bitmap() {
