@@ -36,7 +36,10 @@ class alignas(Align) Aligned {
 
   /// The matching delete operator for operator new().
   static void operator delete(void* worker) {
-    free(worker);
+    // delete can be called with a null pointer, but free can't be
+    if (worker) {
+      free(worker);
+    }
   }
 };
 
