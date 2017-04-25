@@ -582,16 +582,12 @@ global_ptr<V> global_ptr_cast(global_ptr<void> ptr) {
 
 template <class T>
 std::ostream& operator<<(std::ostream& out, const hpx::global_ptr<T>& rhs) {
-  out << rhs.get() << ":" << rhs.get_block_size();
-  return out;
+  return (out << rhs.get());
 }
 
 template <class T>
 std::ostream&& operator<<(std::ostream&& out, const hpx::global_ptr<T>& rhs) {
-  std::move(out) << rhs.get();
-  std::move(out) << ":";
-  std::move(out) << rhs.get_block_size();
-  return std::move(out);
+  return std::move(std::move(out) << rhs.get());
 }
 
 #endif // HPX_CXX_GLOBAL_PTR_H
