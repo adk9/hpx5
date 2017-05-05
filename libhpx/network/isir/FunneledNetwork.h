@@ -19,13 +19,15 @@
 #include "ISendBuffer.h"
 #include "MPITransport.h"
 #include "libhpx/ParcelStringOps.h"
+#include "libhpx/util/Aligned.h"
 #include "libhpx/util/TwoLockQueue.h"
 #include <mutex>
 
 namespace libhpx {
 namespace network {
 namespace isir {
-class FunneledNetwork : public Network, public ParcelStringOps
+class FunneledNetwork : public Network, public ParcelStringOps,
+                        public util::Aligned<HPX_CACHELINE_SIZE>
 {
  public:
   FunneledNetwork(const config_t *cfg, GAS *gas);

@@ -28,6 +28,7 @@ using libhpx::network::isir::FunneledNetwork;
 FunneledNetwork::FunneledNetwork(const config_t *cfg, GAS *gas)
     : Network(),
       ParcelStringOps(),
+      util::Aligned<HPX_CACHELINE_SIZE>(),
       sends_(),
       recvs_(),
       xport_(),
