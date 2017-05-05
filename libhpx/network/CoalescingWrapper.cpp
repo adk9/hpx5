@@ -169,6 +169,7 @@ CoalescingWrapper::flush() {
 CoalescingWrapper::CoalescingWrapper(Network* impl, const config_t *cfg,
                                      GAS *gas)
     : NetworkWrapper(impl),
+      util::Aligned<HPX_CACHELINE_SIZE>(),
       gas_(*gas),
       size_(cfg->coalescing_buffersize),
       prev_(0),
