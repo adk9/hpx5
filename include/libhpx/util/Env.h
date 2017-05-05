@@ -27,7 +27,7 @@ class NotFound : public std::exception {
 /// Get a value of type T from the environment associated with a
 /// case-insensitive key @p key.
 template <typename T>
-inline T getEnv(const char * const key) throw(NotFound) {
+inline T getEnv(const char * const key) {
   char* env = std::getenv(key);
   if (!env) {
     std::string upper(key);
