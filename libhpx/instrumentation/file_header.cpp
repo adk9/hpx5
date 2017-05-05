@@ -63,7 +63,7 @@ static int cat(char *dst, const char *src) {
 
 static size_t write_header_dict(void* base, const inst_event_metadata_t *event_md, inst_named_value_t* named_values, int num_named_values) {
   const char* endian = endian_flag();
-  char part_buffer[100];
+  char part_buffer[256];
 
   char *data = (char*) base;
   int written = 0;
@@ -73,14 +73,16 @@ static size_t write_header_dict(void* base, const inst_event_metadata_t *event_m
   unsigned expected_offset = 0;
   for (int i=0; i< event_md->num_cols; i++) {
     inst_event_col_metadata_t col = event_md->col_metadata[i];
-    if (strlen(col.name) == 0) {break;}
+    unsigned length = strlen(col.name);
+    if (length == 0) {break;}
     if (expected_offset != col.offset) {
       sprintf(part_buffer, "('--pad%d--', 'a%d'), ", pad_fields++, col.offset-expected_offset);
       written += cat(data, part_buffer);
       expected_offset += col.offset - expected_offset;
     }
 
-    sprintf(part_buffer, "('%s', '%s%s')", col.name, endian, col.data_type.code);
+    length = (sizeof(part_buffer) < length) ? sizeof(part_buffer) : length;
+    snprintf(part_buffer, length, "('%s', '%s%s')", col.name, endian, col.data_type.code);
     written += cat(data, part_buffer);
 
     if (i < event_md->num_cols-1) {
