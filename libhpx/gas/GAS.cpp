@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2016, Trustees of Indiana University,
+//  Copyright (c) 2013-2017, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -21,6 +21,7 @@
 #include "agas/AGAS.h"
 #include "libhpx/debug.h"
 #include "libhpx/gas/Affinity.h"
+#include "libhpx/util/Aligned.h"
 
 namespace {
 const int LEVEL = HPX_LOG_CONFIG | HPX_LOG_GAS;
@@ -31,16 +32,19 @@ using libhpx::gas::agas::AGAS;
 using libhpx::gas::affinity::None;
 using libhpx::gas::affinity::CuckooHash;
 using libhpx::gas::affinity::URCU;
+using namespace libhpx::util;
 
 /// The Hosted class mixes a GAS implementation with an Affinity policy to
 /// create a complete GAS class. The associated make_hosted template allows us
 /// to dynamically dispatch to a static class based on the current
 /// configuration.
 template <class GAS, class Affinity>
-class Hosted : public Affinity, public GAS {
+class Hosted : public Affinity, public GAS, public Aligned<HPX_CACHELINE_SIZE>
+{
  public:
   template <typename... Args>
-  Hosted(Args... args) : Affinity(), GAS(args...) {
+  Hosted(Args... args) : Affinity(), GAS(args...), Aligned<HPX_CACHELINE_SIZE>()
+  {
   }
 };
 

@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2016, Trustees of Indiana University,
+//  Copyright (c) 2013-2017, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -163,6 +163,18 @@ Thread::generateContinue(int n, va_list* args)
   std::swap(parcel_->c_action, op);
   std::swap(parcel_->c_target, target);
   return action_new_parcel_va(op, target, 0, 0, n, args);
+}
+
+hpx_parcel_t*
+Thread::captureContinue(const void* data, size_t bytes)
+{
+  assert(!continued_);
+  continued_ = true;
+  hpx_parcel_t *p = parcel_new(0, 0, parcel_->c_target, parcel_->c_action,
+                               parcel_->pid, data, bytes);
+  parcel_->c_action = 0;
+  parcel_->c_target = 0;
+  return p;
 }
 
 void

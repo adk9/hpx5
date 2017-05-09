@@ -38,6 +38,7 @@ TESTS = allreduce               \
         lco_setget              \
         lco_user                \
         libhpx_boot             \
+        libhpx_cond             \
         parcel_continuation     \
         parcel_create           \
         parcel_send             \
@@ -75,6 +76,8 @@ thread_yield_SOURCES                = thread_yield.cpp
 # the LIBHPX versions rather than the HPX_APPS version.
 libhpx_boot_CPPFLAGS                = $(LIBHPX_CPPFLAGS) -I$(top_srcdir)/include -Wno-unused
 libhpx_boot_CFLAGS                  = $(LIBHPX_CFLAGS)
+libhpx_cond_CPPFLAGS                = $(LIBHPX_CPPFLAGS) -I$(top_srcdir)/include -Wno-unused
+libhpx_cond_CFLAGS                  = $(LIBHPX_CFLAGS)
 
 apex_DEPENDENCIES                   = $(HPX_APPS_DEPS)
 allreduce_DEPENDENCIES              = $(HPX_APPS_DEPS)
@@ -104,6 +107,7 @@ lco_setget_DEPENDENCIES             = $(HPX_APPS_DEPS)
 lco_user_DEPENDENCIES               = $(HPX_APPS_DEPS)
 lco_wait_DEPENDENCIES               = $(HPX_APPS_DEPS)
 libhpx_boot_DEPENDENCIES            = $(HPX_APPS_DEPS)
+libhpx_cond_DEPENDENCIES            = $(HPX_APPS_DEPS)
 parcel_continuation_DEPENDENCIES    = $(HPX_APPS_DEPS)
 parcel_create_DEPENDENCIES          = $(HPX_APPS_DEPS)
 parcel_send_DEPENDENCIES            = $(HPX_APPS_DEPS)

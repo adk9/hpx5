@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2016, Trustees of Indiana University,
+//  Copyright (c) 2013-2017, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -32,7 +32,7 @@
 #include "libhpx/Network.h"
 #include <libhpx/padding.h>
 #include <libhpx/parcel.h>
-#include <libhpx/topology.h>
+#include <libhpx/Topology.h>
 #include "libhpx/Worker.h"
 #include <hpx/hpx.h>
 #include <ffi.h>
@@ -46,6 +46,7 @@
 
 namespace {
 using libhpx::self;
+using libhpx::scheduler::Thread;
 }
 
 // this will only be used during instrumentation
@@ -150,7 +151,7 @@ void parcel_launch(hpx_parcel_t *p) {
   else {
     int e = here->net->send(p, NULL);
 #ifdef HAVE_APEX
-  	apex_send(p->id, p->size, target);
+    apex_send(p->id, p->size, target);
 #endif
     dbg_check(e, "failed to perform a network send\n");
   }
@@ -201,7 +202,7 @@ void parcel_init(hpx_addr_t target, hpx_action_t action, hpx_addr_t c_target,
     parcel_count++;
     int rank   = HPX_LOCALITY_ID;
     int thread = HPX_THREAD_ID;
-    p->id = topo_offset_to_value(rank, thread, parcel_count);
+    p->id = Topology::topo_offset_to_value(rank, thread, parcel_count);
   } else {
     p->id = 0;
   }

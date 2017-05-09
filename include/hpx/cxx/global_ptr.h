@@ -1,7 +1,7 @@
 // ================================================================= -*- C++ -*-
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2016, Trustees of Indiana University,
+//  Copyright (c) 2013-2017, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -16,6 +16,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <ostream>
 #include <exception>
 #include <hpx/addr.h>
 #include <hpx/gas.h>
@@ -35,8 +36,8 @@ class global_ptr;
 /// Special case global pointers to void with a template specialization.
 ///
 /// These serve the same roll as void* pointers do. Other pointers can be cast
-/// to global_ptr<void>, however we can't pin, unpin, or perform address
-/// arithmetic on them, and we don't know their block size.
+/// to global_ptr<void>, however we can't perform address arithmetic on them,
+/// because don't know their type.
 ///
 /// This specialization is defined first because we use it in the implementation
 /// of the generic global_ptr template below (as part of an explicit cast
@@ -47,20 +48,26 @@ class global_ptr<void> {
   /// Default constructor.
   ///
   /// This constructs a global_ptr<void> to NULL.
-  global_ptr<void>() noexcept : _impl(HPX_NULL) {
+  global_ptr<void>() noexcept : _impl(HPX_NULL), _bsize(0) {
   }
 
-  global_ptr<void>(std::nullptr_t) noexcept : _impl(HPX_NULL) {
+  global_ptr<void>(std::nullptr_t) noexcept : _impl(HPX_NULL), _bsize(0) {
   }
 
   /// Construct a generic global pointer from a generic HPX address.
-  global_ptr<void>(hpx_addr_t addr) noexcept : _impl(addr) {
+  global_ptr<void>(hpx_addr_t addr) noexcept : _impl(addr), _bsize(0) {
+  }
+
+  /// Construct a generic global pointer from a generic HPX address.
+  global_ptr<void>(hpx_addr_t addr, size_t bsize) noexcept : _impl(addr),
+    _bsize(bsize) {
   }
 
   /// Construct a generic global pointer from a pointer to any other type---this
   /// serves to handle pointer casts as well.
   template <typename U>
-  global_ptr<void>(const global_ptr<U>& ptr) noexcept : _impl(ptr.get()) {
+  global_ptr<void>(const global_ptr<U>& ptr) noexcept : _impl(ptr.get()),
+     _bsize(ptr.get_block_size()) {
   }
 
   /// Allow smart pointers to be used in (!ptr) style tests.
@@ -73,8 +80,46 @@ class global_ptr<void> {
     return _impl;
   }
 
+  /// Return the block size that this smart pointer encapsulates.
+  size_t get_block_size() const noexcept {
+    return _bsize;
+  }
+
+  /// Pin the global pointer.
+  ///
+  /// @param[out] local True if the pin succeeds, false otherwise.
+  /// @return           The local pointer associated with the
+  void* pin(bool &local) const noexcept {
+    void *lva = nullptr;
+    local = hpx_gas_try_pin(_impl, &lva);
+    return lva;
+  }
+
+  /// @overload pin()
+  ///
+  /// @return           The local pointer associated with the global pointer.
+  /// @throw   NotLocal If the pointer is not local.
+  void* pin() const noexcept(false) {
+    bool local;
+    void* lva = pin(local);
+    if (!local) {
+      throw NotLocal();
+    }
+    return lva;
+  }
+
+  /// Unpin a global pointer.
+  ///
+  /// The unpin() operation must match a pin() operation, but this requirement
+  /// is not enforced by the runtime. A pin_guard object can help ensure that
+  /// lexically-scoped use can be properly pinned and unpinned.
+  void unpin() const noexcept {
+    hpx_gas_unpin(_impl);
+  }
+
  private:
   const hpx_addr_t _impl;
+  const size_t _bsize;
 };
 
 /// An HPX global address ptr.
@@ -148,6 +193,24 @@ class global_ptr {
     : _gbl_ptr(gva.get()), _elems_per_blk(n) {
   }
 
+  /// Allow smart pointers to be constructed from compatible types.
+  template <class U,
+            class = typename std::enable_if<std::is_base_of<T, U>::value ||
+                                            std::is_same<U, void>::value>::type>
+  global_ptr(const global_ptr<U>& rhs) noexcept
+    : _gbl_ptr(rhs.get()), _elems_per_blk(rhs.get_block_size()) {
+  }
+
+  /// Allow smart pointers to be converted from compatible types.
+  template <class U,
+            class = typename std::enable_if<std::is_base_of<T, U>::value ||
+                                            std::is_same<U, void>::value>::type>
+  global_ptr& operator=(const global_ptr<U>& rhs) {
+    _gbl_ptr = rhs.get();
+    _elems_per_blk = rhs.get_block_size();
+    return *this;
+  }
+
   /// Allow smart pointers to be used in (!ptr) style tests.
   operator bool() const noexcept {
     return (_gbl_ptr != HPX_NULL);
@@ -210,9 +273,9 @@ class global_ptr {
   /// @return           The local pointer associated with the global pointer.
   /// @throw   NotLocal If the pointer is not local.
   T* pin() const noexcept(false) {
-    T* lva = nullptr;
-    void **clva = static_cast<void**>(static_cast<void*>(&lva));
-    if (!hpx_gas_try_pin(_gbl_ptr, clva)) {
+    bool local;
+    T* lva = pin(local);
+    if (!local) {
       throw NotLocal();
     }
     return lva;
@@ -465,6 +528,11 @@ class pin_guard {
     return _lva;
   }
 
+  /// Use the underlying pointer.
+  T* operator->() const noexcept {
+    return get();
+  }
+
  private:
   const global_ptr<T> _gva;
   bool              _local;
@@ -499,6 +567,27 @@ scoped_pin(hpx_addr_t gva) noexcept
   return pin_guard<T>(gva);
 }
 
+template <class U, class V,
+          class = typename std::enable_if<std::is_base_of<U, V>::value>::type>
+global_ptr<V> global_ptr_cast(global_ptr<U> ptr) {
+  return global_ptr<V>(ptr);
+}
+
+template <class V>
+global_ptr<V> global_ptr_cast(global_ptr<void> ptr) {
+  return global_ptr<V>(ptr);
+}
+
 } // namespace hpx
+
+template <class T>
+std::ostream& operator<<(std::ostream& out, const hpx::global_ptr<T>& rhs) {
+  return (out << rhs.get());
+}
+
+template <class T>
+std::ostream&& operator<<(std::ostream&& out, const hpx::global_ptr<T>& rhs) {
+  return std::move(std::move(out) << rhs.get());
+}
 
 #endif // HPX_CXX_GLOBAL_PTR_H

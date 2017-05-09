@@ -1,7 +1,7 @@
 // ==================================================================-*- C++ -*-
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2016, Trustees of Indiana University,
+//  Copyright (c) 2013-2017, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -426,6 +426,9 @@ class Worker : public libhpx::util::Aligned<HPX_CACHELINE_SIZE>
   Deque                    queues_[2];          //!< work and yield queues
   Mailbox                   inbox_;             //!< mail sent to me
   std::thread              thread_;             //!< this worker's native thread
+
+  // Allow the thread class to call ContextSwitch directly.
+  friend class libhpx::scheduler::Thread;
 };
 
 

@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2016, Trustees of Indiana University,
+//  Copyright (c) 2013-2017, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -19,7 +19,7 @@
 #include <libhpx/debug.h>
 #include <libhpx/memory.h>
 
-const char *je_malloc_conf = "lg_chunk:22";
+const char *je_malloc_conf = "lg_chunk:21";
 
 /// Backing declaration for the flags.
 __thread int as_flags[AS_COUNT] = {0};

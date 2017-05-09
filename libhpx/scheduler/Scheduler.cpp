@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2016, Trustees of Indiana University,
+//  Copyright (c) 2013-2017, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -28,6 +28,7 @@
 namespace {
 using libhpx::Scheduler;
 using libhpx::Worker;
+using libhpx::scheduler::Thread;
 LIBHPX_ACTION(HPX_DEFAULT, HPX_MARSHALLED, SetOutput,
               Scheduler::SetOutputHandler, HPX_POINTER, HPX_SIZE_T);
 LIBHPX_ACTION(HPX_DEFAULT, 0, Stop, Scheduler::StopHandler);
@@ -35,8 +36,8 @@ LIBHPX_ACTION(HPX_DEFAULT, 0, TerminateSPMD, Scheduler::TerminateSPMDHandler);
 }
 
 Scheduler::Scheduler(const config_t* cfg)
-    : lock_(PTHREAD_MUTEX_INITIALIZER),
-      stopped_(PTHREAD_COND_INITIALIZER),
+    : lock_(),
+      stopped_(),
       state_(STOP),
       nextTlsId_(0),
       code_(HPX_SUCCESS),
@@ -46,7 +47,7 @@ Scheduler::Scheduler(const config_t* cfg)
       nTarget_(cfg->threads),
       epoch_(0),
       spmd_(0),
-      nsWait_(100000000),
+      nsWait_(cfg->progress_period),
       output_(nullptr),
       workers_(nWorkers_)
 {
@@ -99,11 +100,12 @@ Scheduler::start(int spmd, hpx_action_t act, void *out, int n, va_list *args)
   }
 
   // wait for someone to stop the scheduler
-  pthread_mutex_lock(&lock_);
-  while (getState() == RUN) {
-    wait();
+  {
+    std::unique_lock<std::mutex> _(lock_);
+    while (getState() == RUN) {
+      wait(std::move(_));
+    }
   }
-  pthread_mutex_unlock(&lock_);
 
   // stop all of the worker threads
   for (auto&& w : workers_) {
@@ -130,7 +132,7 @@ Scheduler::start(int spmd, hpx_action_t act, void *out, int n, va_list *args)
 }
 
 void
-Scheduler::wait()
+Scheduler::wait(std::unique_lock<std::mutex>&& lock)
 {
 #ifdef HAVE_APEX
   using std::min;
@@ -149,17 +151,9 @@ Scheduler::wait()
       workers_[i]->start();
     }
   }
-
-  struct timeval tv;
-  gettimeofday(&tv, NULL);
-  struct timespec ts = {
-    .tv_sec = tv.tv_sec + 0,
-    .tv_nsec = nsWait_                          // todo: be adaptive here
-  };
-  pthread_cond_timedwait(&stopped_, &lock_, &ts);
-#else
-  pthread_cond_wait(&stopped_, &lock_);
 #endif
+
+  stopped_.wait_for(lock, nsWait_);
 }
 
 void
@@ -167,20 +161,18 @@ Scheduler::setOutput(size_t bytes, const void* value)
 {
   if (!bytes) return;
   if (!output_) return;
-  pthread_mutex_lock(&lock_);
+  std::lock_guard<std::mutex> _(lock_);
   memcpy(output_, value, bytes);
-  pthread_mutex_unlock(&lock_);
 }
 
 void
 Scheduler::stop(uint64_t code)
 {
-  pthread_mutex_lock(&lock_);
+  std::lock_guard<std::mutex> _(lock_);
   dbg_assert(code < UINT64_MAX);
   setCode(int(code));
   setState(Scheduler::STOP);
-  pthread_cond_broadcast(&stopped_);
-  pthread_mutex_unlock(&lock_);
+  stopped_.notify_all();
 }
 
 void
@@ -294,3 +286,7 @@ Scheduler::TerminateSPMDHandler()
   here->sched->terminateSPMD();
   return HPX_SUCCESS;
 }
+
+CallbackType Scheduler::begin_callback = nullptr;
+CallbackType Scheduler::before_transfer_callback = nullptr;
+CallbackType Scheduler::after_transfer_callback = nullptr;

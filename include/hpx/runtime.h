@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2016, Trustees of Indiana University,
+//  Copyright (c) 2013-2017, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -37,6 +37,12 @@ extern "C" {
 /// @param         argv Array of command-line arguments.
 /// @returns      HPX_SUCCESS on success
 int hpx_init(int *argc, char ***argv)
+  HPX_PUBLIC;
+
+/// Test to see if the runtime has been initialized.
+///
+/// @returns            Non-zero if HPX has been initialized and not finalized.
+int hpx_initialized(void)
   HPX_PUBLIC;
 
 /// Finalize/cleanup from the HPX runtime.

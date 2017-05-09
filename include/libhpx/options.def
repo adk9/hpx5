@@ -1,7 +1,7 @@
 // -*- C -*- ===================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2016, Trustees of Indiana University,
+//  Copyright (c) 2013-2017, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -112,6 +112,11 @@ LIBHPX_OPT_SCALAR(, stacksize, 32768, unsigned)
 LIBHPX_OPT_SCALAR(sched_, policy, HPX_SCHED_POLICY_DEFAULT, libhpx_sched_policy_t)
 LIBHPX_OPT_SCALAR(sched_, wfthreshold, 256, uint32_t)
 LIBHPX_OPT_SCALAR(sched_, stackcachelimit, 32, int32_t)
+// @}
+
+// Network options
+// @{
+LIBHPX_OPT_SCALAR(progress_, period, 10000000000, uint64_t)
 // @}
 
 // GAS options

@@ -6,9 +6,9 @@ implementation is guided by the ParalleX execution model. It provides a
 programming model for parallel and distributed applications, allowing programs
 to run unmodified on systems from a single SMP to large clusters or
 supercomputers with thousands of nodes. HPX-5 supports Linux running on Intel
-x86 and Xeon Phi processors and various ARM platforms. We use HPX-5 for a broad
-range of scientific applications enabling scientists write code that performs
-and scales better than contemporary parallel runtimes.
+x86, Intel Knights Landing, IBM Power8 and various ARM platforms. We use HPX-5 
+for a broad range of scientific applications enabling scientists write code 
+that performs and scales better than contemporary parallel runtimes.
 
 HPX–5 supports both SMP and networked configurations using the Photon networking
 library. MPI support is included for legacy applications and portability.
@@ -20,8 +20,8 @@ compilation of the distribution to execution of some tools.
 
 # Platform Support
 
-HPX-5 is tested on Linux on x86_64, Xeon Phi, ARMv7 and AArch64
-(ARMv8). Experimental support is available for SMP execution on Darwin on
+HPX-5 is tested on Linux on x86_64, Intel Knights Landing, ARMv7, AArch64 (ARMv8) 
+and IBM Power8. Experimental support is available for SMP execution on Darwin on
 x86_64.
 
 # Tool Support
@@ -31,7 +31,7 @@ The following tools have been verified to work with HPX-5.
 * GCC 4.8.4 or newer (Tested with 4.8.4, 4.9.1, 4.9.2, 5.1.0, 5.2.0, 5.3.0, 
                       6.2.0).
 * clang Tested with 3.8.1 (3.5 and earlier are known to be broken).
-* icc (Tested with 16.0.2).
+* icc (Tested with 17.1).
 * GNU Make 3.81+
 
 # Configuration and Building

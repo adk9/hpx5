@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2016, Trustees of Indiana University,
+//  Copyright (c) 2013-2017, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -27,6 +27,7 @@
 namespace {
 using libhpx::self;
 using libhpx::Worker;
+using libhpx::scheduler::Thread;
 }
 
 hpx_parcel_t *
@@ -38,6 +39,13 @@ _hpx_thread_generate_continuation(int n, ...)
   hpx_parcel_t* c = p->thread->generateContinue(n, &args);
   va_end(args);
   return c;
+}
+
+hpx_parcel_t *
+hpx_thread_capture_continuation(const void* args, size_t bytes)
+{
+  hpx_parcel_t *p = self->getCurrentParcel();
+  return p->thread->captureContinue(args, bytes);
 }
 
 void
@@ -247,5 +255,26 @@ _hpx_thread_continue(int n, ...)
   va_end(args);
 
   return HPX_SUCCESS;
+}
+
+int
+libhpx_register_begin_callback(CallbackType callback)
+{
+    Scheduler::begin_callback = callback;
+    return HPX_SUCCESS;
+}
+
+int
+libhpx_register_before_transfer_callback(CallbackType callback)
+{
+    Scheduler::before_transfer_callback = callback;
+    return HPX_SUCCESS;
+}
+
+int
+libhpx_register_after_transfer_callback(CallbackType callback)
+{
+    Scheduler::after_transfer_callback = callback;
+    return HPX_SUCCESS;
 }
 

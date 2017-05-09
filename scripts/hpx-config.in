@@ -39,7 +39,7 @@ case "$1" in
         exit 0
         ;;
 --version)
-        echo "@HPX_VERSION@"
+        echo "4.1.0"
         echo "@HPX_COPYRIGHT@"
         ;;
 --config)

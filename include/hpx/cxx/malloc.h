@@ -1,7 +1,7 @@
 // ================================================================= -*- C++ -*-
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2016, Trustees of Indiana University,
+//  Copyright (c) 2013-2017, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -49,6 +49,15 @@ malloc(size_t n, unsigned block, unsigned boundary, hpx_gas_dist_t dist,
   return global_ptr<T>(gva, block);
 }
 
+template <>
+inline global_ptr<void>
+malloc<void>(size_t n, unsigned block, unsigned boundary, hpx_gas_dist_t dist,
+             unsigned attr)
+{
+  hpx_addr_t gva = hpx_gas_alloc(n, block, boundary, dist, attr);
+  return global_ptr<void>(gva, block);
+}
+
 /// The generic gas allocation routine.
 template <typename T>
 inline global_ptr<T>
@@ -59,8 +68,18 @@ calloc(size_t n, unsigned block, unsigned boundary, hpx_gas_dist_t dist,
   return global_ptr<T>(gva, block);
 }
 
+/// The generic gas allocation routine.
+template <>
+inline global_ptr<void>
+calloc<void>(size_t n, unsigned block, unsigned boundary, hpx_gas_dist_t dist,
+             unsigned attr)
+{
+  hpx_addr_t gva = hpx_gas_calloc(n, block, boundary, dist, attr);
+  return global_ptr<void>(gva, block);
+}
+
 /// Allocate a local array of elements.
-template <typename T, typename V>
+template <typename T>
 inline global_ptr<T>
 alloc_local(size_t n, unsigned boundary)
 {
@@ -74,7 +93,7 @@ alloc_local(size_t n)
   return malloc<T>(n, 1, 0, HPX_GAS_DIST_LOCAL, HPX_GAS_ATTR_NONE);
 }
 
-template <typename T, typename V>
+template <typename T>
 inline global_ptr<T>
 calloc_local(size_t n, unsigned boundary)
 {

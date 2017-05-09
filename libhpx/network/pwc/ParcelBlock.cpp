@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2016, Trustees of Indiana University,
+//  Copyright (c) 2013-2017, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -44,7 +44,8 @@ EagerBlock::EagerBlock(size_t capacity, char* buffer)
 void*
 EagerBlock::operator new[](size_t bytes)
 {
-  return registered_memalign(HPX_CACHELINE_SIZE, bytes);
+  void *p = registered_memalign(HPX_CACHELINE_SIZE, bytes);
+  return p;
 }
 
 void
@@ -54,17 +55,20 @@ EagerBlock::operator delete[](void* ptr)
 }
 
 void*
-EagerBlock::allocate(size_t& bytes)
+EagerBlock::allocate(size_t& bytes, int rank)
 {
   size_t padded = bytes + util::align(bytes, HPX_CACHELINE_SIZE);
   dbg_assert(bytes <= padded);
   dbg_assert(next_ <= end_);
   size_t capacity = size_t(end_ - next_);
-  if (capacity < padded) {
+  if (capacity <= padded) {
     bytes = capacity;
     return nullptr;
   }
   else {
+    if (capacity == padded) {
+      log_net("perfect use of eager buffer targeting rank %d\n", rank);
+    }
     void* buffer = next_;
     next_ += padded;
     dbg_assert(buffer <= next_);
@@ -75,7 +79,7 @@ EagerBlock::allocate(size_t& bytes)
 bool
 EagerBlock::put(unsigned rank, const hpx_parcel_t* p, size_t& n)
 {
-  void *dest = allocate(n);
+  void *dest = allocate(n, rank);
   if (!dest) {
     return false;
   }
@@ -123,12 +127,15 @@ InplaceBlock::operator new(size_t bytes, size_t n)
                  "Parcel block alignment is currently limited to "
                  "--hpx-pwc-parcelbuffersize (%zu), %zu requested\n",
                  here->config->pwc_parcelbuffersize, align);
-  return registered_memalign(align, n);
+  void *p = registered_memalign(align, n);
+  log_net("allocating parcel block %p\n", p);
+  return p;
 }
 
 void
 InplaceBlock::operator delete(void* block)
 {
+  log_net("freeing parcel block %p\n", block);
   registered_free(block);
 }
 
@@ -149,8 +156,9 @@ InplaceBlock::deallocate(size_t bytes)
 void
 InplaceBlock::finalize()
 {
-  if (remaining_) {
-    deallocate(remaining_);
+  if (size_t remaining = remaining_) {
+    log_net("recovering %zu bytes from parcel block %p during finalize\n", remaining, this);
+    deallocate(remaining);
   }
 }
 

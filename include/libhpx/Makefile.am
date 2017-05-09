@@ -24,7 +24,7 @@ noinst_HEADERS = action.h \
                  StringOps.h \
                  system.h \
                  time.h \
-                 topology.h \
+                 Topology.h \
                  Worker.h
 
 

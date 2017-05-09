@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2016, Trustees of Indiana University,
+//  Copyright (c) 2013-2017, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -28,8 +28,8 @@
 #include "libhpx/Network.h"
 #include "libhpx/rebalancer.h"
 #include "libhpx/Scheduler.h"
+#include "libhpx/Topology.h"
 #include "libhpx/system.h"
-#include "libhpx/topology.h"
 #include "libhpx/util/math.h"
 #include <cstring>
 #ifdef HAVE_URCU
@@ -226,6 +226,10 @@ Worker::enter()
   EVENT_SCHED_BEGIN();
   dbg_assert(here && here->config && here->gas && here->net);
 
+  if(Scheduler::begin_callback != nullptr) {
+      Scheduler::begin_callback();
+  }
+
   self = this;
 
   // Ensure that all of the threads have joined the address spaces.
@@ -259,6 +263,11 @@ Worker::enter()
 
   system_ = &system;
   current_ = &system;
+
+  // At this point (once we have a "current_" pointer we can do any
+  // architecture-specific initialization necessary, up to and including calling
+  // ContextSwitch.
+  Thread::InitArch(this);
 
   // Hang out here until we're shut down.
   while (state_ != SHUTDOWN) {
@@ -312,6 +321,10 @@ Worker::sleep()
 void
 Worker::checkpoint(hpx_parcel_t *p, Continuation& f, void *sp)
 {
+  if(Scheduler::before_transfer_callback != nullptr) {
+      Scheduler::before_transfer_callback();
+  }
+
   current_->thread->setSp(sp);
   std::swap(current_, p);
   f(p);
@@ -319,6 +332,10 @@ Worker::checkpoint(hpx_parcel_t *p, Continuation& f, void *sp)
 #ifdef HAVE_URCU
   rcu_quiescent_state();
 #endif
+
+  if(Scheduler::after_transfer_callback != nullptr) {
+      Scheduler::after_transfer_callback();
+  }
 }
 
 void
@@ -603,6 +620,17 @@ Worker::ExecuteUserThread(hpx_parcel_t *p)
         dbg_assert(w == self);
         w->unbind(p);
         parcel_launch(p);
+      });
+    unreachable();
+
+   case HPX_ABANDON:                            // like RESEND without relaunch
+    w = self;
+    w->EVENT_THREAD_END(p);
+    // EVENT_PARCEL_STOP(w->current_->id, w->current_->action,
+    //                   w->current_->size, w->current_->src);
+    w->schedule([w](hpx_parcel_t* p) {
+        dbg_assert(w == self);
+        w->unbind(p);
       });
     unreachable();
 

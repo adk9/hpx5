@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2016, Trustees of Indiana University,
+//  Copyright (c) 2013-2017, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -49,7 +49,7 @@
 #elif defined(__linux__)
 # define SYMBOL(S) S
 # define PLT_SYMBOL(S) S##@PLT
-#if defined(__x86_64__) || defined(__ARMEL__)
+#if defined(__x86_64__) || defined(__ARMEL__) || defined(__PPC64__)
 # define GLOBAL(S) .globl SYMBOL(S)
 #elif defined(__aarch64__)
 # define GLOBAL(S) .global SYMBOL(S)

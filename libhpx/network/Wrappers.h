@@ -1,7 +1,7 @@
 // ==================================================================-*- C++ -*-
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2016, Trustees of Indiana University,
+//  Copyright (c) 2013-2017, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -15,6 +15,7 @@
 #define LIBHPX_NETWORK_WRAPPERS_H
 
 #include "libhpx/Network.h"
+#include "libhpx/util/Aligned.h"
 #include "libhpx/util/TwoLockQueue.h"
 #include <atomic>
 
@@ -129,7 +130,9 @@ class CompressionWrapper final : public NetworkWrapper {
   int send(hpx_parcel_t* p, hpx_parcel_t* ssync);
 };
 
-class CoalescingWrapper final : public NetworkWrapper {
+class CoalescingWrapper final : public NetworkWrapper,
+                                public util::Aligned<HPX_CACHELINE_SIZE>
+{
  public:
   CoalescingWrapper(Network* impl, const config_t *cfg, GAS *gas);
   void progress(int n);

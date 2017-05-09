@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2016, Trustees of Indiana University,
+//  Copyright (c) 2013-2017, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -29,13 +29,14 @@ extern "C" {
 typedef short hpx_status_t;
 
 #define  HPX_ERROR           ((hpx_status_t)-1)
+#define  HPX_ENOMEM          ((hpx_status_t)-2)
 #define  HPX_SUCCESS         ((hpx_status_t)0)
 #define  HPX_RESEND          ((hpx_status_t)1)
 #define  HPX_LCO_ERROR       ((hpx_status_t)2)
 #define  HPX_LCO_CHAN_EMPTY  ((hpx_status_t)3)
 #define  HPX_LCO_TIMEOUT     ((hpx_status_t)4)
 #define  HPX_LCO_RESET       ((hpx_status_t)5)
-#define  HPX_ENOMEM          ((hpx_status_t)6)
+#define  HPX_ABANDON         ((hpx_status_t)7)
 #define  HPX_USER            ((hpx_status_t)127)
 
 const char *hpx_strerror(hpx_status_t) HPX_PUBLIC;
@@ -76,10 +77,12 @@ typedef ffi_type* hpx_type_t;
 /* We have support for libffi complex numbers */
 #undef HAVE_LIBFFI_COMPLEX
 
+#if !defined(__PPC64__)
 #ifdef HAVE_LIBFFI_COMPLEX
 # define HPX_COMPLEX_FLOAT      &ffi_type_complex_float
 # define HPX_COMPLEX_DOUBLE     &ffi_type_complex_double
 # define HPX_COMPLEX_LONGDOUBLE &ffi_type_complex_longdouble
+#endif
 #endif
 
 #ifdef __LP64__

@@ -1,7 +1,7 @@
 // ==================================================================-*- C++ -*-
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2016, Trustees of Indiana University,
+//  Copyright (c) 2013-2017, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -23,17 +23,16 @@
 namespace libhpx {
 namespace util {
 
+/// A chase-lev workstealing deque.
+///
+/// The workstealing deque provides push and pop operations that must be called
+/// serially, along with a steal operation that may be called concurrently with
+/// either push or pop.
+///
+/// http://dl.acm.org/citation.cfm?id=1073974
 template <typename T>
 class ChaseLevDeque;
 
-/// Class representing a worker thread's state.
-///
-/// Worker threads are "object-oriented" insofar as that goes, but each native
-/// thread has exactly one, thread-local worker structure, so the interface
-/// doesn't take a "this" pointer and instead grabs the "self" structure using
-/// __thread local storage.
-///
-/// @{
 template <typename T>
 class ChaseLevDeque<T*> : public Aligned<HPX_CACHELINE_SIZE>
 {
@@ -43,12 +42,15 @@ class ChaseLevDeque<T*> : public Aligned<HPX_CACHELINE_SIZE>
   static constexpr auto RELAXED = std::memory_order_relaxed;
   static constexpr auto ACQUIRE = std::memory_order_acquire;
   static constexpr auto RELEASE = std::memory_order_release;
+  static constexpr auto SEQ_CST = std::memory_order_seq_cst;
 
  public:
   ChaseLevDeque(unsigned capacity)
-      : bottom_(1), topBound_(1), capacity_(ceil2(capacity)),
-        buffer_(nullptr), top_(1) {
-    buffer_ = new(capacity_) Buffer(nullptr, capacity_);
+      : bottom_(1),
+        topBound_(1),
+        capacity_(ceil2(capacity)),
+        buffer_(new(capacity_) Buffer(nullptr, capacity_)),
+        top_(1) {
   }
 
   ChaseLevDeque() : ChaseLevDeque(32u) {
@@ -70,7 +72,7 @@ class ChaseLevDeque<T*> : public Aligned<HPX_CACHELINE_SIZE>
 
   /// Pop an item from the deque.
   T* pop() {
-    auto bottom = bottom_.fetch_sub(1, RELEASE) - 1;
+    auto bottom = bottom_.fetch_sub(1, SEQ_CST) - 1;
     topBound_ = top_.load(ACQUIRE);  // update bound
 
     // if the queue was empty, then we overshot (canonicalize empty)

@@ -1,7 +1,7 @@
 // ==================================================================-*- C++ -*-
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2016, Trustees of Indiana University,
+//  Copyright (c) 2013-2017, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -19,13 +19,15 @@
 #include "ISendBuffer.h"
 #include "MPITransport.h"
 #include "libhpx/ParcelStringOps.h"
+#include "libhpx/util/Aligned.h"
 #include "libhpx/util/TwoLockQueue.h"
 #include <mutex>
 
 namespace libhpx {
 namespace network {
 namespace isir {
-class FunneledNetwork : public Network, public ParcelStringOps
+class FunneledNetwork : public Network, public ParcelStringOps,
+                        public util::Aligned<HPX_CACHELINE_SIZE>
 {
  public:
   FunneledNetwork(const config_t *cfg, GAS *gas);

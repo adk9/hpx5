@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2016, Trustees of Indiana University,
+//  Copyright (c) 2013-2017, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -52,26 +52,22 @@ _boot_allgather(void *obj, const void * src, void * dest, int n)
 static void
 _init_photon_config(const config_t *cfg, int rank, int ranks,
                     struct photon_config_t *pcfg) {
-  // C++ doesn't like it when we assign a string literal to a char *, it demands
-  // a const char *. Unfortunately, photon's interface is a char *, which I
-  // don't want to change. This uses a char array for the literal to make it
-  // non-const.
   static char _gid_cxx_hack[] = "ff0e::ffff:0000:0000\0";
 
   pcfg->meta_exch               = PHOTON_EXCH_EXTERNAL;
   pcfg->nproc                   = ranks;
   pcfg->address                 = rank;
   pcfg->comm                    = NULL;
-  pcfg->fi.provider             = const_cast<char*>(cfg->photon_fiprov);
-  pcfg->fi.eth_dev              = const_cast<char*>(cfg->photon_fidev);
+  pcfg->fi.provider             = cfg->photon_fiprov;
+  pcfg->fi.eth_dev              = cfg->photon_fidev;
   pcfg->fi.node                 = NULL;
   pcfg->fi.service              = NULL;
   pcfg->fi.domain               = NULL;
   pcfg->ibv.use_cma             = cfg->photon_usecma;
-  pcfg->ibv.eth_dev             = const_cast<char*>(cfg->photon_ethdev);
-  pcfg->ibv.ib_dev              = const_cast<char*>(cfg->photon_ibdev);
+  pcfg->ibv.eth_dev             = cfg->photon_ethdev;
+  pcfg->ibv.ib_dev              = cfg->photon_ibdev;
   pcfg->ibv.num_srq             = cfg->photon_ibsrq;
-  pcfg->ugni.eth_dev            = const_cast<char*>(cfg->photon_ethdev);
+  pcfg->ugni.eth_dev            = cfg->photon_ethdev;
   pcfg->ugni.bte_thresh         = cfg->photon_btethresh;
   pcfg->cap.eager_buf_size      = cfg->photon_eagerbufsize;
   pcfg->cap.pwc_buf_size        = cfg->photon_pwcbufsize;

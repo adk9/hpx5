@@ -69,6 +69,12 @@ option "hpx-sched-stackcachelimit" - "bound on the number of stacks to cache"
 typestr="stacks"
 int optional
 
+section "Network Options"
+
+option "hpx-progress-period" - "async network progess period"
+typestr="nanoseconds"
+long optional
+
 section "GAS Options"
 
 option "hpx-gas-affinity" - "GAS affinity implementation"

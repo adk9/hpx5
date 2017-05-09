@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2016, Trustees of Indiana University,
+//  Copyright (c) 2013-2017, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -70,8 +70,18 @@ static int _spmd_handler(int iteration) {
 HPX_ACTION(HPX_DEFAULT, 0, _spmd, _spmd_handler, HPX_INT);
 
 int main(int argc, char *argv[argc]) {
+  if (hpx_initialized()) {
+    fprintf(stderr, "HPX claims to be initialized before hpx_init.\n");
+    return -1;
+  }
+
   if (hpx_init(&argc, &argv) != 0) {
     fprintf(stderr, "failed to initialize HPX.\n");
+    return -1;
+  }
+
+  if (!hpx_initialized()) {
+    fprintf(stderr, "HPX claims not to be initialized after hpx_init.\n");
     return -1;
   }
 
@@ -110,5 +120,11 @@ int main(int argc, char *argv[argc]) {
 
   hpx_finalize();
   printf("hpx_finalize completed %d.\n", 1);
+
+  if (hpx_initialized()) {
+    fprintf(stderr, "HPX claims to be initialized after hpx_finalize.\n");
+    return -1;
+  }
+
   return 0;
 }

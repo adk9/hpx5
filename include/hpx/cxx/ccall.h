@@ -1,7 +1,7 @@
 // ================================================================= -*- C++ -*-
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2016, Trustees of Indiana University,
+//  Copyright (c) 2013-2017, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -20,6 +20,42 @@
 
 namespace hpx {
 namespace c {
+template <typename T, typename U, typename... Params>
+inline void
+call(T&& target, hpx_action_t action, global_ptr<U>& c_target,
+     hpx_action_t c_action, Params... params)
+{
+  constexpr auto n = sizeof...(params);
+  if (int e = _hpx_call_with_continuation(target.get(), action, c_target.get(),
+                                          c_action, n, &params...)) {
+    throw Error(e);
+  }
+}
+
+template <typename U, typename... Params>
+inline void
+call(hpx_addr_t target, hpx_action_t action, global_ptr<U>& c_target,
+     hpx_action_t c_action, Params... params)
+{
+  constexpr auto n = sizeof...(params);
+  if (int e = _hpx_call_with_continuation(target, action, c_target.get(),
+                                          c_action, n, &params...)) {
+    throw Error(e);
+  }
+}
+
+template <typename U, typename... Params>
+inline void
+call(hpx_addr_t target, hpx_action_t action, hpx_addr_t c_target,
+     hpx_action_t c_action, Params... params)
+{
+  constexpr auto n = sizeof...(params);
+  if (int e = _hpx_call_with_continuation(target, action, c_target,
+                                          c_action, n, &params...)) {
+    throw Error(e);
+  }
+}
+
 template <typename T, typename U, typename... Params>
 inline void
 call(T&& target, hpx_action_t action, global_ptr<U>& sync, Params... params)

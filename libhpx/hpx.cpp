@@ -1,7 +1,7 @@
 // =============================================================================
 //  High Performance ParalleX Library (libhpx)
 //
-//  Copyright (c) 2013-2016, Trustees of Indiana University,
+//  Copyright (c) 2013-2017, Trustees of Indiana University,
 //  All rights reserved.
 //
 //  This software may be modified and distributed under the terms of the BSD
@@ -38,7 +38,7 @@
 #include "libhpx/Scheduler.h"
 #include "libhpx/system.h"
 #include "libhpx/time.h"
-#include "libhpx/topology.h"
+#include "libhpx/Topology.h"
 #include "libhpx/boot/Network.h"
 #include <hpx/hpx.h>
 #include <assert.h>
@@ -75,7 +75,7 @@ static void _cleanup(locality_t *l) {
   delete l->boot;
 
   if (l->topology) {
-    topology_delete(l->topology);
+    delete l->topology;
   }
 
   action_table_finalize();
@@ -154,7 +154,7 @@ int hpx_init(int *argc, char ***argv) {
   }
 
   // topology discovery and initialization
-  here->topology = topology_new(here->config);
+  here->topology = new Topology(here->config);
   if (!here->topology) {
     status = log_error("failed to discover topology.\n");
     goto unwind1;
@@ -287,6 +287,13 @@ const char *hpx_strerror(hpx_status_t s) {
   }
 }
 
-void hpx_finalize(void) {
+void
+hpx_finalize(void) {
   _cleanup(here);
+  here = NULL;
+}
+
+int
+hpx_initialized(void) {
+  return (here != NULL);
 }
