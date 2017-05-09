@@ -21,7 +21,7 @@ compilation of the distribution to execution of some tools.
 # Platform Support
 
 HPX-5 is tested on Linux on x86_64, Xeon Phi, ARMv7 and AArch64
-(ARMv8). Experimental support is available for SMP execution on Darwin on
+(ARMv8), Power8. Experimental support is available for SMP execution on Darwin on
 x86_64.
 
 # Tool Support

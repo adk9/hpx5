@@ -1,4 +1,4 @@
-# Copyright (c) 2013-2016, Trustees of Indiana University 
+# Copyright (c) 2013-2017, Trustees of Indiana University 
 # All rights reserved.
 
 # This software may be modified and distributed under the terms of
@@ -9,7 +9,7 @@
 
 AC_PREREQ([2.63])
 m4_define([LIBHPX_MAJOR], [4])
-m4_define([LIBHPX_MINOR], [0])
+m4_define([LIBHPX_MINOR], [1])
 m4_define([LIBHPX_PATCH], [0])
 AC_INIT([hpx-5], LIBHPX_MAJOR.LIBHPX_MINOR.LIBHPX_PATCH, [hpx@indiana.edu])
 
@@ -19,8 +19,8 @@ AC_INIT([hpx-5], LIBHPX_MAJOR.LIBHPX_MINOR.LIBHPX_PATCH, [hpx@indiana.edu])
 : ${CFLAGS="-O3 -g"}
 : ${CXXFLAGS="-O3 -g"}
 
-AC_SUBST(HPX_COPYRIGHT,["Copyright (c) 2013-2016, Trustees of Indiana University."])
-AC_COPYRIGHT([Copyright (c) 2013-2016, Trustees of Indiana University.])
+AC_SUBST(HPX_COPYRIGHT,["Copyright (c) 2013-2017, Trustees of Indiana University."])
+AC_COPYRIGHT([Copyright (c) 2013-2017, Trustees of Indiana University.])
 
 CLEANFILES="*~ .\#*"
 AC_SUBST(CLEANFILES)
