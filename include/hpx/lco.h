@@ -30,7 +30,6 @@ extern "C" {
 #include <hpx/types.h>
 
 /// These are the operations associated with the generic LCO class.
-/// @{
 
 /// Delete an LCO.
 ///
@@ -336,8 +335,6 @@ hpx_status_t hpx_lco_sema_p(hpx_addr_t sema)
   HPX_PUBLIC;
 
 /// An "and" LCO represents an AND gate.
-/// @{
-
 ///
 /// Create an AND gate.
 ///
@@ -367,7 +364,6 @@ void hpx_lco_and_set(hpx_addr_t lco, hpx_addr_t sync)
 ///             may be HPX_NULL
 void hpx_lco_and_set_num(hpx_addr_t lco, int num, hpx_addr_t sync)
   HPX_PUBLIC;
-/// @}
 
 /// Create a future.
 ///
@@ -380,7 +376,6 @@ void hpx_lco_and_set_num(hpx_addr_t lco, int num, hpx_addr_t sync)
 /// @returns    the global address of the newly allocated future
 hpx_addr_t hpx_lco_future_new(int size)
   HPX_PUBLIC;
-/// @}
 
 /// Allocate a global array of futures.
 ///
@@ -657,10 +652,8 @@ int _hpx_lco_dataflow_add(hpx_addr_t lco, hpx_action_t action,
 #define hpx_lco_dataflow_add(lco, action, out, ...)                   \
   _hpx_lco_dataflow_add(lco, action, out, __HPX_NARGS(__VA_ARGS__) , \
                         ##__VA_ARGS__)
-/// @}
 
 /// LCO reduction operators.
-/// @{
 ///
 /// The commutative-associative (monoid) operation type.
 ///
@@ -687,11 +680,9 @@ _HPX_REDUCTION_DECL(SUM_);
 _HPX_REDUCTION_DECL(PROD_);
 _HPX_REDUCTION_DECL(MAX_);
 _HPX_REDUCTION_DECL(MIN_);
-/// @}
 
 /// Local array operations for LCOs. These allow creation of LCO arrays
 /// local to the calling locality.
-/// @{
 ///
 /// Allocate an array of future LCO local to the calling locality.
 /// @param          n The (total) number of lcos to allocate
